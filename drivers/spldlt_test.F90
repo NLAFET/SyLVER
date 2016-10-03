@@ -3,7 +3,7 @@ program spldlt_test
    use spral_ssids
    use spral_rutherford_boeing
    use spral_matrix_util, only : cscl_verify, SPRAL_MATRIX_REAL_SYM_INDEF
-   use spldlt_analyse_mod, only : spldlt_print_atree 
+   use spldlt_analyse_mod
    implicit none
 
    integer, parameter :: wp = kind(0d0)
@@ -38,9 +38,12 @@ program spldlt_test
    ! flags
    integer :: flag, more
 
+   ! ssids structures
    type(ssids_inform) :: inform ! stats
    type(ssids_akeep) :: akeep   ! analysis data
    type(ssids_fkeep) :: fkeep   ! factorization data
+   ! spldlt strucutres
+   type(spldlt_akeep_type) :: spldlt_akeep
 
    ! stats
    real :: smanal, smfact, smaflop, smafact
@@ -59,7 +62,8 @@ program spldlt_test
 
    pos_def = .true. ! DEBUG assume matrix is posdef
 
-   ssids_opt%print_level = 1 ! enable printing
+   ! ssids_opt%print_level = 1 ! enable printing
+   ssids_opt%print_level = 0 ! disable printing
    ssids_opt%use_gpu_solve = .false. ! disable GPU
 
    ! Read in a matrix
@@ -119,6 +123,9 @@ program spldlt_test
    ! print "(a6, es10.2)", "gpu_flops", real(inform%gpu_flops)
    smaflop = real(inform%num_flops)
    smafact = real(inform%num_factor)
+
+   ! perform spldlt analysis 
+   call spldlt_analyse(spldlt_akeep, akeep)
 
    ! print atree
    call spldlt_print_atree(akeep)

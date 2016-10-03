@@ -4,6 +4,7 @@ file(
   sources 
   *.F90
   *.c
-  *.cxx)
+  *.cxx
+  *.hxx)
 
 add_library(spldlt ${sources})

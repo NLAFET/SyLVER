@@ -30,7 +30,6 @@ set(SPRAL_DIR $ENV{SPRALDIR} CACHE PATH "Location of Spral Library")
 include_directories(${SPRAL_DIR})
 
 set(SPRAL_SRC_DIR $ENV{SPRALSRCDIR} CACHE PATH "Location of Spral sources")
-include_directories(${SPRAL_SRC_DIR}/include)
 include_directories(${SPRAL_SRC_DIR})
 include_directories(${SPRAL_SRC_DIR}/src)
 
