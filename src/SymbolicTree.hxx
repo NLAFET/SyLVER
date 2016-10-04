@@ -9,9 +9,9 @@ using namespace spral::ssids::cpu;
 
 namespace spldlt {
 
-   class SymbolicAtree {
+   class SymbolicTree {
    public:
-      SymbolicAtree(int nnodes, int const* sptr, int const* sparent, long const* rptr, int const* rlist, int const* nptr, int const* nlist) 
+      SymbolicTree(int nnodes, int const* sptr, int const* sparent, long const* rptr, int const* rlist, int const* nptr, int const* nlist) 
          : nnodes_(nnodes), nodes_(nnodes_+1)
       {
          
@@ -44,4 +44,4 @@ namespace spldlt {
       size_t nfactor_;
       std::vector<SymbolicNode> nodes_;
    };
-} /* end of namespace spldlt*/
+} /* end of namespace spldlt */

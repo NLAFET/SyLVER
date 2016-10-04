@@ -6,7 +6,8 @@ program spldlt_test
    use spldlt_analyse_mod
    implicit none
 
-   integer, parameter :: wp = kind(0d0)
+   ! FIXME use the one defined in ssids for now
+   ! integer, parameter :: wp = kind(0d0)
 
    type(ssids_options) :: ssids_opt
    logical :: pos_def ! if true, assume matrix is posdef
@@ -125,7 +126,7 @@ program spldlt_test
    smafact = real(inform%num_factor)
 
    ! perform spldlt analysis 
-   call spldlt_analyse(spldlt_akeep, akeep)
+   call spldlt_analyse(spldlt_akeep, akeep, ssids_opt)
 
    ! print atree
    call spldlt_print_atree(akeep)

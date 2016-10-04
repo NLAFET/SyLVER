@@ -1,19 +1,23 @@
 module spldlt_analyse_mod
   use spral_ssids_akeep, only: ssids_akeep 
   use, intrinsic :: iso_c_binding
+  use spral_ssids_cpu_iface ! fixme only
+  use spral_ssids_datatypes
   implicit none
 
   type spldlt_akeep_type
      type(ssids_akeep), pointer  :: akeep => null()
-     type(c_ptr) :: atree_c
+     type(c_ptr) :: symbolic_tree_c
   end type spldlt_akeep_type
 
-  interface spldlt_create_symbolic_atree_c
-
-     type(c_ptr) function spldlt_create_symbolic_atree(nnodes, sptr, sparent, rptr, rlist, &
-          nptr, nlist) &
-          bind(C, name="spldlt_create_symbolic_atree")
+  interface spldlt_create_symbolic_tree_c
+     type(c_ptr) function spldlt_create_symbolic_tree(n, nnodes, sptr, sparent, rptr, rlist, &
+          nptr, nlist, options) &
+          bind(C, name="spldlt_create_numeric_tree_dbl")
        use, intrinsic :: iso_c_binding
+       import :: cpu_factor_options
+       implicit none
+       integer(C_INT), value :: n
        integer(c_int), value :: nnodes
        integer(c_int), dimension(*), intent(in) :: sptr
        integer(c_int), dimension(*), intent(in) :: sparent
@@ -21,20 +25,24 @@ module spldlt_analyse_mod
        integer(c_int), dimension(*), intent(in) :: rlist
        integer(c_int), dimension(*), intent(in) :: nptr
        integer(c_int), dimension(2, *), intent(in) :: nlist
-     end function spldlt_create_symbolic_atree
-  end interface spldlt_create_symbolic_atree_c
+       type(cpu_factor_options), intent(in) :: options
+     end function spldlt_create_symbolic_tree
+  end interface spldlt_create_symbolic_tree_c
 
 contains
 
-  subroutine spldlt_analyse(spldlt_akeep, akeep)
+  subroutine spldlt_analyse(spldlt_akeep, akeep, options)
     use spral_ssids_akeep, only: ssids_akeep
+    use spral_ssids_datatypes
     implicit none
     
     type(spldlt_akeep_type) :: spldlt_akeep ! spldlt akeep structure 
     type(ssids_akeep), target :: akeep ! ssids akeep structure
+    type(ssids_options), intent(in) :: options
 
     integer nnodes
-        
+   type(cpu_factor_options) :: coptions
+
     spldlt_akeep%akeep => akeep 
     nnodes = akeep%nnodes
 
@@ -42,9 +50,10 @@ contains
     ! print *, "sparent: ", akeep%sparent(1:nnodes)
 
     ! call C++ analyse routine
-    spldlt_akeep%atree_c = spldlt_create_symbolic_atree_c(nnodes, &
+    call cpu_copy_options_in(options, coptions)
+    spldlt_akeep%symbolic_tree_c = spldlt_create_symbolic_tree_c(akeep%n, nnodes, &
          akeep%sptr, akeep%sparent, akeep%rptr, akeep%rlist, &
-         akeep%nptr, akeep%nlist)
+         akeep%nptr, akeep%nlist, coptions)
 
   end subroutine spldlt_analyse
   
