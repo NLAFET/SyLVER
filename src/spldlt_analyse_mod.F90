@@ -13,7 +13,7 @@ module spldlt_analyse_mod
   interface spldlt_create_symbolic_tree_c
      type(c_ptr) function spldlt_create_symbolic_tree(n, nnodes, sptr, sparent, rptr, rlist, &
           nptr, nlist, options) &
-          bind(C, name="spldlt_create_numeric_tree_dbl")
+          bind(C, name="spldlt_create_symbolic_tree")
        use, intrinsic :: iso_c_binding
        import :: cpu_factor_options
        implicit none

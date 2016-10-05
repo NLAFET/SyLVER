@@ -5,16 +5,33 @@ module spldlt_factorize_mod
   type spldlt_fkeep_type
      ! Facored elimination tree
      type(c_ptr) :: numeric_tree_c
+   contains
+     procedure :: solve
   end type spldlt_fkeep_type
 
-  interface spldlt_create_symbolic_tree_c
-     type(c_ptr) function spldlt_create_symbolic_tree(symbolic_tree, aval) &
+  ! Numeric tree routines
+
+  ! routine to create a numeric subtree from the symbolic one
+  ! return a C ptr on the tree structure
+  interface spldlt_create_numeric_tree_c
+     type(c_ptr) function spldlt_create_numeric_tree_dlb(symbolic_tree, aval) &
           bind(C, name="spldlt_create_numeric_tree_dbl")
        use, intrinsic :: iso_c_binding
        type(c_ptr), value :: symbolic_tree
        real(c_double), dimension(*), intent(in) :: aval
-     end function spldlt_create_symbolic_tree
-  end interface spldlt_create_symbolic_tree_c
+     end function spldlt_create_numeric_tree_dlb
+  end interface spldlt_create_numeric_tree_c
+
+  ! destroy the C ptr on numeric tree strucutre
+  interface spldlt_destroy_numeric_tree_c
+     subroutine spldlt_destroy_numeric_tree_dlb(numeric_tree) &
+          bind(C, name="spldlt_destroy_numeric_tree_dbl")          
+       use, intrinsic :: iso_c_binding
+       type(c_ptr), value :: numeric_tree
+     end subroutine spldlt_destroy_numeric_tree_dlb
+  end interface spldlt_destroy_numeric_tree_c
+
+  ! Solve routine
 
 contains
 
@@ -32,9 +49,18 @@ contains
 
     akeep => spldlt_akeep%akeep
 
-    spldlt_fkeep%numeric_tree_c = spldlt_create_symbolic_tree_c( &
+    spldlt_fkeep%numeric_tree_c = spldlt_create_numeric_tree_c( &
          spldlt_akeep%symbolic_tree_c, val)
 
   end subroutine spldlt_factorize
+
+  subroutine solve(spldlt_fkeep)
+    implicit none
+
+    class(spldlt_fkeep_type) :: spldlt_fkeep
+    
+    print *, "solve"
+    
+  end subroutine solve
   
 end module spldlt_factorize_mod

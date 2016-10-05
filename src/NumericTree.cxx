@@ -20,6 +20,14 @@ void *spldlt_create_numeric_tree_dbl(void const* symbolic_tree_ptr, const double
    return (void *) tree;
 }
 
+// delete tree structure in memory
+extern "C"
+void spldlt_destroy_numeric_tree_dbl(void* target) {
+
+   auto *tree = static_cast<NumericTreeDbl*>(target);
+   delete tree;
+}
+
 extern "C"
 Flag spldlt_tree_solve_fwd_dbl(void const* tree_ptr, // pointer to relevant type of NumericTree
                                int nrhs,         // number of right-hand sides

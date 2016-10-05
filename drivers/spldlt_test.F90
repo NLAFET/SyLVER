@@ -4,6 +4,7 @@ program spldlt_test
    use spral_rutherford_boeing
    use spral_matrix_util, only : cscl_verify, SPRAL_MATRIX_REAL_SYM_INDEF
    use spldlt_analyse_mod
+   use spldlt_factorize_mod
    implicit none
 
    ! FIXME use the one defined in ssids for now
@@ -45,6 +46,7 @@ program spldlt_test
    type(ssids_fkeep) :: fkeep   ! factorization data
    ! spldlt strucutres
    type(spldlt_akeep_type) :: spldlt_akeep
+   type(spldlt_fkeep_type) :: spldlt_fkeep
 
    ! stats
    real :: smanal, smfact, smaflop, smafact
@@ -166,6 +168,9 @@ program spldlt_test
    endif
    write(*, "(a)") "ok"
    print *, "Solve took ", (stop_t - start_t)/real(rate_t)
+
+   ! Solve SpLDLT
+   call spldlt_fkeep%solve()
 
    print *, "number bad cmp = ", count(abs(soln(1:n,1)-1.0).ge.1e-6)
    print *, "fwd error || ||_inf = ", maxval(abs(soln(1:n,1)-1.0))
