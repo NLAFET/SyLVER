@@ -11,8 +11,8 @@ namespace spldlt {
 
    class SymbolicTree {
    public:
-      SymbolicTree(int nnodes, int const* sptr, int const* sparent, long const* rptr, int const* rlist, int const* nptr, int const* nlist) 
-         : nnodes_(nnodes), nodes_(nnodes_+1)
+      SymbolicTree(int n, int nnodes, int const* sptr, int const* sparent, long const* rptr, int const* rlist, int const* nptr, int const* nlist) 
+         : n(n), nnodes_(nnodes), nodes_(nnodes_+1)
       {
          
          printf("[SymbolicAtree] create symbolic atree, nnodes: %d\n", nnodes_);
@@ -38,10 +38,23 @@ namespace spldlt {
             nfactor_ += static_cast<size_t>(nodes_[ni].nrow)*nodes_[ni].ncol;
 
       }
-   
+
+      size_t get_factor_mem_est(double multiplier) const {
+         size_t mem = n*sizeof(int) + (2*n+nfactor_)*sizeof(double);
+         return std::max(mem, static_cast<size_t>(mem*multiplier));
+      }
+
+      SymbolicNode const& operator[](int idx) const {
+         return nodes_[idx];
+      }
+   public:
+      int const n; //< Maximum row index
    private:
       int nnodes_;
       size_t nfactor_;
       std::vector<SymbolicNode> nodes_;
+
+      template <typename T, size_t PAGE_SIZE, typename FactorAlloc, bool posdef>
+      friend class NumericTree;
    };
 } /* end of namespace spldlt */
