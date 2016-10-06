@@ -21,14 +21,34 @@ namespace spldlt {
 
       NumericTree(SymbolicTree const& symbolic_tree, T const* aval)
          : symb_(symbolic_tree), 
-           factor_alloc_(symbolic_tree.get_factor_mem_est(1.0))
-      {}
+           factor_alloc_(symbolic_tree.get_factor_mem_est(1.0)),
+           pool_alloc_(symbolic_tree.get_pool_size<T>())
+      {
+         // printf("Numeric tree\n");
+         /* Associate symbolic nodes to numeric ones; copy tree structure */
+         nodes_.reserve(symbolic_tree.nnodes_+1);
+         for(int ni=0; ni<symb_.nnodes_+1; ++ni) {
+            nodes_.emplace_back(symbolic_tree[ni], pool_alloc_);
+            auto* fc = symbolic_tree[ni].first_child;
+            nodes_[ni].first_child = fc ? &nodes_[fc->idx] : nullptr;
+            auto* nc = symbolic_tree[ni].next_child;
+            nodes_[ni].next_child = nc ? &nodes_[nc->idx] :  nullptr;
+         }
+
+         /* Allocate workspace */
+         Workspace *work = new Workspace(PAGE_SIZE);
+
+         /* Loop over singleton nodes in order */
+         for(int ni=0; ni<symb_.nnodes_; ++ni) {
+         
+         }
+      }
 
       void solve_fwd(int nrhs, double* x, int ldx) const {
          /* Allocate memory */
          double* xlocal = new double[nrhs*symb_.n];
          int* map_alloc = (!posdef) ? new int[symb_.n] : nullptr; // only indef
-
+        
          /* Main loop */
          for(int ni=0; ni<symb_.nnodes_; ++ni) {
             int m = symb_[ni].nrow;
@@ -161,6 +181,7 @@ namespace spldlt {
    private:
       SymbolicTree const& symb_;
       FactorAllocator factor_alloc_;
+      PoolAllocator pool_alloc_;
       std::vector<NumericNode<T,PoolAllocator>> nodes_;
    };
 

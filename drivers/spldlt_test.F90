@@ -154,6 +154,9 @@ program spldlt_test
    print *, "Factor took ", (stop_t - start_t)/real(rate_t)
    smfact = (stop_t - start_t)/real(rate_t)
 
+   ! Perform spldlt factorize  
+   call spldlt_factorize(val, spldlt_akeep, spldlt_fkeep, ssids_opt)
+
    ! Solve
    write(*, "(a)") "Solve..."
    call system_clock(start_t, rate_t)
@@ -170,7 +173,7 @@ program spldlt_test
    print *, "Solve took ", (stop_t - start_t)/real(rate_t)
 
    ! Solve SpLDLT
-   call spldlt_fkeep%solve()
+   call spldlt_fkeep%solve(nrhs, soln, n)
 
    print *, "number bad cmp = ", count(abs(soln(1:n,1)-1.0).ge.1e-6)
    print *, "fwd error || ||_inf = ", maxval(abs(soln(1:n,1)-1.0))

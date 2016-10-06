@@ -2,9 +2,16 @@ module spldlt_factorize_mod
   use, intrinsic :: iso_c_binding
   implicit none
 
+  type numeric_tree_type
+     type(c_ptr) :: ptr_c ! pointer to the C structure
+   contains
+     procedure :: solve_fwd
+     procedure :: solve_bwd
+  end type numeric_tree_type
+  
   type spldlt_fkeep_type
      ! Facored elimination tree
-     type(c_ptr) :: numeric_tree_c
+     type(numeric_tree_type) :: numeric_tree ! structure representing the numeric tree
    contains
      procedure :: solve
   end type spldlt_fkeep_type
@@ -31,7 +38,31 @@ module spldlt_factorize_mod
      end subroutine spldlt_destroy_numeric_tree_dlb
   end interface spldlt_destroy_numeric_tree_c
 
-  ! Solve routine
+  ! Solve routines
+
+  ! forward solve
+  interface spldlt_tree_solve_fwd_c
+     integer(c_int) function spldlt_tree_solve_fwd_dbl(numeric_tree, nrhs, x, ldx) &
+          bind(C, name="spldlt_tree_solve_fwd_dbl")
+       use, intrinsic :: iso_c_binding
+       type(c_ptr), value :: numeric_tree
+       integer(c_int), value :: nrhs
+       real(c_double), dimension(*), intent(inout) :: x
+       integer(c_int), value :: ldx
+     end function spldlt_tree_solve_fwd_dbl
+  end interface spldlt_tree_solve_fwd_c
+
+  ! backward solve
+  interface spldlt_tree_solve_bwd_c
+     integer(c_int) function spldlt_tree_solve_bwd_dbl(numeric_tree, nrhs, x, ldx) &
+          bind(C, name="spldlt_tree_solve_bwd_dbl")
+       use, intrinsic :: iso_c_binding
+       type(c_ptr), value :: numeric_tree
+       integer(c_int), value :: nrhs
+       real(c_double), dimension(*), intent(inout) :: x
+       integer(c_int), value :: ldx       
+     end function spldlt_tree_solve_bwd_dbl
+  end interface spldlt_tree_solve_bwd_c
 
 contains
 
@@ -49,18 +80,68 @@ contains
 
     akeep => spldlt_akeep%akeep
 
-    spldlt_fkeep%numeric_tree_c = spldlt_create_numeric_tree_c( &
+    spldlt_fkeep%numeric_tree%ptr_c = spldlt_create_numeric_tree_c( &
          spldlt_akeep%symbolic_tree_c, val)
 
   end subroutine spldlt_factorize
 
-  subroutine solve(spldlt_fkeep)
+  ! Solve phase
+  subroutine solve(spldlt_fkeep, nrhs, x, ldx)
+    use spral_ssids_datatypes
     implicit none
 
     class(spldlt_fkeep_type) :: spldlt_fkeep
-    
+    integer, intent(in) :: nrhs
+    integer, intent(in) :: ldx
+    real(wp), dimension(ldx,nrhs), intent(inout) :: x
+
     print *, "solve"
+
+    ! permute and scale
+    ! TODO
+    
+    ! perform solve
+    call spldlt_fkeep%numeric_tree%solve_fwd(nrhs, x, ldx)
+
+    ! un-permute and un-scale
+    ! TODO
     
   end subroutine solve
-  
+
+  ! Fwd solve on numeric tree
+  subroutine solve_fwd(numeric_tree, nrhs, x, ldx)
+    use, intrinsic :: iso_c_binding
+    use spral_ssids_datatypes
+    implicit none
+    
+    class(numeric_tree_type), intent(in) :: numeric_tree 
+    integer, intent(in) :: nrhs
+    integer, intent(in) :: ldx
+    real(wp), dimension(*), intent(inout) :: x
+
+    integer(c_int) :: flag ! return value
+
+    flag = spldlt_tree_solve_fwd_c(numeric_tree%ptr_c, nrhs, x, ldx)
+    ! TODO error managment
+    ! if(flag.ne.SSIDS_SUCCESS) inform%flag = flag
+  end subroutine solve_fwd
+
+  ! Bwd solve on numeric tree
+  subroutine solve_bwd(numeric_tree, nrhs, x, ldx)
+    use, intrinsic :: iso_c_binding
+    use spral_ssids_datatypes
+    implicit none
+    
+    class(numeric_tree_type), intent(in) :: numeric_tree 
+    integer, intent(in) :: nrhs
+    integer, intent(in) :: ldx
+    real(wp), dimension(*), intent(inout) :: x
+
+    integer(c_int) :: flag ! return value
+    
+    flag = spldlt_tree_solve_bwd_c(numeric_tree%ptr_c, nrhs, x, ldx)
+    ! TODO error managment
+    ! if(flag.ne.SSIDS_SUCCESS) inform%flag = flag
+  end subroutine solve_bwd
+
 end module spldlt_factorize_mod

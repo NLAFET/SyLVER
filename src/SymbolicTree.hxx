@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <vector>
 
+#include "ssids/cpu/cpu_iface.hxx"
 #include "ssids/cpu/SymbolicNode.hxx"
 
 using namespace spral::ssids::cpu;
@@ -16,7 +17,7 @@ namespace spldlt {
       {
          
          printf("[SymbolicAtree] create symbolic atree, nnodes: %d\n", nnodes_);
-         
+         maxfront_ = 0;         
          for(int ni=0; ni<nnodes_; ++ni) {
             nodes_[ni].idx = ni;
             nodes_[ni].nrow = static_cast<int>(rptr[ni+1] - rptr[ni]);
@@ -30,6 +31,7 @@ namespace spldlt {
             nodes_[ni].amap = &nlist[2*(nptr[ni]-1)]; // nptr is Fortran indexed
             nodes_[ni].parent = sparent[ni]-1; // sparent is Fortran indexed
             printf("[SymbolicAtree] nodes: %d, parent: %d\n", ni, nodes_[ni].parent);
+            maxfront_ = std::max(maxfront_, (size_t) nodes_[ni].nrow);
          }
 
          /* Count size of factors */
@@ -43,6 +45,10 @@ namespace spldlt {
          size_t mem = n*sizeof(int) + (2*n+nfactor_)*sizeof(double);
          return std::max(mem, static_cast<size_t>(mem*multiplier));
       }
+      template <typename T>
+      size_t get_pool_size() const {
+         return maxfront_*align_lda<double>(maxfront_);
+      }
 
       SymbolicNode const& operator[](int idx) const {
          return nodes_[idx];
@@ -52,6 +58,7 @@ namespace spldlt {
    private:
       int nnodes_;
       size_t nfactor_;
+      size_t maxfront_;
       std::vector<SymbolicNode> nodes_;
 
       template <typename T, size_t PAGE_SIZE, typename FactorAlloc, bool posdef>
