@@ -40,7 +40,7 @@ namespace spldlt {
 
          /* Loop over singleton nodes in order */
          for(int ni=0; ni<symb_.nnodes_; ++ni) {
-         
+            
          }
       }
 
