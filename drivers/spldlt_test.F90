@@ -106,6 +106,7 @@ program spldlt_test
    ssids_opt%scaling = 0 ! no scaling
 
    ! Analyse
+   write(*, "(a)") "[SpLDLT Test] Analyse..."
    call system_clock(start_t, rate_t)
    call ssids_analyse(.false., n, ptr, row, akeep, &
         ssids_opt, inform, val=val)
@@ -134,46 +135,59 @@ program spldlt_test
    call spldlt_print_atree(akeep)
 
    ! Factorize
-   write(*, "(a)") "Factorize..."
+   ! write(*, "(a)") "[SpLDLT Test] Factorize..."
+   ! call system_clock(start_t, rate_t)
+   ! do i = 1, nfact
+   !    if(allocated(scaling)) then
+   !       call ssids_factor(pos_def, val, akeep, fkeep, &
+   !            ssids_opt, inform, ptr=ptr, row=row, scale=scaling)
+   !    else
+   !       call ssids_factor(pos_def, val, akeep, fkeep, &
+   !            ssids_opt, inform, ptr=ptr, row=row)
+   !    endif
+   ! end do
+   ! call system_clock(stop_t)
+   ! if (inform%flag < 0) then
+   !    print *, "oops on factorize ", inform%flag
+   !    stop
+   ! endif
+   ! write(*, "(a)") "ok"
+   ! print *, "Factor took ", (stop_t - start_t)/real(rate_t)
+   ! smfact = (stop_t - start_t)/real(rate_t)
+
+   ! Factorize (SpLDLT)  
    call system_clock(start_t, rate_t)
-   do i = 1, nfact
-      if(allocated(scaling)) then
-         call ssids_factor(pos_def, val, akeep, fkeep, &
-              ssids_opt, inform, ptr=ptr, row=row, scale=scaling)
-      else
-         call ssids_factor(pos_def, val, akeep, fkeep, &
-              ssids_opt, inform, ptr=ptr, row=row)
-      endif
-   end do
+   call spldlt_factorize(val, spldlt_akeep, spldlt_fkeep, ssids_opt)
    call system_clock(stop_t)
-   if (inform%flag < 0) then
-      print *, "oops on factorize ", inform%flag
-      stop
-   endif
    write(*, "(a)") "ok"
    print *, "Factor took ", (stop_t - start_t)/real(rate_t)
    smfact = (stop_t - start_t)/real(rate_t)
 
-   ! Perform spldlt factorize  
-   call spldlt_factorize(val, spldlt_akeep, spldlt_fkeep, ssids_opt)
-
    ! Solve
-   write(*, "(a)") "Solve..."
+   write(*, "(a)") "[SpLDLT Test] Solve..."
+   ! call system_clock(start_t, rate_t)
+   ! do i = 1, nslv
+   !    soln = rhs
+   !    call ssids_solve(nrhs, soln, n, akeep, fkeep, ssids_opt, inform)
+   ! end do
+   ! call system_clock(stop_t)
+   ! if (inform%flag < 0) then
+   !    print *, "oops on solve ", inform%flag
+   !    stop
+   ! endif
+   ! write(*, "(a)") "ok"
+   ! print *, "Solve took ", (stop_t - start_t)/real(rate_t)
+
+   ! Solve SpLDLT
    call system_clock(start_t, rate_t)
-   do i = 1, nslv
-      soln = rhs
-      call ssids_solve(nrhs, soln, n, akeep, fkeep, ssids_opt, inform)
-   end do
+   soln = rhs ! init solution with RHS
+   call spldlt_fkeep%solve(nrhs, soln, n)
    call system_clock(stop_t)
-   if (inform%flag < 0) then
-      print *, "oops on solve ", inform%flag
-      stop
-   endif
    write(*, "(a)") "ok"
    print *, "Solve took ", (stop_t - start_t)/real(rate_t)
 
-   ! Solve SpLDLT
-   call spldlt_fkeep%solve(nrhs, soln, n)
+   ! print *, "RHS: ", rhs
+   ! print *, "soln: ", soln
 
    print *, "number bad cmp = ", count(abs(soln(1:n,1)-1.0).ge.1e-6)
    print *, "fwd error || ||_inf = ", maxval(abs(soln(1:n,1)-1.0))
@@ -185,6 +199,7 @@ program spldlt_test
    
  contains
 
+   ! Get argument from command line
    subroutine proc_args(nb, nrhs, pos_def)
      
      integer, intent(inout) :: nb

@@ -1,10 +1,14 @@
-#include "SymbolicTree.hxx"
-
 #include "ssids/cpu/cpu_iface.hxx"
 #include "ssids/cpu/factor.hxx"
 #include "ssids/cpu/BuddyAllocator.hxx"
 #include "ssids/cpu/NumericNode.hxx"
 #include "ssids/cpu/ThreadStats.hxx"
+#include "ssids/cpu/kernels/cholesky.hxx"
+
+#include "SymbolicTree.hxx"
+#include "kernels/assemble.hxx"
+
+using namespace spral::ssids::cpu;
 
 namespace spldlt {
 
@@ -19,12 +23,14 @@ namespace spldlt {
       NumericTree(const NumericTree&) =delete;
       NumericTree& operator=(const NumericTree&) =delete;
 
-      NumericTree(SymbolicTree const& symbolic_tree, T const* aval)
+      NumericTree(SymbolicTree const& symbolic_tree, T const* aval, 
+                  struct cpu_factor_options const& options)
          : symb_(symbolic_tree), 
            factor_alloc_(symbolic_tree.get_factor_mem_est(1.0)),
            pool_alloc_(symbolic_tree.get_pool_size<T>())
       {
          // printf("Numeric tree\n");
+         printf("[NumericTree] block size: %d\n",  options.cpu_task_block_size);
          /* Associate symbolic nodes to numeric ones; copy tree structure */
          nodes_.reserve(symbolic_tree.nnodes_+1);
          for(int ni=0; ni<symb_.nnodes_+1; ++ni) {
@@ -40,7 +46,31 @@ namespace spldlt {
 
          /* Loop over singleton nodes in order */
          for(int ni=0; ni<symb_.nnodes_; ++ni) {
+
+            init_node(symb_[ni], nodes_[ni], factor_alloc_, pool_alloc_, work, aval);
+
+            /* Extract useful information about node */
+            int m = symb_[ni].nrow;
+            int n = symb_[ni].ncol;
+            int ldl = align_lda<T>(m);
+            T *lcol = nodes_[ni].lcol;
+            T *contrib = nodes_[ni].contrib;
+
+            // DEBUG
+            // T maxelt = 0.0;
+            // for (int i = 0; i < m*n; ++i) {
+            //    if (lcol[i] > maxelt) maxelt = lcol[i];
+            // }
+            // printf("[NumericTree] max lcol: %f\n", maxelt);
+            // printf("[NumericTree] m: %d, n: %d, ldl: %d\n",  m, n, ldl);
+
+            // int flag;
+            // cholesky_factor(
+            //       m, n, lcol, ldl, 0.0, contrib, m-n, options.cpu_task_block_size, &flag
+            //       );
+            int flag = lapack_potrf(FILL_MODE_LWR, n, lcol, ldl);
             
+            printf("[NumericTree] cholesky_factor Flag: %d\n", flag);
          }
       }
 

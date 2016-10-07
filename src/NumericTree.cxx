@@ -10,12 +10,17 @@ namespace {
    typedef NumericTree<T, PAGE_SIZE, AppendAlloc<T>, true> NumericTreeDbl; // posdef = true
 }
 
+/* Double precision wrapper around templated routines */
+
 extern "C"
-void *spldlt_create_numeric_tree_dbl(void const* symbolic_tree_ptr, const double *const aval) {
+void *spldlt_create_numeric_tree_dbl(
+      void const* symbolic_tree_ptr, const double *const aval,
+      struct cpu_factor_options const* options // Options in
+      ) {
 
    auto const& symbolic_tree = *static_cast<SymbolicTree const*>(symbolic_tree_ptr);
 
-   auto* tree = new NumericTreeDbl(symbolic_tree, aval);
+   auto* tree = new NumericTreeDbl(symbolic_tree, aval, *options);
 
    return (void *) tree;
 }
@@ -58,6 +63,24 @@ Flag spldlt_tree_solve_bwd_dbl(void const* tree_ptr, // pointer to relevant type
       auto &tree = *static_cast<NumericTreeDbl const*>(tree_ptr); // positive definite!
       tree.solve_bwd(nrhs, x, ldx);
       
+   } catch(std::bad_alloc const&) {
+      return Flag::ERROR_ALLOCATION;
+   }
+   return Flag::SUCCESS;
+}
+
+extern "C"
+Flag spldlt_tree_solve_diag_bwd_dbl(
+      void const* tree_ptr, // pointer to relevant type of NumericTree
+      int nrhs,         // number of right-hand sides
+      double* x,        // ldx x nrhs array of right-hand sides
+      int ldx           // leading dimension of x
+      ) {
+
+   // Call method
+   try {
+      auto &tree = *static_cast<NumericTreeDbl const*>(tree_ptr);
+      tree.solve_diag_bwd(nrhs, x, ldx);
    } catch(std::bad_alloc const&) {
       return Flag::ERROR_ALLOCATION;
    }
