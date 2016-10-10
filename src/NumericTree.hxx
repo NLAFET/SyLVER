@@ -7,6 +7,7 @@
 
 #include "SymbolicTree.hxx"
 #include "kernels/assemble.hxx"
+#include "kernels/common.hxx"
 
 using namespace spral::ssids::cpu;
 
@@ -43,7 +44,9 @@ namespace spldlt {
 
          /* Allocate workspace */
          Workspace *work = new Workspace(PAGE_SIZE);
-
+         
+         // printf("[NumericTree] nnodes: %d\n", symb_.nnodes_);
+         
          /* Loop over singleton nodes in order */
          for(int ni=0; ni<symb_.nnodes_; ++ni) {
 
@@ -55,7 +58,11 @@ namespace spldlt {
             int ldl = align_lda<T>(m);
             T *lcol = nodes_[ni].lcol;
             T *contrib = nodes_[ni].contrib;
+            
+            // printf("[NumericTree] NumericTree, ldl: %d\n", ldl);
 
+            print_mat(m, n, lcol, ldl);
+            
             // DEBUG
             // T maxelt = 0.0;
             // for (int i = 0; i < m*n; ++i) {
@@ -64,17 +71,24 @@ namespace spldlt {
             // printf("[NumericTree] max lcol: %f\n", maxelt);
             // printf("[NumericTree] m: %d, n: %d, ldl: %d\n",  m, n, ldl);
 
-            // int flag;
-            // cholesky_factor(
-            //       m, n, lcol, ldl, 0.0, contrib, m-n, options.cpu_task_block_size, &flag
-            //       );
-            int flag = lapack_potrf(FILL_MODE_LWR, n, lcol, ldl);
+            int flag;
+            cholesky_factor(
+                  m, n, lcol, ldl, 0.0, contrib, m-n, options.cpu_task_block_size, &flag
+                  );
+            // int flag = lapack_potrf(FILL_MODE_LWR, n, lcol, ldl);            
+            // printf("[NumericTree] cholesky_factor Flag: %d\n", flag);
+
+            print_mat(m, n, lcol, ldl);
             
-            printf("[NumericTree] cholesky_factor Flag: %d\n", flag);
          }
       }
 
       void solve_fwd(int nrhs, double* x, int ldx) const {
+
+         // printf("[NumericTree] solve fwd, nrhs: %d\n", nrhs);
+         // for (int i = 0; i < ldx; ++i) printf(" %10.4f", x[i]);
+         // printf("[NumericTree] solve fwd, posdef: %d\n", posdef);
+
          /* Allocate memory */
          double* xlocal = new double[nrhs*symb_.n];
          int* map_alloc = (!posdef) ? new int[symb_.n] : nullptr; // only indef
@@ -88,7 +102,7 @@ namespace spldlt {
             int ndin = (posdef) ? 0
                : nodes_[ni].ndelay_in;
             int ldl = align_lda<T>(m+ndin);
-
+            // printf("[NumericTree] solve fwd, node: %d, nelim: %d, ldl: %d\n", ni, nelim, ldl);
             /* Build map (indef only) */
             int const *map;
             if(!posdef) {

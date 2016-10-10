@@ -106,32 +106,63 @@ contains
   end subroutine spldlt_factorize
 
   ! Solve phase
-  subroutine solve(spldlt_fkeep, nrhs, x, ldx)
+  subroutine solve(spldlt_fkeep, nrhs, x, ldx, spldlt_akeep)
     use spral_ssids_datatypes
+    use spldlt_analyse_mod
     implicit none
 
     class(spldlt_fkeep_type) :: spldlt_fkeep
     integer, intent(in) :: nrhs
     integer, intent(in) :: ldx
     real(wp), dimension(ldx,nrhs), intent(inout) :: x
+    type(spldlt_akeep_type), intent(in) :: spldlt_akeep
 
-    print *, "solve"
+    real(wp), dimension(:,:), allocatable :: x2
+    type(ssids_akeep) :: akeep
+
+    integer :: r
+    integer :: n
+    
+    akeep = spldlt_akeep%akeep
+    n = akeep%n
+
+    allocate(x2(n, nrhs))
+    ! allocate(x2(n, nrhs), stat=inform%stat)
+    ! if(inform%stat.ne.0) goto 100 ! TODO error managment
+
+    ! print *, "solve, nrhs: ", nrhs, ", ldx: ", ldx
+    ! print *, "solve, x: ", x
+    ! print *, "solve, n: ", n
+
 
     ! permute and scale
     ! TODO
+    ! Just copy
+    do r = 1, nrhs
+       x2(1:n, r) = x(akeep%invp(1:n), r)
+    end do
     
     ! Perform solve
     ! Fwd solve
-    call spldlt_fkeep%numeric_tree%solve_fwd(nrhs, x, ldx)
+    call spldlt_fkeep%numeric_tree%solve_fwd(nrhs, x2, ldx)
 
     ! Bwd solve
     ! call spldlt_fkeep%numeric_tree%solve_bwd(nrhs, x, ldx)
 
     ! Diag and bwd solve
-    call spldlt_fkeep%numeric_tree%solve_diag_bwd(nrhs, x, ldx)
+    call spldlt_fkeep%numeric_tree%solve_diag_bwd(nrhs, x2, ldx)
 
     ! un-permute and un-scale
     ! TODO
+    ! Just copy
+    do r = 1, nrhs
+       x(akeep%invp(1:n), r) = x2(1:n, r)
+    end do
+
+   100 continue
+    ! TODO error managment
+   ! inform%flag = SSIDS_ERROR_ALLOCATION
+   return
     
   end subroutine solve
 
@@ -148,9 +179,14 @@ contains
 
     integer(c_int) :: flag ! return value
 
+    ! print *, "solve fwd, x: ", x(1:ldx, 1)
+
     flag = spldlt_tree_solve_fwd_c(numeric_tree%ptr_c, nrhs, x, ldx)
     ! TODO error managment
     ! if(flag.ne.SSIDS_SUCCESS) inform%flag = flag
+
+    ! print *, "solve fwd, x: ", x(1:ldx)
+
   end subroutine solve_fwd
 
   ! Bwd solve on numeric tree

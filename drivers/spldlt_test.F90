@@ -61,7 +61,7 @@ program spldlt_test
 
    integer :: cuda_error ! DEBUG not useful for now 
    
-   call proc_args(nb, nrhs, pos_def)
+   call proc_args(ssids_opt, nrhs, pos_def)
 
    pos_def = .true. ! DEBUG assume matrix is posdef
 
@@ -181,13 +181,13 @@ program spldlt_test
    ! Solve SpLDLT
    call system_clock(start_t, rate_t)
    soln = rhs ! init solution with RHS
-   call spldlt_fkeep%solve(nrhs, soln, n)
+   call spldlt_fkeep%solve(nrhs, soln, n, spldlt_akeep)
    call system_clock(stop_t)
    write(*, "(a)") "ok"
    print *, "Solve took ", (stop_t - start_t)/real(rate_t)
 
    ! print *, "RHS: ", rhs
-   ! print *, "soln: ", soln
+   print *, "soln: ", soln
 
    print *, "number bad cmp = ", count(abs(soln(1:n,1)-1.0).ge.1e-6)
    print *, "fwd error || ||_inf = ", maxval(abs(soln(1:n,1)-1.0))
@@ -200,9 +200,11 @@ program spldlt_test
  contains
 
    ! Get argument from command line
-   subroutine proc_args(nb, nrhs, pos_def)
-     
-     integer, intent(inout) :: nb
+   subroutine proc_args(options, nrhs, pos_def)
+     use spral_ssids
+     implicit none
+
+     type(ssids_options), intent(inout) :: options
      integer, intent(inout) :: nrhs
      logical, intent(inout) :: pos_def
 
@@ -220,11 +222,6 @@ program spldlt_test
         call get_command_argument(argnum, argval)
         argnum = argnum + 1
         select case(argval)
-        case("--nb")
-           call get_command_argument(argnum, argval)
-           argnum = argnum + 1
-           read( argval, * ) nb
-           print *, 'CPU block size = ', nb
         case("--nrhs")
            call get_command_argument(argnum, argval)
            argnum = argnum + 1
@@ -233,6 +230,16 @@ program spldlt_test
         case("--posdef")
            pos_def = .true.
            print *, 'Matrix assumed positive definite'
+        case("--nemin")
+           call get_command_argument(argnum, argval)
+           argnum = argnum + 1
+           read( argval, * ) options%nemin
+           print *, 'Supernode amalgamation nemin = ', options%nemin
+        case("--nb")
+           call get_command_argument(argnum, argval)
+           argnum = argnum + 1
+           read( argval, * ) options%cpu_task_block_size
+           print *, 'CPU block size = ', options%cpu_task_block_size
         case default
            print *, "Unrecognised command line argument: ", argval
            stop

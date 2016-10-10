@@ -45,7 +45,7 @@ namespace spldlt {
 
       /* Add A */
       // add_a_block<T, NumericNode<T,PoolAlloc>>(0, snode.num_a, node, aval, NULL);  
-      add_a_block(0, snode.num_a, node, aval, scaling);  
+      add_a_block(0, snode.num_a, node, aval, scaling);      
    }
    
 } /* end of namespace spldlt */
