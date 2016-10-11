@@ -46,8 +46,8 @@ contains
     spldlt_akeep%akeep => akeep 
     nnodes = akeep%nnodes
 
-    print *, "spldlt_analyse, nnodes: ", nnodes
-    ! print *, "sparent: ", akeep%sparent(1:nnodes)
+    ! print *, "[spldlt_analyse] nnodes: ", nnodes
+    ! print *, "sptr: ", akeep%sptr(1:nnodes+1)
 
     ! call C++ analyse routine
     call cpu_copy_options_in(options, coptions)

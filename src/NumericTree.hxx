@@ -102,26 +102,31 @@ namespace spldlt {
                SymbolicSNode const& asnode = symb_[parent]; // parent symbolic node 
                int sa = asnode.sa;
                int en = asnode.en;
-               printf("[NumericTree] node: %d, parent: %d, sa: %d, en: %d\n", ni, asnode.idx, sa, en);
+               // printf("[NumericTree] node: %d, parent: %d, sa: %d, en: %d\n", ni, asnode.idx, sa, en);
 
-               printf("cptr: %d, rlist[cptr]: %d, cptr2: %d, rlist[cptr2]: %d\n", 
-                      cptr, snode.rlist[cptr], cptr2, snode.rlist[cptr2]);
+               // printf("cptr: %d, rlist[cptr]: %d, cptr2: %d, rlist[cptr2]: %d\n", 
+               //        cptr, snode.rlist[cptr], cptr2, snode.rlist[cptr2]);
                
-               // find cptr
-               // for (cptr = 0; cptr < m; ++cptr)
-               //    printf("cptr: %d\n", cptr);
-
-               for (cptr = cptr; cptr < m; ++cptr) 
+               // for (int i = 0; i < m; i++) 
+               //    printf(" %d ", snode.rlist[i]);
+               // printf("\n");
+               
+               while (cptr < m) {
                   if (snode.rlist[cptr] >= sa) break;
-               if (cptr > m) break;
+                  cptr++;
+               }
+               if (cptr >= m) break;
                
                // find cptr2
-               for (cptr2 = cptr; cptr2 < m; ++cptr2)
-                  if (snode.rlist[cptr2] >= en) break;
-               // cptr2--;
-               
-               printf("cptr: %d, rlist[cptr]: %d, cptr2: %d, rlist[cptr2]: %d\n", 
-                      cptr, snode.rlist[cptr], cptr2, snode.rlist[cptr2]);
+               cptr2 = cptr;
+               while (cptr2 < m) {
+                  if (snode.rlist[cptr2] > en) break;
+                  cptr2++;
+               }
+               cptr2--;
+
+               // printf("cptr: %d, rlist[cptr]: %d, sa: %d, cptr2: %d, rlist[cptr2]: %d, en: %d\n", 
+               //        cptr, snode.rlist[cptr], sa, cptr2, snode.rlist[cptr2], en);
 
                T *a_lcol = nodes_[asnode.idx].lcol;
                int a_ldl = align_lda<T>(asnode.nrow);
@@ -129,17 +134,17 @@ namespace spldlt {
                int acol = 0; // column index in ancestor
                int arow = 0; // row index in ancestor
                
-               for (int j = cptr; j <= cptr2; ++j) {
+               for (int j = cptr; j <= cptr2; j++) {
 
                   // find acol: local col index in ancestor
-                  for (; sa+acol != snode.rlist[j]; ++acol);
+                  for (; sa+acol != snode.rlist[j]; acol++);
 
                   arow = 0;
 
-                  for ( int i = j; i < m; ++i) {
+                  for ( int i = j; i < m; i++) {
                      
                      // find arow: local row index in ancestor
-                     for (; asnode.rlist[arow] != snode.rlist[i]; ++arow);
+                     for (; asnode.rlist[arow] != snode.rlist[i]; arow++);
 
                      double v = 0.0;
 

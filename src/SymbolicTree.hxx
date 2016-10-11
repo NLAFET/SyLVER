@@ -17,6 +17,9 @@ namespace spldlt {
       SymbolicTree(int n, int nnodes, int const* sptr, int const* sparent, long const* rptr, int const* rlist, int const* nptr, int const* nlist) 
          : n(n), nnodes_(nnodes), nodes_(nnodes_+1)
       {
+
+         for(int ni=0; ni<nnodes_; ++ni) 
+            nodes_[ni].least_desc = ni;
          
          // printf("[SymbolicTree] create symbolic atree, nnodes: %d\n", nnodes_);
          maxfront_ = 0;
@@ -40,8 +43,13 @@ namespace spldlt {
             // SymbolicSNode info
             nodes_[ni].sa = sptr[ni];
             nodes_[ni].en = sptr[ni+1]-1;
+            
+            // Setup least_desc for easily traverse subtrees
+            nodes_[nodes_[ni].parent].least_desc = std::min(
+                  nodes_[nodes_[ni].parent].least_desc,
+                  nodes_[ni].least_desc);
          }
-
+         
          /* Count size of factors */
          nfactor_ = 0;
          for(int ni=0; ni<nnodes_; ++ni)
