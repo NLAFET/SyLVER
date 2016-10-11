@@ -106,8 +106,9 @@ contains
   end subroutine spldlt_factorize
 
   ! Solve phase
-  subroutine solve(spldlt_fkeep, nrhs, x, ldx, spldlt_akeep)
+  subroutine solve(spldlt_fkeep, nrhs, x, ldx, spldlt_akeep, inform)
     use spral_ssids_datatypes
+    use spral_ssids_inform, only : ssids_inform
     use spldlt_analyse_mod
     implicit none
 
@@ -116,6 +117,7 @@ contains
     integer, intent(in) :: ldx
     real(wp), dimension(ldx,nrhs), intent(inout) :: x
     type(spldlt_akeep_type), intent(in) :: spldlt_akeep
+    type(ssids_inform), intent(inout) :: inform
 
     real(wp), dimension(:,:), allocatable :: x2
     type(ssids_akeep) :: akeep
@@ -126,14 +128,12 @@ contains
     akeep = spldlt_akeep%akeep
     n = akeep%n
 
-    allocate(x2(n, nrhs))
-    ! allocate(x2(n, nrhs), stat=inform%stat)
-    ! if(inform%stat.ne.0) goto 100 ! TODO error managment
+    allocate(x2(n, nrhs), stat=inform%stat)
+    if(inform%stat.ne.0) goto 100
 
     ! print *, "solve, nrhs: ", nrhs, ", ldx: ", ldx
     ! print *, "solve, x: ", x
     ! print *, "solve, n: ", n
-
 
     ! permute and scale
     ! TODO
@@ -160,10 +160,8 @@ contains
     end do
 
    100 continue
-    ! TODO error managment
-   ! inform%flag = SSIDS_ERROR_ALLOCATION
-   return
-    
+   inform%flag = SSIDS_ERROR_ALLOCATION
+   return    
   end subroutine solve
 
   ! Fwd solve on numeric tree

@@ -19,7 +19,7 @@ namespace spldlt {
          T const* aval
          ) {
 
-      printf("[kernels] init node\n");
+      // printf("[kernels] init node\n");
       bool posdef = true;
       T *scaling = NULL;
 

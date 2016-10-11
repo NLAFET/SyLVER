@@ -5,6 +5,7 @@
 #include "ssids/cpu/ThreadStats.hxx"
 #include "ssids/cpu/kernels/cholesky.hxx"
 
+#include "SymbolicSNode.hxx"
 #include "SymbolicTree.hxx"
 #include "kernels/assemble.hxx"
 #include "kernels/common.hxx"
@@ -30,8 +31,7 @@ namespace spldlt {
            factor_alloc_(symbolic_tree.get_factor_mem_est(1.0)),
            pool_alloc_(symbolic_tree.get_pool_size<T>())
       {
-         // printf("Numeric tree\n");
-         printf("[NumericTree] block size: %d\n",  options.cpu_task_block_size);
+         // printf("[NumericTree] block size: %d\n",  options.cpu_task_block_size);
          /* Associate symbolic nodes to numeric ones; copy tree structure */
          nodes_.reserve(symbolic_tree.nnodes_+1);
          for(int ni=0; ni<symb_.nnodes_+1; ++ni) {
@@ -41,27 +41,38 @@ namespace spldlt {
             auto* nc = symbolic_tree[ni].next_child;
             nodes_[ni].next_child = nc ? &nodes_[nc->idx] :  nullptr;
          }
-
+         
          /* Allocate workspace */
          Workspace *work = new Workspace(PAGE_SIZE);
          
          // printf("[NumericTree] nnodes: %d\n", symb_.nnodes_);
-         
-         /* Loop over singleton nodes in order */
-         for(int ni=0; ni<symb_.nnodes_; ++ni) {
+
+         // Initialize nodes because right-looking update
+         for(int ni = 0; ni < symb_.nnodes_; ++ni) {
+
+            SymbolicSNode const& snode = symb_[ni];
 
             init_node(symb_[ni], nodes_[ni], factor_alloc_, pool_alloc_, work, aval);
+         }
+         
+         /* Loop over singleton nodes in order */
+         for(int ni = 0; ni < symb_.nnodes_; ++ni) {
+
+            SymbolicSNode const& snode = symb_[ni];
+            
+            // printf("[NumericTree] NumericTree, ni: %d\n", ni);
+
+            // init_node(symb_[ni], nodes_[ni], factor_alloc_, pool_alloc_, work, aval);
 
             /* Extract useful information about node */
-            int m = symb_[ni].nrow;
-            int n = symb_[ni].ncol;
+            int m = snode.nrow;
+            int n = snode.ncol;
             int ldl = align_lda<T>(m);
             T *lcol = nodes_[ni].lcol;
             T *contrib = nodes_[ni].contrib;
             
             // printf("[NumericTree] NumericTree, ldl: %d\n", ldl);
-
-            print_mat(m, n, lcol, ldl);
+            // print_mat(m, n, lcol, ldl);
             
             // DEBUG
             // T maxelt = 0.0;
@@ -78,7 +89,75 @@ namespace spldlt {
             // int flag = lapack_potrf(FILL_MODE_LWR, n, lcol, ldl);            
             // printf("[NumericTree] cholesky_factor Flag: %d\n", flag);
 
-            print_mat(m, n, lcol, ldl);
+            // print_mat(m, n, lcol, ldl);
+            
+            int* map = nullptr;
+            int cptr = n; // point to first row below diag in node
+            int cptr2 = 0;
+
+            // loop over the ancestor nodes
+            int parent = snode.parent;
+            while (parent < symb_.nnodes_) {
+               // NumericNode<T,PoolAllocator> &anode = nodes_[parent];
+               SymbolicSNode const& asnode = symb_[parent]; // parent symbolic node 
+               int sa = asnode.sa;
+               int en = asnode.en;
+               printf("[NumericTree] node: %d, parent: %d, sa: %d, en: %d\n", ni, asnode.idx, sa, en);
+
+               printf("cptr: %d, rlist[cptr]: %d, cptr2: %d, rlist[cptr2]: %d\n", 
+                      cptr, snode.rlist[cptr], cptr2, snode.rlist[cptr2]);
+               
+               // find cptr
+               // for (cptr = 0; cptr < m; ++cptr)
+               //    printf("cptr: %d\n", cptr);
+
+               for (cptr = cptr; cptr < m; ++cptr) 
+                  if (snode.rlist[cptr] >= sa) break;
+               if (cptr > m) break;
+               
+               // find cptr2
+               for (cptr2 = cptr; cptr2 < m; ++cptr2)
+                  if (snode.rlist[cptr2] >= en) break;
+               // cptr2--;
+               
+               printf("cptr: %d, rlist[cptr]: %d, cptr2: %d, rlist[cptr2]: %d\n", 
+                      cptr, snode.rlist[cptr], cptr2, snode.rlist[cptr2]);
+
+               T *a_lcol = nodes_[asnode.idx].lcol;
+               int a_ldl = align_lda<T>(asnode.nrow);
+
+               int acol = 0; // column index in ancestor
+               int arow = 0; // row index in ancestor
+               
+               for (int j = cptr; j <= cptr2; ++j) {
+
+                  // find acol: local col index in ancestor
+                  for (; sa+acol != snode.rlist[j]; ++acol);
+
+                  arow = 0;
+
+                  for ( int i = j; i < m; ++i) {
+                     
+                     // find arow: local row index in ancestor
+                     for (; asnode.rlist[arow] != snode.rlist[i]; ++arow);
+
+                     double v = 0.0;
+
+                     for (int k = 0; k < n; ++k) {
+                        double a_jk = lcol[ k*ldl + j ];
+                        double a_ik = lcol[ k*ldl + i ];                        
+                        v += a_ik * a_jk; 
+                     }
+                     
+                     // printf("arow: %d, acol: %d\n", arow, acol);
+                     a_lcol[ acol*a_ldl + arow ] -= v;
+                  }
+               }
+
+               cptr = cptr2 + 1; // move cptr
+
+               parent = symb_[asnode.idx].parent; // move up the tree
+            }
             
          }
       }

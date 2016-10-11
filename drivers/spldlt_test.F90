@@ -69,6 +69,8 @@ program spldlt_test
    ssids_opt%print_level = 0 ! disable printing
    ssids_opt%use_gpu_solve = .false. ! disable GPU
 
+   print *, "[SpLDLT Test] nb: ", ssids_opt%cpu_task_block_size
+
    ! Read in a matrix
    write(*, "(a)") "Reading..."
    ! DEBUG ensure matrix is diag dominant
@@ -181,13 +183,13 @@ program spldlt_test
    ! Solve SpLDLT
    call system_clock(start_t, rate_t)
    soln = rhs ! init solution with RHS
-   call spldlt_fkeep%solve(nrhs, soln, n, spldlt_akeep)
+   call spldlt_fkeep%solve(nrhs, soln, n, spldlt_akeep, inform)
    call system_clock(stop_t)
    write(*, "(a)") "ok"
    print *, "Solve took ", (stop_t - start_t)/real(rate_t)
 
    ! print *, "RHS: ", rhs
-   print *, "soln: ", soln
+   ! print *, "soln: ", soln
 
    print *, "number bad cmp = ", count(abs(soln(1:n,1)-1.0).ge.1e-6)
    print *, "fwd error || ||_inf = ", maxval(abs(soln(1:n,1)-1.0))
