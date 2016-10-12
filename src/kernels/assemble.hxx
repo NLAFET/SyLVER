@@ -1,6 +1,6 @@
 #include "ssids/cpu/NumericNode.hxx"
 #include "ssids/cpu/SymbolicNode.hxx"
-#include "ssids/cpu/Workspace.hxx"
+// #include "ssids/cpu/Workspace.hxx"
 #include "ssids/cpu/kernels/assemble.hxx"
 
 using namespace spral::ssids::cpu;
@@ -15,7 +15,7 @@ namespace spldlt {
          NumericNode<T,PoolAlloc>& node,
          FactorAlloc& factor_alloc,
          PoolAlloc& pool_alloc,
-         Workspace *work,
+         //         Workspace *work,
          T const* aval
          ) {
 

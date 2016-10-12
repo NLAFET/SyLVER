@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ssids/cpu/cpu_iface.hxx"
+#include "ssids/cpu/Workspace.hxx"
 #include "ssids/cpu/factor.hxx"
 #include "ssids/cpu/BuddyAllocator.hxx"
 #include "ssids/cpu/NumericNode.hxx"
@@ -49,7 +50,10 @@ namespace spldlt {
          int nb = options.cpu_task_block_size;
 
          /* Allocate workspace */
-         Workspace *work = new Workspace(PAGE_SIZE);
+         // Workspace *work = new Workspace(PAGE_SIZE);
+         Workspace work(PAGE_SIZE);
+         Workspace colmap(PAGE_SIZE);
+         Workspace rowmap(PAGE_SIZE);
          
          // printf("[NumericTree] nnodes: %d\n", symb_.nnodes_);
 
@@ -58,7 +62,9 @@ namespace spldlt {
 
             SymbolicSNode const& snode = symb_[ni];
 
-            init_node(symb_[ni], nodes_[ni], factor_alloc_, pool_alloc_, work, aval);
+            init_node(symb_[ni], nodes_[ni], factor_alloc_, pool_alloc_, 
+                      // work,
+                      aval);
          }
          
          /* Loop over singleton nodes in order */
@@ -151,7 +157,9 @@ namespace spldlt {
                   
                   update_between_block(n, cptr, cptr2, cptr, m-1,
                                        snode, nodes_[ni],
-                                       asnode, nodes_[asnode.idx]);
+                                       asnode, nodes_[asnode.idx],
+                                       work,
+                                       rowmap, colmap);
 
                   cptr = cptr2 + 1; // move cptr
                }
