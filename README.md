@@ -8,9 +8,9 @@ developed with a runtime system.
 We use CMake tools for the compilation of this package. For example:  
 
 ```bash
-mkdir build
-cd build
-cmake ..
+mkdir build # create build directory
+cd build 
+cmake .. # configure compilation
 make
 ```
 
