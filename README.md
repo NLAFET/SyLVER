@@ -11,6 +11,6 @@ We use CMake tools for the compilation of this package. For example:
 mkdir build # create build directory
 cd build 
 cmake .. # configure compilation
-make
+make # run compilation 
 ```
 

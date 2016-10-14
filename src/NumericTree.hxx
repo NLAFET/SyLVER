@@ -58,15 +58,11 @@ namespace spldlt {
          // printf("[NumericTree] nnodes: %d\n", symb_.nnodes_);
 
          // Initialize nodes because right-looking update
-         for(int ni = 0; ni < symb_.nnodes_; ++ni) {
-
-            SymbolicSNode const& snode = symb_[ni];
-
+         for(int ni = 0; ni < symb_.nnodes_; ++ni)
             init_node(symb_[ni], nodes_[ni], factor_alloc_, pool_alloc_, 
                       // work,
                       aval);
-         }
-         
+
          /* Loop over singleton nodes in order */
          for(int ni = 0; ni < symb_.nnodes_; ++ni) {
 
@@ -77,118 +73,15 @@ namespace spldlt {
             int n = snode.ncol;
             int ldl = align_lda<T>(m);
             T *lcol = nodes_[ni].lcol;
-            T *contrib = nodes_[ni].contrib;
             int nc = (n-1)/nb +1; // number of block column
             
             // Factorize node
             factorize_node_posdef(snode, nodes_[ni], options);
-                        
-            Workspace map(symb_.n); // maxfront size
-            int *amap = map.get_ptr<int>(symb_.n); 
-            bool map_done = false;
-            int cptr = n; // point to first row below diag in node
-            int cptr2 = 0;
 
-            // loop over the ancestor nodes
-            int parent = snode.parent;
-            while (parent < symb_.nnodes_) {
-               // NumericNode<T,PoolAllocator> &anode = nodes_[parent];
-               SymbolicSNode const& asnode = symb_[parent]; // parent symbolic node 
-               int sa = asnode.sa;
-               int en = asnode.en;
-
-
-               T *a_lcol = nodes_[asnode.idx].lcol;
-               int a_ldl = align_lda<T>(asnode.nrow);
-
-               map_done = false;
-               // printf("[NumericTree] node: %d, parent: %d, sa: %d, en: %d\n", ni, asnode.idx, sa, en);
-
-               // printf("cptr: %d, rlist[cptr]: %d, cptr2: %d, rlist[cptr2]: %d\n", 
-               //        cptr, snode.rlist[cptr], cptr2, snode.rlist[cptr2]);
-               
-               // for (int i = 0; i < m; i++) 
-               //    printf(" %d ", snode.rlist[i]);
-               // printf("\n");
-               
-               while (cptr < m) {
-                  if (snode.rlist[cptr] >= sa) break;
-                  cptr++;
-               }
-               if (cptr >= m) break;
-
-               while(cptr < m) {
-                  if (snode.rlist[cptr] > en) break;
-                  
-                  // determine last column index of current block column 
-                  int cb = (snode.rlist[cptr] - sa) / nb;
-                  int jlast = std::min(sa + (cb+1)*nb, en);
-
-                  // printf("[NumericTree] cb: %d\n", cb);
-
-                  // find cptr2
-                  cptr2 = cptr;
-                  while (cptr2 < m) {
-                     if (snode.rlist[cptr2] > jlast) break;
-                     cptr2++;
-                  }
-                  cptr2--;
-
-                  // printf("cptr: %d, rlist[cptr]: %d, sa: %d, cptr2: %d, rlist[cptr2]: %d, en: %d\n", 
-                  //        cptr, snode.rlist[cptr], sa, cptr2, snode.rlist[cptr2], en);
-                  
-                  if (!map_done) {
-                     // int a_nb = nb;
-                     int r = 0; // row index
-                     int rr = 0; // block row index
-                     for (int row = 0; row < asnode.nrow; ++row) {
-                        rr = row / nb;
-                        r = asnode.rlist[row];
-                        amap[r] = rr;
-                     }
-                     map_done = true;
-                  }
-
-                  int ilast = cptr;
-                  int ii = amap[snode.rlist[cptr]]; // first block row in anode
-
-                  int i = 0;
-                  for (i = cptr; i < m; i++) {
-                     int k = amap[snode.rlist[i]];
-                     
-                     if (k != ii) {
-                        
-                        for (int kk = 0; kk < nc; ++kk) {
-                     
-                           int blkn = std::min(nb, n-(kk*nb));
-                     
-                           update_between_block(blkn, kk*nb, cptr, cptr2, ilast, i-1,
-                                                snode, nodes_[ni],
-                                                asnode, nodes_[asnode.idx],
-                                                work, rowmap, colmap);
-                        }
-
-
-                        ii = k;
-                        ilast = i;
-                     }
-                  }
-
-                  for (int kk = 0; kk < nc; ++kk) {
-                     
-                     int blkn = std::min(nb, n-(kk*nb));
-                     
-                     update_between_block(blkn, kk*nb, cptr, cptr2, ilast, i-1, // cptr, m-1,
-                                          snode, nodes_[ni],
-                                          asnode, nodes_[asnode.idx],
-                                          work, rowmap, colmap);
-                  }
-
-                  cptr = cptr2 + 1; // move cptr
-               }
-
-               parent = symb_[asnode.idx].parent; // move up the tree
-            }
+            // Apply factorization operation to ancestors
+            apply_node(snode, nodes_[ni],
+                       symb_.nnodes_, symb_, nodes_,
+                       nb, work, rowmap, colmap);
             
          }
       }
