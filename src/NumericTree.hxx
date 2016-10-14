@@ -72,34 +72,20 @@ namespace spldlt {
 
             SymbolicSNode const& snode = symb_[ni];
             
-            // printf("[NumericTree] NumericTree, ni: %d\n", ni);
-
-            // init_node(symb_[ni], nodes_[ni], factor_alloc_, pool_alloc_, work, aval);
-
             /* Extract useful information about node */
             int m = snode.nrow;
             int n = snode.ncol;
             int ldl = align_lda<T>(m);
             T *lcol = nodes_[ni].lcol;
             T *contrib = nodes_[ni].contrib;
+            int nc = (n-1)/nb +1; // number of block column
             
-            // printf("[NumericTree] NumericTree, ldl: %d\n", ldl);
-            // print_mat(m, n, lcol, ldl);
-            
-            // DEBUG
-            // T maxelt = 0.0;
-            // for (int i = 0; i < m*n; ++i) {
-            //    if (lcol[i] > maxelt) maxelt = lcol[i];
-            // }
-            // printf("[NumericTree] max lcol: %f\n", maxelt);
-            // printf("[NumericTree] m: %d, n: %d, ldl: %d\n",  m, n, ldl);
-
             // Factorize node
             factorize_node_posdef(snode, nodes_[ni], options);
-            
-            // print_mat(m, n, lcol, ldl);
-            
-            int* map = nullptr;
+                        
+            Workspace map(symb_.n); // maxfront size
+            int *amap = map.get_ptr<int>(symb_.n); 
+            bool map_done = false;
             int cptr = n; // point to first row below diag in node
             int cptr2 = 0;
 
@@ -115,9 +101,7 @@ namespace spldlt {
                T *a_lcol = nodes_[asnode.idx].lcol;
                int a_ldl = align_lda<T>(asnode.nrow);
 
-               int acol = 0; // column index in ancestor
-               int arow = 0; // row index in ancestor
-
+               map_done = false;
                // printf("[NumericTree] node: %d, parent: %d, sa: %d, en: %d\n", ni, asnode.idx, sa, en);
 
                // printf("cptr: %d, rlist[cptr]: %d, cptr2: %d, rlist[cptr2]: %d\n", 
@@ -153,13 +137,52 @@ namespace spldlt {
                   // printf("cptr: %d, rlist[cptr]: %d, sa: %d, cptr2: %d, rlist[cptr2]: %d, en: %d\n", 
                   //        cptr, snode.rlist[cptr], sa, cptr2, snode.rlist[cptr2], en);
                   
-                  acol = 0;
-                  
-                  update_between_block(n, cptr, cptr2, cptr, m-1,
-                                       snode, nodes_[ni],
-                                       asnode, nodes_[asnode.idx],
-                                       work,
-                                       rowmap, colmap);
+                  if (!map_done) {
+                     // int a_nb = nb;
+                     int r = 0; // row index
+                     int rr = 0; // block row index
+                     for (int row = 0; row < asnode.nrow; ++row) {
+                        rr = row / nb;
+                        r = asnode.rlist[row];
+                        amap[r] = rr;
+                     }
+                     map_done = true;
+                  }
+
+                  int ilast = cptr;
+                  int ii = amap[snode.rlist[cptr]]; // first block row in anode
+
+                  int i = 0;
+                  for (i = cptr; i < m; i++) {
+                     int k = amap[snode.rlist[i]];
+                     
+                     if (k != ii) {
+                        
+                        for (int kk = 0; kk < nc; ++kk) {
+                     
+                           int blkn = std::min(nb, n-(kk*nb));
+                     
+                           update_between_block(blkn, kk*nb, cptr, cptr2, ilast, i-1,
+                                                snode, nodes_[ni],
+                                                asnode, nodes_[asnode.idx],
+                                                work, rowmap, colmap);
+                        }
+
+
+                        ii = k;
+                        ilast = i;
+                     }
+                  }
+
+                  for (int kk = 0; kk < nc; ++kk) {
+                     
+                     int blkn = std::min(nb, n-(kk*nb));
+                     
+                     update_between_block(blkn, kk*nb, cptr, cptr2, ilast, i-1, // cptr, m-1,
+                                          snode, nodes_[ni],
+                                          asnode, nodes_[asnode.idx],
+                                          work, rowmap, colmap);
+                  }
 
                   cptr = cptr2 + 1; // move cptr
                }
