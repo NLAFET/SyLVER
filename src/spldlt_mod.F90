@@ -3,7 +3,7 @@ module spldlt_mod
 contains
 
   ! Initialize SpLDLT solver, initialize runtime system.
-  subroutine spldlt_init(ncpu, options)
+  subroutine spldlt_init(ncpu)
 #if defined(SPLLT_USE_STARPU)
     use iso_c_binding
     use starpu_f_mod
@@ -11,7 +11,6 @@ contains
     implicit none
     
     integer, intent(in) :: ncpu
-    type(ssids_options), intent(in) :: options    
 #if defined(SPLLT_USE_STARPU)
     integer(c_int) :: ret
 #endif

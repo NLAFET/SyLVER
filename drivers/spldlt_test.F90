@@ -5,6 +5,7 @@ program spldlt_test
    use spral_matrix_util, only : cscl_verify, SPRAL_MATRIX_REAL_SYM_INDEF
    use spldlt_analyse_mod
    use spldlt_factorize_mod
+   use spldlt_mod
    implicit none
 
    ! FIXME use the one defined in ssids for now
@@ -137,6 +138,9 @@ program spldlt_test
 
    ! print atree
    call spldlt_print_atree(akeep)
+
+   ! Initialize SpLDLT
+   call spldlt_init(ncpu)
 
    ! Factorize
    ! write(*, "(a)") "[SpLDLT Test] Factorize..."
