@@ -47,6 +47,21 @@ if (${RUNTIME} MATCHES "STF")
   # Use STF code
   add_definitions(-DSPLDLT_USE_STF)
 
+elseif(${RUNTIME} MATCHES "StarPU")
+
+  # Use StarPU code
+  add_definitions(-DSPLDLT_USE_STARPU)
+
+  # StarPU lib
+  set(STARPU_DIR $ENV{STARPUDIR} CACHE PATH "Location of StarPU Library")
+  include_directories(${STARPU_DIR}/include/starpu/1.3)
+  find_library(STARPU_LIBRARY starpu-1.3 PATHS ${STARPU_DIR}/lib)
+  
+  # HWLOC
+  set(HWLOC_DIR $ENV{HWLOCDIR} CACHE PATH "Location of HWLOC Library")
+  include_directories(${HWLOC_DIR}/include)  
+  find_library(HWLOC_LIBRARY hwloc PATHS ${HWLOC_DIR}/lib)
+
 endif()
 
 add_subdirectory(src)

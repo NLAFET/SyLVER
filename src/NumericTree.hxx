@@ -57,7 +57,7 @@ namespace spldlt {
          
          // printf("[NumericTree] nnodes: %d\n", symb_.nnodes_);
 
-         // Initialize nodes because right-looking update
+         /* Initialize nodes because right-looking update */
          for(int ni = 0; ni < symb_.nnodes_; ++ni)
             init_node(symb_[ni], nodes_[ni], factor_alloc_, pool_alloc_, 
                       // work,
@@ -66,20 +66,11 @@ namespace spldlt {
          /* Loop over singleton nodes in order */
          for(int ni = 0; ni < symb_.nnodes_; ++ni) {
 
-            SymbolicSNode const& snode = symb_[ni];
-            
-            /* Extract useful information about node */
-            int m = snode.nrow;
-            int n = snode.ncol;
-            int ldl = align_lda<T>(m);
-            T *lcol = nodes_[ni].lcol;
-            int nc = (n-1)/nb +1; // number of block column
-            
-            // Factorize node
-            factorize_node_posdef(snode, nodes_[ni], options);
+            /* Factorize node */
+            factorize_node_posdef(symb_[ni], nodes_[ni], options);
 
-            // Apply factorization operation to ancestors
-            apply_node(snode, nodes_[ni],
+            /* Apply factorization operation to ancestors */
+            apply_node(symb_[ni], nodes_[ni],
                        symb_.nnodes_, symb_, nodes_,
                        nb, work, rowmap, colmap);
             

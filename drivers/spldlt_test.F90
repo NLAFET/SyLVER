@@ -22,8 +22,10 @@ program spldlt_test
    integer, dimension(:), allocatable :: ptr, row, col
    real(wp), dimension(:), allocatable :: val
 
-   ! block-size
+   ! Block-size
    integer :: nb
+   ! Number of cpus
+   integer :: ncpu
 
    ! right-hand side and solution
    integer :: nrhs
@@ -61,7 +63,7 @@ program spldlt_test
 
    integer :: cuda_error ! DEBUG not useful for now 
    
-   call proc_args(ssids_opt, nrhs, pos_def)
+   call proc_args(ssids_opt, nrhs, pos_def, ncpu)
 
    pos_def = .true. ! DEBUG assume matrix is posdef
 
@@ -202,13 +204,14 @@ program spldlt_test
  contains
 
    ! Get argument from command line
-   subroutine proc_args(options, nrhs, pos_def)
+   subroutine proc_args(options, nrhs, pos_def, ncpu)
      use spral_ssids
      implicit none
 
      type(ssids_options), intent(inout) :: options
      integer, intent(inout) :: nrhs
      logical, intent(inout) :: pos_def
+     integer, intent(inout) :: ncpu
 
      integer :: argnum, narg
      character(len=200) :: argval
@@ -242,6 +245,11 @@ program spldlt_test
            argnum = argnum + 1
            read( argval, * ) options%cpu_task_block_size
            print *, 'CPU block size = ', options%cpu_task_block_size
+        case("--ncpu")
+           call get_command_argument(argnum, argval)
+           argnum = argnum + 1
+           read( argval, * ) ncpu
+           print *, 'CPU block size = ', ncpu
         case default
            print *, "Unrecognised command line argument: ", argval
            stop
