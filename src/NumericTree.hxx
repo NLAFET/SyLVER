@@ -14,7 +14,16 @@
 #include "kernels/common.hxx"
 #include "factorize.hxx"
 
+#if defined(SPLDLT_USE_STARPU)
+#include <starpu.h>
+#include "StarPU/kernels.hxx"
+#endif
+
 using namespace spral::ssids::cpu;
+
+#if defined(SPLDLT_USE_STARPU)
+using namespace spldlt::starpu;
+#endif
 
 namespace spldlt {
 
@@ -63,6 +72,16 @@ namespace spldlt {
                       // work,
                       aval);
 
+#if defined(SPLDLT_USE_STARPU)
+
+         for(int ni = 0; ni < symb_.nnodes_; ++ni) {
+
+            SymbolicSNode snode = symb_[ni];
+
+            /* Register blocks in StarPU */
+            register_node(snode, nodes_[ni], nb);
+         }
+#endif
          /* Loop over singleton nodes in order */
          for(int ni = 0; ni < symb_.nnodes_; ++ni) {
 

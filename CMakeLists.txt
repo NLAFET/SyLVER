@@ -42,6 +42,9 @@ file(
 # MESSAGE(STATUS "object files: " ${obj})
 # add_library(spral_ssids_tests STATIC IMPORTED ${obj})
 
+# Include source directory
+include_directories(${SpLDLT_SOURCE_DIR}/src)
+
 if (${RUNTIME} MATCHES "STF")
 
   # Use STF code
@@ -128,3 +131,12 @@ target_link_libraries(spldlt_test pthread)
 
 ## std C++
 target_link_libraries(spldlt_test stdc++)
+
+## runtime system
+### StarPU
+if(${RUNTIME} MATCHES "StarPU")
+  # StarPU
+  target_link_libraries(spldlt_test ${STARPU_LIBRARY})
+  # HWLOC
+  target_link_libraries(spldlt_test ${HWLOC_LIBRARY})
+endif()

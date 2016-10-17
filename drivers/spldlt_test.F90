@@ -141,6 +141,7 @@ program spldlt_test
 
    ! Initialize SpLDLT
    call spldlt_init(ncpu)
+   ! print *, "TETETET"
 
    ! Factorize
    ! write(*, "(a)") "[SpLDLT Test] Factorize..."
@@ -163,7 +164,7 @@ program spldlt_test
    ! print *, "Factor took ", (stop_t - start_t)/real(rate_t)
    ! smfact = (stop_t - start_t)/real(rate_t)
 
-   ! Factorize (SpLDLT)  
+   ! Factorize (SpLDLT)
    call system_clock(start_t, rate_t)
    call spldlt_factorize(val, spldlt_akeep, spldlt_fkeep, ssids_opt)
    call system_clock(stop_t)
@@ -185,6 +186,9 @@ program spldlt_test
    ! endif
    ! write(*, "(a)") "ok"
    ! print *, "Solve took ", (stop_t - start_t)/real(rate_t)
+
+   ! Shutdown SpLDLT
+   call spldlt_finalize()
 
    ! Solve SpLDLT
    call system_clock(start_t, rate_t)
