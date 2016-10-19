@@ -1,13 +1,13 @@
 #pragma once
 
 #include "ssids/cpu/cpu_iface.hxx"
-#include "ssids/cpu/Workspace.hxx"
 #include "ssids/cpu/factor.hxx"
 #include "ssids/cpu/BuddyAllocator.hxx"
 #include "ssids/cpu/NumericNode.hxx"
 #include "ssids/cpu/ThreadStats.hxx"
 #include "ssids/cpu/kernels/cholesky.hxx"
 
+#include "Workspace.hxx"
 #include "SymbolicSNode.hxx"
 #include "SymbolicTree.hxx"
 #include "kernels/assemble.hxx"
@@ -20,6 +20,7 @@
 #endif
 
 using namespace spral::ssids::cpu;
+using namespace spldlt;
 
 #if defined(SPLDLT_USE_STARPU)
 using namespace spldlt::starpu;
@@ -38,7 +39,9 @@ namespace spldlt {
       NumericTree(const NumericTree&) =delete;
       NumericTree& operator=(const NumericTree&) =delete;
 
-      NumericTree(SymbolicTree const& symbolic_tree, T const* aval, 
+      // FIXME: idealy symbolic_tree should be constant but we
+      // currently modify it in order to add the runtime system info
+      NumericTree(SymbolicTree& symbolic_tree, T const* aval, 
                   struct cpu_factor_options const& options)
          : symb_(symbolic_tree), 
            factor_alloc_(symbolic_tree.get_factor_mem_est(1.0)),
@@ -60,11 +63,32 @@ namespace spldlt {
 
          /* Allocate workspace */
          // Workspace *work = new Workspace(PAGE_SIZE);
-         Workspace work(PAGE_SIZE);
-         Workspace colmap(PAGE_SIZE);
-         Workspace rowmap(PAGE_SIZE);
+         spldlt::Workspace work(PAGE_SIZE);
+         spldlt::Workspace colmap(PAGE_SIZE);
+         spldlt::Workspace rowmap(PAGE_SIZE);
          
          // printf("[NumericTree] nnodes: %d\n", symb_.nnodes_);
+
+#if defined(SPLDLT_USE_STARPU)
+         // Initialize factorization with StarPU
+         // Init codelet
+         codelet_init();
+         // Init scratch memory data
+         // Init workspace
+         starpu_matrix_data_register(
+               &(work.hdl), -1, 0,
+               nb, nb, nb,
+               sizeof(T));
+         // Init colmap workspace (int array)
+         starpu_vector_data_register(
+               &(colmap.hdl), -1, 0, nb, 
+               sizeof(int));
+         // Init rowmap workspace (int array)
+         starpu_vector_data_register(
+               &(rowmap.hdl), -1, 0, nb, 
+               sizeof(int));
+
+#endif
 
          /* Initialize nodes because right-looking update */
          for(int ni = 0; ni < symb_.nnodes_; ++ni)
@@ -73,11 +97,11 @@ namespace spldlt {
                       aval);
 
 #if defined(SPLDLT_USE_STARPU)
-
          for(int ni = 0; ni < symb_.nnodes_; ++ni) {
+            // printf("[NumericTree] regiter node: %d\n", ni);
 
-            SymbolicSNode snode = symb_[ni];
-
+            SymbolicSNode &snode = symb_[ni];
+            
             /* Register blocks in StarPU */
             register_node(snode, nodes_[ni], nb);
          }
@@ -85,8 +109,16 @@ namespace spldlt {
          /* Loop over singleton nodes in order */
          for(int ni = 0; ni < symb_.nnodes_; ++ni) {
 
+#if defined(SPLDLT_USE_STARPU)
+         starpu_task_wait_for_all();
+#endif         
+
             /* Factorize node */
             factorize_node_posdef(symb_[ni], nodes_[ni], options);
+
+#if defined(SPLDLT_USE_STARPU)
+         starpu_task_wait_for_all();
+#endif         
 
             /* Apply factorization operation to ancestors */
             apply_node(symb_[ni], nodes_[ni],
@@ -236,7 +268,7 @@ namespace spldlt {
       }
 
    private:
-      SymbolicTree const& symb_;
+      SymbolicTree& symb_;
       FactorAllocator factor_alloc_;
       PoolAllocator pool_alloc_;
       std::vector<NumericNode<T,PoolAllocator>> nodes_;

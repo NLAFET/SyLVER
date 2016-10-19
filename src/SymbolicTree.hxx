@@ -66,9 +66,14 @@ namespace spldlt {
          return maxfront_*align_lda<double>(maxfront_);
       }
 
+      SymbolicSNode& operator[](int idx) {
+         return nodes_[idx];
+      }
+      
       SymbolicSNode const& operator[](int idx) const {
          return nodes_[idx];
       }
+
    public:
       int const n; //< Maximum row index
    private:

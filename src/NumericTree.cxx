@@ -14,11 +14,11 @@ namespace {
 
 extern "C"
 void *spldlt_create_numeric_tree_dbl(
-      void const* symbolic_tree_ptr, const double *const aval,
+      void *symbolic_tree_ptr, const double *const aval,
       struct cpu_factor_options const* options // Options in
       ) {
 
-   auto const& symbolic_tree = *static_cast<SymbolicTree const*>(symbolic_tree_ptr);
+   auto &symbolic_tree = *static_cast<SymbolicTree*>(symbolic_tree_ptr);
 
    auto* tree = new NumericTreeDbl(symbolic_tree, aval, *options);
 
