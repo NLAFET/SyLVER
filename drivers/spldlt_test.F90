@@ -72,7 +72,8 @@ program spldlt_test
    ssids_opt%print_level = 0 ! disable printing
    ssids_opt%use_gpu_solve = .false. ! disable GPU
 
-   print *, "[SpLDLT Test] nb: ", ssids_opt%cpu_task_block_size
+   print *, "[SpLDLT Test] ncpu: ", ncpu
+   print *, "[SpLDLT Test]   nb: ", ssids_opt%cpu_task_block_size
 
    ! Read in a matrix
    write(*, "(a)") "Reading..."
@@ -227,6 +228,7 @@ program spldlt_test
      ! default values
      nb = 2
      nrhs = 1
+     ncpu = 1
 
      ! Process args
      narg = command_argument_count()
@@ -257,7 +259,7 @@ program spldlt_test
            call get_command_argument(argnum, argval)
            argnum = argnum + 1
            read( argval, * ) ncpu
-           print *, 'CPU block size = ', ncpu
+           print *, 'Number of CPUs = ', ncpu
         case default
            print *, "Unrecognised command line argument: ", argval
            stop

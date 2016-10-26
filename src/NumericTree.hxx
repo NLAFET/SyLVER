@@ -72,7 +72,7 @@ namespace spldlt {
 #if defined(SPLDLT_USE_STARPU)
          // Initialize factorization with StarPU
          // Init codelet
-         codelet_init();
+         codelet_init<T,PoolAllocator>();
          // Init scratch memory data
          // Init workspace
          starpu_matrix_data_register(
@@ -91,41 +91,55 @@ namespace spldlt {
 #endif
 
          /* Initialize nodes because right-looking update */
-         for(int ni = 0; ni < symb_.nnodes_; ++ni)
-            init_node(symb_[ni], nodes_[ni], factor_alloc_, pool_alloc_, 
+         for(int ni = 0; ni < symb_.nnodes_; ++ni) {
+
+            SymbolicSNode &snode = symb_[ni];
+            
+            init_node(snode, nodes_[ni], factor_alloc_, pool_alloc_, 
                       // work,
                       aval);
 
 #if defined(SPLDLT_USE_STARPU)
-         for(int ni = 0; ni < symb_.nnodes_; ++ni) {
-            // printf("[NumericTree] regiter node: %d\n", ni);
-
-            SymbolicSNode &snode = symb_[ni];
-            
             /* Register blocks in StarPU */
+            // printf("[NumericTree] regiter node: %d\n", ni);
             register_node(snode, nodes_[ni], nb);
-         }
 #endif
+         }
+         
          /* Loop over singleton nodes in order */
          for(int ni = 0; ni < symb_.nnodes_; ++ni) {
 
 #if defined(SPLDLT_USE_STARPU)
          starpu_task_wait_for_all();
-#endif         
+#endif
 
             /* Factorize node */
             factorize_node_posdef(symb_[ni], nodes_[ni], options);
 
 #if defined(SPLDLT_USE_STARPU)
          starpu_task_wait_for_all();
-#endif         
+#endif
 
             /* Apply factorization operation to ancestors */
             apply_node(symb_[ni], nodes_[ni],
                        symb_.nnodes_, symb_, nodes_,
                        nb, work, rowmap, colmap);
-            
+
+#if defined(SPLDLT_USE_STARPU)
+         starpu_task_wait_for_all();
+#endif
+
          }
+
+#if defined(SPLDLT_USE_STARPU)
+         starpu_task_wait_for_all();
+#endif
+
+#if defined(SPLDLT_USE_STARPU)
+         starpu_data_unregister_submit(work.hdl);
+         starpu_data_unregister_submit(colmap.hdl);
+         starpu_data_unregister_submit(rowmap.hdl);
+#endif        
       }
 
       void solve_fwd(int nrhs, double* x, int ldx) const {

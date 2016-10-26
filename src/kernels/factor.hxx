@@ -53,18 +53,20 @@ namespace spldlt {
 
    template <typename T>
    void expand_buffer_block(
-         SymbolicSNode const& snode, // symbolic source node  
-         SymbolicSNode const& asnode,  // symbolic destination node
+         SymbolicSNode &snode, // symbolic source node  
+         SymbolicSNode &asnode,  // symbolic destination node
+         int ii, int jj, 
+         int blksz,
          T *a, int lda,  
          int cptr, int rptr,
          int m, int n, T const*buffer,
-         Workspace& rowmap, Workspace& colmap
+         int *rlst, int *clst
          ) {
 
       int sa = asnode.sa; // first column in destination node
 
-      int *rlst = rowmap.get_ptr<int>(m); // row mapping, src to dest block 
-      int *clst = colmap.get_ptr<int>(n); // col mapping, src to dest block
+      // int *rlst = rowmap.get_ptr<int>(m); // row mapping, src to dest block 
+      // int *clst = colmap.get_ptr<int>(n); // col mapping, src to dest block
 
       int acol = 0; // column index in ancestor
       int arow = 0; // row index in ancestor
@@ -73,14 +75,14 @@ namespace spldlt {
       acol = 0;
       for (int j = 0; j < n; ++j) {
          for (; sa+acol != snode.rlist[cptr+j]; acol++);
-         clst[j] = acol;
+         clst[j] = acol - (jj*blksz); // compute local column index wihtin block
       }
 
       // build rowmap
       arow = 0;
       for (int i = 0; i < m; ++i) {
          for (; asnode.rlist[arow] != snode.rlist[rptr+i]; arow++);
-         rlst[i] = arow;
+         rlst[i] = arow - (ii*blksz);
       }
 
       // scatter buffer into destination block
@@ -99,18 +101,20 @@ namespace spldlt {
 
    template <typename T, typename PoolAlloc>
    void update_between_block(
-         int n, // column width
-         int kk, // column index in source node 
+         int n, // destination block column width
+         int kk, // block column index in source node 
+         int ii, int jj, // block row and block column index of A_ij block in destination node
+         int blksz, // block size
          int cptr, int cptr2, // local row indexes of a_kj elements 
          // in source node
          int rptr, int rptr2, // local row indexes of a_ik elements 
          // in source node
-         SymbolicSNode const& snode, // symbolic source node  
+         SymbolicSNode &snode, // symbolic source node  
          NumericNode<T, PoolAlloc> &node, // numeric source node
-         SymbolicSNode const& asnode,  // symbolic destination node
-         T *a, int lda,  
-         Workspace& work, // workspace
-         Workspace& rowmap, Workspace& colmap // workpaces for col and row mapping
+         SymbolicSNode &asnode,  // symbolic destination node
+         T *a_ij, int lda, // block to be updated in destination node  
+         T *work, // workspace
+         int *rowmap, int *colmap // workpaces for col and row mapping
          ) {
       
       int sa = asnode.sa;
@@ -124,24 +128,26 @@ namespace spldlt {
 
       int mr = rptr2-rptr+1; // number of rows in Aik
       int mc = cptr2-cptr+1; // number of rows in Ajk
-      T *buffer = work.get_ptr<T>(mr*mc);
-
+      // T *buffer = work.get_ptr<T>(mr*mc);
+      printf("[update_between_block] mr: %d, mc: %d\n", mr, mc);
       // TODO: use syrk on diag blocks
       host_gemm(OP_N, OP_T, mr, mc, n, -1.0, 
-                &lcol[rptr + kk*ldl], ldl,
-                &lcol[cptr + kk*ldl], ldl,
+                &lcol[rptr + kk*blksz*ldl], ldl,
+                &lcol[cptr + kk*blksz*ldl], ldl,
                 0.0,
-                buffer, mr);
+                work, 
+                mr);
 
       // expand buffer into destination block
       expand_buffer_block(
             snode, // symbolic source node
             asnode,  // symbolic destination node
-            a, lda,// numeric destination node
+            // a, lda,// numeric destination node
+            ii, jj, blksz,
+            a_ij, lda, // numeric destination node
             cptr, rptr,
-            mr, mc, buffer,
-            rowmap, colmap);
+            mr, mc, 
+            work, rowmap, colmap);
    }
-
 
 } /* end of namespace spldlt */
