@@ -90,57 +90,57 @@ namespace spldlt {
                sizeof(int));
 #endif
 
+         factor(aval, work, rowmap, colmap, options);
+//          /* Initialize nodes because right-looking update */
+//          for(int ni = 0; ni < symb_.nnodes_; ++ni) {
 
-         /* Initialize nodes because right-looking update */
-         for(int ni = 0; ni < symb_.nnodes_; ++ni) {
-
-            SymbolicSNode &snode = symb_[ni];
+//             SymbolicSNode &snode = symb_[ni];
             
-            activate_node(snode, nodes_[ni], nb, factor_alloc_, pool_alloc_);
+//             activate_node(snode, nodes_[ni], nb, factor_alloc_, pool_alloc_);
 
-            //             alloc_node(snode, nodes_[ni], factor_alloc_, pool_alloc_);
+//             //             alloc_node(snode, nodes_[ni], factor_alloc_, pool_alloc_);
 
-            // #if defined(SPLDLT_USE_STARPU)
-            //             starpu_void_data_register(&(snode.hdl));
+//             // #if defined(SPLDLT_USE_STARPU)
+//             //             starpu_void_data_register(&(snode.hdl));
 
-            //             /* Register blocks in StarPU */
-            //             // printf("[NumericTree] regiter node: %d\n", ni);
-            //             register_node(snode, nodes_[ni], nb);
+//             //             /* Register blocks in StarPU */
+//             //             // printf("[NumericTree] regiter node: %d\n", ni);
+//             //             register_node(snode, nodes_[ni], nb);
 
-            //             // activate_node(snode, nodes_[ni], nb);
-            // #endif
+//             //             // activate_node(snode, nodes_[ni], nb);
+//             // #endif
             
-            init_node_task(snode, nodes_[ni], aval);
-         }
+//             init_node_task(snode, nodes_[ni], aval);
+//          }
 
-// #if defined(SPLDLT_USE_STARPU)
-//          starpu_task_wait_for_all();
-// #endif
+// // #if defined(SPLDLT_USE_STARPU)
+// //          starpu_task_wait_for_all();
+// // #endif
          
-         /* Loop over singleton nodes in order */
-         for(int ni = 0; ni < symb_.nnodes_; ++ni) {
+//          /* Loop over singleton nodes in order */
+//          for(int ni = 0; ni < symb_.nnodes_; ++ni) {
 
-// #if defined(SPLDLT_USE_STARPU)
-//          starpu_task_wait_for_all();
-// #endif
+// // #if defined(SPLDLT_USE_STARPU)
+// //          starpu_task_wait_for_all();
+// // #endif
 
-            /* Factorize node */
-            factorize_node_posdef(symb_[ni], nodes_[ni], options);
+//             /* Factorize node */
+//             factorize_node_posdef(symb_[ni], nodes_[ni], options);
 
-// #if defined(SPLDLT_USE_STARPU)
-//          starpu_task_wait_for_all();
-// #endif
+// // #if defined(SPLDLT_USE_STARPU)
+// //          starpu_task_wait_for_all();
+// // #endif
 
-            /* Apply factorization operation to ancestors */
-            apply_node(symb_[ni], nodes_[ni],
-                       symb_.nnodes_, symb_, nodes_,
-                       nb, work, rowmap, colmap);
+//             /* Apply factorization operation to ancestors */
+//             apply_node(symb_[ni], nodes_[ni],
+//                        symb_.nnodes_, symb_, nodes_,
+//                        nb, work, rowmap, colmap);
 
-// #if defined(SPLDLT_USE_STARPU)
-//          starpu_task_wait_for_all();
-// #endif
+// // #if defined(SPLDLT_USE_STARPU)
+// //          starpu_task_wait_for_all();
+// // #endif
 
-         }
+//          }
 
 #if defined(SPLDLT_USE_STARPU)
          starpu_data_unregister_submit(work.hdl);
@@ -293,6 +293,71 @@ namespace spldlt {
       }
 
    private:
+      
+      /* SN factorization. Asynchronous routine i.e. no barrier at the end. 
+       */
+      void factor(
+            T *aval,
+            Workspace &work,
+            Workspace &rowmap,
+            Workspace &colmap,
+            struct cpu_factor_options const& options) {
+
+         int blksz = options.cpu_task_block_size; 
+
+         /* Initialize nodes because right-looking update */
+         for(int ni = 0; ni < symb_.nnodes_; ++ni) {
+
+            SymbolicSNode &snode = symb_[ni];
+            
+            activate_node(snode, nodes_[ni], blksz, factor_alloc_, pool_alloc_);
+
+            //             alloc_node(snode, nodes_[ni], factor_alloc_, pool_alloc_);
+
+            // #if defined(SPLDLT_USE_STARPU)
+            //             starpu_void_data_register(&(snode.hdl));
+
+            //             /* Register blocks in StarPU */
+            //             // printf("[NumericTree] regiter node: %d\n", ni);
+            //             register_node(snode, nodes_[ni], nb);
+
+            //             // activate_node(snode, nodes_[ni], nb);
+            // #endif
+            
+            init_node_task(snode, nodes_[ni], aval);
+         }
+
+         // #if defined(SPLDLT_USE_STARPU)
+         //          starpu_task_wait_for_all();
+         // #endif
+         
+         /* Loop over singleton nodes in order */
+         for(int ni = 0; ni < symb_.nnodes_; ++ni) {
+
+            // #if defined(SPLDLT_USE_STARPU)
+            //          starpu_task_wait_for_all();
+            // #endif
+
+            /* Factorize node */
+            factorize_node_posdef(symb_[ni], nodes_[ni], options);
+
+            // #if defined(SPLDLT_USE_STARPU)
+            //          starpu_task_wait_for_all();
+            // #endif
+
+            /* Apply factorization operation to ancestors */
+            apply_node(symb_[ni], nodes_[ni],
+                       symb_.nnodes_, symb_, nodes_,
+                       blksz, work, rowmap, colmap);
+
+            // #if defined(SPLDLT_USE_STARPU)
+            //          starpu_task_wait_for_all();
+            // #endif
+
+         }
+
+      }
+
       SymbolicTree& symb_;
       FactorAllocator factor_alloc_;
       PoolAllocator pool_alloc_;
