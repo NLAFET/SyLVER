@@ -75,6 +75,7 @@ namespace spldlt {
          codelet_init<T,PoolAllocator>();
          // Init scratch memory data
          // Init workspace
+         // int ldw = align_lda<T>(nb);
          starpu_matrix_data_register(
                &(work.hdl), -1, 0,
                nb, nb, nb,
@@ -87,7 +88,11 @@ namespace spldlt {
          starpu_vector_data_register(
                &(rowmap.hdl), -1, 0, nb, 
                sizeof(int));
+#endif
 
+#if defined(SPLDLT_USE_STARPU)
+         for(int ni = 0; ni < symb_.nnodes_; ++ni)
+            starpu_void_data_register(&(symb_[ni].hdl));
 #endif
 
          /* Initialize nodes because right-looking update */
@@ -109,37 +114,37 @@ namespace spldlt {
          /* Loop over singleton nodes in order */
          for(int ni = 0; ni < symb_.nnodes_; ++ni) {
 
-#if defined(SPLDLT_USE_STARPU)
-         starpu_task_wait_for_all();
-#endif
+// #if defined(SPLDLT_USE_STARPU)
+//          starpu_task_wait_for_all();
+// #endif
 
             /* Factorize node */
             factorize_node_posdef(symb_[ni], nodes_[ni], options);
 
-#if defined(SPLDLT_USE_STARPU)
-         starpu_task_wait_for_all();
-#endif
+// #if defined(SPLDLT_USE_STARPU)
+//          starpu_task_wait_for_all();
+// #endif
 
             /* Apply factorization operation to ancestors */
             apply_node(symb_[ni], nodes_[ni],
                        symb_.nnodes_, symb_, nodes_,
                        nb, work, rowmap, colmap);
 
-#if defined(SPLDLT_USE_STARPU)
-         starpu_task_wait_for_all();
-#endif
+// #if defined(SPLDLT_USE_STARPU)
+//          starpu_task_wait_for_all();
+// #endif
 
          }
-
-#if defined(SPLDLT_USE_STARPU)
-         starpu_task_wait_for_all();
-#endif
 
 #if defined(SPLDLT_USE_STARPU)
          starpu_data_unregister_submit(work.hdl);
          starpu_data_unregister_submit(colmap.hdl);
          starpu_data_unregister_submit(rowmap.hdl);
 #endif        
+
+#if defined(SPLDLT_USE_STARPU)
+         starpu_task_wait_for_all();
+#endif
       }
 
       void solve_fwd(int nrhs, double* x, int ldx) const {

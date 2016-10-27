@@ -184,6 +184,10 @@ namespace spldlt { namespace starpu {
 
          /* Get workspace */
          T *buffer = (T *)STARPU_MATRIX_GET_PTR(buffers[0]);
+         // unsigned buf_m = STARPU_MATRIX_GET_NX(buffers[0]);
+         // unsigned buf_n = STARPU_MATRIX_GET_NY(buffers[0]);
+         // unsigned buf_ld = STARPU_MATRIX_GET_LD(buffers[0]);
+         // printf("[update_between_cpu_func] buf_m: %d, buf_n: %d, buf_ld: %d\n", buf_m, buf_n, buf_ld);
          /* Get rowmap workspace */
          int *rlst = (int *)STARPU_VECTOR_GET_PTR(buffers[1]);
          /* Get colmap workspace */
@@ -192,7 +196,7 @@ namespace spldlt { namespace starpu {
          T *a_ij = (T *)STARPU_MATRIX_GET_PTR(buffers[3]);
          unsigned lda = STARPU_MATRIX_GET_LD(buffers[3]);
          /* Get any A_ik block width */ 
-         unsigned n = STARPU_MATRIX_GET_NY(buffers[4]);
+         // unsigned n = STARPU_MATRIX_GET_NY(buffers[4]);
         
          int kk, ii, jj;
          int blksz;
@@ -217,11 +221,26 @@ namespace spldlt { namespace starpu {
          // printf("[update_between_cpu_func] n: %d\n", n);
          // printf("[update_between_cpu_func] kk: %d, ii: %d, jj: %d\n", kk, ii, jj);
          // printf("[update_between_cpu_func] snode: %p\n", snode);
-         printf("[update_between_cpu_func]  snode nrow: %d\n", snode->nrow);
-         printf("[update_between_cpu_func] asnode nrow: %d\n", asnode->nrow);
+         // printf("[update_between_cpu_func]  snode nrow: %d\n", snode->nrow);
+         // printf("[update_between_cpu_func] asnode nrow: %d\n", asnode->nrow);
+
+         // int mc = cptr2-cptr+1; // number of rows in Ajk
+         // int mr = rptr2-rptr+1; // number of rows in Aik
+         // printf("[update_between_cpu_func] mr: %d, mc: %d, n: %d, blksz: %d\n", mr, mc, n, blksz);
+         // rlst = new int[mr]; // Get ptr on rowmap array
+         // clst = new int[mc];
+         // buffer = new T[mr*mc];
+         // printf("[update_between_cpu_func] buffer: %p\n", buffer);
+         // for (int j = 0; j < blksz; j++)
+         //    for (int i = 0; i < blksz; i++)
+         //       buffer[j*blksz+i] = 0.0;
+
+         // Determine A_ik and A_kj column width 
+         int blkn = std::min(snode->ncol - kk*blksz, blksz);
+         // printf("[update_between_cpu_func] blkn: %d\n", blkn);
 
          update_between_block(
-               n, // blcok column width
+               blkn, // blcok column width
                kk, ii, jj, // block row and block column index of A_ij block in destination node
                blksz, // block size
                cptr, cptr2, // local row indexes of a_kj elements 
@@ -274,9 +293,14 @@ namespace spldlt { namespace starpu {
          nh = nh + 1;
          // A_ij
          // printf("[insert_update_between] a_ij handle ptr: %p\n", bc_ij_hdl);
-         descrs[nh].handle =  bc_ij_hdl; descrs[nh].mode = /* STARPU_RW; */ (starpu_data_access_mode) (STARPU_RW | STARPU_COMMUTE);
+         descrs[nh].handle =  bc_ij_hdl; descrs[nh].mode = /* STARPU_RW;*/  (starpu_data_access_mode) (STARPU_RW | STARPU_COMMUTE);
          nh = nh + 1;
+         // printf("[insert_update_between] nblk_ik: %d, nblk_jk: %d\n", nblk_ik, nblk_jk);
          // A_ik handles
+         // DEBUG
+         // printf("[insert_update_between] A_ik handle %d ptr: %p\n", 0, bc_ik_hdls[0]);
+         // descrs[nh].handle = bc_ik_hdls[0];  descrs[nh].mode = STARPU_R;
+         // nh = nh + 1;
          for(int i = 0; i < nblk_ik; i++) {
             // printf("[insert_update_between] a_ik handle %d, ptr: %p\n", i, bc_ik_hdls[i]);
             descrs[nh].handle = bc_ik_hdls[i];  descrs[nh].mode = STARPU_R;
@@ -289,6 +313,7 @@ namespace spldlt { namespace starpu {
             nh = nh + 1;
          }
          int ret;
+         // printf("[insert_between_update] snode ptr: %p, nrow: %d\n", snode, snode->nrow);
          // printf("[insert_between_update] snode ptr: %p, nrow: %d\n", snode, snode->nrow);
          // SymbolicSNode *ptr = &snode;
          ret = starpu_task_insert(&cl_update_between,
@@ -341,7 +366,7 @@ namespace spldlt { namespace starpu {
          cl_update_between.where = STARPU_CPU;
          cl_update_between.nbuffers = STARPU_VARIABLE_NBUFFERS;
          cl_update_between.name = "UPDATE_BETWEEN_BLK";
-         cl_update_between.cpu_funcs[0] = update_between_cpu_func<double, PoolAlloc>;
+         cl_update_between.cpu_funcs[0] = update_between_cpu_func<T, PoolAlloc>;
 
       }   
 }} /* namespaces spldlt::starpu  */

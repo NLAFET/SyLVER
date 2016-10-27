@@ -128,15 +128,28 @@ namespace spldlt {
 
       int mr = rptr2-rptr+1; // number of rows in Aik
       int mc = cptr2-cptr+1; // number of rows in Ajk
-      // T *buffer = work.get_ptr<T>(mr*mc);
-      printf("[update_between_block] mr: %d, mc: %d\n", mr, mc);
+      
       // TODO: use syrk on diag blocks
-      host_gemm(OP_N, OP_T, mr, mc, n, -1.0, 
-                &lcol[rptr + kk*blksz*ldl], ldl,
-                &lcol[cptr + kk*blksz*ldl], ldl,
-                0.0,
-                work, 
-                mr);
+      host_gemm(
+            OP_N, OP_T, mr, mc, n, -1.0, 
+            &lcol[rptr + kk*blksz*ldl], ldl,
+            &lcol[cptr + kk*blksz*ldl], ldl,
+            0.0,
+            work,
+            // buffer,
+            mr
+            // mc
+            // blksz
+            );
+
+      // if (mr > blksz) {
+      //    printf("[update_between_block] mr > blksz!!!, mr: %d, blksz: %d\n", mr, blksz);
+      // }
+
+      // if (mc > blksz) {
+      //    printf("[update_between_block] mc > blksz!!!, mc: %d, blksz: %d\n", mc, blksz);
+      //    printf("[update_between_block] mr > blksz!!!, cptr: %d, cptr2: %d\n", cptr, cptr2);
+      // }
 
       // expand buffer into destination block
       expand_buffer_block(
