@@ -4,12 +4,13 @@
 
 #include "SymbolicSNode.hxx"
 #include "kernels/factor.hxx"
+#include "kernels/assemble.hxx"
 
 #include <starpu.h>
 
 namespace spldlt { namespace starpu {
 
-      /* register handles in StarPU*/
+      /* Register handles in StarPU*/
 
       template <typename T, typename PoolAlloc>
       void register_node(
@@ -45,9 +46,51 @@ namespace spldlt { namespace starpu {
          }         
       }
 
-      /* register handles in StarPU*/
+      /* Unregister handles in StarPU*/
       // void unregister
       
+      /* init_node StarPU task*/
+      /* CPU task */
+      template <typename T, typename PoolAlloc>
+      void init_node_cpu_func(void *buffers[], void *cl_arg) {
+
+         SymbolicSNode *snode = nullptr;
+         NumericNode<T, PoolAlloc> *node = nullptr;
+         T *aval;
+
+         starpu_codelet_unpack_args(
+               cl_arg,
+               &snode,
+               &node,
+               &aval);
+
+         init_node(*snode, *node, aval);
+      }
+
+      /* init_node codelet */
+      struct starpu_codelet cl_init_node;      
+
+      template <typename T, typename PoolAlloc>
+      void insert_init_node(
+            SymbolicSNode *snode,
+            NumericNode<T, PoolAlloc> *node,
+            starpu_data_handle_t node_hdl,
+            T *aval) {
+                  
+         int ret;
+
+         ret = starpu_insert_task(
+               &cl_init_node,
+               STARPU_RW, node_hdl,
+               STARPU_VALUE, &snode, sizeof(SymbolicSNode*),
+               STARPU_VALUE, &node, sizeof(NumericNode<T, PoolAlloc>*),
+               STARPU_VALUE, &aval, sizeof(T*),
+               0);
+
+         STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
+
+      }
+
       /* factorize_block StarPU task */
 
       /* CPU task */
@@ -77,14 +120,25 @@ namespace spldlt { namespace starpu {
       struct starpu_codelet cl_factorize_block;      
 
       /* Insert factorization of diag block into StarPU*/
-      void insert_factorize_block(starpu_data_handle_t bc_hdl) {
+      void insert_factorize_block(
+            starpu_data_handle_t bc_hdl,
+            starpu_data_handle_t node_hdl) {
                   
          int ret;
-     
-         ret = starpu_insert_task(
-               &cl_factorize_block,
-               STARPU_RW, bc_hdl,
-               0);
+
+         if (node_hdl) {
+            ret = starpu_insert_task(
+                  &cl_factorize_block,
+                  STARPU_RW, bc_hdl,
+                  STARPU_R, node_hdl,
+                  0);
+         }
+         else {
+            ret = starpu_insert_task(
+                  &cl_factorize_block,
+                  STARPU_RW, bc_hdl,
+                  0);
+         }
 
          STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
       }
@@ -268,6 +322,7 @@ namespace spldlt { namespace starpu {
             starpu_data_handle_t *bc_jk_hdls, int nblk_jk, /* A_ik block handle */
             int kk,
             SymbolicSNode *asnode,
+            starpu_data_handle_t anode_hdl,
             starpu_data_handle_t bc_ij_hdl,
             int ii, int jj,
             starpu_data_handle_t work_hdl,
@@ -278,8 +333,9 @@ namespace spldlt { namespace starpu {
             int rptr, int rptr2) {
          
          struct starpu_data_descr *descrs = 
-            new starpu_data_descr[nblk_ik+nblk_jk+4];
+            new starpu_data_descr[nblk_ik+nblk_jk+5];
 
+         int ret;
          int nh = 0;
          
          // worksapce 
@@ -312,10 +368,11 @@ namespace spldlt { namespace starpu {
             descrs[nh].handle = bc_jk_hdls[i];  descrs[nh].mode = STARPU_R;
             nh = nh + 1;
          }
-         int ret;
-         // printf("[insert_between_update] snode ptr: %p, nrow: %d\n", snode, snode->nrow);
-         // printf("[insert_between_update] snode ptr: %p, nrow: %d\n", snode, snode->nrow);
-         // SymbolicSNode *ptr = &snode;
+         
+         // Make sure that destination node as been initialized
+         descrs[nh].handle =  anode_hdl; descrs[nh].mode = STARPU_R;
+         nh = nh + 1;         
+
          ret = starpu_task_insert(&cl_update_between,
                                   STARPU_DATA_MODE_ARRAY, descrs,   nh,
                                   STARPU_VALUE, &snode, sizeof(SymbolicSNode*),
@@ -339,7 +396,14 @@ namespace spldlt { namespace starpu {
          we do it via this function */
       template <typename T, typename PoolAlloc>
       void codelet_init() {
-         
+
+         // Initialize init_node StarPU codelet
+         starpu_codelet_init(&cl_init_node);
+         cl_init_node.where = STARPU_CPU;
+         cl_init_node.nbuffers = STARPU_VARIABLE_NBUFFERS;
+         cl_init_node.name = "INIT_NODE";
+         cl_init_node.cpu_funcs[0] = init_node_cpu_func<T, PoolAlloc>;
+
          // Initialize factorize_block StarPU codelet
          starpu_codelet_init(&cl_factorize_block);
          cl_factorize_block.where = STARPU_CPU;

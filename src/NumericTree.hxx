@@ -41,7 +41,7 @@ namespace spldlt {
 
       // FIXME: idealy symbolic_tree should be constant but we
       // currently modify it in order to add the runtime system info
-      NumericTree(SymbolicTree& symbolic_tree, T const* aval, 
+      NumericTree(SymbolicTree& symbolic_tree, T *aval, 
                   struct cpu_factor_options const& options)
          : symb_(symbolic_tree), 
            factor_alloc_(symbolic_tree.get_factor_mem_est(1.0)),
@@ -90,26 +90,32 @@ namespace spldlt {
                sizeof(int));
 #endif
 
-#if defined(SPLDLT_USE_STARPU)
-         for(int ni = 0; ni < symb_.nnodes_; ++ni)
-            starpu_void_data_register(&(symb_[ni].hdl));
-#endif
 
          /* Initialize nodes because right-looking update */
          for(int ni = 0; ni < symb_.nnodes_; ++ni) {
 
             SymbolicSNode &snode = symb_[ni];
             
-            init_node(snode, nodes_[ni], factor_alloc_, pool_alloc_, 
-                      // work,
-                      aval);
+            activate_node(snode, nodes_[ni], nb, factor_alloc_, pool_alloc_);
 
-#if defined(SPLDLT_USE_STARPU)
-            /* Register blocks in StarPU */
-            // printf("[NumericTree] regiter node: %d\n", ni);
-            register_node(snode, nodes_[ni], nb);
-#endif
+            //             alloc_node(snode, nodes_[ni], factor_alloc_, pool_alloc_);
+
+            // #if defined(SPLDLT_USE_STARPU)
+            //             starpu_void_data_register(&(snode.hdl));
+
+            //             /* Register blocks in StarPU */
+            //             // printf("[NumericTree] regiter node: %d\n", ni);
+            //             register_node(snode, nodes_[ni], nb);
+
+            //             // activate_node(snode, nodes_[ni], nb);
+            // #endif
+            
+            init_node_task(snode, nodes_[ni], aval);
          }
+
+// #if defined(SPLDLT_USE_STARPU)
+//          starpu_task_wait_for_all();
+// #endif
          
          /* Loop over singleton nodes in order */
          for(int ni = 0; ni < symb_.nnodes_; ++ni) {

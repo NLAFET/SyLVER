@@ -14,7 +14,7 @@ namespace {
 
 extern "C"
 void *spldlt_create_numeric_tree_dbl(
-      void *symbolic_tree_ptr, const double *const aval,
+      void *symbolic_tree_ptr, double *aval,
       struct cpu_factor_options const* options // Options in
       ) {
 
