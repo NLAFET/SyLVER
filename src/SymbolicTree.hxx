@@ -18,6 +18,9 @@ namespace spldlt {
          : n(n), nnodes_(nnodes), nodes_(nnodes_+1)
       {
 
+         // FIXME multifrontal mode: use template paramter?
+         // bool mf = true;
+
          for(int ni=0; ni<nnodes_; ++ni) 
             nodes_[ni].least_desc = ni;
          
@@ -48,6 +51,14 @@ namespace spldlt {
             nodes_[nodes_[ni].parent].least_desc = std::min(
                   nodes_[nodes_[ni].parent].least_desc,
                   nodes_[ni].least_desc);
+         }
+         // Useful in a multifrontal mode 
+         nodes_[nnodes_].first_child = nullptr; // List of roots
+         /* Build child linked lists */
+         for(int ni=0; ni<nnodes_; ++ni) {
+            SymbolicNode *parent = &nodes_[ std::min(nodes_[ni].parent, nnodes_) ];
+            nodes_[ni].next_child = parent->first_child;
+            parent->first_child = &nodes_[ni];
          }
          
          /* Count size of factors */
