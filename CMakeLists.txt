@@ -52,6 +52,10 @@ if (${RUNTIME} MATCHES "STF")
 
 elseif(${RUNTIME} MATCHES "StarPU")
 
+  # For some reason StarPU need OpenMP on scarf
+  # set(CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
+  # set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fopenmp")
+
   # Use StarPU code
   add_definitions(-DSPLDLT_USE_STARPU)
 

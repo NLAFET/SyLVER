@@ -11,20 +11,20 @@ module spldlt_analyse_mod
   end type spldlt_akeep_type
 
   interface spldlt_create_symbolic_tree_c
-     type(c_ptr) function spldlt_create_symbolic_tree(n, nnodes, sptr, sparent, rptr, rlist, &
-          nptr, nlist, options) &
+     type(c_ptr) function spldlt_create_symbolic_tree(n, nnodes, & 
+          sptr, sparent, rptr, rlist, nptr, nlist, options) &
           bind(C, name="spldlt_create_symbolic_tree")
        use, intrinsic :: iso_c_binding
        import :: cpu_factor_options
        implicit none
-       integer(C_INT), value :: n
+       integer(c_int), value :: n
        integer(c_int), value :: nnodes
        integer(c_int), dimension(*), intent(in) :: sptr
        integer(c_int), dimension(*), intent(in) :: sparent
        integer(c_long), dimension(*), intent(in) :: rptr
        integer(c_int), dimension(*), intent(in) :: rlist
-       integer(c_int), dimension(*), intent(in) :: nptr
-       integer(c_int), dimension(2, *), intent(in) :: nlist
+       integer(c_long), dimension(*), intent(in) :: nptr
+       integer(c_long), dimension(2, *), intent(in) :: nlist
        type(cpu_factor_options), intent(in) :: options
      end function spldlt_create_symbolic_tree
   end interface spldlt_create_symbolic_tree_c
@@ -51,9 +51,10 @@ contains
 
     ! call C++ analyse routine
     call cpu_copy_options_in(options, coptions)
-    spldlt_akeep%symbolic_tree_c = spldlt_create_symbolic_tree_c(akeep%n, nnodes, &
-         akeep%sptr, akeep%sparent, akeep%rptr, akeep%rlist, &
-         akeep%nptr, akeep%nlist, coptions)
+    spldlt_akeep%symbolic_tree_c = &
+         spldlt_create_symbolic_tree_c(akeep%n, nnodes, akeep%sptr, &
+         akeep%sparent, akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist, &
+         coptions)
 
   end subroutine spldlt_analyse
   

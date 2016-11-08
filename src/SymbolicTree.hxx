@@ -14,7 +14,7 @@ namespace spldlt {
 
    class SymbolicTree {
    public:
-      SymbolicTree(int n, int nnodes, int const* sptr, int const* sparent, long const* rptr, int const* rlist, int const* nptr, int const* nlist) 
+      SymbolicTree(int n, int nnodes, int const* sptr, int const* sparent, long const* rptr, int const* rlist, long const* nptr, long const* nlist) 
          : n(n), nnodes_(nnodes), nodes_(nnodes_+1)
       {
 

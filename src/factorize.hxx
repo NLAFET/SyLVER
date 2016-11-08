@@ -194,7 +194,7 @@ namespace spldlt {
       T *a = node.lcol;
       // T *contrib = nodes_[ni].contrib;
 
-      int blksz = options.cpu_task_block_size;
+      int blksz = options.cpu_block_size;
       int nr = (m-1) / blksz + 1; // number of block rows
       int nc = (n-1) / blksz + 1; // number of block columns
    
@@ -254,13 +254,13 @@ namespace spldlt {
       T *lcol = node.lcol;
       // T *contrib = nodes_[ni].contrib;
 
-      int blksz = options.cpu_task_block_size;
+      int blksz = options.cpu_block_size;
       int nr = (m-1) / blksz + 1; // number of block rows
       int nc = (n-1) / blksz + 1; // number of block columns
    
       // int flag;
       // cholesky_factor(
-      //       m, n, lcol, ldl, 0.0, NULL, 0, options.cpu_task_block_size, &flag
+      //       m, n, lcol, ldl, 0.0, NULL, 0, options.cpu_block_size, &flag
       //       );
       // int *info = new int(-1);
 

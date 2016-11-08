@@ -47,7 +47,7 @@ namespace spldlt {
            factor_alloc_(symbolic_tree.get_factor_mem_est(1.0)),
            pool_alloc_(symbolic_tree.get_pool_size<T>())
       {
-         // printf("[NumericTree] block size: %d\n",  options.cpu_task_block_size);
+         // printf("[NumericTree] block size: %d\n",  options.cpu_block_size);
          /* Associate symbolic nodes to numeric ones; copy tree structure */
          nodes_.reserve(symbolic_tree.nnodes_+1);
          for(int ni=0; ni<symb_.nnodes_+1; ++ni) {
@@ -59,7 +59,7 @@ namespace spldlt {
          }
 
          /* blocking size */
-         int nb = options.cpu_task_block_size;
+         int nb = options.cpu_block_size;
 
          /* Allocate workspace */
          // Workspace *work = new Workspace(PAGE_SIZE);
@@ -254,7 +254,7 @@ namespace spldlt {
             Workspace &colmap,
             struct cpu_factor_options const& options) {
 
-         int blksz = options.cpu_task_block_size; 
+         int blksz = options.cpu_block_size; 
 
          /* Initialize nodes because right-looking update */
          for(int ni = 0; ni < symb_.nnodes_; ++ni) {

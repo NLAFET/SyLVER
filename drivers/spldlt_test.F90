@@ -15,12 +15,12 @@ program spldlt_test
    logical :: pos_def ! if true, assume matrix is posdef
 
    ! matrix reader options
-   type(rb_reader_options) :: rb_options
+   type(rb_read_options) :: rb_options
    integer :: rb_flag
 
    ! Matrix description
    integer :: m, n
-   integer, dimension(:), allocatable :: ptr, row, col
+   integer, dimension(:), allocatable :: ptr, row
    real(wp), dimension(:), allocatable :: val
 
    ! Block-size
@@ -70,16 +70,16 @@ program spldlt_test
 
    ! ssids_opt%print_level = 1 ! enable printing
    ssids_opt%print_level = 0 ! disable printing
-   ssids_opt%use_gpu_solve = .false. ! disable GPU
+   ssids_opt%use_gpu = .false. ! disable GPU
 
    print *, "[SpLDLT Test] ncpu: ", ncpu
-   print *, "[SpLDLT Test]   nb: ", ssids_opt%cpu_task_block_size
+   print *, "[SpLDLT Test]   nb: ", ssids_opt%cpu_block_size
 
    ! Read in a matrix
    write(*, "(a)") "Reading..."
    ! DEBUG ensure matrix is diag dominant
    rb_options%values = 3 ! Force diagonal dominance
-   call rb_read("matrix.rb", m, n, ptr, row, col, val, rb_options, rb_flag)
+   call rb_read("matrix.rb", m, n, ptr, row, val, rb_options, rb_flag)
    if(rb_flag.ne.0) then
       print *, "Rutherford-Boeing read failed with error ", rb_flag
       stop
@@ -253,8 +253,8 @@ program spldlt_test
         case("--nb")
            call get_command_argument(argnum, argval)
            argnum = argnum + 1
-           read( argval, * ) options%cpu_task_block_size
-           print *, 'CPU block size = ', options%cpu_task_block_size
+           read( argval, * ) options%cpu_block_size
+           print *, 'CPU block size = ', options%cpu_block_size
         case("--ncpu")
            call get_command_argument(argnum, argval)
            argnum = argnum + 1
