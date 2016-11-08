@@ -16,10 +16,10 @@ make # run compilation
 
 # Runtime systems
 
-## STF
-
-By default the code is compiled in sequential mode but can also be
-specified by using the following option for the configuration:
+By default the code is compiled in sequential mode but the choice of
+the runtime system can be specified by setting the option
+`-DRUNTIME`. For example, the sequential code can be configured as
+following:
 
 ```bash
 cmake -DRUNTIME=STF <path-to-source>
@@ -28,8 +28,8 @@ cmake -DRUNTIME=STF <path-to-source>
 
 ## StarPU
 
-The parallel version of the code with the StarPU runtime system can be
-obtained by using the following option for the configuration:
+A parallel version of the code using the StarPU runtime system can be
+obtained as following:
 
 ```bash
 cmake -DRUNTIME=StarPU <path-to-source>
