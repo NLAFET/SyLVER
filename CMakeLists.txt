@@ -23,7 +23,7 @@ MESSAGE( STATUS "Runtime:         " ${RUNTIME} )
 
 # Decide wheter we want to compile the kernel test driver or not
 option(KERNEL_TEST "Kernel test" OFF)
-MESSAGE( STATUS "Kernel test:         " ${KERNEL_TEST})
+# MESSAGE( STATUS "Kernel test:         " ${KERNEL_TEST})
 
 ## spral
 set(SPRAL_DIR $ENV{SPRALDIR} CACHE PATH "Location of Spral Library")
