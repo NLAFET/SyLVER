@@ -35,6 +35,7 @@ namespace spldlt {
    }
 
    /*
+     A_ij <- A_ij - Aik A_jk^T
      m: number of row in A_ij block
      n: number of column in A_ij block
      k: number of column in A_ik and A_jk blocks
@@ -45,9 +46,32 @@ namespace spldlt {
                      T *a_ik, int ld_a_ik, 
                      T *a_kj, int ld_a_kj) {
       
-      // TODO: use syrk on diag blocks      
       host_gemm(OP_N, OP_T, m, n, k, -1.0, a_ik, ld_a_ik,
                 a_kj, ld_a_kj, 1.0, a_ij, ld_a_ij);
+
+   }
+   /*
+     Update block lying the diagonal
+     TODO: only A_ik or A_kj needed as it is the same block
+   */
+   template <typename T>
+   void update_diag_block(
+         int m, int n, T *a_ij, int ld_a_ij,
+         int k,
+         T *a_ik, int ld_a_ik, 
+         T *a_kj, int ld_a_kj) {
+      
+      host_syrk(FILL_MODE_LWR, OP_N, n, k, -1.0, 
+                a_ik, ld_a_ik,
+                1.0, 
+                a_ij, ld_a_ij);
+
+      if (m > n) {
+
+         host_gemm(OP_N, OP_T, m-n, n, k, -1.0,
+                   &a_ik[n], ld_a_ik,
+                   a_kj, ld_a_kj, 1.0, a_ij, ld_a_ij);
+      }
 
    }
 
@@ -129,18 +153,35 @@ namespace spldlt {
       int mr = rptr2-rptr+1; // number of rows in Aik
       int mc = cptr2-cptr+1; // number of rows in Ajk
       
-      // TODO: use syrk on diag blocks
-      host_gemm(
-            OP_N, OP_T, mr, mc, n, -1.0, 
-            &lcol[rptr + kk*blksz*ldl], ldl,
-            &lcol[cptr + kk*blksz*ldl], ldl,
-            0.0,
-            work,
-            // buffer,
-            mr
-            // mc
-            // blksz
-            );
+      // Block on the diagonal
+      if (ii == jj) {
+
+         host_syrk(FILL_MODE_LWR, OP_N, mc, n, -1.0, 
+                   &lcol[cptr + kk*blksz*ldl], ldl,
+                   0.0,
+                   work, mr);
+
+         if (mr > mc) {
+
+            host_gemm(
+                  OP_N, OP_T, mr-mc, mc, n, -1.0, 
+                  &lcol[rptr + mc + kk*blksz*ldl], ldl,
+                  &lcol[cptr + kk*blksz*ldl], ldl,
+                  0.0,
+                  &work[mc], mr);
+
+         }         
+      }
+      else {
+         // TODO: use syrk on diag blocks
+         host_gemm(
+               OP_N, OP_T, mr, mc, n, -1.0, 
+               &lcol[rptr + kk*blksz*ldl], ldl,
+               &lcol[cptr + kk*blksz*ldl], ldl,
+               0.0,
+               work,
+               mr);
+      }
 
       // if (mr > blksz) {
       //    printf("[update_between_block] mr > blksz!!!, mr: %d, blksz: %d\n", mr, blksz);

@@ -95,11 +95,11 @@ namespace spldlt {
 #else
 
       int blkm = std::min(blksz, m - kk*blksz); 
-      int blkm = std::min(blksz, n - kk*blksz);
+      int blkn = std::min(blksz, n - kk*blksz);
       int lda = align_lda<T>(m);
       T *a = node.lcol;
 
-      factorize_diag_block(blkm, blkn, a[kk*blksz*(lda+1)], lda);
+      factorize_diag_block(blkm, blkn, &a[kk*blksz*(lda+1)], lda);
 
 #endif
    }
@@ -155,10 +155,10 @@ namespace spldlt {
       int m = snode.nrow;
       int n = snode.ncol;
 
+#if defined(SPLDLT_USE_STARPU)
+
       int nr = (m-1) / blksz + 1; // number of block rows
       int nc = (n-1) / blksz + 1; // number of block columns
-
-#if defined(SPLDLT_USE_STARPU)
 
       insert_update_block(
             snode.handles[jj*nr + ii], // A_ij block handle 
@@ -178,6 +178,46 @@ namespace spldlt {
 
 #endif
    }
+
+   template <typename T>
+   void update_diag_block_task(
+         SymbolicSNode const& snode,
+         int kk, /* block column index of A_ik and A_jk blocks */
+         int ii, /* block row index of A_ik and A_ij blocks  */
+         int jj, /* block row index of A_jk and block column index of
+                    A_ij blocks */
+         T *a_ij, int lda_ij,
+         T *a_ik, int lda_ik,
+         T *a_jk, int lda_jk,
+         int blksz) {
+
+      int m = snode.nrow;
+      int n = snode.ncol;
+
+#if defined(SPLDLT_USE_STARPU)
+
+      int nr = (m-1) / blksz + 1; // number of block rows
+      int nc = (n-1) / blksz + 1; // number of block columns
+
+      insert_update_block(
+            snode.handles[jj*nr + ii], // A_ij block handle 
+            snode.handles[kk*nr + ii], // A_ik block handle
+            snode.handles[kk*nr + jj]  // A_jk block handle
+            );
+
+#else
+
+      int blkm = std::min(blksz, m - ii*blksz);
+      int blkn = std::min(blksz, n - jj*blksz);
+      int blkk = std::min(blksz, n - kk*blksz);
+
+      update_diag_block(blkm, blkn, a_ij, lda_ij,
+                        blkk,
+                        a_ik, lda_ik,
+                        a_jk, lda_jk);
+
+#endif      
+   };   
 
    // TODO: error managment
    template <typename T, typename PoolAlloc>
@@ -220,7 +260,19 @@ namespace spldlt {
          /* Schur Update Tasks: mostly internal */
          for(int k = j+1; k < nc; ++k) {
 
-            for(int i = k;  i < nr; ++i) {
+            update_diag_block_task(
+                  snode,
+                  j, /* block column index of A_ik and A_jk blocks */
+                  k, /* block row index of A_ik and A_ij blocks  */
+                  k, /* block row index of A_jk and block column index of
+                        A_ij blocks */
+                  &a[ (k*blksz*lda) + (k*blksz)], lda,
+                  &a[(j*blksz*lda) + (k*blksz)], lda,
+                  &a[(j*blksz*lda) + (k*blksz)], lda,
+                  blksz);
+
+
+            for(int i = k+1;  i < nr; ++i) {
                
                update_block_task(
                      snode,
@@ -571,10 +623,6 @@ namespace spldlt {
 
                      int blkn = std::min(nb, n-(kk*nb));
 
-// #if defined(SPLDLT_USE_STARPU)
-//                      starpu_task_wait_for_all();
-// #endif         
-
                      update_between_block_task(
                            snode, node,
                            cptr, cptr2, rptr, rptr2-1,
@@ -583,18 +631,6 @@ namespace spldlt {
                            ii, cb,
                            nb,
                            work, rowmap, colmap);
-
-// #if defined(SPLDLT_USE_STARPU)
-//                      starpu_task_wait_for_all();
-// #endif         
-                     
-                     // update_between_block(blkn, 
-                     //                      kk, ii, cb, 
-                     //                      nb, 
-                     //                      cptr, cptr2, rptr, rptr2-1 /* i-1 */,
-                     //                      snode, node,
-                     //                      asnode, &a_lcol[(cb*nb*a_ldl)+(ii*nb)], a_ldl,
-                     //                      buffer, rlst, clst);
                   }
 
 
@@ -611,10 +647,6 @@ namespace spldlt {
 
                int blkn = std::min(nb, n-(kk*nb));
 
-// #if defined(SPLDLT_USE_STARPU)
-//          starpu_task_wait_for_all();
-// #endif         
-
                update_between_block_task(
                      snode, node,
                      cptr, cptr2, rptr, rptr2-1,
@@ -623,18 +655,6 @@ namespace spldlt {
                      ii, cb,
                      nb,
                      work, rowmap, colmap);                     
-
-// #if defined(SPLDLT_USE_STARPU)
-//          starpu_task_wait_for_all();
-// #endif         
-
-               // update_between_block(blkn, 
-               //                      kk, ii, cb, 
-               //                      nb, 
-               //                      cptr, cptr2, rptr, rptr2-1 /* i-1 */,
-               //                      snode, node,
-               //                      asnode, &a_lcol[(cb*nb*a_ldl)+(ii*nb)], a_ldl,
-               //                      buffer, rlst, clst);
             }
             
             cptr = cptr2 + 1; // move cptr
