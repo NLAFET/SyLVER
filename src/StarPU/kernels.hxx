@@ -75,7 +75,7 @@ namespace spldlt { namespace starpu {
             SymbolicSNode *snode,
             NumericNode<T, PoolAlloc> *node,
             starpu_data_handle_t node_hdl,
-            T *aval) {
+            T *aval, int prio) {
                   
          int ret;
 
@@ -85,6 +85,7 @@ namespace spldlt { namespace starpu {
                STARPU_VALUE, &snode, sizeof(SymbolicSNode*),
                STARPU_VALUE, &node, sizeof(NumericNode<T, PoolAlloc>*),
                STARPU_VALUE, &aval, sizeof(T*),
+               STARPU_PRIORITY, prio,
                0);
 
          STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
@@ -122,7 +123,8 @@ namespace spldlt { namespace starpu {
       /* Insert factorization of diag block into StarPU*/
       void insert_factorize_block(
             starpu_data_handle_t bc_hdl,
-            starpu_data_handle_t node_hdl) {
+            starpu_data_handle_t node_hdl,
+            int prio) {
                   
          int ret;
 
@@ -131,12 +133,14 @@ namespace spldlt { namespace starpu {
                   &cl_factorize_block,
                   STARPU_RW, bc_hdl,
                   STARPU_R, node_hdl,
+                  STARPU_PRIORITY, prio,
                   0);
          }
          else {
             ret = starpu_insert_task(
                   &cl_factorize_block,
                   STARPU_RW, bc_hdl,
+                  STARPU_PRIORITY, prio,
                   0);
          }
 
@@ -168,7 +172,8 @@ namespace spldlt { namespace starpu {
       /* Insert solve of sub diag block into StarPU */
       void insert_solve_block(
             starpu_data_handle_t bc_kk_hdl, /* diag block handle */
-            starpu_data_handle_t bc_ik_hdl /* sub diag block handle */
+            starpu_data_handle_t bc_ik_hdl, /* sub diag block handle */
+            int prio
             ) {
 
          int ret;
@@ -177,6 +182,7 @@ namespace spldlt { namespace starpu {
                &cl_solve_block,
                STARPU_R, bc_kk_hdl,
                STARPU_RW, bc_ik_hdl,
+               STARPU_PRIORITY, prio,
                0);
 
          STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
@@ -214,8 +220,8 @@ namespace spldlt { namespace starpu {
       void insert_update_block(
             starpu_data_handle_t bc_ij_hdl, /* A_ij block handle */
             starpu_data_handle_t bc_ik_hdl, /* A_ik block handle */
-            starpu_data_handle_t bc_jk_hdl /* A_jk block handle */
-            ) {
+            starpu_data_handle_t bc_jk_hdl, /* A_jk block handle */
+            int prio) {
 
          int ret;
 
@@ -224,6 +230,54 @@ namespace spldlt { namespace starpu {
                STARPU_RW, bc_ij_hdl,
                STARPU_R, bc_ik_hdl,
                STARPU_R, bc_jk_hdl,
+               STARPU_PRIORITY, prio,
+               0);
+
+         STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");         
+      }
+
+      /* update_diag_block StarPU task */
+
+      void update_diag_block_cpu_func(void *buffers[], void *cl_arg) {
+
+         /* Get A_ij pointer */
+         double *blk_ij = (double *)STARPU_MATRIX_GET_PTR(buffers[0]);
+         unsigned m = STARPU_MATRIX_GET_NX(buffers[0]);
+         unsigned n = STARPU_MATRIX_GET_NY(buffers[0]);
+         unsigned ld_ij = STARPU_MATRIX_GET_LD(buffers[0]);
+                  
+         /* Get A_ik pointer */
+         double *blk_ik = (double *)STARPU_MATRIX_GET_PTR(buffers[1]);
+         unsigned k = STARPU_MATRIX_GET_NY(buffers[1]);
+         unsigned ld_ik = STARPU_MATRIX_GET_LD(buffers[1]); 
+
+         double *blk_jk = (double *)STARPU_MATRIX_GET_PTR(buffers[2]);
+         unsigned ld_jk = STARPU_MATRIX_GET_LD(buffers[2]); 
+        
+         update_diag_block(m, n, blk_ij, ld_ij,
+                           k,
+                           blk_ik, ld_ik, 
+                           blk_jk, ld_jk);
+
+      }
+
+      /* update diag block codelet */
+      struct starpu_codelet cl_update_diag_block;      
+
+      void insert_update_diag_block(
+            starpu_data_handle_t bc_ij_hdl, /* A_ij block handle */
+            starpu_data_handle_t bc_ik_hdl, /* A_ik block handle */
+            starpu_data_handle_t bc_jk_hdl, /* A_jk block handle */
+            int prio) {
+
+         int ret;
+
+         ret = starpu_insert_task(
+               &cl_update_diag_block,
+               STARPU_RW, bc_ij_hdl,
+               STARPU_R, bc_ik_hdl,
+               STARPU_R, bc_jk_hdl,
+               STARPU_PRIORITY, prio,
                0);
 
          STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");         
@@ -330,7 +384,8 @@ namespace spldlt { namespace starpu {
             starpu_data_handle_t col_list_hdl,
             int blksz,
             int cptr, int cptr2,
-            int rptr, int rptr2) {
+            int rptr, int rptr2,
+            int prio) {
          
          struct starpu_data_descr *descrs = 
             new starpu_data_descr[nblk_ik+nblk_jk+5];
@@ -386,10 +441,12 @@ namespace spldlt { namespace starpu {
                                   STARPU_VALUE, &cptr2, sizeof(int),
                                   STARPU_VALUE, &rptr, sizeof(int),
                                   STARPU_VALUE, &rptr2, sizeof(int),
+                                  STARPU_PRIORITY, prio,
                                   0);
 
          STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
 
+         delete[] descrs;
       }
 
       /* As it is not possible to statically intialize codelet in C++,
@@ -424,6 +481,13 @@ namespace spldlt { namespace starpu {
          cl_update_block.nbuffers = STARPU_VARIABLE_NBUFFERS;
          cl_update_block.name = "UPDATE_BLK";
          cl_update_block.cpu_funcs[0] = update_block_cpu_func;
+
+         // Initialize update_block StarPU codelet
+         starpu_codelet_init(&cl_update_diag_block);
+         cl_update_diag_block.where = STARPU_CPU;
+         cl_update_diag_block.nbuffers = STARPU_VARIABLE_NBUFFERS;
+         cl_update_diag_block.name = "UPDATE_BLK";
+         cl_update_diag_block.cpu_funcs[0] = update_diag_block_cpu_func;
 
          // Initialize update_between StarPU codelet
          starpu_codelet_init(&cl_update_between);

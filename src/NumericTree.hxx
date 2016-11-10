@@ -263,13 +263,21 @@ namespace spldlt {
             Workspace &colmap,
             struct cpu_factor_options const& options) {
 
+         /* Task priorities:
+            init: 4
+            facto: 3
+            solve: 2
+            udpate: 1
+            udpate_between: 0
+         */
+
          int blksz = options.cpu_block_size; 
 
          // profiling
          std::chrono::high_resolution_clock::time_point start, end;
          long tapply = 0, tinit = 0;
 
-         start = std::chrono::high_resolution_clock::now();
+         // start = std::chrono::high_resolution_clock::now();
 
          /* Initialize nodes because right-looking update */
          for(int ni = 0; ni < symb_.nnodes_; ++ni) {
@@ -290,11 +298,11 @@ namespace spldlt {
             //             // activate_node(snode, nodes_[ni], nb);
             // #endif
             
-            init_node_task(snode, nodes_[ni], aval);
+            init_node_task(snode, nodes_[ni], aval, 4);
          }
          
-         end = std::chrono::high_resolution_clock::now();
-         tinit = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count();
+         // end = std::chrono::high_resolution_clock::now();
+         // tinit = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count();
          
          // #if defined(SPLDLT_USE_STARPU)
          //          starpu_task_wait_for_all();
@@ -314,7 +322,7 @@ namespace spldlt {
             //          starpu_task_wait_for_all();
             // #endif
 
-            start = std::chrono::high_resolution_clock::now();
+            // start = std::chrono::high_resolution_clock::now();
  
             /* Apply factorization operation to ancestors */
             apply_node(symb_[ni], nodes_[ni],
@@ -329,13 +337,13 @@ namespace spldlt {
             //          starpu_task_wait_for_all();
             // #endif
             
-            end = std::chrono::high_resolution_clock::now();
-            tapply += std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count();
+            // end = std::chrono::high_resolution_clock::now();
+            // tapply += std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count();
 
          }
 
-         printf("[NumericTree] task apply submission time: %e\n", 1e-9*tapply);
-         printf("[NumericTree] task init submission time: %e\n", 1e-9*tinit);
+         // printf("[NumericTree] task apply submission time: %e\n", 1e-9*tapply);
+         // printf("[NumericTree] task init submission time: %e\n", 1e-9*tinit);
 
       }
 

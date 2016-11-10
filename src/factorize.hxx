@@ -45,8 +45,7 @@ namespace spldlt {
    void init_node_task(
          SymbolicSNode &snode,
          NumericNode<T, PoolAlloc> &node,
-         T *aval
-         ) {
+         T *aval, int prio) {
 
 #if defined(SPLDLT_USE_STARPU)
       
@@ -54,7 +53,7 @@ namespace spldlt {
       insert_init_node(
             &snode, &node,
             snode.hdl,
-            aval);
+            aval, prio);
 #else
 
       init_node(snode, node, aval);
@@ -71,7 +70,7 @@ namespace spldlt {
          SymbolicSNode const& snode,
          NumericNode<T, PoolAlloc> &node,
          int kk, // block  column (and row) index
-         int blksz) {
+         int blksz, int prio) {
 
       int m = snode.nrow;
       int n = snode.ncol;
@@ -90,7 +89,7 @@ namespace spldlt {
       starpu_data_handle_t node_hdl = NULL;
       if (kk == 0) node_hdl = snode.hdl; 
       // printf("[factorize_diag_block_task] handles size: %zu\n", snode.handles.size());
-      insert_factorize_block(snode.handles[kk*nr + kk], node_hdl);
+      insert_factorize_block(snode.handles[kk*nr + kk], node_hdl, prio);
 
 #else
 
@@ -113,7 +112,7 @@ namespace spldlt {
          int ii, /* block row index of subdiag block*/
          T *a, int lda, 
          T *a_ik, int lda_ik,         
-         int blksz) {
+         int blksz, int prio) {
       
       int m = snode.nrow;
       int n = snode.ncol;
@@ -125,8 +124,8 @@ namespace spldlt {
       
       insert_solve_block(
             snode.handles[kk*nr + kk], // diag block handle 
-            snode.handles[kk*nr + ii] // subdiag block handle
-            );
+            snode.handles[kk*nr + ii], // subdiag block handle
+            prio);
       
 #else
 
@@ -150,7 +149,7 @@ namespace spldlt {
          T *a_ij, int lda_ij,
          T *a_ik, int lda_ik,
          T *a_jk, int lda_jk,
-         int blksz) {
+         int blksz, int prio) {
 
       int m = snode.nrow;
       int n = snode.ncol;
@@ -163,8 +162,8 @@ namespace spldlt {
       insert_update_block(
             snode.handles[jj*nr + ii], // A_ij block handle 
             snode.handles[kk*nr + ii], // A_ik block handle
-            snode.handles[kk*nr + jj]  // A_jk block handle
-            );
+            snode.handles[kk*nr + jj],  // A_jk block handle
+            prio);
 #else
 
       int blkm = std::min(blksz, m - ii*blksz);
@@ -189,7 +188,7 @@ namespace spldlt {
          T *a_ij, int lda_ij,
          T *a_ik, int lda_ik,
          T *a_jk, int lda_jk,
-         int blksz) {
+         int blksz, int prio) {
 
       int m = snode.nrow;
       int n = snode.ncol;
@@ -202,8 +201,8 @@ namespace spldlt {
       insert_update_block(
             snode.handles[jj*nr + ii], // A_ij block handle 
             snode.handles[kk*nr + ii], // A_ik block handle
-            snode.handles[kk*nr + jj]  // A_jk block handle
-            );
+            snode.handles[kk*nr + jj],  // A_jk block handle
+            prio);
 
 #else
 
@@ -237,13 +236,21 @@ namespace spldlt {
       int blksz = options.cpu_block_size;
       int nr = (m-1) / blksz + 1; // number of block rows
       int nc = (n-1) / blksz + 1; // number of block columns
+
+      /* Task priorities:
+         init: 4
+         facto: 3
+         solve: 2
+         udpate: 1
+         udpate_between: 0
+      */
    
       for(int j = 0; j < nc; ++j) {
          
          /* Diagonal Block Factorization Task */
          int blkm = std::min(blksz, m - j*blksz);
          
-         factorize_diag_block_task(snode, node, j, blksz);
+         factorize_diag_block_task(snode, node, j, blksz, 3);
 
          /* Column Solve Tasks */
          for(int i = j+1; i < nr; ++i) {
@@ -253,7 +260,7 @@ namespace spldlt {
                   j, i,
                   &a[j*blksz*(lda+1)], lda,
                   &a[(j*blksz*lda) + (i*blksz)], lda,
-                  blksz);
+                  blksz, 2);
             
          }
 
@@ -269,7 +276,7 @@ namespace spldlt {
                   &a[ (k*blksz*lda) + (k*blksz)], lda,
                   &a[(j*blksz*lda) + (k*blksz)], lda,
                   &a[(j*blksz*lda) + (k*blksz)], lda,
-                  blksz);
+                  blksz, 1);
 
 
             for(int i = k+1;  i < nr; ++i) {
@@ -283,7 +290,7 @@ namespace spldlt {
                      &a[ (k*blksz*lda) + (i*blksz)], lda,
                      &a[(j*blksz*lda) + (i*blksz)], lda,
                      &a[(j*blksz*lda) + (k*blksz)], lda,
-                     blksz);
+                     blksz, 1);
             }
          }         
       }
@@ -414,7 +421,8 @@ namespace spldlt {
          int jj, /* block column index of A_ij block in ancestor node */
          int blksz, // blocking size
          Workspace &work,
-         Workspace &rowmap, Workspace& colmap) {
+         Workspace &rowmap, Workspace& colmap,
+         int prio) {
 
       /* Extract useful information about node */
       int m = snode.nrow;
@@ -468,7 +476,8 @@ namespace spldlt {
             work.hdl, rowmap.hdl, colmap.hdl,
             blksz,
             cptr, cptr2,
-            rptr, rptr2);
+            rptr, rptr2,
+            prio);
 
       // int blkn = std::min(blksz, n - kk*blksz);
       // T *a_lcol = anode.lcol;
@@ -530,7 +539,7 @@ namespace spldlt {
          Workspace &rowmap, Workspace& colmap
          ) {
 
-      return;
+      // return;
       // printf("node idx: %d\n", snode.idx);
       // return;
 
@@ -549,6 +558,8 @@ namespace spldlt {
       int cptr2 = 0; 
       
       int parent = snode.parent;
+
+      int prio = 0;
 
       while (parent < nnodes) {
          // printf("[apply_node] parent: %d\n", parent);
@@ -629,7 +640,8 @@ namespace spldlt {
                            asnode, nodes[asnode.idx],
                            ii, cb,
                            nb,
-                           work, rowmap, colmap);
+                           work, rowmap, colmap,
+                           prio);
                   }
 
 
@@ -653,7 +665,8 @@ namespace spldlt {
                      asnode, nodes[asnode.idx],
                      ii, cb,
                      nb,
-                     work, rowmap, colmap);                     
+                     work, rowmap, colmap,
+                     prio);                     
             }
             
             cptr = cptr2 + 1; // move cptr
