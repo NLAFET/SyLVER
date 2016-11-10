@@ -19,6 +19,9 @@
 #include "StarPU/kernels.hxx"
 #endif
 
+/* profiling */
+#include <chrono>
+
 using namespace spral::ssids::cpu;
 using namespace spldlt;
 
@@ -86,12 +89,18 @@ namespace spldlt {
                sizeof(int));
          // Init rowmap workspace (int array)
          starpu_vector_data_register(
-               &(rowmap.hdl), -1, 0, nb, 
+               &(rowmap.hdl), -1, 0, nb,
                sizeof(int));
 #endif
+
+         auto start = std::chrono::high_resolution_clock::now();
          
          // Perform the factorization of the numeric tree
          factor(aval, work, rowmap, colmap, options);
+
+         auto end = std::chrono::high_resolution_clock::now();
+         long ttotal = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count();
+         printf("[NumericTree] task submission time: %e\n", 1e-9*ttotal);
 
 #if defined(SPLDLT_USE_STARPU)
          starpu_data_unregister_submit(work.hdl);
@@ -256,6 +265,12 @@ namespace spldlt {
 
          int blksz = options.cpu_block_size; 
 
+         // profiling
+         std::chrono::high_resolution_clock::time_point start, end;
+         long tapply = 0, tinit = 0;
+
+         start = std::chrono::high_resolution_clock::now();
+
          /* Initialize nodes because right-looking update */
          for(int ni = 0; ni < symb_.nnodes_; ++ni) {
 
@@ -277,7 +292,10 @@ namespace spldlt {
             
             init_node_task(snode, nodes_[ni], aval);
          }
-
+         
+         end = std::chrono::high_resolution_clock::now();
+         tinit = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count();
+         
          // #if defined(SPLDLT_USE_STARPU)
          //          starpu_task_wait_for_all();
          // #endif
@@ -296,16 +314,28 @@ namespace spldlt {
             //          starpu_task_wait_for_all();
             // #endif
 
+            start = std::chrono::high_resolution_clock::now();
+ 
             /* Apply factorization operation to ancestors */
             apply_node(symb_[ni], nodes_[ni],
                        symb_.nnodes_, symb_, nodes_,
                        blksz, work, rowmap, colmap);
 
+            // apply_node();
+            // apply_node<T,PoolAllocator>(symb_[ni], nodes_[ni], symb_.nnodes_,
+            //                             symb_, nodes_);
+            
             // #if defined(SPLDLT_USE_STARPU)
             //          starpu_task_wait_for_all();
             // #endif
+            
+            end = std::chrono::high_resolution_clock::now();
+            tapply += std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count();
 
          }
+
+         printf("[NumericTree] task apply submission time: %e\n", 1e-9*tapply);
+         printf("[NumericTree] task init submission time: %e\n", 1e-9*tinit);
 
       }
 

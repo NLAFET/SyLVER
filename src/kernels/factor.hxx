@@ -173,14 +173,13 @@ namespace spldlt {
          }         
       }
       else {
-         // TODO: use syrk on diag blocks
+
          host_gemm(
                OP_N, OP_T, mr, mc, n, -1.0, 
                &lcol[rptr + kk*blksz*ldl], ldl,
                &lcol[cptr + kk*blksz*ldl], ldl,
                0.0,
-               work,
-               mr);
+               work, mr);
       }
 
       // if (mr > blksz) {

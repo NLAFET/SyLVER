@@ -523,13 +523,17 @@ namespace spldlt {
          NumericNode<T, PoolAlloc> &node, // numeric node to be applied
          int nnodes,
          SymbolicTree &stree, // symbolic tree
-         std::vector<NumericNode<T,PoolAlloc>> nodes, // list of nodes in the tree
+         std::vector<NumericNode<T,PoolAlloc>> &nodes, // list of nodes in the tree
          int nb, // blocking size
-         // struct cpu_factor_options const& options
+         // // struct cpu_factor_options const& options
          Workspace &work,
          Workspace &rowmap, Workspace& colmap
          ) {
-      
+
+      return;
+      // printf("node idx: %d\n", snode.idx);
+      // return;
+
       /* Extract useful information about node */
       int m = snode.nrow; // number of row in node
       int n = snode.ncol; // number of column in node
@@ -545,8 +549,11 @@ namespace spldlt {
       int cptr2 = 0; 
       
       int parent = snode.parent;
+
       while (parent < nnodes) {
+         // printf("[apply_node] parent: %d\n", parent);
          // NumericNode<T,PoolAllocator> &anode = nodes_[parent];
+
          SymbolicSNode &asnode = stree[parent]; // parent symbolic node 
          int sa = asnode.sa;
          int en = asnode.en;
@@ -556,14 +563,6 @@ namespace spldlt {
          int a_ldl = align_lda<T>(asnode.nrow);
 
          map_done = false;
-         // printf("[NumericTree] node: %d, parent: %d, sa: %d, en: %d\n", ni, asnode.idx, sa, en);
-
-         // printf("cptr: %d, rlist[cptr]: %d, cptr2: %d, rlist[cptr2]: %d\n", 
-         //        cptr, snode.rlist[cptr], cptr2, snode.rlist[cptr2]);
-               
-         // for (int i = 0; i < m; i++) 
-         //    printf(" %d ", snode.rlist[i]);
-         // printf("\n");
                
          while (cptr < m) {
             if (snode.rlist[cptr] >= sa) break;
@@ -672,7 +671,7 @@ namespace spldlt {
          NumericNode<T, PoolAlloc> &node, // numeric node to be applied
          int nnodes,
          SymbolicTree const& stree, // symbolic tree
-         std::vector<NumericNode<T,PoolAlloc>> nodes, // list of nodes in the tree
+         std::vector<NumericNode<T,PoolAlloc>> &nodes, // list of nodes in the tree
          int nb, // blocking size
          // struct cpu_factor_options const& options
          Workspace &work,
