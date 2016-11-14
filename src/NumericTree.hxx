@@ -328,10 +328,6 @@ namespace spldlt {
             apply_node(symb_[ni], nodes_[ni],
                        symb_.nnodes_, symb_, nodes_,
                        blksz, work, rowmap, colmap);
-
-            // apply_node();
-            // apply_node<T,PoolAllocator>(symb_[ni], nodes_[ni], symb_.nnodes_,
-            //                             symb_, nodes_);
             
             // #if defined(SPLDLT_USE_STARPU)
             //          starpu_task_wait_for_all();

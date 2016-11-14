@@ -63,7 +63,7 @@ namespace spldlt {
    }
 
    /* Factorize block on daig task */
-   
+
    // TODO create and use BLK structure
    template <typename T, typename PoolAlloc>
    void factorize_diag_block_task(
@@ -215,8 +215,8 @@ namespace spldlt {
                         a_ik, lda_ik,
                         a_jk, lda_jk);
 
-#endif      
-   };   
+#endif
+   };
 
    // TODO: error managment
    template <typename T, typename PoolAlloc>
@@ -249,11 +249,17 @@ namespace spldlt {
          
          /* Diagonal Block Factorization Task */
          int blkm = std::min(blksz, m - j*blksz);
+         int blkn = std::min(blksz, n - j*blksz);
          
          factorize_diag_block_task(snode, node, j, blksz, 3);
+         
+         // factorize_diag_block(blkm, blkn, &a[j*blksz*(lda+1)], lda);
+
 
          /* Column Solve Tasks */
          for(int i = j+1; i < nr; ++i) {
+
+            int blkm = std::min(blksz, m - j*blksz);
             
             solve_block_task(
                   snode,
@@ -261,7 +267,11 @@ namespace spldlt {
                   &a[j*blksz*(lda+1)], lda,
                   &a[(j*blksz*lda) + (i*blksz)], lda,
                   blksz, 2);
-            
+
+            // solve_block(
+            //       blkm, blkn, 
+            //       &a[j*blksz*(lda+1)], lda, 
+            //       &a[(j*blksz*lda) + (i*blksz)], lda);
          }
 
          /* Schur Update Tasks: mostly internal */
@@ -277,6 +287,16 @@ namespace spldlt {
                   &a[(j*blksz*lda) + (k*blksz)], lda,
                   &a[(j*blksz*lda) + (k*blksz)], lda,
                   blksz, 1);
+
+            // int blkm = std::min(blksz, m - k*blksz);
+            // int blkn = std::min(blksz, n - k*blksz);
+            // int blkk = std::min(blksz, n - j*blksz);
+
+            // update_diag_block(blkm, blkn, 
+            //                   &a[(k*blksz*lda) + (k*blksz)], lda,
+            //                   blkk,
+            //                   &a[(j*blksz*lda) + (k*blksz)], lda,
+            //                   &a[(j*blksz*lda) + (k*blksz)], lda);
 
 
             for(int i = k+1;  i < nr; ++i) {
@@ -511,9 +531,12 @@ namespace spldlt {
       int mr = rptr2-rptr+1; // number of rows in Aik
       int *rlst = rowmap.get_ptr<int>(mr); // Get ptr on rowmap array
       T *buffer = work.get_ptr<T>(mr*mc);
+      // T *buffer = work.get_ptr<T>(blksz*blksz);
+      // printf("[update_between_block_task] kk: %d, ii: %d, jj: %d\n", kk, ii, jj);
+      // printf("[update_between_block_task] cptr: %d, cptr2: %d, rptr: %d, rptr2: %d\n", cptr, cptr2, rptr, rptr2);
 
-      update_between_block(blkn, 
-                           kk, ii, jj, 
+      update_between_block(blkn,
+                           kk, ii, jj,
                            blksz, 
                            cptr, cptr2, rptr, rptr2,
                            snode, node,
@@ -533,7 +556,7 @@ namespace spldlt {
          int nnodes,
          SymbolicTree &stree, // symbolic tree
          std::vector<NumericNode<T,PoolAlloc>> &nodes, // list of nodes in the tree
-         int nb, // blocking size
+         int blksz, // blocking size
          // // struct cpu_factor_options const& options
          Workspace &work,
          Workspace &rowmap, Workspace& colmap
@@ -548,7 +571,7 @@ namespace spldlt {
       int n = snode.ncol; // number of column in node
       int ldl = align_lda<T>(m); // leading dimensions
       T *lcol = node.lcol; // numerical values
-      int nc = (n-1)/nb +1; // number of block column
+      int nc = (n-1)/blksz +1; // number of block column
 
       Workspace map(stree.n); // maxfront size
       int *amap = map.get_ptr<int>(stree.n); // row to block row mapping array 
@@ -585,8 +608,8 @@ namespace spldlt {
             if (snode.rlist[cptr] > en) break;
                   
             // determine last column index of current block column 
-            int cb = (snode.rlist[cptr] - sa) / nb;
-            int jlast = std::min(sa + (cb+1)*nb-1, en);
+            int cb = (snode.rlist[cptr] - sa) / blksz;
+            int jlast = std::min(sa + (cb+1)*blksz-1, en);
 
             // printf("[NumericTree] cb: %d\n", cb);
 
@@ -602,11 +625,11 @@ namespace spldlt {
             //        cptr, snode.rlist[cptr], sa, cptr2, snode.rlist[cptr2], en);
                   
             if (!map_done) {
-               // int a_nb = nb;
+               // int a_blksz = blksz;
                int r = 0; // row index
                int rr = 0; // block row index
                for (int row = 0; row < asnode.nrow; ++row) {
-                  rr = row / nb;
+                  rr = row / blksz;
                   r = asnode.rlist[row];
                   amap[r] = rr;
                }
@@ -631,7 +654,7 @@ namespace spldlt {
                         
                   for (int kk = 0; kk < nc; ++kk) {
 
-                     int blkn = std::min(nb, n-(kk*nb));
+                     int blkn = std::min(blksz, n-(kk*blksz));
 
                      update_between_block_task(
                            snode, node,
@@ -639,9 +662,19 @@ namespace spldlt {
                            kk,
                            asnode, nodes[asnode.idx],
                            ii, cb,
-                           nb,
+                           blksz,
                            work, rowmap, colmap,
                            prio);
+
+                     // update_between_block(blkn,
+                     //                      kk, ii, cb,
+                     //                      blksz, 
+                     //                      cptr, cptr2, rptr, rptr2-1,
+                     //                      snode, node,
+                     //                      asnode, 
+                     //                      &a_lcol[(cb*blksz*a_ldl)+(ii*blksz)], a_ldl,
+                     //                      buffer, rlst, clst);
+
                   }
 
 
@@ -656,7 +689,7 @@ namespace spldlt {
 
             for (int kk = 0; kk < nc; ++kk) {
 
-               int blkn = std::min(nb, n-(kk*nb));
+               int blkn = std::min(blksz, n-(kk*blksz));
 
                update_between_block_task(
                      snode, node,
@@ -664,9 +697,19 @@ namespace spldlt {
                      kk, 
                      asnode, nodes[asnode.idx],
                      ii, cb,
-                     nb,
+                     blksz,
                      work, rowmap, colmap,
                      prio);                     
+
+               // update_between_block(blkn,
+               //                      kk, ii, cb,
+               //                      blksz, 
+               //                      cptr, cptr2, rptr, rptr2-1,
+               //                      snode, node,
+               //                      asnode, 
+               //                      &a_lcol[(cb*blksz*a_ldl)+(ii*blksz)], a_ldl,
+               //                      buffer, rlst, clst);
+
             }
             
             cptr = cptr2 + 1; // move cptr

@@ -211,7 +211,6 @@ namespace spldlt { namespace starpu {
                       k,
                       blk_ik, ld_ik, 
                       blk_jk, ld_jk);
-
       }
 
       /* update block codelet */
@@ -328,6 +327,8 @@ namespace spldlt { namespace starpu {
 
          // printf("[update_between_cpu_func] n: %d\n", n);
          // printf("[update_between_cpu_func] kk: %d, ii: %d, jj: %d\n", kk, ii, jj);
+         // printf("[update_between_block_task] cptr: %d, cptr2: %d, rptr: %d, rptr2: %d\n", cptr, cptr2, rptr, rptr2);
+
          // printf("[update_between_cpu_func] snode: %p\n", snode);
          // printf("[update_between_cpu_func]  snode nrow: %d\n", snode->nrow);
          // printf("[update_between_cpu_func] asnode nrow: %d\n", asnode->nrow);

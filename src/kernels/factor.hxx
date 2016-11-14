@@ -50,6 +50,7 @@ namespace spldlt {
                 a_kj, ld_a_kj, 1.0, a_ij, ld_a_ij);
 
    }
+
    /*
      Update block lying the diagonal
      TODO: only A_ik or A_kj needed as it is the same block
@@ -70,9 +71,8 @@ namespace spldlt {
 
          host_gemm(OP_N, OP_T, m-n, n, k, -1.0,
                    &a_ik[n], ld_a_ik,
-                   a_kj, ld_a_kj, 1.0, a_ij, ld_a_ij);
-      }
-
+                   a_kj, ld_a_kj, 1.0, &a_ij[n], ld_a_ij);
+      }      
    }
 
    template <typename T>
