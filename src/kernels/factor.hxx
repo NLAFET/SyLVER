@@ -21,6 +21,36 @@ namespace spldlt {
    }
 
    /*
+     m: number of row in block
+     n: number of column in block
+     upd: contribution block
+    */
+   template <typename T>
+   void factorize_diag_block(
+         int m, int n, 
+         T *a, int lda, 
+         T* upd, int ldupd, 
+         bool zero_upd) {
+
+      int flag = lapack_potrf(FILL_MODE_LWR, n, a, lda);
+      if(m > n) {
+         // Diagonal block factored OK, handle some rectangular part of block
+         host_trsm(SIDE_RIGHT, FILL_MODE_LWR, OP_T, DIAG_NON_UNIT,
+                   m-n, n, 1.0, a, lda,
+                   &a[n], lda);
+         
+         if(upd) {
+
+            double rbeta = zero_upd ? 0.0 : 1.0;
+            host_syrk(FILL_MODE_LWR, OP_N, m-n, n, -1.0,
+                      &a[n], lda, rbeta, 
+                      upd, ldupd);
+         }
+
+      }
+   }
+
+   /*
      m: number of row in sub diag block
      n: number of column in sub diag block
     */
@@ -32,6 +62,36 @@ namespace spldlt {
       host_trsm(SIDE_RIGHT, FILL_MODE_LWR, OP_T, DIAG_NON_UNIT,
                 m, n, 1.0, a_kk, ld_a_kk, a_ik, ld_a_ik);
 
+   }
+
+   /*
+     m: number of row in sub diag block
+     n: number of column in sub diag block
+     upd: contribution block
+    */
+   template <typename T>
+   void solve_block(
+         int m, int n, 
+         T *a_kk, int ld_a_kk, 
+         T *a_ik, int ld_a_ik,
+         T *upd, int ldupd,
+         bool zero_upd,  
+         int blksz
+         ) {
+
+      host_trsm(SIDE_RIGHT, FILL_MODE_LWR, OP_T, DIAG_NON_UNIT,
+                m, n, 1.0, a_kk, ld_a_kk, a_ik, ld_a_ik);
+
+      if(n<blksz && upd) {
+
+         double rbeta = zero_upd ? 0.0 : 1.0;
+
+         host_gemm(OP_N, OP_T, m, blksz-n, n, -1.0,
+                   a_ik, ld_a_ik, 
+                   &a_kk[n], ld_a_kk,
+                   rbeta, 
+                   upd, ldupd);
+      }
    }
 
    /*
@@ -49,6 +109,85 @@ namespace spldlt {
       host_gemm(OP_N, OP_T, m, n, k, -1.0, a_ik, ld_a_ik,
                 a_kj, ld_a_kj, 1.0, a_ij, ld_a_ij);
 
+   }
+
+   /*
+     A_ij <- A_ij - Aik A_jk^T
+     m: number of row in A_ij block
+     n: number of column in A_ij block
+     k: number of column in A_ik and A_jk blocks
+     upd: contribution block
+    */
+   template <typename T>
+   void update_block(
+         int m, int n, T *a_ij, int ld_a_ij,
+         int k,
+         T *a_ik, int ld_a_ik, 
+         T *a_kj, int ld_a_kj,
+         T *upd, int ldupd,
+         int updm, int updn,
+         bool zero_upd,  
+         int blksz
+         ) {
+
+      host_gemm(OP_N, OP_T, m, n, k, -1.0, a_ik, ld_a_ik,
+                a_kj, ld_a_kj, 1.0, a_ij, ld_a_ij);
+      
+      if(n<blksz && upd) {
+
+         // printf("[update_block] blkn: %d, blksz: %d\n", n, blksz);
+         // printf("[update_block] upd: %p, ldupd: %d\n", upd, ldupd);
+
+         double rbeta = zero_upd ? 0.0 : 1.0;
+
+         host_gemm(OP_N, OP_T, 
+                   updm, updn, k, -1.0,
+                   &a_ik[m-updm], ld_a_ik, 
+                   a_kj, ld_a_kj, 
+                   rbeta,
+                   upd, ldupd);
+
+         // int upd_width = (m<n+blksz) ? m-n : blksz-n;
+         //    if(i-n < 0) {
+         //       // Special case for first block of contrib
+         //       host_gemm(OP_N, OP_T, blkm+i-n, upd_width, blkn, -1.0,
+         //                 &a[j*lda+n], lda, &a[j*lda+k+blkk], lda, rbeta,
+         //                 upd, ldupd);
+         //    } else {
+         //       host_gemm(OP_N, OP_T, blkm, upd_width, blkn, -1.0,
+         //                 &a[j*lda+i], lda, &a[j*lda+k+blkk], lda, rbeta,
+         //                 &upd[i-n], ldupd);
+         //    }
+      }
+   }
+
+   /*
+     Performs update of a block in Schur complement 
+     A_ij <- A_ij - Aik A_jk^T
+     m: number of row in A_ij block
+     n: number of column in A_ij block
+     k: number of column in A_ik and A_jk blocks
+     upd: contribution block
+    */
+   template <typename T>
+   void update_block(
+         int m, int n, 
+         T *upd, int ldupd,
+         int k,
+         T *a_ik, int ld_a_ik, 
+         T *a_kj, int ld_a_kj,
+         bool zero_upd) {
+
+      double rbeta = zero_upd ? 0.0 : 1.0;
+
+      host_gemm(
+            OP_N, OP_T, 
+            m, n, k,
+            -1.0, 
+            a_ik, ld_a_ik,
+            a_kj, ld_a_kj, 
+            rbeta, 
+            upd, ldupd);
    }
 
    /*

@@ -218,6 +218,113 @@ namespace spldlt {
 #endif
    };
 
+   /* Factorize node in a MF context
+    */
+   template <typename T, typename PoolAlloc>
+   void factorize_node_posdef_mf(
+         SymbolicSNode const& snode,
+         NumericNode<T, PoolAlloc> &node,
+         struct cpu_factor_options const& options
+         ) {
+
+      /* Extract useful information about node */
+      int m = snode.nrow;
+      int n = snode.ncol;
+      int lda = align_lda<T>(m);
+      T *lcol = node.lcol;
+      T *contrib = node.contrib;
+      int ldcontrib = m-n;
+
+      int blksz = options.cpu_block_size;
+      int nr = (m-1) / blksz + 1; // number of block rows
+      int nc = (n-1) / blksz + 1; // number of block columns
+   
+      // printf("[factorize_node_posdef_mf] contrib: %p\n", contrib);
+
+      for(int j = 0; j < nc; ++j) {
+
+         int blkn = std::min(blksz, n - j*blksz);
+         
+         /* Diagonal Block Factorization Task */
+
+         int blkm = std::min(blksz, m - j*blksz);
+         
+         factorize_diag_block(
+               blkm, blkn, 
+               &lcol[j*blksz*(lda+1)], lda,
+               contrib, ldcontrib,
+               j==0);
+
+         /* Column Solve Tasks */
+         for(int i = j+1; i < nr; ++i) {
+
+            int blkm = std::min(blksz, m - i*blksz);
+
+            solve_block(blkm, blkn, 
+                        &lcol[j*blksz*(lda+1)], lda, 
+                        &lcol[(j*blksz*lda) + (i*blksz)], lda,
+                        (contrib) ? &contrib[(i*blksz)-n] : nullptr, ldcontrib,
+                        j==0, 
+                        blksz);
+         }
+
+         /* Schur Update Tasks: mostly internal */
+         for(int k = j+1; k < nc; ++k) {
+
+            int blkk = std::min(blksz, n - k*blksz);
+
+            for(int i = k;  i < nr; ++i) {
+               
+               int blkm = std::min(blksz, m - i*blksz);
+               
+               int cbm = std::min(blksz, (i+1)*blksz - n);
+               int cbn = std::min(blksz, m-(k+1)*blksz)-blkk;
+               
+               update_block(blkm, blkk, &lcol[ (k*blksz*lda) + (i*blksz)], lda,
+                            blkn,
+                            &lcol[(j*blksz*lda) + (i*blksz)], lda, 
+                            &lcol[(j*blksz*lda) + (k*blksz)], lda,
+                            (contrib) ? &contrib[(i*blksz)-n] : nullptr, ldcontrib,
+                            cbm, cbn,
+                            j==0,
+                            blksz);
+
+            }
+         }
+
+         /* Contrib Schur complement update: external */
+         if (contrib) {
+            for(int k = nc+1; k < nr; ++k) {
+               
+               int blkk = std::min(blksz, m - k*blksz);
+
+               for(int i = k;  i < nr; ++i) {
+               
+                  int blkm = std::min(blksz, m - i*blksz);
+                  
+                  update_block(
+                        blkm, blkk,
+                        &contrib[((k*blksz-n)*lda) + (i*blksz) - n], ldcontrib,
+                        blkn,
+                        &lcol[(j*blksz*lda) + (i*blksz)], lda, 
+                        &lcol[(j*blksz*lda) + (k*blksz)], lda,
+                        j==0);
+                  
+                  // update_block(blkm, blkk, &contrib[ (k*blksz*lda) + (i*blksz)], lda,
+                  //              blkn,
+                  //              &lcol[(j*blksz*lda) + (i*blksz)], lda,
+                  //              &lcol[(j*blksz*lda) + (k*blksz)], lda,
+                  //              contrib, ldcontrib,
+                  //              cbm, cbn,
+                  //              j==0,
+                  //              blksz);
+
+               }
+            }
+         }
+      }
+   }
+
    // TODO: error managment
    template <typename T, typename PoolAlloc>
    void factorize_node_posdef(

@@ -96,7 +96,9 @@ namespace spldlt {
          auto start = std::chrono::high_resolution_clock::now();
          
          // Perform the factorization of the numeric tree
-         factor(aval, work, rowmap, colmap, options);
+         // factor(aval, work, rowmap, colmap, options);
+
+         factor_mf(aval, work, rowmap, colmap, options);
 
          auto end = std::chrono::high_resolution_clock::now();
          long ttotal = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count();
@@ -253,8 +255,39 @@ namespace spldlt {
       }
 
    private:
-      
-      /* SN factorization. Asynchronous routine i.e. no barrier at the end. 
+
+      /* MF factorization. 
+         Note: Asynchronous routine i.e. no barrier at the end. 
+       */
+      void factor_mf(
+            T *aval,
+            Workspace &work,
+            Workspace &rowmap,
+            Workspace &colmap,
+            struct cpu_factor_options const& options) {
+
+         int blksz = options.cpu_block_size;
+
+         for(int ni = 0; ni < symb_.nnodes_; ++ni) {
+
+            SymbolicSNode &snode = symb_[ni];
+            
+            // Allocate front
+            alloc_node_mf(snode, nodes_[ni], factor_alloc_, pool_alloc_);
+
+            // Init
+            init_node(snode, nodes_[ni], aval);
+            
+            // Assemble front
+
+            // Factorize
+            // TODO overload factorize_node_posdef routine
+            factorize_node_posdef_mf(snode, nodes_[ni], options);            
+         }
+      }
+
+      /* SN factorization. 
+         Note: Asynchronous routine i.e. no barrier at the end. 
        */
       void factor(
             T *aval,
