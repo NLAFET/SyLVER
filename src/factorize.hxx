@@ -260,6 +260,8 @@ namespace spldlt {
 
             int blkm = std::min(blksz, m - i*blksz);
 
+            // printf("[factorize_node_posdef_mf] contrib start: %d\n", (i*blksz)-n);
+
             solve_block(blkm, blkn, 
                         &lcol[j*blksz*(lda+1)], lda, 
                         &lcol[(j*blksz*lda) + (i*blksz)], lda,
@@ -277,14 +279,19 @@ namespace spldlt {
                
                int blkm = std::min(blksz, m - i*blksz);
                
-               int cbm = std::min(blksz, (i+1)*blksz - n);
-               int cbn = std::min(blksz, m-(k+1)*blksz)-blkk;
+               int cbm = (i*blksz < n) ? (i+1)*blksz-n : blkm; 
+               int cbn = std::min(blksz, m-k*blksz)-blkk;
+               
+               // int cbm = std::min(blksz, m-std::max(n,i*blksz));
+               // int cbn = std::min(blksz, m-k*blksz)-blkk;
+               
+               // printf("[factorize_node_posdef_mf] m: %d, k: %d\n", m, k);
                
                update_block(blkm, blkk, &lcol[ (k*blksz*lda) + (i*blksz)], lda,
                             blkn,
                             &lcol[(j*blksz*lda) + (i*blksz)], lda, 
                             &lcol[(j*blksz*lda) + (k*blksz)], lda,
-                            (contrib) ? &contrib[(i*blksz)-n] : nullptr, ldcontrib,
+                            (contrib) ? &contrib[std::max(i*blksz, n)-n] : nullptr, ldcontrib,
                             cbm, cbn,
                             j==0,
                             blksz);
@@ -294,17 +301,24 @@ namespace spldlt {
 
          /* Contrib Schur complement update: external */
          if (contrib) {
-            for(int k = nc+1; k < nr; ++k) {
+            // printf("[factorize_node_posdef_mf] node: %d\n", snode.idx);
+            // printf("[factorize_node_posdef_mf] nc: %d, nr: %d\n", nc, nr);
+            for(int k = nc; k < nr; ++k) {
                
                int blkk = std::min(blksz, m - k*blksz);
 
                for(int i = k;  i < nr; ++i) {
                
                   int blkm = std::min(blksz, m - i*blksz);
+
+                  // printf("[factorize_node_posdef_mf] row: %d, col: %d\n", i, k);
+                  // printf("[factorize_node_posdef_mf] blkm: %d, blkk: %d\n", i, k);
                   
+                  // printf("[factorize_node_posdef_mf] row: %d, col: %d\n", (i*blksz)-n, (k*blksz-n));
+
                   update_block(
                         blkm, blkk,
-                        &contrib[((k*blksz-n)*lda) + (i*blksz) - n], ldcontrib,
+                        &contrib[((k*blksz-n)*ldcontrib) + (i*blksz)-n], ldcontrib,
                         blkn,
                         &lcol[(j*blksz*lda) + (i*blksz)], lda, 
                         &lcol[(j*blksz*lda) + (k*blksz)], lda,

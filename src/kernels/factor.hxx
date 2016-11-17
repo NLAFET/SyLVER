@@ -40,10 +40,18 @@ namespace spldlt {
                    &a[n], lda);
          
          if(upd) {
-
+            
             double rbeta = zero_upd ? 0.0 : 1.0;
-            host_syrk(FILL_MODE_LWR, OP_N, m-n, n, -1.0,
-                      &a[n], lda, rbeta, 
+            
+            printf("[factorize_diag_block]\n");
+            // printf("[factorize_diag_block] blkm: %d, blkn: %d\n", m, n);
+            // printf("[factorize_diag_block] updm: %d, k: %d\n", m-n, n);
+
+            host_syrk(FILL_MODE_LWR, OP_N, 
+                      m-n, n, 
+                      -1.0,
+                      &a[n], lda, 
+                      rbeta, 
                       upd, ldupd);
          }
 
@@ -82,14 +90,20 @@ namespace spldlt {
       host_trsm(SIDE_RIGHT, FILL_MODE_LWR, OP_T, DIAG_NON_UNIT,
                 m, n, 1.0, a_kk, ld_a_kk, a_ik, ld_a_ik);
 
-      if(n<blksz && upd) {
+      if (n<blksz && upd) {
 
          double rbeta = zero_upd ? 0.0 : 1.0;
+         
+         printf("[solve_block]\n");
+         // printf("[solve_block] blkm: %d\n", m);
+         // printf("[solve_block] updn: %d\n", blksz-n);
 
-         host_gemm(OP_N, OP_T, m, blksz-n, n, -1.0,
-                   a_ik, ld_a_ik, 
+         host_gemm(OP_N, OP_T,
+                   m, blksz-n, n,
+                   -1.0,
+                   a_ik, ld_a_ik,
                    &a_kk[n], ld_a_kk,
-                   rbeta, 
+                   rbeta,
                    upd, ldupd);
       }
    }
@@ -135,8 +149,11 @@ namespace spldlt {
       
       if(n<blksz && upd) {
 
-         // printf("[update_block] blkn: %d, blksz: %d\n", n, blksz);
+         // printf("[update_block] lda: %d\n", ld_a_ij);
+         // printf("[update_block] blkm: %d, blkn: %d\n", m, n);
+         // printf("[update_block] updm: %d, updn: %d\n", updm, updn);
          // printf("[update_block] upd: %p, ldupd: %d\n", upd, ldupd);
+         // printf("[update_block] blkn: %d, blksz: %d\n", n, blksz);
 
          double rbeta = zero_upd ? 0.0 : 1.0;
 
@@ -178,12 +195,17 @@ namespace spldlt {
          T *a_kj, int ld_a_kj,
          bool zero_upd) {
 
+      printf("[update_block]\n");
+      // printf("[update_block] upd: %p\n", upd);
+      // printf("[update_block] blkm: %d, blkn: %d, k: %d\n", m, n, k);
+      // printf("[update_block] ldupd: %d\n", ldupd);
+
       double rbeta = zero_upd ? 0.0 : 1.0;
 
       host_gemm(
             OP_N, OP_T, 
             m, n, k,
-            -1.0, 
+            -1.0,
             a_ik, ld_a_ik,
             a_kj, ld_a_kj, 
             rbeta, 
