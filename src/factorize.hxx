@@ -279,19 +279,25 @@ namespace spldlt {
                
                int blkm = std::min(blksz, m - i*blksz);
                
-               int cbm = (i*blksz < n) ? (i+1)*blksz-n : blkm; 
+               // int cbm = (i*blksz < n) ? std::min((i+1)*blksz,m)-n : blkm;
+               int cbm = (i*blksz < n) ? blkm+(i*blksz)-n : blkm;
                int cbn = std::min(blksz, m-k*blksz)-blkk;
-               
+               T *upd = nullptr;
+                  
+               if (contrib)
+                  upd = (i*blksz < n) ? contrib : &contrib[(i*blksz)-n];
+
                // int cbm = std::min(blksz, m-std::max(n,i*blksz));
                // int cbn = std::min(blksz, m-k*blksz)-blkk;
                
                // printf("[factorize_node_posdef_mf] m: %d, k: %d\n", m, k);
+               // printf("[factorize_node_posdef_mf] cbm: %d, cbn: %d\n", cbm, cbn);
                
                update_block(blkm, blkk, &lcol[ (k*blksz*lda) + (i*blksz)], lda,
                             blkn,
                             &lcol[(j*blksz*lda) + (i*blksz)], lda, 
                             &lcol[(j*blksz*lda) + (k*blksz)], lda,
-                            (contrib) ? &contrib[std::max(i*blksz, n)-n] : nullptr, ldcontrib,
+                            upd, ldcontrib,
                             cbm, cbn,
                             j==0,
                             blksz);
