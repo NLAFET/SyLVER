@@ -278,7 +278,7 @@ namespace spldlt {
             // Init
             init_node(snode, nodes_[ni], aval);
             
-            // Assemble front
+            // Assemble front: fully-summed columns 
 
             typedef typename std::allocator_traits<PoolAllocator>::template rebind_alloc<int> PoolAllocInt;
 
@@ -290,9 +290,8 @@ namespace spldlt {
                map[ snode.rlist[i] ] = i;
             for(int i=snode.ncol; i<snode.nrow; i++)
                map[ snode.rlist[i] ] = i + nodes_[ni].ndelay_in;
-
-
-            for(auto* child=nodes_[ni].first_child; child!=NULL; child=child->next_child) {
+            
+            for (auto* child=nodes_[ni].first_child; child!=NULL; child=child->next_child) {
                
                SymbolicNode const& csnode = child->symb;
                
@@ -312,6 +311,26 @@ namespace spldlt {
             // Factorize
             // TODO overload factorize_node_posdef routine
             factorize_node_posdef_mf(snode, nodes_[ni], options);            
+
+            // Assemble front: non fully-summed columns i.e. contribution block 
+
+            for (auto* child=nodes_[ni].first_child; child!=NULL; child=child->next_child) {
+               
+               SymbolicNode const& csnode = child->symb;
+               
+               /* Handle expected contributions (only if something there) */
+               if(child->contrib) {
+
+                  int cm = csnode.nrow - csnode.ncol;
+                  int* cache = work.get_ptr<int>(cm);
+
+                  // printf("[factor_mf] childnum: %d, cm: %d\n", csnode.idx, cm);
+
+                  assemble_expected_contrib(0, cm, nodes_[ni], *child, map, cache);
+
+               }
+            }
+
          }
       }
 
