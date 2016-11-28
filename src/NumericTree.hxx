@@ -296,7 +296,7 @@ namespace spldlt {
                SymbolicNode const& csnode = child->symb;
                
                /* Handle expected contributions (only if something there) */
-               if(child->contrib) {
+               if (child->contrib) {
 
                   int cm = csnode.nrow - csnode.ncol;
                   int* cache = work.get_ptr<int>(cm);
@@ -304,13 +304,12 @@ namespace spldlt {
                   // printf("[factor_mf] childnum: %d, cm: %d\n", csnode.idx, cm);
 
                   assemble_expected(0, cm, nodes_[ni], *child, map, cache);
-
                }
             }
 
             // Factorize
             // TODO overload factorize_node_posdef routine
-            factorize_node_posdef_mf(snode, nodes_[ni], options);            
+            factorize_node_posdef_mf(snode, nodes_[ni], options);
 
             // Assemble front: non fully-summed columns i.e. contribution block 
 
@@ -319,7 +318,7 @@ namespace spldlt {
                SymbolicNode const& csnode = child->symb;
                
                /* Handle expected contributions (only if something there) */
-               if(child->contrib) {
+               if (child->contrib) {
 
                   int cm = csnode.nrow - csnode.ncol;
                   int* cache = work.get_ptr<int>(cm);
@@ -330,7 +329,6 @@ namespace spldlt {
 
                }
             }
-
          }
       }
 

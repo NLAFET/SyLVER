@@ -19,6 +19,7 @@ program spldlt_test
    integer :: rb_flag
 
    ! Matrix description
+   character(len=200) :: matfile = ''
    integer :: m, n
    integer, dimension(:), allocatable :: ptr, row
    real(wp), dimension(:), allocatable :: val
@@ -64,7 +65,7 @@ program spldlt_test
 
    integer :: cuda_error ! DEBUG not useful for now 
    
-   call proc_args(ssids_opt, nrhs, pos_def, ncpu)
+   call proc_args(ssids_opt, nrhs, pos_def, ncpu, matfile)
 
    pos_def = .true. ! DEBUG assume matrix is posdef
 
@@ -213,7 +214,7 @@ program spldlt_test
  contains
 
    ! Get argument from command line
-   subroutine proc_args(options, nrhs, pos_def, ncpu)
+   subroutine proc_args(options, nrhs, pos_def, ncpu, matfile)
      use spral_ssids
      implicit none
 
@@ -221,6 +222,7 @@ program spldlt_test
      integer, intent(inout) :: nrhs
      logical, intent(inout) :: pos_def
      integer, intent(inout) :: ncpu
+     character(len=200), intent(inout) :: matfile
 
      integer :: argnum, narg
      character(len=200) :: argval
@@ -260,6 +262,11 @@ program spldlt_test
            argnum = argnum + 1
            read( argval, * ) ncpu
            print *, 'Number of CPUs = ', ncpu
+        case("--mat")
+           call get_command_argument(argnum, argval)
+           argnum = argnum + 1
+           read( argval, * ) matfile
+           print *, 'Matrix = ', matfile
         case default
            print *, "Unrecognised command line argument: ", argval
            stop
