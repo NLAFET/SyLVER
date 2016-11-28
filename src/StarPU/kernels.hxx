@@ -483,7 +483,7 @@ namespace spldlt { namespace starpu {
          cl_update_block.name = "UPDATE_BLK";
          cl_update_block.cpu_funcs[0] = update_block_cpu_func;
 
-         // Initialize update_block StarPU codelet
+         // Initialize update_diag_block StarPU codelet
          starpu_codelet_init(&cl_update_diag_block);
          cl_update_diag_block.where = STARPU_CPU;
          cl_update_diag_block.nbuffers = STARPU_VARIABLE_NBUFFERS;

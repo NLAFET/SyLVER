@@ -198,7 +198,7 @@ namespace spldlt {
       int nr = (m-1) / blksz + 1; // number of block rows
       int nc = (n-1) / blksz + 1; // number of block columns
 
-      insert_update_block(
+      insert_update_diag_block(
             snode.handles[jj*nr + ii], // A_ij block handle 
             snode.handles[kk*nr + ii], // A_ik block handle
             snode.handles[kk*nr + jj],  // A_jk block handle
