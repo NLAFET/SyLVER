@@ -72,6 +72,8 @@ program spldlt_test
    ! ssids_opt%print_level = 1 ! enable printing
    ssids_opt%print_level = 0 ! disable printing
    ssids_opt%use_gpu = .false. ! disable GPU
+   
+   if (matfile.eq.'') matfile = "matrix.rb" 
 
    print *, "[SpLDLT Test] ncpu: ", ncpu
    print *, "[SpLDLT Test]   nb: ", ssids_opt%cpu_block_size
@@ -80,7 +82,7 @@ program spldlt_test
    write(*, "(a)") "Reading..."
    ! DEBUG ensure matrix is diag dominant
    rb_options%values = 3 ! Force diagonal dominance
-   call rb_read("matrix.rb", m, n, ptr, row, val, rb_options, rb_flag)
+   call rb_read(matfile, m, n, ptr, row, val, rb_options, rb_flag)
    if(rb_flag.ne.0) then
       print *, "Rutherford-Boeing read failed with error ", rb_flag
       stop
