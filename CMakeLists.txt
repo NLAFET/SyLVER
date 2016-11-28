@@ -33,13 +33,13 @@ set(SPRAL_SRC_DIR $ENV{SPRALSRCDIR} CACHE PATH "Location of Spral sources")
 include_directories(${SPRAL_SRC_DIR})
 include_directories(${SPRAL_SRC_DIR}/src)
 
-# get source files
+# Get object files 
 file(
   GLOB_RECURSE
   obj
   ${SPRAL_DIR}/tests/ssids/kernels/*.o)
 
-# MESSAGE(STATUS "object files: " ${obj})
+MESSAGE(STATUS "object files: " ${obj})
 # add_library(spral_ssids_tests STATIC IMPORTED ${obj})
 
 # Include source directory
@@ -82,7 +82,14 @@ target_link_libraries(spldlt_test spldlt)
 ## Kernel test driver
 if (${KERNEL_TEST} MATCHES "ON")
 
-  add_executable(spldlt_kernel_test tests/kernel_test.cxx)  
+  file(
+    GLOB_RECURSE
+    test_src
+    tests/*.cxx
+    tests/*.hxx)
+  
+  # add_executable(spldlt_kernel_test tests/kernel_test.cxx)  
+  add_executable(spldlt_kernel_test ${test_src})
   target_link_libraries(spldlt_kernel_test ${obj})
 
 endif()
