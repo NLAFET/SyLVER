@@ -4,7 +4,6 @@
 
 #include "tests/ssids/kernels/framework.hxx"
 #include "ssids/cpu/kernels/wrappers.hxx"
-#include "ssids/cpu/kernels/ldlt_tpp.hxx"
 
 using namespace spral::ssids::cpu;
 
@@ -118,18 +117,43 @@ namespace spldlt {
       }
       // Check we eliminated all the columns
       EXPECT_EQ(m, q1+q2) << "(test " << test << " seed " << seed << ")" << std::endl;
-      printf("[ldlt_tpp_test] q1+q2: %d\n", q1+q2);
       // Make sure all entries in L are bounded by 1/u
       double l_abs_max = find_l_abs_max(m, l, lda);
       EXPECT_LE(l_abs_max, 1.0/u) << "(test " << test << " seed " << seed << ")" << std::endl;
-      printf("nrom(L, max): %e\n", l_abs_max);
 
       std::cout << "q1=" << q1 << " q2=" << q2 << std::endl;
       std::cout << "L:" << std::endl;
+
+      // Print info
       // print_mat("%10.2e", m, l, lda, perm);
       print_mat(m, perm, l, lda);
       std::cout << "D:" << std::endl;
       print_d(m, d);
+
+      // Perform solve
+      double *soln = new double[m];
+      solve(m, q1, perm, l, lda, d, b, soln);
+
+      // Print info
+      printf("soln = ");
+      for(int i=0; i<m; i++) printf(" %le", soln[i]);
+      printf("\n");
+
+      double bwderr = backward_error(m, a, lda, b, 1, soln, m);
+
+      // Print info
+      printf("bwderr = %le\n", bwderr);
+      // Make sure that the bwd error is small
+      EXPECT_LE(bwderr, 2e-13) << "(test " << test << " seed " << seed << ")" << std::endl;
+
+      // Cleanup memory
+      delete[] a; delete[] l;
+      delete[] b;
+      delete[] perm;
+      delete[] work;
+      delete[] d; delete[] soln;
+
+      return failed ? -1 : 0;
    }
 
    int run_ldlt_tpp_tests() {
