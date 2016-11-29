@@ -50,8 +50,8 @@ namespace spldlt {
    void print_mat (int n, int *perm, T *a, int lda) {
       for(int i=0; i<n; i++) {
          printf("%d:", perm[i]);
-         for(int j=0; j<n; j++) 
-            printf(" %le", a[j*lda+i]);
+         for(int j=0; j<n; j++)
+            printf(" %10.3le", a[j*lda+i]);
          printf("\n");
       }
    }
