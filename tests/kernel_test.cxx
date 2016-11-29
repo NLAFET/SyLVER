@@ -3,6 +3,7 @@
 #include "tests/ssids/kernels/framework.hxx"
 #include "ssids/cpu/kernels/wrappers.hxx"
 #include "ldlt_tpp.hxx"
+#include "ldlt_app.hxx"
 
 // using namespace spral::ssids::cpu;
 
@@ -16,6 +17,8 @@ int main(void) {
 
    // gen_posdef(m, a, lda);
 
-   printf("[Tests] Test LDLT TPP kernels\n");
-   spldlt::run_ldlt_tpp_tests();
+   printf("[Tests] Test LDLT kernels\n");
+   // spldlt::run_ldlt_tpp_tests();
+
+   spldlt::run_ldlt_app_tests();
 }

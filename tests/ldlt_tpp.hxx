@@ -11,7 +11,9 @@
 using namespace spral::ssids::cpu;
 
 namespace spldlt {
-   
+
+   // Run tests for the LDLT with threshold partial pivoting
+   // factorization kernel (sequential)
    int run_ldlt_tpp_tests();
 
    template<typename T>
