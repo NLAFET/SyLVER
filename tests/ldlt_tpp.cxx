@@ -62,8 +62,8 @@ namespace spldlt {
          std::cout << "q1=" << q1 << " q2=" << q2 << std::endl;
          std::cout << "L:" << std::endl;
          // Print info
-         // print_mat("%10.2e", m, l, lda, perm);
-         print_mat(m, perm, l, lda);
+         print_mat("%10.2e", m, l, lda, perm);
+         // print_mat(m, perm, l, lda);
          std::cout << "D:" << std::endl;
          print_d(m, d);
       }

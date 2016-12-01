@@ -1,5 +1,7 @@
 #include <cstdio>
 
+// #include "ssids/cpu/kernels/ldlt_app.cxx" // .cxx as we need internal namespace
+
 #include "tests/ssids/kernels/framework.hxx"
 #include "ssids/cpu/kernels/wrappers.hxx"
 #include "ldlt_tpp.hxx"

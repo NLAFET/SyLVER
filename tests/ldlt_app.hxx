@@ -1,6 +1,5 @@
 #pragma once
 
-#include "tests/ssids/kernels/framework.hxx"
 
 namespace spldlt {
 
