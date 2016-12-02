@@ -6,6 +6,7 @@
 #include "Workspace.hxx"
 #include "SymbolicSNode.hxx"
 #include "kernels/factor.hxx"
+#include "SymbolicTree.hxx"
 
 #if defined(SPLDLT_USE_STARPU)
 #include <starpu.h>

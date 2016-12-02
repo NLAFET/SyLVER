@@ -249,10 +249,10 @@ private:
 
 
 /** Returns true if ptr is suitably aligned for AVX, false if not */
-bool is_aligned(void* ptr) {
-   const int align = 32;
-   return (reinterpret_cast<uintptr_t>(ptr) % align == 0);
-}
+// bool is_aligned(void* ptr) {
+//    const int align = 32;
+//    return (reinterpret_cast<uintptr_t>(ptr) % align == 0);
+// }
 
 /** Move up eliminated entries to fill any gaps left by failed pivots
  *  within diagonal block.
@@ -997,6 +997,7 @@ public:
       } else { /* block_size == INNER_BLOCK_SIZE */
          // Call another routine for small block factorization
          if(ncol() < INNER_BLOCK_SIZE || !is_aligned(aval_)) {
+         // if(ncol() < INNER_BLOCK_SIZE || !(reinterpret_cast<uintptr_t>(aval_) % 32 == 0)) {
             T* ld = work[omp_get_thread_num()].get_ptr<T>(2*INNER_BLOCK_SIZE);
             cdata_[i_].nelim = ldlt_tpp_factor(
                   nrow(), ncol(), lperm, aval_, lda_,
@@ -1233,6 +1234,10 @@ private:
    /** \brief return number of rows in given block row */
    inline int get_nrow(int blk) const {
       return calc_blkn(blk, m_, block_size_);
+   }
+   bool is_aligned(void* ptr) {
+      const int align = 32;
+      return (reinterpret_cast<uintptr_t>(ptr) % align == 0);
    }
 
    int const i_; ///< block's row

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ssids/cpu/cpu_iface.hxx"
+#include "ssids/cpu/NumericNode.hxx"
 
 namespace spldlt {
    

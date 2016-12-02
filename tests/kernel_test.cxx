@@ -6,6 +6,7 @@
 #include "ssids/cpu/kernels/wrappers.hxx"
 #include "ldlt_tpp.hxx"
 #include "ldlt_app.hxx"
+#include "testing_factorize_indef.hxx"
 
 // using namespace spral::ssids::cpu;
 
@@ -22,5 +23,5 @@ int main(void) {
    printf("[Tests] Test LDLT kernels\n");
    // spldlt::run_ldlt_tpp_tests();
 
-   spldlt::run_ldlt_app_tests();
+   spldlt::run_factorize_indef_tests();
 }

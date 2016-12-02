@@ -91,6 +91,7 @@ if (${KERNEL_TEST} MATCHES "ON")
   # add_executable(spldlt_kernel_test tests/kernel_test.cxx)  
   add_executable(spldlt_kernel_test ${test_src})
   target_link_libraries(spldlt_kernel_test ${obj})
+  target_link_libraries(spldlt_kernel_test spldlt)
 
 endif()
 

@@ -7,17 +7,20 @@
 #include "tests/ssids/kernels/framework.hxx"
 #include "tests/ssids/kernels/AlignedAllocator.hxx"
 #include "ssids/cpu/BuddyAllocator.hxx"
-#include "ssids/cpu/kernels/ldlt_app.hxx"
+// #include "ssids/cpu/kernels/ldlt_app.hxx"
 #include "ssids/cpu/kernels/wrappers.hxx"
 // #include "ssids/cpu/kernels/ldlt_app.cxx" // .cxx as we need internal namespace
 #include "ssids/cpu/kernels/ldlt_tpp.hxx"
 #include "ssids/cpu/cpu_iface.hxx"
 
+#include "kernels/ldlt_app.hxx"
+
 using namespace spral::ssids::cpu;
 
 namespace spldlt {
 
-   static const int INNER_BLOCK_SIZE = 32; // same as in ssids/cpu/kernels/ldlt_app.cxx 
+   // static const int INNER_BLOCK_SIZE = 32; // same as in ssids/cpu/kernels/ldlt_app.cxx 
+   using namespace spldlt::ldlt_app_internal;
 
    template<typename T>
    void solve(int m, int n, const int *perm, const T *l, int ldl, const T *d, const T *b, T *x) {
@@ -42,12 +45,14 @@ namespace spldlt {
    /*
      bool dblk_singular singular diagonal blocks
     */
-   template<typename T, 
+   template<typename T,
             bool aggressive, // Use Cholesky-like app pattern
-            bool debug=true>
+            bool debug=true,
+            int iblksz=INNER_BLOCK_SIZE>
    int ldlt_app_test(T u, T small, 
                      bool delays, bool singular, bool dblk_singular, 
-                     int m, int n, int outer_block_size=INNER_BLOCK_SIZE,
+                     int m, int n, 
+                     int blksz=INNER_BLOCK_SIZE, 
                      int test=0, int seed=0) {
 
       bool failed = false;
@@ -59,7 +64,7 @@ namespace spldlt {
       int lda = align_lda<T>(m);
       double* a = new T[m*lda];
       gen_sym_indef(m, a, lda);
-      modify_test_matrix<T, INNER_BLOCK_SIZE>(
+      modify_test_matrix<T, iblksz>(
             singular, delays, dblk_singular, m, n, a, lda
             );
       
@@ -99,20 +104,20 @@ namespace spldlt {
       work.emplace_back(PAGE_SIZE);
       T* upd = nullptr;
       BuddyAllocator<T,std::allocator<T>> pool_alloc(m*n);
-      int q1 = ldlt_app_factor(
-            m, n, perm, l, lda, d, 0.0, upd, 0, 
-            options, work, 
-            // allocT
-            pool_alloc
-            );
-      // CopyBackup<T> backup(m, n, outer_block_size);
-      // int const use_tasks = false;
-      // int q1 = LDLT
-      //    <T, INNER_BLOCK_SIZE, CopyBackup<T>, use_tasks, debug>
-      //    ::factor(
-      //          m, n, perm, l, lda, d, backup, options, options.pivot_method,
-      //          outer_block_size, 0.0, nullptr, 0, work
-      //          );
+      // int q1 = ldlt_app_factor(
+      //       m, n, perm, l, lda, d, 0.0, upd, 0, 
+      //       options, work, 
+      //       // allocT
+      //       pool_alloc
+      //       );
+      CopyBackup<T> backup(m, n, blksz);
+      int const use_tasks = false;
+      int q1 = LDLT
+         <T, iblksz, CopyBackup<T>, use_tasks, debug>
+         ::factor(
+               m, n, perm, l, lda, d, backup, options, options.pivot_method,
+               blksz, 0.0, nullptr, 0, work
+               );
       if(debug) {
          std::cout << "FIRST FACTOR CALL ELIMINATED " << q1 << " of " << n << " pivots" << std::endl;
          std::cout << "L after first elim:" << std::endl;
@@ -136,11 +141,18 @@ namespace spldlt {
          for(int i=0; i<m-q1; i++)
             perm2[i] = i;
          
-         q2 = ldlt_app_factor(
-               m-q1, m-q1, perm2, &l[q1*(lda+1)], lda, &d[2*q1], 0.0, upd, 0,
-               options, work,
-               pool_alloc
-               );
+         // q2 = ldlt_app_factor(
+         //       m-q1, m-q1, perm2, &l[q1*(lda+1)], lda, &d[2*q1], 0.0, upd, 0,
+         //       options, work,
+         //       pool_alloc
+         //       );
+         CopyBackup<T> backup(m-q1, m-q1, blksz);
+         q2 = LDLT
+            <T, iblksz, CopyBackup<T>, use_tasks, debug>
+            ::factor(
+                  m-q1, m-q1, perm2, &l[q1*(lda+1)], lda, &d[2*q1], backup, options,
+                  options.pivot_method, blksz, 0.0, nullptr, 0, work
+                  );
          permute_rows(m-q1, q1, perm2, &perm[q1], &l[q1], lda);
          delete[] perm2;
          if(q1+q2 < m) {
@@ -192,12 +204,15 @@ namespace spldlt {
 
       printf("[LDLT APP tests]\n");
       
-      // 10x10 matrix
-      // Type=double, agressive=false, debug=true
-      // delays=true, sigular=false, dblk_singular=fasle
-      // ldlt_app_test<double, false, true>(0.01, 1e-20, true, false, false, 10, 10);
-
-      ldlt_app_test<double, false, true>(0.01, 1e-20, true, false, false, 10, 3);
+      /* 10x10 matrix
+         Type=double, agressive=false, debug=true
+         delays=true, sigular=false, dblk_singular=fasle
+         ldlt_app_test<double, false, true>(0.01, 1e-20, true, false, false, 10, 10);
+         default blocksize
+      */
+      // ldlt_app_test<double, false, true>(0.01, 1e-20, true, false, false, 10, 3);
+      
+      ldlt_app_test<double, false, true, 10>(0.01, 1e-20, true, false, false, 10, 3, 10);
       
       return err;
    }
