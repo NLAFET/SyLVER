@@ -796,7 +796,7 @@ public:
    Block(int i, int j, int m, int n, ColumnData<T,IntAlloc>& cdata, T* a,
          int lda, int block_size)
    : i_(i), j_(j), m_(m), n_(n), lda_(lda), block_size_(block_size),
-     cdata_(cdata), aval_(&a[j*block_size*lda+i*block_size])
+     cdata_(cdata), aval_(a) // aval_(&a[j*block_size*lda+i*block_size])
    {}
 
    /** \brief Create backup of this block.
@@ -1316,7 +1316,7 @@ private:
                Profile::Task task("TA_LDLT_DIAG");
 #endif
                if(debug) printf("Factor(%d)\n", blk);
-               BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
+               BlockSpec dblk(blk, blk, m, n, cdata, &a[blk*block_size*lda+blk*block_size], lda, block_size);
                // Store a copy for recovery in case of a failed column
                dblk.backup(backup);
                // Perform actual factorization
@@ -1371,8 +1371,8 @@ private:
                Profile::Task task("TA_LDLT_APPLY");
 #endif
                if(debug) printf("ApplyT(%d,%d)\n", blk, jblk);
-               BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
-               BlockSpec cblk(blk, jblk, m, n, cdata, a, lda, block_size);
+               BlockSpec dblk(blk, blk, m, n, cdata, &a[blk*block_size*lda+blk*block_size], lda, block_size);
+               BlockSpec cblk(blk, jblk, m, n, cdata, &a[jblk*block_size*lda+blk*block_size], lda, block_size);
                // Apply row permutation from factorization of dblk and in
                // the process, store a (permuted) copy for recovery in case of
                // a failed column
@@ -1402,8 +1402,8 @@ private:
                Profile::Task task("TA_LDLT_APPLY");
 #endif
                if(debug) printf("ApplyN(%d,%d)\n", iblk, blk);
-               BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
-               BlockSpec rblk(iblk, blk, m, n, cdata, a, lda, block_size);
+               BlockSpec dblk(blk, blk, m, n, cdata, &a[blk*block_size*lda+blk*block_size], lda, block_size);
+               BlockSpec rblk(iblk, blk, m, n, cdata, &a[blk*block_size*lda+iblk*block_size], lda, block_size);
                // Apply column permutation from factorization of dblk and in
                // the process, store a (permuted) copy for recovery in case of
                // a failed column
@@ -1458,12 +1458,12 @@ private:
 #endif
                   if(debug) printf("UpdateT(%d,%d,%d)\n", iblk, jblk, blk);
                   int thread_num = omp_get_thread_num();
-                  BlockSpec ublk(iblk, jblk, m, n, cdata, a, lda, block_size);
+                  BlockSpec ublk(iblk, jblk, m, n, cdata, &a[jblk*block_size*lda+iblk*block_size], lda, block_size);
                   int isrc_row = (blk<=iblk) ? iblk : blk;
                   int isrc_col = (blk<=iblk) ? blk : iblk;
-                  BlockSpec isrc(isrc_row, isrc_col, m, n, cdata, a, lda,
+                  BlockSpec isrc(isrc_row, isrc_col, m, n, cdata, &a[isrc_col*block_size*lda+isrc_row*block_size], lda,
                         block_size);
-                  BlockSpec jsrc(blk, jblk, m, n, cdata, a, lda, block_size);
+                  BlockSpec jsrc(blk, jblk, m, n, cdata, &a[jblk*block_size*lda+blk*block_size], lda, block_size);
                   // If we're on the block row we've just eliminated, restore
                   // any failed rows and release resources storing backup
                   ublk.restore_if_required(backup, blk);
@@ -1491,9 +1491,9 @@ private:
 #endif
                   if(debug) printf("UpdateN(%d,%d,%d)\n", iblk, jblk, blk);
                   int thread_num = omp_get_thread_num();
-                  BlockSpec ublk(iblk, jblk, m, n, cdata, a, lda, block_size);
-                  BlockSpec isrc(iblk, blk, m, n, cdata, a, lda, block_size);
-                  BlockSpec jsrc(jblk, blk, m, n, cdata, a, lda, block_size);
+                  BlockSpec ublk(iblk, jblk, m, n, cdata, &a[jblk*block_size*lda+iblk*block_size], lda, block_size);
+                  BlockSpec isrc(iblk, blk, m, n, cdata, &a[blk*block_size*lda+iblk*block_size], lda, block_size);
+                  BlockSpec jsrc(jblk, blk, m, n, cdata, &a[blk*block_size*lda+jblk*block_size], lda, block_size);
                   // If we're on the block col we've just eliminated, restore
                   // any failed cols and release resources storing backup
                   ublk.restore_if_required(backup, blk);
@@ -1529,9 +1529,9 @@ private:
 #endif
                   if(debug) printf("FormContrib(%d,%d,%d)\n", iblk, jblk, blk);
                   int thread_num = omp_get_thread_num();
-                  BlockSpec ublk(iblk, jblk, m, n, cdata, a, lda, block_size);
-                  BlockSpec isrc(iblk, blk, m, n, cdata, a, lda, block_size);
-                  BlockSpec jsrc(jblk, blk, m, n, cdata, a, lda, block_size);
+                  BlockSpec ublk(iblk, jblk, m, n, cdata, &a[jblk*block_size*lda+iblk*block_size], lda, block_size);
+                  BlockSpec isrc(iblk, blk, m, n, cdata, &a[blk*block_size*lda+iblk*block_size], lda, block_size);
+                  BlockSpec jsrc(jblk, blk, m, n, cdata, &a[blk*block_size*lda+jblk*block_size], lda, block_size);
                   ublk.form_contrib(
                         isrc, jsrc, work[thread_num], beta, upd_ij, ldupd
                         );
@@ -1581,7 +1581,7 @@ private:
             // Factor diagonal: depend on perm[blk*block_size] as we init npass
             {
                if(debug) printf("Factor(%d)\n", blk);
-               BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
+               BlockSpec dblk(blk, blk, m, n, cdata, &a[blk*block_size*lda+blk*block_size], lda, block_size);
                // Store a copy for recovery in case of a failed column
                dblk.backup(backup);
                // Perform actual factorization
@@ -1596,8 +1596,8 @@ private:
             // Loop over off-diagonal blocks applying pivot
             for(int jblk=0; jblk<blk; jblk++) {
                if(debug) printf("ApplyT(%d,%d)\n", blk, jblk);
-               BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
-               BlockSpec cblk(blk, jblk, m, n, cdata, a, lda, block_size);
+               BlockSpec dblk(blk, blk, m, n, cdata, &a[blk*block_size*lda+blk*block_size], lda, block_size);
+               BlockSpec cblk(blk, jblk, m, n, cdata, &a[jblk*block_size*lda+blk*block_size], lda, block_size);
                // Apply row permutation from factorization of dblk and in
                // the process, store a (permuted) copy for recovery in case of
                // a failed column
@@ -1612,8 +1612,8 @@ private:
             }
             for(int iblk=blk+1; iblk<mblk; iblk++) {
                if(debug) printf("ApplyN(%d,%d)\n", iblk, blk);
-               BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
-               BlockSpec rblk(iblk, blk, m, n, cdata, a, lda, block_size);
+               BlockSpec dblk(blk, blk, m, n, cdata, &a[blk*block_size*lda+blk*block_size], lda, block_size);
+               BlockSpec rblk(iblk, blk, m, n, cdata, &a[blk*block_size*lda+iblk*block_size], lda, block_size);
                // Apply column permutation from factorization of dblk and in
                // the process, store a (permuted) copy for recovery in case of
                // a failed column
@@ -1635,12 +1635,12 @@ private:
                for(int iblk=jblk; iblk<mblk; iblk++) {
                   if(debug) printf("UpdateT(%d,%d,%d)\n", iblk, jblk, blk);
                   int thread_num = omp_get_thread_num();
-                  BlockSpec ublk(iblk, jblk, m, n, cdata, a, lda, block_size);
+                  BlockSpec ublk(iblk, jblk, m, n, cdata, &a[jblk*block_size*lda+iblk*block_size], lda, block_size);
                   int isrc_row = (blk<=iblk) ? iblk : blk;
                   int isrc_col = (blk<=iblk) ? blk : iblk;
-                  BlockSpec isrc(isrc_row, isrc_col, m, n, cdata, a, lda,
+                  BlockSpec isrc(isrc_row, isrc_col, m, n, cdata, &a[isrc_col*block_size*lda+isrc_row*block_size], lda,
                         block_size);
-                  BlockSpec jsrc(blk, jblk, m, n, cdata, a, lda, block_size);
+                  BlockSpec jsrc(blk, jblk, m, n, cdata, &a[jblk*block_size*lda+blk*block_size], lda, block_size);
                   // If we're on the block row we've just eliminated, restore
                   // any failed rows and release resources storing backup
                   ublk.restore_if_required(backup, blk);
@@ -1652,9 +1652,9 @@ private:
                for(int iblk=jblk; iblk<mblk; iblk++) {
                   if(debug) printf("UpdateN(%d,%d,%d)\n", iblk, jblk, blk);
                   int thread_num = omp_get_thread_num();
-                  BlockSpec ublk(iblk, jblk, m, n, cdata, a, lda, block_size);
-                  BlockSpec isrc(iblk, blk, m, n, cdata, a, lda, block_size);
-                  BlockSpec jsrc(jblk, blk, m, n, cdata, a, lda, block_size);
+                  BlockSpec ublk(iblk, jblk, m, n, cdata, &a[jblk*block_size*lda+iblk*block_size], lda, block_size);
+                  BlockSpec isrc(iblk, blk, m, n, cdata, &a[blk*block_size*lda+iblk*block_size], lda, block_size);
+                  BlockSpec jsrc(jblk, blk, m, n, cdata, &a[blk*block_size*lda+jblk*block_size], lda, block_size);
                   // If we're on the block col we've just eliminated, restore
                   // any failed cols and release resources storing backup
                   ublk.restore_if_required(backup, blk);
@@ -1675,9 +1675,9 @@ private:
                   {
                      if(debug) printf("FormContrib(%d,%d,%d)\n", iblk, jblk, blk);
                      int thread_num = omp_get_thread_num();
-                     BlockSpec ublk(iblk, jblk, m, n, cdata, a, lda, block_size);
-                     BlockSpec isrc(iblk, blk, m, n, cdata, a, lda, block_size);
-                     BlockSpec jsrc(jblk, blk, m, n, cdata, a, lda, block_size);
+                     BlockSpec ublk(iblk, jblk, m, n, cdata, &a[jblk*block_size*lda+iblk*block_size], lda, block_size);
+                     BlockSpec isrc(iblk, blk, m, n, cdata, &a[blk*block_size*lda+iblk*block_size], lda, block_size);
+                     BlockSpec jsrc(jblk, blk, m, n, cdata, &a[blk*block_size*lda+jblk*block_size], lda, block_size);
                      ublk.form_contrib(
                            isrc, jsrc, work[thread_num], beta, upd_ij, ldupd
                            );
@@ -1739,7 +1739,7 @@ private:
                Profile::Task task("TA_LDLT_DIAG");
 #endif
                if(debug) printf("Factor(%d)\n", blk);
-               BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
+               BlockSpec dblk(blk, blk, m, n, cdata, &a[blk*block_size*lda+blk*block_size], lda, block_size);
                // On first access to this block, store copy in case of failure
                if(blk==0) dblk.backup(backup);
                // Record block state as assuming we've done up to col blk
@@ -1797,8 +1797,8 @@ private:
 #endif
                if(debug) printf("ApplyT(%d,%d)\n", blk, jblk);
                int thread_num = omp_get_thread_num();
-               BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
-               BlockSpec cblk(blk, jblk, m, n, cdata, a, lda, block_size);
+               BlockSpec dblk(blk, blk, m, n, cdata, &a[blk*block_size*lda+blk*block_size], lda, block_size);
+               BlockSpec cblk(blk, jblk, m, n, cdata, &a[jblk*block_size*lda+blk*block_size], lda, block_size);
                // Record block state as assuming we've done up to col blk
                up_to_date[jblk*mblk+blk] = blk;
                // Apply row permutation from factorization of dblk
@@ -1823,8 +1823,8 @@ private:
 #endif
                if(debug) printf("ApplyN(%d,%d)\n", iblk, blk);
                int thread_num = omp_get_thread_num();
-               BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
-               BlockSpec rblk(iblk, blk, m, n, cdata, a, lda, block_size);
+               BlockSpec dblk(blk, blk, m, n, cdata, &a[blk*block_size*lda+blk*block_size], lda, block_size);
+               BlockSpec rblk(iblk, blk, m, n, cdata, &a[blk*block_size*lda+iblk*block_size], lda, block_size);
                // On first access to this block, store copy in case of failure
                if(blk==0) rblk.backup(backup);
                // Record block state as assuming we've done up to col blk
@@ -1867,9 +1867,9 @@ private:
 #endif
                   if(debug) printf("UpdateN(%d,%d,%d)\n", iblk, jblk, blk);
                   int thread_num = omp_get_thread_num();
-                  BlockSpec ublk(iblk, jblk, m, n, cdata, a, lda, block_size);
-                  BlockSpec isrc(iblk, blk, m, n, cdata, a, lda, block_size);
-                  BlockSpec jsrc(jblk, blk, m, n, cdata, a, lda, block_size);
+                  BlockSpec ublk(iblk, jblk, m, n, cdata, &a[jblk*block_size*lda+iblk*block_size], lda, block_size);
+                  BlockSpec isrc(iblk, blk, m, n, cdata, &a[blk*block_size*lda+iblk*block_size], lda, block_size);
+                  BlockSpec jsrc(jblk, blk, m, n, cdata, &a[blk*block_size*lda+jblk*block_size], lda, block_size);
                   // On first access to this block, store copy in case of fail
                   if(blk==0 && jblk!=blk) ublk.backup(backup);
                   // Record block state as assuming we've done up to col blk
@@ -1904,9 +1904,9 @@ private:
 #endif
                   if(debug) printf("FormContrib(%d,%d,%d)\n", iblk, jblk, blk);
                   int thread_num = omp_get_thread_num();
-                  BlockSpec ublk(iblk, jblk, m, n, cdata, a, lda, block_size);
-                  BlockSpec isrc(iblk, blk, m, n, cdata, a, lda, block_size);
-                  BlockSpec jsrc(jblk, blk, m, n, cdata, a, lda, block_size);
+                  BlockSpec ublk(iblk, jblk, m, n, cdata, &a[jblk*block_size*lda+iblk*block_size], lda, block_size);
+                  BlockSpec isrc(iblk, blk, m, n, cdata, &a[blk*block_size*lda+iblk*block_size], lda, block_size);
+                  BlockSpec jsrc(jblk, blk, m, n, cdata, &a[blk*block_size*lda+jblk*block_size], lda, block_size);
                   // Record block state as assuming we've done up to col blk
                   up_to_date[jblk*mblk+iblk] = blk;
                   // Perform update
@@ -1957,7 +1957,7 @@ private:
          // Factor diagonal
          try {
             if(debug) printf("Factor(%d)\n", blk);
-            BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
+            BlockSpec dblk(blk, blk, m, n, cdata, &a[blk*block_size*lda+blk*block_size], lda, block_size);
             // On first access to this block, store copy in case of failure
             if(blk==0) dblk.backup(backup);
             // Record block state as assuming we've done up to col blk
@@ -1984,8 +1984,8 @@ private:
          for(int jblk=0; jblk<blk; jblk++) {
             if(debug) printf("ApplyT(%d,%d)\n", blk, jblk);
             int thread_num = omp_get_thread_num();
-            BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
-            BlockSpec cblk(blk, jblk, m, n, cdata, a, lda, block_size);
+            BlockSpec dblk(blk, blk, m, n, cdata, &a[blk*block_size*lda+blk*block_size], lda, block_size);
+            BlockSpec cblk(blk, jblk, m, n, cdata, &a[jblk*block_size*lda+blk*block_size], lda, block_size);
             // Record block state as assuming we've done up to col blk
             up_to_date[jblk*mblk+blk] = blk;
             // Apply row permutation from factorization of dblk
@@ -1996,8 +1996,8 @@ private:
          for(int iblk=blk+1; iblk<mblk; iblk++) {
             if(debug) printf("ApplyN(%d,%d)\n", iblk, blk);
             int thread_num = omp_get_thread_num();
-            BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
-            BlockSpec rblk(iblk, blk, m, n, cdata, a, lda, block_size);
+            BlockSpec dblk(blk, blk, m, n, cdata, &a[blk*block_size*lda+blk*block_size], lda, block_size);
+            BlockSpec rblk(iblk, blk, m, n, cdata, &a[blk*block_size*lda+iblk*block_size], lda, block_size);
             // On first access to this block, store copy in case of failure
             if(blk==0) rblk.backup(backup);
             // Record block state as assuming we've done up to col blk
@@ -2019,9 +2019,9 @@ private:
             for(int iblk=jblk; iblk<mblk; iblk++) {
                if(debug) printf("UpdateN(%d,%d,%d)\n", iblk, jblk, blk);
                int thread_num = omp_get_thread_num();
-               BlockSpec ublk(iblk, jblk, m, n, cdata, a, lda, block_size);
-               BlockSpec isrc(iblk, blk, m, n, cdata, a, lda, block_size);
-               BlockSpec jsrc(jblk, blk, m, n, cdata, a, lda, block_size);
+               BlockSpec ublk(iblk, jblk, m, n, cdata, &a[jblk*block_size*lda+iblk*block_size], lda, block_size);
+               BlockSpec isrc(iblk, blk, m, n, cdata, &a[blk*block_size*lda+iblk*block_size], lda, block_size);
+               BlockSpec jsrc(jblk, blk, m, n, cdata, &a[blk*block_size*lda+jblk*block_size], lda, block_size);
                // On first access to this block, store copy in case of fail
                if(blk==0 && jblk!=blk) ublk.backup(backup);
                // Record block state as assuming we've done up to col blk
@@ -2041,9 +2041,9 @@ private:
                               (iblk-nblk)*block_size];
                if(debug) printf("FormContrib(%d,%d,%d)\n", iblk, jblk, blk);
                int thread_num = omp_get_thread_num();
-               BlockSpec ublk(iblk, jblk, m, n, cdata, a, lda, block_size);
-               BlockSpec isrc(iblk, blk, m, n, cdata, a, lda, block_size);
-               BlockSpec jsrc(jblk, blk, m, n, cdata, a, lda, block_size);
+               BlockSpec ublk(iblk, jblk, m, n, cdata, &a[jblk*block_size*lda+iblk*block_size], lda, block_size);
+               BlockSpec isrc(iblk, blk, m, n, cdata, &a[blk*block_size*lda+iblk*block_size], lda, block_size);
+               BlockSpec jsrc(jblk, blk, m, n, cdata, &a[blk*block_size*lda+jblk*block_size], lda, block_size);
                // Record block state as assuming we've done up to col blk
                up_to_date[jblk*mblk+iblk] = blk;
                // Perform update
@@ -2104,7 +2104,7 @@ private:
                   depend(inout: a[jblk*block_size*lda+iblk*block_size:1])
                {
                   int thread_num = omp_get_thread_num();
-                  BlockSpec rblk(iblk, jblk, m, n, cdata, a, lda, block_size);
+                  BlockSpec rblk(iblk, jblk, m, n, cdata, &a[jblk*block_size*lda+iblk*block_size], lda, block_size);
                   rblk.apply_inv_rperm(work[thread_num]);
                }
             }
@@ -2121,7 +2121,7 @@ private:
                   shared(a, backup, cdata) \
                   depend(inout: a[jblk*block_size*lda+iblk*block_size:1])
                {
-                  BlockSpec rblk(iblk, jblk, m, n, cdata, a, lda, block_size);
+                  BlockSpec rblk(iblk, jblk, m, n, cdata, &a[jblk*block_size*lda+iblk*block_size], lda, block_size);
                   rblk.full_restore(backup);
                }
                progress = -1;
@@ -2136,9 +2136,9 @@ private:
                   depend(in: a[kblk*block_size*lda+jblk*block_size:1])
                {
                   int thread_num = omp_get_thread_num();
-                  BlockSpec ublk(iblk, jblk, m, n, cdata, a, lda, block_size);
-                  BlockSpec isrc(iblk, kblk, m, n, cdata, a, lda, block_size);
-                  BlockSpec jsrc(jblk, kblk, m, n, cdata, a, lda, block_size);
+                  BlockSpec ublk(iblk, jblk, m, n, cdata, &a[jblk*block_size*lda+iblk*block_size], lda, block_size);
+                  BlockSpec isrc(iblk, kblk, m, n, cdata, &a[kblk*block_size*lda+iblk*block_size], lda, block_size);
+                  BlockSpec jsrc(jblk, kblk, m, n, cdata, &a[kblk*block_size*lda+jblk*block_size], lda, block_size);
                   ublk.update(isrc, jsrc, work[thread_num], 0.0, upd, ldupd);
                }
             }
@@ -2162,9 +2162,9 @@ private:
                   depend(inout: upd_ij[0:1])
                {
                   int thread_num = omp_get_thread_num();
-                  BlockSpec ublk(iblk, jblk, m, n, cdata, a, lda, block_size);
-                  BlockSpec isrc(iblk, kblk, m, n, cdata, a, lda, block_size);
-                  BlockSpec jsrc(jblk, kblk, m, n, cdata, a, lda, block_size);
+                  BlockSpec ublk(iblk, jblk, m, n, cdata, &a[jblk*block_size*lda+iblk*block_size], lda, block_size);
+                  BlockSpec isrc(iblk, kblk, m, n, cdata, &a[kblk*block_size*lda+iblk*block_size], lda, block_size);
+                  BlockSpec jsrc(jblk, kblk, m, n, cdata, &a[kblk*block_size*lda+jblk*block_size], lda, block_size);
                   // Perform update
                   ublk.form_contrib(
                         isrc, jsrc, work[thread_num], 0.0, upd_ij, ldupd
