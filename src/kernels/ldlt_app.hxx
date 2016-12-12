@@ -33,6 +33,10 @@
 #include "ssids/cpu/kernels/common.hxx"
 #include "ssids/cpu/kernels/wrappers.hxx"
 
+#if defined(SPLDLT_USE_STARPU)
+#include <starpu.h>
+#endif
+
 // namespace spral { namespace ssids { namespace cpu {
 namespace spldlt {
 
@@ -964,8 +968,8 @@ public:
     */
    template <typename Allocator>
    int factor(int next_elim, int* perm, T* d,
-         struct cpu_factor_options const &options,
-         std::vector<Workspace>& work, Allocator const& alloc) {
+              struct cpu_factor_options const &options,
+              Workspace& work,/*std::vector<Workspace>& work,*/ Allocator const& alloc) {
       if(i_ != j_)
          throw std::runtime_error("factor called on non-diagonal block!");
       int* lperm = cdata_.get_lperm(i_);
@@ -973,39 +977,48 @@ public:
          lperm[i] = i;
       cdata_[i_].d = &d[2*next_elim];
       if(block_size_ != INNER_BLOCK_SIZE) {
+
          // Recurse
          CopyBackup<T, Allocator> inner_backup(
                nrow(), ncol(), INNER_BLOCK_SIZE, alloc
                );
          bool const use_tasks = false; // Don't run in parallel at lower level
          bool const debug = false; // Don't print debug info for inner call
+         std::vector<Workspace> work_wrap = {work}; // we only need one 
+         // workspace because we call factor without using tasks.
+
+         // FIXME: note that we are recurssing on the factor routine
+         // from the LDLT class (taken from SSIDS) because we run it in
+         // sequential. It would certainly be simpler to recurse on
+         // the ldlt_app routine from FactorSymIndef class.
          cdata_[i_].nelim =
             LDLT<T, INNER_BLOCK_SIZE, CopyBackup<T,Allocator>,
                  use_tasks, debug, Allocator>
                 ::factor(
                       nrow(), ncol(), lperm, aval_, lda_,
                       cdata_[i_].d, inner_backup, options, options.pivot_method,
-                      INNER_BLOCK_SIZE, 0, nullptr, 0, work, alloc
+                      INNER_BLOCK_SIZE, 0, nullptr, 0, work_wrap,/*work,*/ alloc
                       );
          if(cdata_[i_].nelim < 0) return cdata_[i_].nelim;
-         int* temp = work[omp_get_thread_num()].get_ptr<int>(ncol());
+         int* temp = /*work[omp_get_thread_num()]*/work.get_ptr<int>(ncol());
          int* blkperm = &perm[i_*block_size_];
          for(int i=0; i<ncol(); ++i)
             temp[i] = blkperm[lperm[i]];
          for(int i=0; i<ncol(); ++i)
             blkperm[i] = temp[i];
+
       } else { /* block_size == INNER_BLOCK_SIZE */
          // Call another routine for small block factorization
          if(ncol() < INNER_BLOCK_SIZE || !is_aligned(aval_)) {
          // if(ncol() < INNER_BLOCK_SIZE || !(reinterpret_cast<uintptr_t>(aval_) % 32 == 0)) {
-            T* ld = work[omp_get_thread_num()].get_ptr<T>(2*INNER_BLOCK_SIZE);
+            T* ld = /*work[omp_get_thread_num()]*/work.get_ptr<T>(2*INNER_BLOCK_SIZE);
             cdata_[i_].nelim = ldlt_tpp_factor(
                   nrow(), ncol(), lperm, aval_, lda_,
                   cdata_[i_].d, ld, INNER_BLOCK_SIZE, options.action,
                   options.u, options.small
                   );
             if(cdata_[i_].nelim < 0) return cdata_[i_].nelim;
-            int* temp = work[omp_get_thread_num()].get_ptr<int>(ncol());
+            int* temp = /*work[omp_get_thread_num()]*/work.get_ptr<int>(ncol());
             int* blkperm = &perm[i_*INNER_BLOCK_SIZE];
             for(int i=0; i<ncol(); ++i)
                temp[i] = blkperm[lperm[i]];
@@ -1013,7 +1026,7 @@ public:
                blkperm[i] = temp[i];
          } else {
             int* blkperm = &perm[i_*INNER_BLOCK_SIZE];
-            T* ld = work[omp_get_thread_num()].get_ptr<T>(
+            T* ld = /*work[omp_get_thread_num()]*/work.get_ptr<T>(
                   INNER_BLOCK_SIZE*INNER_BLOCK_SIZE
                   );
             block_ldlt<T, INNER_BLOCK_SIZE>(
@@ -1226,6 +1239,19 @@ public:
    int nrow() const { return get_nrow(i_); }
    /** \brief return number of columns in this block */
    int ncol() const { return get_ncol(j_); }
+   /* return block's row */
+   int get_row() const { return i_; }
+   /* return block's col */
+   int get_col() const { return j_; }
+
+#if defined(SPLDLT_USE_STARPU)
+   void register_handle() {
+      
+      starpu_matrix_data_register(
+            &hdl_, -1, 0, lda_, nrow(), ncol(),
+            sizeof(T));
+   }
+#endif
 private:
    /** \brief return number of columns in given block column */
    inline int get_ncol(int blk) const {
@@ -1248,6 +1274,9 @@ private:
    int const block_size_; ///< block size
    ColumnData<T,IntAlloc>& cdata_; ///< global column data array
    T* aval_; ///< pointer to underlying matrix storage
+#if defined(SPLDLT_USE_STARPU)
+   starpu_data_handle_t hdl_;
+#endif
 };
 
 /** \brief Grouping of assorted functions for LDL^T factorization that share
@@ -1321,7 +1350,7 @@ private:
                dblk.backup(backup);
                // Perform actual factorization
                int nelim = dblk.template factor<Allocator>(
-                     next_elim, perm, d, options, work, alloc
+                     next_elim, perm, d, options, work[omp_get_thread_num()],/*work,*/ alloc
                      );
                if(nelim<0) {
                   flag = nelim;
@@ -1586,7 +1615,7 @@ private:
                dblk.backup(backup);
                // Perform actual factorization
                int nelim = dblk.template factor<Allocator>(
-                     next_elim, perm, d, options, work, alloc
+                     next_elim, perm, d, options, work[omp_get_thread_num()], /*work,*/ alloc
                      );
                if(nelim<0) return nelim;
                // Init threshold check (non locking => task dependencies)
@@ -1746,7 +1775,7 @@ private:
                up_to_date[blk*mblk+blk] = blk;
                // Perform actual factorization
                int nelim = dblk.template factor<Allocator>(
-                     next_elim, perm, d, options, work, alloc
+         next_elim, perm, d, options, work[omp_get_thread_num()], /*work,*/ alloc
                      );
                if(nelim < get_ncol(blk, n, block_size)) {
                   cdata[blk].init_passed(0); // diagonal block has NOT passed
@@ -1964,7 +1993,7 @@ private:
             up_to_date[blk*mblk+blk] = blk;
             // Perform actual factorization
             int nelim = dblk.template factor<Allocator>(
-                  next_elim, perm, d, options, work, alloc
+               next_elim, perm, d, options, work[omp_get_thread_num()],/* work,*/ alloc
                   );
             if(nelim < get_ncol(blk, n, block_size)) {
                cdata[blk].init_passed(0); // diagonal block has NOT passed

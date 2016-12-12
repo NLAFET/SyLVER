@@ -12,7 +12,8 @@ namespace spldlt {
    /* alloc node */
    template <typename T,
              typename FactorAlloc,
-             typename PoolAlloc>
+             typename PoolAlloc,
+             int posdef = true>
    void alloc_node(
          SymbolicNode const& snode,
          NumericNode<T,PoolAlloc>& node,
@@ -20,7 +21,6 @@ namespace spldlt {
          PoolAlloc& pool_alloc
          ) {
 
-      bool posdef = true;
       T *scaling = NULL;
 
       /* Rebind allocators */
@@ -47,7 +47,10 @@ namespace spldlt {
    /* alloc node in MF context
       FIXME bool mf as input parameter?
     */
-   template<typename T, typename FactorAlloc, typename PoolAlloc>
+   template<typename T, 
+            typename FactorAlloc, 
+            typename PoolAlloc,
+            bool posdef = true>
    void alloc_node_mf(
          SymbolicNode const& snode,
          NumericNode<T,PoolAlloc>& node,
@@ -55,7 +58,6 @@ namespace spldlt {
          PoolAlloc& pool_alloc
          ) {
 
-      bool posdef = true;
       T *scaling = NULL;
 
       /* Rebind allocators */

@@ -1,7 +1,12 @@
 #pragma once
 
+// SSIDS
 #include "ssids/cpu/cpu_iface.hxx"
 #include "ssids/cpu/NumericNode.hxx"
+#include "ssids/cpu/kernels/common.hxx"
+#include "ssids/cpu/kernels/wrappers.hxx"
+
+using namespace spral::ssids::cpu;
 
 namespace spldlt {
    

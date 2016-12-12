@@ -151,4 +151,12 @@ if(${RUNTIME} MATCHES "StarPU")
   target_link_libraries(spldlt_test ${STARPU_LIBRARY})
   # HWLOC
   target_link_libraries(spldlt_test ${HWLOC_LIBRARY})
+
+  # Kernel tests
+  if (${KERNEL_TEST} MATCHES "ON")
+    # StarPU
+    target_link_libraries(spldlt_kernel_test ${STARPU_LIBRARY})
+    # HWLOC
+    target_link_libraries(spldlt_kernel_test ${HWLOC_LIBRARY})
+  endif()
 endif()
