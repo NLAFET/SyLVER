@@ -6,7 +6,7 @@
 #include "ssids/cpu/kernels/wrappers.hxx"
 // #include "ldlt_tpp.hxx"
 // #include "ldlt_app.hxx"
-#include "testing_factorize_indef.hxx"
+#include "testing_factor_indef.hxx"
 #include "testing_factor_node_indef.hxx"
 
 // using namespace spral::ssids::cpu;
@@ -25,7 +25,7 @@ int main(void) {
    // spldlt::run_ldlt_tpp_tests();
 
    // Factorize node in indefinite case using APTP (sequtential)
-   // spldlt::run_factorize_indef_tests();
+   // spldlt::run_factor_indef_tests();
 
    // Factorize node in indefinite case using APTP (parallel)
    spldlt::run_factor_node_indef_tests();
