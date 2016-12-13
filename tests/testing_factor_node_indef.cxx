@@ -84,7 +84,7 @@ namespace spldlt {
       options.u = u;
       options.print_level = 0;
       options.small_subtree_threshold = 100*100*100;
-      options.cpu_block_size = 256;
+      options.cpu_block_size = blksz;
       options.pivot_method = PivotMethod::app_block;
       // options.pivot_method = (aggressive) ? PivotMethod::app_aggressive
       //                                     : PivotMethod::app_block;
@@ -119,11 +119,14 @@ namespace spldlt {
       
       // Initialize solver (tasking system in particular)
 #if defined(SPLDLT_USE_STARPU)
+      struct starpu_conf *conf = new starpu_conf;// (struct starpu_conf *)malloc(sizeof(struct starpu_conf));
+      starpu_conf_init(conf);
+      conf->ncpus = 1;
       int ret = starpu_init(NULL);
 #endif
 
       // Init factoriization 
-      factor_indef_init<T, PoolAllocator>();
+      factor_indef_init<T, iblksz, CopyBackup<T>, PoolAllocator>();
 
       // int q1 = LDLT
       //    <T, iblksz, CopyBackup<T>, false, debug>
@@ -213,9 +216,9 @@ namespace spldlt {
        */
       // factor_node_indef_test<double, 5, true>(0.01, 1e-20, true, false, 10, 3, 5);
 
-      /* 10x10 matrix
-         blksz: 10
-         inner blksz: 5
+      /* 12x12 matrix
+         blksz: 12
+         inner blksz: 4
          debug: enabled
        */
       factor_node_indef_test<double, 4, true>(0.01, 1e-20, true, false, 12, 12, 4);

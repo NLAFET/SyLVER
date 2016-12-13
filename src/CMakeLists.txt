@@ -19,7 +19,6 @@ file(
   )
 
 # message(STATUS "Kernel sources: ${kernel_sources}")
-message(STATUS "Sources: ${sources}")
 set(sources ${sources} ${kernel_sources})
 
 if(${RUNTIME} MATCHES "StarPU")
@@ -28,10 +27,16 @@ if(${RUNTIME} MATCHES "StarPU")
     GLOB 
     starpu_sources 
     StarPU/*.F90
-    StarPU/*.c)
+    StarPU/*.c
+    StarPU/*.cxx
+    StarPU/*.hxx)
+
+  message(STATUS "StarPU sources: ${starpu_sources}")
 
   set(sources ${sources} ${starpu_sources})
 
 endif()
+
+# message(STATUS "Sources: ${sources}")
 
 add_library(spldlt ${sources})

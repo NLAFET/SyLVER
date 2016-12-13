@@ -1243,12 +1243,21 @@ public:
    int get_row() const { return i_; }
    /* return block's col */
    int get_col() const { return j_; }
+   /* return number of rows in the matrix */
+   int get_m() const { return m_; }
+   /* return number of columns in the matrix*/
+   int get_n() const { return n_; }
 
 #if defined(SPLDLT_USE_STARPU)
+   /* return StarPU on block */
+   starpu_data_handle_t get_hdl() { return hdl_; }
+
    void register_handle() {
       
-      starpu_matrix_data_register(
-            &hdl_, -1, 0, lda_, nrow(), ncol(),
+      // printf("[Block::register_handle]\n");
+      
+      starpu_matrix_data_register (
+            &hdl_, 0, (uintptr_t) aval_, lda_, nrow(), ncol(),
             sizeof(T));
    }
 #endif

@@ -10,10 +10,10 @@ using namespace spldlt::starpu;
 
 namespace spldlt {
 
-   template <typename T, typename PoolAlloc>
+   template <typename T, int iblksz, typename Backup, typename PoolAlloc>
    void factor_indef_init() {
 #if defined(SPLDLT_USE_STARPU)
-      codelet_init_indef<T, PoolAlloc>();
+      codelet_init_indef<T, iblksz, Backup, PoolAlloc>();
 #endif
    }
 
@@ -65,14 +65,21 @@ namespace spldlt {
             BlockSpec& dblk, int next_elim,
             int* perm, T* d,
             ColumnData<T,IntAlloc>& cdata, Backup& backup,
-            struct cpu_factor_options const& options,
-            int const block_size, 
-            Workspace& work, 
+            struct cpu_factor_options& options,
+            /*int const block_size,*/ 
+            Workspace& work,
             Allocator const& alloc) {
 
-// #if defined(SPLDLT_USE_STARPU)
+#if defined(SPLDLT_USE_STARPU)
+
+         insert_factor_block_app_task (
+               dblk.get_hdl(),
+               dblk.get_m(), dblk.get_n(), dblk.get_col(),
+               next_elim, perm, d,
+               &cdata, &backup,
+               &options, &work, &alloc);
          
-// #else
+#else
          bool abort=false;
 
          int blk = dblk.get_row();
@@ -92,7 +99,7 @@ namespace spldlt {
 
          // Init threshold check (non locking => task dependencies)
          cdata[blk].init_passed(nelim);      
-// #endif
+#endif
       }
       
       /*  ApplyN task: apply pivot on sub-diagonal block passing the a
@@ -295,7 +302,7 @@ namespace spldlt {
       int factorize_indef_app (
             int const m, int const n, int* perm, T* a,
             int const lda, T* d, ColumnData<T,IntAlloc>& cdata, Backup& backup,
-            struct cpu_factor_options const& options, int const block_size,
+            struct cpu_factor_options& options, int const block_size,
             T const beta, T* upd, int const ldupd, std::vector<spral::ssids::cpu::Workspace>& work,
             Allocator const& alloc, int const from_blk=0) {
          typedef Block<T, iblksz, IntAlloc> BlockSpec;
@@ -317,6 +324,10 @@ namespace spldlt {
                blocks.emplace_back(iblk, jblk, m, n, cdata, &a[jblk*block_size*lda+iblk*block_size], lda, block_size);
                // alternativel store pointer
                // blocks[jblk*mblk + iblk] = new BlockSpec(iblk, jblk, m, n, cdata, &a[jblk*block_size*lda+iblk*block_size], lda, block_size);
+#if defined(SPLDLT_USE_STARPU)
+               // register handle for block (iblk, jblk)
+               blocks[jblk*mblk+iblk].register_handle(); 
+#endif
             }
          }
 
@@ -342,7 +353,11 @@ namespace spldlt {
                   blocks[blk*(mblk+1)] /*dblk*/, next_elim,
                   perm, d,
                   cdata, backup,
-                  options, block_size, work[thread_num], alloc);
+                  options/*, block_size*/, work[thread_num], alloc);
+
+#if defined(SPLDLT_USE_STARPU)
+            starpu_task_wait_for_all();
+#endif
 
             // DEBUG
             // {
@@ -440,9 +455,9 @@ namespace spldlt {
                   // Update uneliminated entries in blocks on the left
                   // of current block column
                   updateT_block_app_task(
-                        isrc, jsrc, ublk,
-                        // blocks[isrc_col*mblk+isrc_row], blocks[jblk*mblk+blk], 
-                        // blocks[jblk*mblk+iblk],
+                        // isrc, jsrc, ublk,
+                        blocks[isrc_col*mblk+isrc_row], blocks[jblk*mblk+blk], 
+                        blocks[jblk*mblk+iblk],
                         backup, 
                         work[0]);
 
@@ -478,7 +493,9 @@ namespace spldlt {
                   // Update blocks on the right of the current block
                   // column
                   updateN_block_app_task(
-                        isrc, jsrc, ublk,
+                        // isrc, jsrc, ublk,
+                        blocks[blk*mblk+iblk], blocks[blk*mblk+jblk],
+                        blocks[jblk*mblk+iblk],
                         backup,
                         beta, upd, ldupd,
                         work[thread_num]);
@@ -500,7 +517,9 @@ namespace spldlt {
                         BlockSpec jsrc(jblk, blk, m, n, cdata, &a[blk*block_size*lda+jblk*block_size], lda, block_size);
 
                         udpate_contrib_task(
-                              isrc, jsrc, ublk,
+                              // isrc, jsrc, ublk,
+                              blocks[blk*mblk+iblk], blocks[blk*mblk+jblk],
+                              blocks[jblk*mblk+iblk],
                               beta, upd_ij, ldupd,
                               work[thread_num]
                               );
@@ -518,6 +537,18 @@ namespace spldlt {
            printf("PostElim:\n");
            print_mat(mblk, nblk, m, n, blkdata, cdata, lda);
            }*/
+
+         /* FIXME: 
+            
+            If we want to return next_elim: need to wait for
+            adjust_task to be completed. Alternatively, remove the
+            return and retreive next_elim upon completion of
+            adjsut_task.
+            
+          */ 
+#if defined(SPLDLT_USE_STARPU)
+         starpu_task_wait_for_all();
+#endif
 
          return next_elim;
       }
@@ -635,7 +666,7 @@ namespace spldlt {
       int ldlt_app(int m, int n, int *perm, 
                    T *a, int lda, T *d, 
                    Backup& backup, 
-                   struct cpu_factor_options const& options/*, PivotMethod pivot_method*/, int block_size, T beta, T* upd, int ldupd, 
+                   struct cpu_factor_options& options/*, PivotMethod pivot_method*/, int block_size, T beta, T* upd, int ldupd, 
                    std::vector<spral::ssids::cpu::Workspace>& work, Allocator const& alloc=Allocator()) {
 
          /* Sanity check arguments */
@@ -660,6 +691,14 @@ namespace spldlt {
                options, block_size,
                beta, upd, ldupd, work,
                alloc);
+
+         // By default function calls are asynchronous, so we put a
+         // barrier and wait for the task-based factorization to be
+         // completed
+#if defined(SPLDLT_USE_STARPU)
+         starpu_task_wait_for_all();
+#endif
+
          
          // realease all memory used for backup
          backup.release_all_memory(); 

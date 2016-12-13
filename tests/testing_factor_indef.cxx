@@ -92,7 +92,7 @@ namespace spldlt {
       typedef BuddyAllocator<T,std::allocator<T>> PoolAllocator;
       PoolAllocator pool_alloc(m*n);
 
-      factor_indef_init<T, PoolAllocator>();
+      // factor_indef_init<T, PoolAllocator>();
 
       // Factorize using main routine
       spral::test::AlignedAllocator<T> allocT;
