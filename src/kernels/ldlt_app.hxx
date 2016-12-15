@@ -169,7 +169,19 @@ public:
    /** \brief return number of passed columns */
    int get_npass() const { return npass_; }
 
+#if defined(SPLDLT_USE_STARPU)
+   /* return StarPU handle on column */
+   starpu_data_handle_t get_hdl() { return hdl_; }
+   /* register handle on column*/
+   void register_handle() {
+      starpu_void_data_register(&hdl_);
+   }
+#endif
+
 private:
+#if defined(SPLDLT_USE_STARPU)
+   starpu_data_handle_t hdl_;
+#endif
    spral::omp::Lock lock_; ///< lock for altering npass
    int npass_=0; ///< reduction variable for nelim
 };

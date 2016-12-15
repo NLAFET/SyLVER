@@ -70,19 +70,20 @@ namespace spldlt {
             Workspace& work,
             Allocator const& alloc) {
 
+         int blk = dblk.get_row();
+
 #if defined(SPLDLT_USE_STARPU)
 
          insert_factor_block_app_task (
-               dblk.get_hdl(),
-               dblk.get_m(), dblk.get_n(), dblk.get_col(),
+               dblk.get_hdl(), cdata[blk].get_hdl(),
+               dblk.get_m(), dblk.get_n(), 
+               blk,
                next_elim, perm, d,
                &cdata, &backup,
                &options, &work, &alloc);
          
 #else
          bool abort=false;
-
-         int blk = dblk.get_row();
 
          // BlockSpec dblk(blk, blk, m, n, cdata, &a[blk*block_size*lda+blk*block_size], lda, block_size);
          // if(debug) printf("Factor(%d)\n", blk);
@@ -117,11 +118,21 @@ namespace spldlt {
             // int const m, int const n, 
             // T* a, int const lda,
             ColumnData<T,IntAlloc>& cdata, Backup& backup,
-            struct cpu_factor_options const& options/*, int const block_size*/) {
+            struct cpu_factor_options& options/*, int const block_size*/) {
 
          int blk = dblk.get_col();
          int iblk = rblk.get_row();
 
+#if defined(SPLDLT_USE_STARPU)
+
+         insert_applyN_block_app (
+               dblk.get_hdl(), rblk.get_hdl(),
+               cdata[blk].get_hdl(),
+               dblk.get_m(), dblk.get_n(), 
+               blk, iblk,
+               &cdata, &backup, &options);
+
+#else
          if(debug) printf("ApplyN(%d,%d)\n", iblk, blk);
          // BlockSpec dblk(blk, blk, m, n, cdata, &a[blk*block_size*lda+blk*block_size], lda, block_size);
          // BlockSpec rblk(iblk, blk, m, n, cdata, &a[blk*block_size*lda+iblk*block_size], lda, block_size);
@@ -134,6 +145,7 @@ namespace spldlt {
          int blkpass = rblk.apply_pivot_app(dblk, options.u, options.small);
          // Update column's passed pivot count
          cdata[blk].update_passed(blkpass);
+#endif
       }
 
       /*  ApplyN task: apply pivot on left-diagonal block passing the
@@ -152,11 +164,21 @@ namespace spldlt {
             // int const m, int const n, 
             // T* a, int const lda,
             ColumnData<T,IntAlloc>& cdata, Backup& backup,
-            struct cpu_factor_options const& options/*, int const block_size*/) {
+            struct cpu_factor_options& options/*, int const block_size*/) {
 
          int blk = dblk.get_col();
          int jblk = cblk.get_col();
 
+#if defined(SPLDLT_USE_STARPU)
+
+         insert_applyT_block_app (
+               dblk.get_hdl(), cblk.get_hdl(),
+               cdata[blk].get_hdl(),
+               dblk.get_m(), dblk.get_n(), 
+               blk, jblk,
+               &cdata, &backup, &options);
+
+#else
          if(debug) printf("ApplyT(%d,%d)\n", blk, jblk);
          // BlockSpec dblk(blk, blk, m, n, cdata, &a[blk*block_size*lda+blk*block_size], lda, block_size);
          // BlockSpec cblk(blk, jblk, m, n, cdata, &a[jblk*block_size*lda+blk*block_size], lda, block_size);
@@ -171,6 +193,7 @@ namespace spldlt {
                );
          // Update column's passed pivot count
          cdata[blk].update_passed(blkpass);
+#endif
       }
 
       /* UpdateN task: peroform update of a block on the right of
@@ -254,22 +277,29 @@ namespace spldlt {
          ublk.restore_if_required(backup, blk);
          // Perform actual update
          ublk.update(isrc, jsrc, work);
-      }      
+      }
       
       /* adjust task
        */
       static 
       void adjust_task(
             BlockSpec& dblk,
-            int& next_elim, 
+            int& next_elim,
             ColumnData<T,IntAlloc>& cdata) {
          
-         int blk = dblk.get_col(); 
+         int blk = dblk.get_col();
 
+#if defined(SPLDLT_USE_STARPU)
+         insert_adjust(
+               cdata[blk].get_hdl(), blk,
+               &next_elim, &cdata);
+#else
          // Adjust column once all applys have finished and we know final
          // number of passed columns.
          if(debug) printf("Adjust(%d)\n", blk);
          cdata[blk].adjust(next_elim);
+#endif
+
       }
 
       /* update_contrib task: Udpate a block as part of the
@@ -319,6 +349,10 @@ namespace spldlt {
          blocks.reserve(num_blocks);
 
          for(int jblk=0; jblk<nblk; jblk++) {
+#if defined(SPLDLT_USE_STARPU)
+            // register symbolic handle for each block column
+            cdata[jblk].register_handle();
+#endif            
             for(int iblk=0; iblk<mblk; iblk++) {
                // Create and insert block at the end (column-wise storage)
                blocks.emplace_back(iblk, jblk, m, n, cdata, &a[jblk*block_size*lda+iblk*block_size], lda, block_size);
@@ -388,6 +422,10 @@ namespace spldlt {
                      cdata, backup,
                      options);
 
+#if defined(SPLDLT_USE_STARPU)
+               starpu_task_wait_for_all();
+#endif
+
                // DEBUG
                // if(debug) printf("ApplyT(%d,%d)\n", blk, jblk);
                // BlockSpec dblk(blk, blk, m, n, cdata, &a[blk*block_size*lda+blk*block_size], lda, block_size);
@@ -414,6 +452,10 @@ namespace spldlt {
                      cdata, backup,
                      options);
 
+#if defined(SPLDLT_USE_STARPU)
+               starpu_task_wait_for_all();
+#endif
+
                // DEBUG
                // if(debug) printf("ApplyN(%d,%d)\n", iblk, blk);
                // BlockSpec dblk(blk, blk, m, n, cdata, &a[blk*block_size*lda+blk*block_size], lda, block_size);
@@ -433,6 +475,10 @@ namespace spldlt {
             // Adjust column once all applys have finished and we know final
             // number of passed columns.
             adjust_task(/* dblk*/blocks[blk*(mblk+1)], next_elim, cdata);
+
+#if defined(SPLDLT_USE_STARPU)
+            starpu_task_wait_for_all();
+#endif
 
             // DEBUG
             // if(debug) printf("Adjust(%d)\n", blk);
