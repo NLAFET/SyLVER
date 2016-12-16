@@ -136,7 +136,7 @@ namespace spldlt { namespace starpu {
          Backup *backup = nullptr;
          struct cpu_factor_options *options = nullptr;
 
-         printf("[applyN_block_app_cpu_func]\n");
+         // printf("[applyN_block_app_cpu_func]\n");
 
          starpu_codelet_unpack_args (
                cl_arg,

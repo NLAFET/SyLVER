@@ -191,7 +191,7 @@ namespace spldlt {
 
       // Check residual
       T bwderr = backward_error(m, a, lda, b, 1, soln, m);
-      if(debug) printf("bwderr = %le\n", bwderr);
+      /*if(debug)*/ printf("bwderr = %le\n", bwderr);
       EXPECT_LE(bwderr, 5e-14) << "(test " << test << " seed " << seed << ")" << std::endl;
 
       // Cleanup memory
@@ -221,7 +221,11 @@ namespace spldlt {
          inner blksz: 4
          debug: enabled
        */
-      factor_node_indef_test<double, 4, true>(0.01, 1e-20, true, false, 12, 12, 4);
+      // factor_node_indef_test<double, 4, true>(0.01, 1e-20, true, false, 12, 12, 4);
+
+      factor_node_indef_test<double, 4, false>(0.01, 1e-20, true, false, 8, 8, 8);
+
+      // factor_node_indef_test<double, 32, false>(0.01, 1e-20, true, false, 64, 64, 64);
 
       return err;
    }
