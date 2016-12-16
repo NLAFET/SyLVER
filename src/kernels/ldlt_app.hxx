@@ -1259,6 +1259,8 @@ public:
    int get_m() const { return m_; }
    /* return number of columns in the matrix*/
    int get_n() const { return n_; }
+   /* return the block size */
+   int get_blksz() const { return block_size_; }
 
 #if defined(SPLDLT_USE_STARPU)
    /* return StarPU on block */

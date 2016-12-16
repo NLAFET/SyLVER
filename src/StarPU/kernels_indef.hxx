@@ -35,6 +35,7 @@ namespace spldlt { namespace starpu {
          int *perm;
          T *d;
          ColumnData<T,IntAlloc> *cdata = nullptr;
+         // Column<T> *col = nullptr;
          Backup *backup = nullptr;
          struct cpu_factor_options *options = nullptr;
          Workspace *work = nullptr;
@@ -66,8 +67,7 @@ namespace spldlt { namespace starpu {
             abort=true;
 
          // Init threshold check (non locking => task dependencies)
-         (*cdata)[blk].init_passed(nelim);      
-
+         (*cdata)[blk].init_passed(nelim);
       }
       
       template<typename T, 
@@ -99,6 +99,7 @@ namespace spldlt { namespace starpu {
                STARPU_VALUE, &perm, sizeof(int*),
                STARPU_VALUE, &d, sizeof(T*),
                STARPU_VALUE, &cdata, sizeof(ColumnData<T,IntAlloc>*),
+               // STARPU_VALUE, &col, sizeof(Column<T>*),
                STARPU_VALUE, &backup, sizeof(Backup*),
                STARPU_VALUE, &options, sizeof(struct cpu_factor_options *),
                STARPU_VALUE, &work, sizeof(Workspace*),
@@ -275,9 +276,92 @@ namespace spldlt { namespace starpu {
       /*  updateN_block_app StarPU task
          
        */
-      template<typename T>
+      template<typename T,
+               int iblksz,
+               typename Backup, 
+               typename IntAlloc>
       void 
       updateN_block_app_cpu_func(void *buffers[], void *cl_arg) {
+
+         T *a_ik = (T *)STARPU_MATRIX_GET_PTR(buffers[0]); // Get diagonal block pointer
+         unsigned ld_a_ik = STARPU_MATRIX_GET_LD(buffers[0]); // Get leading dimensions
+
+         T *a_jk = (T *)STARPU_MATRIX_GET_PTR(buffers[1]); // Get diagonal block pointer
+         unsigned ld_a_jk = STARPU_MATRIX_GET_LD(buffers[1]); // Get leading dimensions
+
+         T *a_ij = (T *)STARPU_MATRIX_GET_PTR(buffers[2]); // Get diagonal block pointer
+         unsigned ld_a_ij = STARPU_MATRIX_GET_LD(buffers[2]); // Get leading dimensions
+
+         int m, n; // node's dimensions
+         int iblk; // destination block's row index
+         int jblk; // destination block's column index     
+         int blk; // source block's column index     
+
+         ColumnData<T,IntAlloc> *cdata = nullptr;
+         Backup *backup = nullptr;
+         
+         T beta;
+         T* upd = nullptr;
+         int ldupd;
+
+         Workspace *work;
+         // struct cpu_factor_options *options = nullptr;
+         int blksz;
+
+         starpu_codelet_unpack_args (
+               cl_arg,
+               &m, &n,
+               &iblk, &jblk, &blk,
+               &cdata, &backup,
+               &beta, &upd, &ldupd,
+               &work, &blksz /*&options*/);
+
+         Block<T, iblksz, IntAlloc> ublk(iblk, jblk, m, n, *cdata, a_ij, ld_a_ij, blksz);
+         Block<T, iblksz, IntAlloc> isrc(iblk, blk, m, n, *cdata, a_ik, ld_a_ik, blksz);
+         Block<T, iblksz, IntAlloc> jsrc(jblk, blk, m, n, *cdata, a_jk, ld_a_jk, blksz);
+
+         // If we're on the block col we've just eliminated, restore
+         // any failed cols and release resources storing backup
+         ublk.restore_if_required(*backup, blk);
+         // Perform actual update
+         ublk.update(isrc, jsrc, *work,
+                     beta, upd, ldupd);
+      }
+
+      template<typename T, 
+               typename Backup, 
+               typename IntAlloc>
+      void insert_updateN_block_app(
+            starpu_data_handle_t a_ik_hdl,
+            starpu_data_handle_t a_jk_hdl,
+            starpu_data_handle_t a_ij_hdl,
+            int m, int n, int iblk, int jblk, int blk,
+            ColumnData<T,IntAlloc> *cdata, Backup *backup,
+            T beta, T* upd, int ldupd,
+            Workspace *work, int blksz/*struct cpu_factor_options *options*/) {
+
+         int ret;
+
+         ret = starpu_task_insert(
+               &cl_updateN_block_app,
+               STARPU_R, a_ik_hdl,
+               STARPU_R, a_jk_hdl,
+               STARPU_RW, a_ij_hdl,
+               STARPU_VALUE, &m, sizeof(int),
+               STARPU_VALUE, &n, sizeof(int),
+               STARPU_VALUE, &iblk, sizeof(int),
+               STARPU_VALUE, &jblk, sizeof(int),
+               STARPU_VALUE, &blk, sizeof(int),
+               STARPU_VALUE, &cdata, sizeof(ColumnData<T,IntAlloc>*),
+               STARPU_VALUE, &backup, sizeof(Backup*),
+               STARPU_VALUE, &beta, sizeof(T),
+               STARPU_VALUE, &upd, sizeof(T*),
+               STARPU_VALUE, &ldupd, sizeof(int),
+               STARPU_VALUE, &work, sizeof(Workspace*),
+               STARPU_VALUE, &blksz, sizeof(int),
+               // STARPU_VALUE, &options, sizeof(struct cpu_factor_options *),
+               0);
+         STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
          
       }
 
@@ -288,10 +372,86 @@ namespace spldlt { namespace starpu {
       /*  updateT_block_app StarPU task
          
        */
-      template<typename T>
+      template<typename T,
+               int iblksz,
+               typename Backup, 
+               typename IntAlloc>
       void 
       updateT_block_app_cpu_func(void *buffers[], void *cl_arg) {
+
+         T *a_ik = (T *)STARPU_MATRIX_GET_PTR(buffers[0]); // Get diagonal block pointer
+         unsigned ld_a_ik = STARPU_MATRIX_GET_LD(buffers[0]); // Get leading dimensions
          
+         T *a_jk = (T *)STARPU_MATRIX_GET_PTR(buffers[1]); // Get diagonal block pointer
+         unsigned ld_a_jk = STARPU_MATRIX_GET_LD(buffers[1]); // Get leading dimensions
+
+         T *a_ij = (T *)STARPU_MATRIX_GET_PTR(buffers[2]); // Get diagonal block pointer
+         unsigned ld_a_ij = STARPU_MATRIX_GET_LD(buffers[2]); // Get leading dimensions
+
+         int m, n; // node's dimensions
+         int iblk; // destination block's row index
+         int jblk; // destination block's column index     
+         int blk; // source block's column index     
+         int isrc_row, isrc_col;
+
+         ColumnData<T,IntAlloc> *cdata = nullptr;
+         Backup *backup = nullptr;
+         Workspace *work;
+         // struct cpu_factor_options *options = nullptr;
+         int blksz;
+
+         starpu_codelet_unpack_args (
+               cl_arg,
+               &m, &n,
+               &isrc_row, &isrc_col,
+               &iblk, &jblk, &blk,
+               &cdata, &backup,
+               &work, &blksz /*&options*/);
+
+         Block<T, iblksz, IntAlloc> ublk(iblk, jblk, m, n, *cdata, a_ij, ld_a_ij, blksz);
+         Block<T, iblksz, IntAlloc> isrc(isrc_row, isrc_col, m, n, *cdata, a_ik, ld_a_ik, blksz);
+         Block<T, iblksz, IntAlloc> jsrc(blk, jblk, m, n, *cdata, a_jk, ld_a_jk, blksz);
+
+         // If we're on the block row we've just eliminated, restore
+         // any failed rows and release resources storing backup
+         ublk.restore_if_required(*backup, blk);
+         // Perform actual update
+         ublk.update(isrc, jsrc, *work);
+      }
+
+      template<typename T, 
+               typename Backup, 
+               typename IntAlloc>
+      void insert_updateT_block_app(
+            starpu_data_handle_t a_ik_hdl,
+            starpu_data_handle_t a_jk_hdl,
+            starpu_data_handle_t a_ij_hdl,
+            int m, int n, int isrc_row, int isrc_col,
+            int iblk, int jblk, int blk,
+            ColumnData<T,IntAlloc> *cdata, Backup *backup,
+            Workspace *work, int blksz/*struct cpu_factor_options *options*/) {
+
+         int ret;
+
+         ret = starpu_task_insert(
+               &cl_updateT_block_app,
+               STARPU_R, a_ik_hdl,
+               STARPU_R, a_jk_hdl,
+               STARPU_RW, a_ij_hdl,
+               STARPU_VALUE, &m, sizeof(int),
+               STARPU_VALUE, &n, sizeof(int),
+               STARPU_VALUE, &isrc_row, sizeof(int),
+               STARPU_VALUE, &isrc_col, sizeof(int),
+               STARPU_VALUE, &iblk, sizeof(int),
+               STARPU_VALUE, &jblk, sizeof(int),
+               STARPU_VALUE, &blk, sizeof(int),
+               STARPU_VALUE, &cdata, sizeof(ColumnData<T,IntAlloc>*),
+               STARPU_VALUE, &backup, sizeof(Backup*),
+               STARPU_VALUE, &work, sizeof(Workspace*),
+               STARPU_VALUE, &blksz, sizeof(int),
+               // STARPU_VALUE, &options, sizeof(struct cpu_factor_options *),
+               0);
+         STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");         
       }
 
       /* adjust StarPU codelet */
@@ -380,14 +540,14 @@ namespace spldlt { namespace starpu {
          cl_updateN_block_app.where = STARPU_CPU;
          cl_updateN_block_app.nbuffers = STARPU_VARIABLE_NBUFFERS;
          cl_updateN_block_app.name = "UPDATEN_BLK_APP";
-         cl_updateN_block_app.cpu_funcs[0] = updateN_block_app_cpu_func<T>;
+         cl_updateN_block_app.cpu_funcs[0] = updateN_block_app_cpu_func<T, iblksz, Backup, IntAlloc>;
 
          // Initialize updateT_block_app StarPU codelet
          starpu_codelet_init(&cl_updateT_block_app);
          cl_updateT_block_app.where = STARPU_CPU;
          cl_updateT_block_app.nbuffers = STARPU_VARIABLE_NBUFFERS;
          cl_updateT_block_app.name = "UPDATET_BLK_APP";
-         cl_updateT_block_app.cpu_funcs[0] = updateT_block_app_cpu_func<T>;
+         cl_updateT_block_app.cpu_funcs[0] = updateT_block_app_cpu_func<T, iblksz, Backup, IntAlloc>;
 
          // Initialize adjust StarPU codelet
          starpu_codelet_init(&cl_adjust);

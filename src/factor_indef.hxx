@@ -212,7 +212,7 @@ namespace spldlt {
             // int blk, int iblk, int jblk,
             // int const m, int const n, 
             // T* a, int const lda,
-            /*ColumnData<T,IntAlloc>& cdata,*/ Backup& backup, 
+            ColumnData<T,IntAlloc>& cdata, Backup& backup, 
             // int const block_size,
             T const beta, T* upd, int const ldupd,
             Workspace& work) {
@@ -221,6 +221,17 @@ namespace spldlt {
          int jblk = ublk.get_col();
          int blk = jsrc.get_col();
 
+#if defined(SPLDLT_USE_STARPU)
+
+         insert_updateN_block_app(
+               isrc.get_hdl(), jsrc.get_hdl(), ublk.get_hdl(), 
+               ublk.get_m(), ublk.get_n(), 
+               iblk, jblk, blk,
+               &cdata, &backup,
+               beta, upd, ldupd,
+               &work, ublk.get_blksz());
+
+#else
          if(debug) printf("UpdateN(%d,%d,%d)\n", iblk, jblk, blk);
          // int thread_num = omp_get_thread_num();
          int thread_num = 0;
@@ -233,6 +244,7 @@ namespace spldlt {
          // Perform actual update
          ublk.update(isrc, jsrc, work,
                      beta, upd, ldupd);
+#endif
       }
       
       /* UpdateT task: peroform update of a block on the left of
@@ -254,7 +266,7 @@ namespace spldlt {
             // int blk, int iblk, int jblk,
             // int const m, int const n, 
             // T* a, int const lda,
-            /*ColumnData<T,IntAlloc>& cdata, */Backup& backup, 
+            ColumnData<T,IntAlloc>& cdata, Backup& backup, 
             // int const block_size,
             Workspace& work) {
 
@@ -262,6 +274,20 @@ namespace spldlt {
          int jblk = ublk.get_col();
          int blk = jsrc.get_row();
 
+         int isrc_row = isrc.get_row();
+         int isrc_col = isrc.get_col();
+
+#if defined(SPLDLT_USE_STARPU)
+
+         insert_updateT_block_app(
+               isrc.get_hdl(), jsrc.get_hdl(), ublk.get_hdl(), 
+               ublk.get_m(), ublk.get_n(),
+               isrc_row, isrc_col,
+               iblk, jblk, blk,
+               &cdata, &backup,
+               &work, ublk.get_blksz());
+
+#else
          if(debug) printf("UpdateT(%d,%d,%d)\n", iblk, jblk, blk);
          // int thread_num = omp_get_thread_num();
          int thread_num = 0;
@@ -277,6 +303,7 @@ namespace spldlt {
          ublk.restore_if_required(backup, blk);
          // Perform actual update
          ublk.update(isrc, jsrc, work);
+#endif
       }
       
       /* adjust task
@@ -504,8 +531,12 @@ namespace spldlt {
                         // isrc, jsrc, ublk,
                         blocks[isrc_col*mblk+isrc_row], blocks[jblk*mblk+blk], 
                         blocks[jblk*mblk+iblk],
-                        backup, 
+                        cdata, backup, 
                         work[0]);
+
+#if defined(SPLDLT_USE_STARPU)
+            starpu_task_wait_for_all();
+#endif
 
                   // DEBUG
                   // if(debug) printf("UpdateT(%d,%d,%d)\n", iblk, jblk, blk);
@@ -542,9 +573,14 @@ namespace spldlt {
                         // isrc, jsrc, ublk,
                         blocks[blk*mblk+iblk], blocks[blk*mblk+jblk],
                         blocks[jblk*mblk+iblk],
-                        backup,
+                        cdata, backup,
                         beta, upd, ldupd,
                         work[thread_num]);
+
+#if defined(SPLDLT_USE_STARPU)
+                  starpu_task_wait_for_all();
+#endif
+
                }
             }
 
