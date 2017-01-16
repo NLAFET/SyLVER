@@ -38,7 +38,8 @@ namespace spldlt { namespace starpu {
          // Column<T> *col = nullptr;
          Backup *backup = nullptr;
          struct cpu_factor_options *options = nullptr;
-         Workspace *work = nullptr;
+         std::vector<spral::ssids::cpu::Workspace> *work = nullptr;
+         // spral::ssids::cpu::Workspace *work = nullptr;
          Allocator *alloc = nullptr;
 
          // printf("[factor_block_app_cpu_func]\n");
@@ -82,7 +83,7 @@ namespace spldlt { namespace starpu {
             int next_elim, int *perm, T* d,
             ColumnData<T,IntAlloc> *cdata, Backup *backup,
             struct cpu_factor_options *options,
-            Workspace *work, Allocator *alloc) {
+            std::vector<spral::ssids::cpu::Workspace> *work, Allocator *alloc) {
          
          int ret;
 
@@ -102,7 +103,7 @@ namespace spldlt { namespace starpu {
                // STARPU_VALUE, &col, sizeof(Column<T>*),
                STARPU_VALUE, &backup, sizeof(Backup*),
                STARPU_VALUE, &options, sizeof(struct cpu_factor_options *),
-               STARPU_VALUE, &work, sizeof(Workspace*),
+               STARPU_VALUE, &work, sizeof(std::vector<spral::ssids::cpu::Workspace>*),
                STARPU_VALUE, &alloc, sizeof(Allocator*),
                0);
 
@@ -291,6 +292,8 @@ namespace spldlt { namespace starpu {
 
          T *a_ij = (T *)STARPU_MATRIX_GET_PTR(buffers[2]); // Get diagonal block pointer
          unsigned ld_a_ij = STARPU_MATRIX_GET_LD(buffers[2]); // Get leading dimensions
+         
+         int id = starpu_worker_get_id();
 
          int m, n; // node's dimensions
          int iblk; // destination block's row index
@@ -304,7 +307,8 @@ namespace spldlt { namespace starpu {
          T* upd = nullptr;
          int ldupd;
 
-         Workspace *work;
+         std::vector<spral::ssids::cpu::Workspace> *work;
+         // Workspace *work;
          // struct cpu_factor_options *options = nullptr;
          int blksz;
 
@@ -324,7 +328,7 @@ namespace spldlt { namespace starpu {
          // any failed cols and release resources storing backup
          ublk.restore_if_required(*backup, blk);
          // Perform actual update
-         ublk.update(isrc, jsrc, *work,
+         ublk.update(isrc, jsrc, (*work)[id],
                      beta, upd, ldupd);
       }
 
@@ -338,7 +342,7 @@ namespace spldlt { namespace starpu {
             int m, int n, int iblk, int jblk, int blk,
             ColumnData<T,IntAlloc> *cdata, Backup *backup,
             T beta, T* upd, int ldupd,
-            Workspace *work, int blksz/*struct cpu_factor_options *options*/) {
+            std::vector<spral::ssids::cpu::Workspace> *work, int blksz/*struct cpu_factor_options *options*/) {
 
          int ret;
 
@@ -357,7 +361,7 @@ namespace spldlt { namespace starpu {
                STARPU_VALUE, &beta, sizeof(T),
                STARPU_VALUE, &upd, sizeof(T*),
                STARPU_VALUE, &ldupd, sizeof(int),
-               STARPU_VALUE, &work, sizeof(Workspace*),
+               STARPU_VALUE, &work, sizeof(std::vector<spral::ssids::cpu::Workspace>*),
                STARPU_VALUE, &blksz, sizeof(int),
                // STARPU_VALUE, &options, sizeof(struct cpu_factor_options *),
                0);
@@ -388,6 +392,8 @@ namespace spldlt { namespace starpu {
          T *a_ij = (T *)STARPU_MATRIX_GET_PTR(buffers[2]); // Get diagonal block pointer
          unsigned ld_a_ij = STARPU_MATRIX_GET_LD(buffers[2]); // Get leading dimensions
 
+         int id = starpu_worker_get_id();
+
          int m, n; // node's dimensions
          int iblk; // destination block's row index
          int jblk; // destination block's column index     
@@ -396,7 +402,8 @@ namespace spldlt { namespace starpu {
 
          ColumnData<T,IntAlloc> *cdata = nullptr;
          Backup *backup = nullptr;
-         Workspace *work;
+         std::vector<spral::ssids::cpu::Workspace> *work; 
+         // Workspace *work;
          // struct cpu_factor_options *options = nullptr;
          int blksz;
 
@@ -416,7 +423,7 @@ namespace spldlt { namespace starpu {
          // any failed rows and release resources storing backup
          ublk.restore_if_required(*backup, blk);
          // Perform actual update
-         ublk.update(isrc, jsrc, *work);
+         ublk.update(isrc, jsrc, (*work)[id]);
       }
 
       template<typename T, 
@@ -429,7 +436,7 @@ namespace spldlt { namespace starpu {
             int m, int n, int isrc_row, int isrc_col,
             int iblk, int jblk, int blk,
             ColumnData<T,IntAlloc> *cdata, Backup *backup,
-            Workspace *work, int blksz/*struct cpu_factor_options *options*/) {
+            std::vector<spral::ssids::cpu::Workspace> *work, int blksz/*struct cpu_factor_options *options*/) {
 
          int ret;
 
@@ -447,7 +454,7 @@ namespace spldlt { namespace starpu {
                STARPU_VALUE, &blk, sizeof(int),
                STARPU_VALUE, &cdata, sizeof(ColumnData<T,IntAlloc>*),
                STARPU_VALUE, &backup, sizeof(Backup*),
-               STARPU_VALUE, &work, sizeof(Workspace*),
+               STARPU_VALUE, &work, sizeof(std::vector<spral::ssids::cpu::Workspace>*),
                STARPU_VALUE, &blksz, sizeof(int),
                // STARPU_VALUE, &options, sizeof(struct cpu_factor_options *),
                0);

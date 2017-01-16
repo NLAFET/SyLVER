@@ -66,8 +66,8 @@ namespace spldlt {
             int* perm, T* d,
             ColumnData<T,IntAlloc>& cdata, Backup& backup,
             struct cpu_factor_options& options,
-            /*int const block_size,*/ 
-            Workspace& work,
+            /*int const block_size,*/
+            std::vector<spral::ssids::cpu::Workspace>& work,
             Allocator const& alloc) {
 
          int blk = dblk.get_row();
@@ -92,7 +92,7 @@ namespace spldlt {
          int thread_num = 0;
          // Perform actual factorization
          int nelim = dblk.template factor<Allocator>(
-               next_elim, perm, d, options, work, alloc
+               next_elim, perm, d, options, work[0], alloc
                );
          if(nelim<0) 
             abort=true;
@@ -215,7 +215,8 @@ namespace spldlt {
             ColumnData<T,IntAlloc>& cdata, Backup& backup, 
             // int const block_size,
             T const beta, T* upd, int const ldupd,
-            Workspace& work) {
+            std::vector<spral::ssids::cpu::Workspace>& work
+            ) {
 
          int iblk = ublk.get_row();
          int jblk = ublk.get_col();
@@ -242,7 +243,7 @@ namespace spldlt {
          // any failed cols and release resources storing backup
          ublk.restore_if_required(backup, blk);
          // Perform actual update
-         ublk.update(isrc, jsrc, work,
+         ublk.update(isrc, jsrc, work[0],
                      beta, upd, ldupd);
 #endif
       }
@@ -268,7 +269,8 @@ namespace spldlt {
             // T* a, int const lda,
             ColumnData<T,IntAlloc>& cdata, Backup& backup, 
             // int const block_size,
-            Workspace& work) {
+            std::vector<spral::ssids::cpu::Workspace>& work
+            ) {
 
          int iblk = ublk.get_row();
          int jblk = ublk.get_col();
@@ -302,7 +304,7 @@ namespace spldlt {
          // any failed rows and release resources storing backup
          ublk.restore_if_required(backup, blk);
          // Perform actual update
-         ublk.update(isrc, jsrc, work);
+         ublk.update(isrc, jsrc, work[0]);
 #endif
       }
       
@@ -336,7 +338,7 @@ namespace spldlt {
       void udpate_contrib_task(
             BlockSpec& isrc, BlockSpec& jsrc, BlockSpec& ublk,
             T const beta, T* upd_ij, int const ldupd,
-            Workspace work
+            std::vector<spral::ssids::cpu::Workspace>& work
             ) {
 
          int iblk =  ublk.get_row();
@@ -346,7 +348,7 @@ namespace spldlt {
          if(debug) printf("FormContrib(%d,%d,%d)\n", iblk, jblk, blk);
 
          ublk.form_contrib(
-               isrc, jsrc, work, beta, upd_ij, ldupd
+               isrc, jsrc, work[0], beta, upd_ij, ldupd
                );
 
       }
@@ -369,7 +371,7 @@ namespace spldlt {
          int const mblk = calc_nblk(m, block_size);
 
          /* Setup */
-         int next_elim = from_blk*block_size;      
+         int next_elim = from_blk*block_size;
       
          int num_blocks = nblk*mblk;
          std::vector<BlockSpec> blocks;
@@ -414,7 +416,7 @@ namespace spldlt {
                   blocks[blk*(mblk+1)] /*dblk*/, next_elim,
                   perm, d,
                   cdata, backup,
-                  options/*, block_size*/, work[thread_num], alloc);
+                  options/*, block_size*/, work, alloc);
 
 #if defined(SPLDLT_USE_STARPU)
             starpu_task_wait_for_all();
@@ -532,7 +534,7 @@ namespace spldlt {
                         blocks[isrc_col*mblk+isrc_row], blocks[jblk*mblk+blk], 
                         blocks[jblk*mblk+iblk],
                         cdata, backup, 
-                        work[0]);
+                        work);
 
 #if defined(SPLDLT_USE_STARPU)
             starpu_task_wait_for_all();
@@ -575,7 +577,7 @@ namespace spldlt {
                         blocks[jblk*mblk+iblk],
                         cdata, backup,
                         beta, upd, ldupd,
-                        work[thread_num]);
+                        work);
 
 #if defined(SPLDLT_USE_STARPU)
                   starpu_task_wait_for_all();
@@ -603,7 +605,7 @@ namespace spldlt {
                               blocks[blk*mblk+iblk], blocks[blk*mblk+jblk],
                               blocks[jblk*mblk+iblk],
                               beta, upd_ij, ldupd,
-                              work[thread_num]
+                              work
                               );
                      }
                   }

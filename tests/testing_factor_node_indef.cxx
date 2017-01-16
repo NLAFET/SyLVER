@@ -223,7 +223,7 @@ namespace spldlt {
        */
       // factor_node_indef_test<double, 4, true>(0.01, 1e-20, true, false, 12, 12, 4);
 
-      factor_node_indef_test<double, 4, false>(0.01, 1e-20, true, false, 8, 8, 8);
+      factor_node_indef_test<double, 2, true>(0.01, 1e-20, true, false, 8, 8, 8);
 
       // factor_node_indef_test<double, 32, false>(0.01, 1e-20, true, false, 64, 64, 64);
 
