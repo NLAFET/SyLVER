@@ -41,19 +41,19 @@ do
                         ./builds/parsec/spldlt_test --ncpu ${ncpu} --nb ${nb} --nemin ${nemin} > $outdir/spldlt_parsec/${matname}_NCPU-${ncpu}_NB-${nb}_NEMIN-${nemin}${outsuffix}
                         ;;
                     starpu)
-                        ./builds/starpu/spldlt_test --ncpu ${ncpu} --nb ${nb} --nemin ${nemin} > $outdir/spldlt_starpu/${matname}_NCPU-${ncpu}_NB-${nb}_NEMIN-${nemin}${outsuffix}
+                        STARPU_SCHED=$sched ./builds/starpu/spldlt_test --ncpu ${ncpu} --nb ${nb} --nemin ${nemin} > $outdir/spldlt_starpu/${matname}_NCPU-${ncpu}_NB-${nb}_NEMIN-${nemin}${outsuffix}
                         ;;
                     starpu_prune)
-                        ./builds/starpu/spldlt_test --prune-tree --ncpu ${ncpu} --nb ${nb} --nemin ${nemin} > $outdir/spldlt_starpu/${matname}_NCPU-${ncpu}_NB-${nb}_NEMIN-${nemin}${outsuffix}
+                        STARPU_SCHED=$sched ./builds/starpu/spldlt_test --prune-tree --ncpu ${ncpu} --nb ${nb} --nemin ${nemin} > $outdir/spldlt_starpu/${matname}_NCPU-${ncpu}_NB-${nb}_NEMIN-${nemin}${outsuffix}
                         ;;
                     starpu_nested_stf)
-                        ./builds/starpu-nested-stf/spldlt_test --ncpu ${ncpu} --nb ${nb} --nemin ${nemin} > $outdir/spldlt_starpu_nested_stf/${matname}_NCPU-${ncpu}_NB-${nb}_NEMIN-${nemin}${outsuffix}
+                        STARPU_SCHED=$sched ./builds/starpu-nested-stf/spldlt_test --ncpu ${ncpu} --nb ${nb} --nemin ${nemin} > $outdir/spldlt_starpu_nested_stf/${matname}_NCPU-${ncpu}_NB-${nb}_NEMIN-${nemin}${outsuffix}
                         ;;
                     starpu_trace)
-                        ./builds/starpu-trace/spldlt_test --ncpu ${ncpu} --nb ${nb} --nemin ${nemin} > $outdir/spldlt_starpu/${matname}_NCPU-${ncpu}_NB-${nb}_NEMIN-${nemin}${outsuffix}
+                        STARPU_SCHED=$sched ./builds/starpu-trace/spldlt_test --ncpu ${ncpu} --nb ${nb} --nemin ${nemin} > $outdir/spldlt_starpu/${matname}_NCPU-${ncpu}_NB-${nb}_NEMIN-${nemin}${outsuffix}
                         ;;
                     starpu_gpu)
-                        ./builds/starpu-gpu/spldlt_test --ncpu ${ncpu} --nb ${nb} --nemin ${nemin} > $outdir/spldlt_starpu/${matname}_NCPU-${ncpu}_NB-${nb}_NEMIN-${nemin}${outsuffix}
+                        STARPU_SCHED=$sched ./builds/starpu-gpu/spldlt_test --ncpu ${ncpu} --nb ${nb} --nemin ${nemin} > $outdir/spldlt_starpu/${matname}_NCPU-${ncpu}_NB-${nb}_NEMIN-${nemin}${outsuffix}
                         ;;
                     gnu_omp)
                         ./builds/omp/gnu/spldlt_test --ncpu ${ncpu} --nb ${nb} --nemin ${nemin} > $outdir/spldlt_omp/gnu/${matname}_NCPU-${ncpu}_NB-${nb}_NEMIN-${nemin}${outsuffix}

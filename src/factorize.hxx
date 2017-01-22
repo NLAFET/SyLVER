@@ -310,11 +310,11 @@ namespace spldlt {
          if (contrib) {
             // printf("[factorize_node_posdef_mf] node: %d\n", snode.idx);
             // printf("[factorize_node_posdef_mf] nc: %d, nr: %d\n", nc, nr);
-            for(int k = nc; k < nr; ++k) {
+            for (int k = nc; k < nr; ++k) {
                
                int blkk = std::min(blksz, m - k*blksz);
 
-               for(int i = k;  i < nr; ++i) {
+               for (int i = k;  i < nr; ++i) {
                
                   int blkm = std::min(blksz, m - i*blksz);
 

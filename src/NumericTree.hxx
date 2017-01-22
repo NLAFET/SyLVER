@@ -297,7 +297,17 @@ namespace spldlt {
                
                /* Handle expected contributions (only if something there) */
                if (child->contrib) {
+                  
+                  // int cnr = (csnode.nrow-1) / blksz + 1; // number of block rows in child node
+                  // int cnc = (csnode.ncol-1) / blksz + 1; // number of block columns in child node
 
+                  // for (int j = nc; j < nr; ++j) {
+
+                  //    for (int j = nc; j < nr; ++j) {
+                        
+                  //    }
+                  // }
+                  
                   int cm = csnode.nrow - csnode.ncol;
                   int* cache = work.get_ptr<int>(cm);
 

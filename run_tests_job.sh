@@ -50,6 +50,7 @@ id=`whoami`
 outdir=data
 #outsuffix="_NOSUB"
 outsuffix=
+sched=eager
 
 echo "[run_tests] build dir: $build_dir"
 #matrices=(JGD_Trefethen/Trefethen_20000)
