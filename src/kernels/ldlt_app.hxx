@@ -988,6 +988,10 @@ public:
       for(int i=0; i<ncol(); i++)
          lperm[i] = i;
       cdata_[i_].d = &d[2*next_elim];
+      int id = 0;
+#if defined(SPLDLT_USE_STARPU)
+      id = std::max(starpu_worker_get_id(), 0);
+#endif
       if(block_size_ != INNER_BLOCK_SIZE) {
 
          // Recurse
@@ -1017,7 +1021,7 @@ public:
          // printf("ncol: %d\n", ncol());
 
          if(cdata_[i_].nelim < 0) return cdata_[i_].nelim;
-         int* temp = work[0].get_ptr<int>(ncol());
+         int* temp = work[id].get_ptr<int>(ncol());
          int* blkperm = &perm[i_*block_size_];
          for(int i=0; i<ncol(); ++i)
             temp[i] = blkperm[lperm[i]];
@@ -1028,14 +1032,14 @@ public:
          // Call another routine for small block factorization
          if(ncol() < INNER_BLOCK_SIZE || !is_aligned(aval_)) {
          // if(ncol() < INNER_BLOCK_SIZE || !(reinterpret_cast<uintptr_t>(aval_) % 32 == 0)) {
-            T* ld = work[0].get_ptr<T>(2*INNER_BLOCK_SIZE);
+            T* ld = work[id].get_ptr<T>(2*INNER_BLOCK_SIZE);
             cdata_[i_].nelim = ldlt_tpp_factor(
                   nrow(), ncol(), lperm, aval_, lda_,
                   cdata_[i_].d, ld, INNER_BLOCK_SIZE, options.action,
                   options.u, options.small
                   );
             if(cdata_[i_].nelim < 0) return cdata_[i_].nelim;
-            int* temp = work[0].get_ptr<int>(ncol());
+            int* temp = work[id].get_ptr<int>(ncol());
             int* blkperm = &perm[i_*INNER_BLOCK_SIZE];
             for(int i=0; i<ncol(); ++i)
                temp[i] = blkperm[lperm[i]];
@@ -1043,7 +1047,7 @@ public:
                blkperm[i] = temp[i];
          } else {
             int* blkperm = &perm[i_*INNER_BLOCK_SIZE];
-            T* ld = work[0].get_ptr<T>(
+            T* ld = work[id].get_ptr<T>(
                   INNER_BLOCK_SIZE*INNER_BLOCK_SIZE
                   );
             block_ldlt<T, INNER_BLOCK_SIZE>(

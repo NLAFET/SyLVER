@@ -226,6 +226,7 @@ namespace spldlt {
 
          insert_updateN_block_app(
                isrc.get_hdl(), jsrc.get_hdl(), ublk.get_hdl(), 
+               cdata[blk].get_hdl(),
                ublk.get_m(), ublk.get_n(), 
                iblk, jblk, blk,
                &cdata, &backup,
@@ -283,6 +284,7 @@ namespace spldlt {
 
          insert_updateT_block_app(
                isrc.get_hdl(), jsrc.get_hdl(), ublk.get_hdl(), 
+               cdata[blk].get_hdl(),
                ublk.get_m(), ublk.get_n(),
                isrc_row, isrc_col,
                iblk, jblk, blk,
@@ -399,6 +401,11 @@ namespace spldlt {
          /* Inner loop - iterate over block columns */
          // try {
          for(int blk=from_blk; blk<nblk; blk++) {
+
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
+
             /*if(debug) {
               printf("Bcol %d:\n", blk);
               print_mat(mblk, nblk, m, n, blkdata, cdata, lda);
@@ -418,9 +425,9 @@ namespace spldlt {
                   cdata, backup,
                   options/*, block_size*/, work, alloc);
 
-#if defined(SPLDLT_USE_STARPU)
-            starpu_task_wait_for_all();
-#endif
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
 
             // DEBUG
             // {
@@ -451,9 +458,9 @@ namespace spldlt {
                      cdata, backup,
                      options);
 
-#if defined(SPLDLT_USE_STARPU)
-               starpu_task_wait_for_all();
-#endif
+// #if defined(SPLDLT_USE_STARPU)
+//                starpu_task_wait_for_all();
+// #endif
 
                // DEBUG
                // if(debug) printf("ApplyT(%d,%d)\n", blk, jblk);
@@ -481,9 +488,9 @@ namespace spldlt {
                      cdata, backup,
                      options);
 
-#if defined(SPLDLT_USE_STARPU)
-               starpu_task_wait_for_all();
-#endif
+// #if defined(SPLDLT_USE_STARPU)
+//                starpu_task_wait_for_all();
+// #endif
 
                // DEBUG
                // if(debug) printf("ApplyN(%d,%d)\n", iblk, blk);
@@ -505,9 +512,9 @@ namespace spldlt {
             // number of passed columns.
             adjust_task(/* dblk*/blocks[blk*(mblk+1)], next_elim, cdata);
 
-#if defined(SPLDLT_USE_STARPU)
-            starpu_task_wait_for_all();
-#endif
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
 
             // DEBUG
             // if(debug) printf("Adjust(%d)\n", blk);
@@ -536,9 +543,9 @@ namespace spldlt {
                         cdata, backup, 
                         work);
 
-#if defined(SPLDLT_USE_STARPU)
-            starpu_task_wait_for_all();
-#endif
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
 
                   // DEBUG
                   // if(debug) printf("UpdateT(%d,%d,%d)\n", iblk, jblk, blk);
@@ -571,7 +578,7 @@ namespace spldlt {
 
                   // Update blocks on the right of the current block
                   // column
-                  updateN_block_app_task(
+                  updateN_block_app_task (
                         // isrc, jsrc, ublk,
                         blocks[blk*mblk+iblk], blocks[blk*mblk+jblk],
                         blocks[jblk*mblk+iblk],
@@ -579,13 +586,16 @@ namespace spldlt {
                         beta, upd, ldupd,
                         work);
 
-#if defined(SPLDLT_USE_STARPU)
-                  starpu_task_wait_for_all();
-#endif
+// #if defined(SPLDLT_USE_STARPU)
+//                   starpu_task_wait_for_all();
+// #endif
 
                }
             }
 
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
             // Handle update to contribution block, if required
             if(upd && mblk>nblk) {
                int uoffset = std::min(nblk*block_size, m) - n;
@@ -610,7 +620,13 @@ namespace spldlt {
                      }
                   }
             }
-         }
+
+#if defined(SPLDLT_USE_STARPU)
+            starpu_task_wait_for_all();
+#endif
+
+         } // loop on block columns
+         
          // } catch(std::bad_alloc const&) {
          //    return Flag::ERROR_ALLOCATION;
          // } catch(SingularError const&) {
@@ -779,9 +795,9 @@ namespace spldlt {
          // By default function calls are asynchronous, so we put a
          // barrier and wait for the task-based factorization to be
          // completed
-#if defined(SPLDLT_USE_STARPU)
-         starpu_task_wait_for_all();
-#endif
+// #if defined(SPLDLT_USE_STARPU)
+//          starpu_task_wait_for_all();
+// #endif
 
          
          // realease all memory used for backup

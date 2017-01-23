@@ -92,7 +92,7 @@ namespace spldlt { namespace starpu {
          ret = starpu_task_insert(
                &cl_factor_block_app,
                STARPU_RW, a_kk_hdl,
-               STARPU_R, col_hdl,
+               STARPU_RW, col_hdl,
                STARPU_VALUE, &m, sizeof(int),
                STARPU_VALUE, &n, sizeof(int),
                STARPU_VALUE, &blk, sizeof(int),
@@ -294,6 +294,7 @@ namespace spldlt { namespace starpu {
          unsigned ld_a_ij = STARPU_MATRIX_GET_LD(buffers[2]); // Get leading dimensions
          
          int id = starpu_worker_get_id();
+         // printf("[updateN_block_app_cpu_func] id: %d nworker: %d\n", id, starpu_worker_get_count());
 
          int m, n; // node's dimensions
          int iblk; // destination block's row index
@@ -339,6 +340,7 @@ namespace spldlt { namespace starpu {
             starpu_data_handle_t a_ik_hdl,
             starpu_data_handle_t a_jk_hdl,
             starpu_data_handle_t a_ij_hdl,
+            starpu_data_handle_t col_hdl,
             int m, int n, int iblk, int jblk, int blk,
             ColumnData<T,IntAlloc> *cdata, Backup *backup,
             T beta, T* upd, int ldupd,
@@ -351,6 +353,7 @@ namespace spldlt { namespace starpu {
                STARPU_R, a_ik_hdl,
                STARPU_R, a_jk_hdl,
                STARPU_RW, a_ij_hdl,
+               STARPU_R, col_hdl,
                STARPU_VALUE, &m, sizeof(int),
                STARPU_VALUE, &n, sizeof(int),
                STARPU_VALUE, &iblk, sizeof(int),
@@ -433,6 +436,7 @@ namespace spldlt { namespace starpu {
             starpu_data_handle_t a_ik_hdl,
             starpu_data_handle_t a_jk_hdl,
             starpu_data_handle_t a_ij_hdl,
+            starpu_data_handle_t col_hdl,
             int m, int n, int isrc_row, int isrc_col,
             int iblk, int jblk, int blk,
             ColumnData<T,IntAlloc> *cdata, Backup *backup,
@@ -445,6 +449,7 @@ namespace spldlt { namespace starpu {
                STARPU_R, a_ik_hdl,
                STARPU_R, a_jk_hdl,
                STARPU_RW, a_ij_hdl,
+               STARPU_R, col_hdl,
                STARPU_VALUE, &m, sizeof(int),
                STARPU_VALUE, &n, sizeof(int),
                STARPU_VALUE, &isrc_row, sizeof(int),
@@ -532,14 +537,14 @@ namespace spldlt { namespace starpu {
          starpu_codelet_init(&cl_applyN_block_app);
          cl_applyN_block_app.where = STARPU_CPU;
          cl_applyN_block_app.nbuffers = STARPU_VARIABLE_NBUFFERS;
-         cl_applyN_block_app.name = "FACOTR_BLK_APP";
+         cl_applyN_block_app.name = "APPLYN_BLK_APP";
          cl_applyN_block_app.cpu_funcs[0] = applyN_block_app_cpu_func<T, iblksz, Backup, IntAlloc>;
          
          // Initialize applyT_block_app StarPU codelet
          starpu_codelet_init(&cl_applyT_block_app);
          cl_applyT_block_app.where = STARPU_CPU;
          cl_applyT_block_app.nbuffers = STARPU_VARIABLE_NBUFFERS;
-         cl_applyT_block_app.name = "FACOTR_BLK_APP";
+         cl_applyT_block_app.name = "APPLYT_BLK_APP";
          cl_applyT_block_app.cpu_funcs[0] = applyT_block_app_cpu_func<T, iblksz, Backup, IntAlloc>;
 
          // Initialize updateN_block_app StarPU codelet

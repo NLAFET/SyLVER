@@ -298,22 +298,28 @@ namespace spldlt {
                /* Handle expected contributions (only if something there) */
                if (child->contrib) {
                   
-                  // int cnr = (csnode.nrow-1) / blksz + 1; // number of block rows in child node
-                  // int cnc = (csnode.ncol-1) / blksz + 1; // number of block columns in child node
-
-                  // for (int j = nc; j < nr; ++j) {
-
-                  //    for (int j = nc; j < nr; ++j) {
-                        
-                  //    }
-                  // }
-                  
                   int cm = csnode.nrow - csnode.ncol;
-                  int* cache = work.get_ptr<int>(cm);
+                  int* cache = work.get_ptr<int>(cm); // TODO move cache array
+                  // printf("[factor_mf] cm: %d\n", cm);
 
-                  // printf("[factor_mf] childnum: %d, cm: %d\n", csnode.idx, cm);
+                  int csa = csnode.ncol / blksz;
+                  int cnr = (csnode.nrow-1) / blksz + 1; // number of block rows in child node
+                  // int cnc = (csnode.ncol-1) / blksz + 1; // number of block columns in child node
+                  // printf("[factor_mf] csa: %d, cnr: %d\n", csa, cnr);
+                  // printf("[factor_mf] ncol: %d\n", csnode.ncol);
 
-                  assemble_expected(0, cm, nodes_[ni], *child, map, cache);
+                  // Lopp over blocks in contribution blocks
+                  for (int jj = csa; jj < cnr; ++jj) {
+
+                     for (int ii = csa; ii < cnr; ++ii) {
+
+                        assemble_block(nodes_[ni], *child, ii, jj, map, blksz);
+                     }
+                  }
+
+                  // assemble_expected(0, cm, nodes_[ni], *child, map, cache);
+
+                  // assemble_expected_contrib(0, cm, nodes_[ni], *child, map, cache);
                }
             }
 
@@ -331,11 +337,32 @@ namespace spldlt {
                if (child->contrib) {
 
                   int cm = csnode.nrow - csnode.ncol;
-                  int* cache = work.get_ptr<int>(cm);
+                  int* cache = work.get_ptr<int>(cm); // TODO move cache array
 
                   // printf("[factor_mf] childnum: %d, cm: %d\n", csnode.idx, cm);
 
-                  assemble_expected_contrib(0, cm, nodes_[ni], *child, map, cache);
+                  int csa = csnode.ncol / blksz;
+                  int cnr = (csnode.nrow-1) / blksz + 1; // number of block rows in child node
+                  // int cnc = (csnode.ncol-1) / blksz + 1; // number of block columns in child node
+                  // printf("[factor_mf] csa: %d, cnr: %d\n", csa, cnr);
+                  // printf("[factor_mf] ncol: %d\n", csnode.ncol);
+
+                  // Lopp over blocks in contribution blocks
+                  for (int jj=csa; jj<cnr; ++jj) {
+                     
+                     int c_sa = (csnode.ncol > jj*blksz) ? 0 : (jj*blksz-csnode.ncol); // first col in block
+                     int c_en = std::min((jj+1)*blksz-csnode.ncol, cm); // last col in block
+
+                     // assemble_expected_contrib(c_sa, c_en, nodes_[ni], *child, map, cache);                     
+                     // int ii = 0;
+
+                     for (int ii=csa; ii<cnr; ++ii) {
+                        
+                        assemble_contrib_block(nodes_[ni], *child, ii, jj, map, blksz);
+                     }
+                  }
+                  
+                  // assemble_expected_contrib(0, cm, nodes_[ni], *child, map, cache);
 
                }
             }

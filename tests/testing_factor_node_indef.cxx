@@ -111,6 +111,7 @@ namespace spldlt {
       // Setup workspaces
       std::vector<spral::ssids::cpu::Workspace> work;
       const int PAGE_SIZE = 8*1024*1024; // 8 MB
+      // int nworkers = 0;
       // for(int i=0; i<omp_get_num_threads(); ++i)
       work.emplace_back(PAGE_SIZE);
       T* upd = nullptr;
@@ -122,7 +123,7 @@ namespace spldlt {
       struct starpu_conf *conf = new starpu_conf;// (struct starpu_conf *)malloc(sizeof(struct starpu_conf));
       starpu_conf_init(conf);
       conf->ncpus = 1;
-      int ret = starpu_init(NULL);
+      int ret = starpu_init(conf);
 #endif
 
       // Init factoriization 
@@ -149,8 +150,9 @@ namespace spldlt {
       starpu_task_wait_for_all();
 #endif
       
+      std::cout << "FIRST FACTOR CALL ELIMINATED " << q1 << " of " << n << " pivots" << std::endl;
+      
       if(debug) {
-         std::cout << "FIRST FACTOR CALL ELIMINATED " << q1 << " of " << n << " pivots" << std::endl;
          std::cout << "L after first elim:" << std::endl;
          print_mat("%10.2e", m, node.lcol, lda, node.perm);
          std::cout << "D:" << std::endl;
@@ -159,10 +161,16 @@ namespace spldlt {
       int q2 = 0;
       if(q1 < n) {
          // Finish off with simplistic kernel
+#if defined(SPLDLT_USE_STARPU)
+      starpu_fxt_trace_user_event(0);
+#endif         
          T *ld = new T[2*m];
          q1 += ldlt_tpp_factor(m-q1, n-q1, &node.perm[q1], &node.lcol[(q1)*(lda+1)], lda,
                                &d[2*(q1)], ld, m, options.action, u, small, q1, &node.lcol[q1], lda);
          delete[] ld;
+#if defined(SPLDLT_USE_STARPU)
+      starpu_fxt_trace_user_event(0);
+#endif         
       }
       EXPECT_EQ(m, q1+q2) << "(test " << test << " seed " << seed << ")" << std::endl;
 
@@ -171,9 +179,10 @@ namespace spldlt {
       starpu_shutdown();
 #endif
 
+      std::cout << "q1=" << q1 << " q2=" << q2 << std::endl;
+
       // Print out matrices if requested
       if(debug) {
-         std::cout << "q1=" << q1 << " q2=" << q2 << std::endl;
          std::cout << "L:" << std::endl;
          print_mat("%10.2e", m, node.lcol, lda, node.perm);
          std::cout << "D:" << std::endl;
@@ -223,9 +232,11 @@ namespace spldlt {
        */
       // factor_node_indef_test<double, 4, true>(0.01, 1e-20, true, false, 12, 12, 4);
 
-      factor_node_indef_test<double, 2, true>(0.01, 1e-20, true, false, 8, 8, 8);
+      // factor_node_indef_test<double, 4, true>(0.01, 1e-20, true, false, 8, 8, 4);
 
-      // factor_node_indef_test<double, 32, false>(0.01, 1e-20, true, false, 64, 64, 64);
+      // factor_node_indef_test<double, 32, false>(0.01, 1e-20, true, false, 512, 512, 128);
+
+      factor_node_indef_test<double, 32, false>(0.01, 1e-20, true, false, 2048, 2048, 512);
 
       return err;
    }
