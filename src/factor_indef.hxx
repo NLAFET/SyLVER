@@ -62,7 +62,7 @@ namespace spldlt {
        */ 
       static
       void factor_block_app_task(
-            BlockSpec& dblk, int next_elim,
+            BlockSpec& dblk, int& next_elim,
             int* perm, T* d,
             ColumnData<T,IntAlloc>& cdata, Backup& backup,
             struct cpu_factor_options& options,
@@ -78,7 +78,7 @@ namespace spldlt {
                dblk.get_hdl(), cdata[blk].get_hdl(),
                dblk.get_m(), dblk.get_n(), 
                blk,
-               next_elim, perm, d,
+               &next_elim, perm, d,
                &cdata, &backup,
                &options, &work, &alloc);
          
@@ -576,8 +576,9 @@ namespace spldlt {
                   // Destination block
                   BlockSpec ublk(iblk, jblk, m, n, cdata, &a[jblk*block_size*lda+iblk*block_size], lda, block_size);
 
-                  // Update blocks on the right of the current block
-                  // column
+                  // If we are on the current block column, restore
+                  // any failed columns and release backups.
+                  // Update blocks on the right of the current block column
                   updateN_block_app_task (
                         // isrc, jsrc, ublk,
                         blocks[blk*mblk+iblk], blocks[blk*mblk+jblk],
@@ -621,9 +622,9 @@ namespace spldlt {
                   }
             }
 
-#if defined(SPLDLT_USE_STARPU)
-            starpu_task_wait_for_all();
-#endif
+// #if defined(SPLDLT_USE_STARPU)
+            // starpu_task_wait_for_all();
+// #endif
 
          } // loop on block columns
          

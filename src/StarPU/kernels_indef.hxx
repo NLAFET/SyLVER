@@ -31,7 +31,7 @@ namespace spldlt { namespace starpu {
 
          int m, n; // dimension of node
          int blk; // block index
-         int next_elim;
+         int *next_elim;
          int *perm;
          T *d;
          ColumnData<T,IntAlloc> *cdata = nullptr;
@@ -62,7 +62,7 @@ namespace spldlt { namespace starpu {
          int thread_num = 0;
          // Perform actual factorization
          int nelim = dblk.template factor<Allocator>(
-               next_elim, perm, d, *options, *work, *alloc
+               *next_elim, perm, d, *options, *work, *alloc
                );
          if(nelim<0) 
             abort=true;
@@ -80,7 +80,7 @@ namespace spldlt { namespace starpu {
             starpu_data_handle_t a_kk_hdl,
             starpu_data_handle_t col_hdl,
             int m, int n, int blk,
-            int next_elim, int *perm, T* d,
+            int *next_elim, int *perm, T* d,
             ColumnData<T,IntAlloc> *cdata, Backup *backup,
             struct cpu_factor_options *options,
             std::vector<spral::ssids::cpu::Workspace> *work, Allocator *alloc) {
@@ -96,7 +96,7 @@ namespace spldlt { namespace starpu {
                STARPU_VALUE, &m, sizeof(int),
                STARPU_VALUE, &n, sizeof(int),
                STARPU_VALUE, &blk, sizeof(int),
-               STARPU_VALUE, &next_elim, sizeof(int),
+               STARPU_VALUE, &next_elim, sizeof(int*),
                STARPU_VALUE, &perm, sizeof(int*),
                STARPU_VALUE, &d, sizeof(T*),
                STARPU_VALUE, &cdata, sizeof(ColumnData<T,IntAlloc>*),
@@ -345,6 +345,8 @@ namespace spldlt { namespace starpu {
             ColumnData<T,IntAlloc> *cdata, Backup *backup,
             T beta, T* upd, int ldupd,
             std::vector<spral::ssids::cpu::Workspace> *work, int blksz/*struct cpu_factor_options *options*/) {
+
+         printf("[insert_updateN_block_app] blk: %d, iblk: %d, jblk: %d\n", blk, iblk, jblk);
 
          int ret;
 

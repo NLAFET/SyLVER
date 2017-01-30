@@ -350,8 +350,8 @@ namespace spldlt {
                   // Lopp over blocks in contribution blocks
                   for (int jj=csa; jj<cnr; ++jj) {
                      
-                     int c_sa = (csnode.ncol > jj*blksz) ? 0 : (jj*blksz-csnode.ncol); // first col in block
-                     int c_en = std::min((jj+1)*blksz-csnode.ncol, cm); // last col in block
+                     // int c_sa = (csnode.ncol > jj*blksz) ? 0 : (jj*blksz-csnode.ncol); // first col in block
+                     // int c_en = std::min((jj+1)*blksz-csnode.ncol, cm); // last col in block
 
                      // assemble_expected_contrib(c_sa, c_en, nodes_[ni], *child, map, cache);                     
                      // int ii = 0;

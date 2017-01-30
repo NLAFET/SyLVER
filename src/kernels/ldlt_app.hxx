@@ -35,6 +35,7 @@
 
 #if defined(SPLDLT_USE_STARPU)
 #include <starpu.h>
+// #include <atomic>
 #endif
 
 // namespace spral { namespace ssids { namespace cpu {
@@ -181,9 +182,14 @@ public:
 private:
 #if defined(SPLDLT_USE_STARPU)
    starpu_data_handle_t hdl_;
-#endif
+
    spral::omp::Lock lock_; ///< lock for altering npass
    int npass_=0; ///< reduction variable for nelim
+   // std::atomic<int> npass_=0; ///< reduction variable for nelim
+#else
+   spral::omp::Lock lock_; ///< lock for altering npass
+   int npass_=0; ///< reduction variable for nelim
+#endif
 };
 
 /** \brief Stores data about block columns

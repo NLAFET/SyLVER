@@ -232,11 +232,11 @@ namespace spldlt {
        */
       // factor_node_indef_test<double, 4, true>(0.01, 1e-20, true, false, 12, 12, 4);
 
-      // factor_node_indef_test<double, 4, true>(0.01, 1e-20, true, false, 8, 8, 4);
+      factor_node_indef_test<double, 4, true>(0.01, 1e-20, true, false, 8, 8, 4);
 
       // factor_node_indef_test<double, 32, false>(0.01, 1e-20, true, false, 512, 512, 128);
 
-      factor_node_indef_test<double, 32, false>(0.01, 1e-20, true, false, 2048, 2048, 512);
+      // factor_node_indef_test<double, 32, false>(0.01, 1e-20, true, false, 2048, 2048, 512);
 
       return err;
    }
