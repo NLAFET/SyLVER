@@ -294,7 +294,7 @@ namespace spldlt { namespace starpu {
          unsigned ld_a_ij = STARPU_MATRIX_GET_LD(buffers[2]); // Get leading dimensions
          
          int id = starpu_worker_get_id();
-         // printf("[updateN_block_app_cpu_func] id: %d nworker: %d\n", id, starpu_worker_get_count());
+         printf("[updateN_block_app_cpu_func] id: %d nworker: %d\n", id, starpu_worker_get_count());
 
          int m, n; // node's dimensions
          int iblk; // destination block's row index
@@ -346,7 +346,7 @@ namespace spldlt { namespace starpu {
             T beta, T* upd, int ldupd,
             std::vector<spral::ssids::cpu::Workspace> *work, int blksz/*struct cpu_factor_options *options*/) {
 
-         printf("[insert_updateN_block_app] blk: %d, iblk: %d, jblk: %d\n", blk, iblk, jblk);
+         // printf("[insert_updateN_block_app] blk: %d, iblk: %d, jblk: %d\n", blk, iblk, jblk);
 
          int ret;
 

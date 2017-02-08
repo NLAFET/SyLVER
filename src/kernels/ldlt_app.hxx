@@ -35,6 +35,7 @@
 
 #if defined(SPLDLT_USE_STARPU)
 #include <starpu.h>
+#include <mutex>
 // #include <atomic>
 #endif
 
@@ -97,7 +98,12 @@ public:
     *  \param passed number of variables passing a posteori pivot test in block
     */
    void update_passed(int passed) {
+      
+#if defined(SPLDLT_USE_STARPU)
+      std::lock_guard<std::mutex> lock(mtx);
+#else
       spral::omp::AcquiredLock scopeLock(lock_);
+#endif
       npass_ = std::min(npass_, passed);
    }
    /** \brief Test if column has failed (in unpivoted case), recording number of
@@ -113,6 +119,9 @@ public:
       bool fail = (passed < nelim);
       if(!fail) {
          // Record number of blocks in column passing this test
+         
+         // TODO find an alternative to the omp atomic update when omp
+         // is not used.
          #pragma omp atomic update
          ++npass_;
       }
@@ -183,8 +192,10 @@ private:
 #if defined(SPLDLT_USE_STARPU)
    starpu_data_handle_t hdl_;
 
-   spral::omp::Lock lock_; ///< lock for altering npass
+   // spral::omp::Lock lock_; ///< lock for altering npass
    int npass_=0; ///< reduction variable for nelim
+
+   std::mutex mtx;
    // std::atomic<int> npass_=0; ///< reduction variable for nelim
 #else
    spral::omp::Lock lock_; ///< lock for altering npass

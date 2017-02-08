@@ -425,9 +425,9 @@ namespace spldlt {
                   cdata, backup,
                   options/*, block_size*/, work, alloc);
 
-// #if defined(SPLDLT_USE_STARPU)
-//             starpu_task_wait_for_all();
-// #endif
+#if defined(SPLDLT_USE_STARPU)
+            starpu_task_wait_for_all();
+#endif
 
             // DEBUG
             // {
@@ -458,9 +458,9 @@ namespace spldlt {
                      cdata, backup,
                      options);
 
-// #if defined(SPLDLT_USE_STARPU)
-//                starpu_task_wait_for_all();
-// #endif
+#if defined(SPLDLT_USE_STARPU)
+               starpu_task_wait_for_all();
+#endif
 
                // DEBUG
                // if(debug) printf("ApplyT(%d,%d)\n", blk, jblk);
@@ -488,9 +488,9 @@ namespace spldlt {
                      cdata, backup,
                      options);
 
-// #if defined(SPLDLT_USE_STARPU)
-//                starpu_task_wait_for_all();
-// #endif
+#if defined(SPLDLT_USE_STARPU)
+               starpu_task_wait_for_all();
+#endif
 
                // DEBUG
                // if(debug) printf("ApplyN(%d,%d)\n", iblk, blk);
@@ -512,9 +512,9 @@ namespace spldlt {
             // number of passed columns.
             adjust_task(/* dblk*/blocks[blk*(mblk+1)], next_elim, cdata);
 
-// #if defined(SPLDLT_USE_STARPU)
-//             starpu_task_wait_for_all();
-// #endif
+#if defined(SPLDLT_USE_STARPU)
+            starpu_task_wait_for_all();
+#endif
 
             // DEBUG
             // if(debug) printf("Adjust(%d)\n", blk);
@@ -543,9 +543,9 @@ namespace spldlt {
                         cdata, backup, 
                         work);
 
-// #if defined(SPLDLT_USE_STARPU)
-//             starpu_task_wait_for_all();
-// #endif
+#if defined(SPLDLT_USE_STARPU)
+            starpu_task_wait_for_all();
+#endif
 
                   // DEBUG
                   // if(debug) printf("UpdateT(%d,%d,%d)\n", iblk, jblk, blk);
@@ -587,9 +587,9 @@ namespace spldlt {
                         beta, upd, ldupd,
                         work);
 
-// #if defined(SPLDLT_USE_STARPU)
-//                   starpu_task_wait_for_all();
-// #endif
+#if defined(SPLDLT_USE_STARPU)
+                  starpu_task_wait_for_all();
+#endif
 
                }
             }
@@ -618,12 +618,17 @@ namespace spldlt {
                               beta, upd_ij, ldupd,
                               work
                               );
+
+#if defined(SPLDLT_USE_STARPU)
+            starpu_task_wait_for_all();
+#endif
+
                      }
                   }
             }
 
 // #if defined(SPLDLT_USE_STARPU)
-            // starpu_task_wait_for_all();
+//             starpu_task_wait_for_all();
 // #endif
 
          } // loop on block columns
