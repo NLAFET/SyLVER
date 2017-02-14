@@ -14,6 +14,7 @@
 #include "ssids/cpu/BuddyAllocator.hxx"
 #include "ssids/cpu/NumericNode.hxx"
 #include "ssids/cpu/kernels/ldlt_tpp.hxx"
+#include "ssids/cpu/kernels/ldlt_app.hxx"
 // SSIDS tests
 #include "tests/ssids/kernels/framework.hxx"
 
@@ -23,7 +24,7 @@
 using namespace spldlt::starpu;
 #endif
 
-using namespace spral::ssids::cpu;
+// using namespace spral::ssids::cpu;
 
 namespace spldlt {
 
@@ -86,7 +87,7 @@ namespace spldlt {
       options.print_level = 0;
       options.small_subtree_threshold = 100*100*100;
       options.cpu_block_size = blksz;
-      options.pivot_method = PivotMethod::app_block;
+      options.pivot_method = PivotMethod::app_block  /*PivotMethod::app_aggressive*/;
       // options.pivot_method = (aggressive) ? PivotMethod::app_aggressive
       //                                     : PivotMethod::app_block;
 
@@ -115,7 +116,7 @@ namespace spldlt {
       
       // Initialize solver (tasking system in particular)
 #if defined(SPLDLT_USE_STARPU)
-      struct starpu_conf *conf = new starpu_conf;// (struct starpu_conf *)malloc(sizeof(struct starpu_conf));
+      struct starpu_conf *conf = new starpu_conf;
       starpu_conf_init(conf);
       conf->ncpus = ncpu;
       int ret = starpu_init(conf);
@@ -130,27 +131,44 @@ namespace spldlt {
 #else
       nworkers = omp_get_num_threads();
 #endif
-      for(int i=0; i<nworkers; ++i)
+      work.reserve(nworkers);
+      for(int i = 0; i < nworkers; ++i) {
          work.emplace_back(PAGE_SIZE);
+      }
+
+      auto start = std::chrono::high_resolution_clock::now();
 
       // Init factoriization 
       factor_indef_init<T, iblksz, CopyBackup<T>, PoolAllocator>();
+      int q1;
 
-      // int q1 = LDLT
+      // q1 = LDLT
       //    <T, iblksz, CopyBackup<T>, false, debug>
       //    ::factor(
       //          m, n, node.perm, node.lcol, lda, d, backup, options, options.pivot_method,
       //          blksz, 0.0, nullptr, 0, work
       //          );
      
+      // Factor node in sequential
+      // q1 = FactorSymIndef
+      //    <T, iblksz, CopyBackup<T>, debug, PoolAllocator>
+      //    ::ldlt_app_notask(
+      //          m, n, node.perm, node.lcol, lda, d, backup, options, 
+      //          // options.pivot_method,
+      //          blksz, 0.0, upd, 0, work[0], pool_alloc);
+
       // Factor node
-      int q1 = FactorSymIndef
+      q1 = FactorSymIndef
          <T, iblksz, CopyBackup<T>, debug, PoolAllocator>
-         ::ldlt_app (
+         ::ldlt_app(
                m, n, node.perm, node.lcol, lda, d, backup, options, 
                // options.pivot_method,
                blksz, 0.0, upd, 0, work, pool_alloc);
-
+      
+      // q1 = spral::ssids::cpu::ldlt_app_factor(
+      //       m, n, node.perm, node.lcol, lda, d, 0.0, upd, 0,
+      //       options, work, pool_alloc);
+      
       // By default function calls are asynchronous, so we put a
       // barrier and wait for the DAG to be executed
 #if defined(SPLDLT_USE_STARPU)
@@ -180,6 +198,10 @@ namespace spldlt {
 #endif         
       }
       EXPECT_EQ(m, q1+q2) << "(test " << test << " seed " << seed << ")" << std::endl;
+
+      auto end = std::chrono::high_resolution_clock::now();
+      long ttotal = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count();
+      printf("[factor_node_indef_test] factor time: %e\n", 1e-9*ttotal);
 
       // Deinitialize solver (shutdown tasking system in particular)
 #if defined(SPLDLT_USE_STARPU)

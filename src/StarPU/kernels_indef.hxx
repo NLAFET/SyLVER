@@ -43,6 +43,7 @@ namespace spldlt { namespace starpu {
          Allocator *alloc = nullptr;
 
          // printf("[factor_block_app_cpu_func]\n");
+         int id = starpu_worker_get_id();
          
          starpu_codelet_unpack_args (
                cl_arg,
@@ -62,7 +63,7 @@ namespace spldlt { namespace starpu {
          int thread_num = 0;
          // Perform actual factorization
          int nelim = dblk.template factor<Allocator>(
-               *next_elim, perm, d, *options, *work, *alloc
+               *next_elim, perm, d, *options, (*work)[id], *alloc
                );
          if(nelim<0) 
             abort=true;
@@ -294,7 +295,7 @@ namespace spldlt { namespace starpu {
          unsigned ld_a_ij = STARPU_MATRIX_GET_LD(buffers[2]); // Get leading dimensions
          
          int id = starpu_worker_get_id();
-         printf("[updateN_block_app_cpu_func] id: %d nworker: %d\n", id, starpu_worker_get_count());
+         // printf("[updateN_block_app_cpu_func] id: %d nworker: %d\n", id, starpu_worker_get_count());
 
          int m, n; // node's dimensions
          int iblk; // destination block's row index

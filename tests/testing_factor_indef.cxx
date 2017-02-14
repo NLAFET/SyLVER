@@ -157,12 +157,12 @@ namespace spldlt {
          //       pool_alloc
          //       );
          CopyBackup<T> backup(m-q1, m-q1, blksz);
-         q2 = LDLT
-            <T, iblksz, CopyBackup<T>, use_tasks, debug>
-            ::factor(
-                  m-q1, m-q1, perm2, &l[q1*(lda+1)], lda, &d[2*q1], backup, options,
-                  options.pivot_method, blksz, 0.0, nullptr, 0, work
-                  );
+         // q2 = LDLT
+         //    <T, iblksz, CopyBackup<T>, use_tasks, debug>
+         //    ::factor(
+         //          m-q1, m-q1, perm2, &l[q1*(lda+1)], lda, &d[2*q1], backup, options,
+         //          options.pivot_method, blksz, 0.0, nullptr, 0, work
+         //          );
          permute_rows(m-q1, q1, perm2, &perm[q1], &l[q1], lda);
          delete[] perm2;
          if(q1+q2 < m) {

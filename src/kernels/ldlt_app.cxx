@@ -12,37 +12,37 @@ size_t ldlt_app_factor_mem_required(int m, int n, int block_size) {
    return align_lda<T>(m) * n * sizeof(T) + align; // CopyBackup
 }
 
-template<typename T, typename Allocator>
-int ldlt_app_factor(int m, int n, int* perm, T* a, int lda, T* d, T beta, T* upd, int ldupd, struct cpu_factor_options const& options, std::vector<Workspace>& work, Allocator const& alloc) {
-   // If we've got a tall and narrow node, adjust block size so each block
-   // has roughly blksz**2 entries
-   // FIXME: Decide if this reshape is actually useful, given it will generate
-   //        a lot more update tasks instead?
-   int outer_block_size = options.cpu_block_size;
-   /*if(n < outer_block_size) {
-       outer_block_size = int((long(outer_block_size)*outer_block_size) / n);
-   }*/
+// template<typename T, typename Allocator>
+// int ldlt_app_factor(int m, int n, int* perm, T* a, int lda, T* d, T beta, T* upd, int ldupd, struct cpu_factor_options const& options, std::vector<Workspace>& work, Allocator const& alloc) {
+//    // If we've got a tall and narrow node, adjust block size so each block
+//    // has roughly blksz**2 entries
+//    // FIXME: Decide if this reshape is actually useful, given it will generate
+//    //        a lot more update tasks instead?
+//    int outer_block_size = options.cpu_block_size;
+//    /*if(n < outer_block_size) {
+//        outer_block_size = int((long(outer_block_size)*outer_block_size) / n);
+//    }*/
 
-#ifdef PROFILE
-   Profile::setState("TA_MISC1");
-#endif
+// #ifdef PROFILE
+//    Profile::setState("TA_MISC1");
+// #endif
 
-   // Template parameters and workspaces
-   bool const debug = false;
-   //PoolBackup<T, Allocator> backup(m, n, outer_block_size, alloc);
-   CopyBackup<T, Allocator> backup(m, n, outer_block_size, alloc);
+//    // Template parameters and workspaces
+//    bool const debug = false;
+//    //PoolBackup<T, Allocator> backup(m, n, outer_block_size, alloc);
+//    CopyBackup<T, Allocator> backup(m, n, outer_block_size, alloc);
 
-   // Actual call
-   bool const use_tasks = true;
-   return LDLT
-      <T, INNER_BLOCK_SIZE, CopyBackup<T,Allocator>, use_tasks, debug,
-       Allocator>
-      ::factor(
-            m, n, perm, a, lda, d, backup, options, options.pivot_method,
-            outer_block_size, beta, upd, ldupd, work, alloc
-            );
-}
-template int ldlt_app_factor<double, BuddyAllocator<double,std::allocator<double>>>(int, int, int*, double*, int, double*, double, double*, int, struct cpu_factor_options const&, std::vector<Workspace>&, BuddyAllocator<double,std::allocator<double>> const& alloc);
+//    // Actual call
+//    bool const use_tasks = true;
+//    return LDLT
+//       <T, INNER_BLOCK_SIZE, CopyBackup<T,Allocator>, use_tasks, debug,
+//        Allocator>
+//       ::factor(
+//             m, n, perm, a, lda, d, backup, options, options.pivot_method,
+//             outer_block_size, beta, upd, ldupd, work, alloc
+//             );
+// }
+// template int ldlt_app_factor<double, BuddyAllocator<double,std::allocator<double>>>(int, int, int*, double*, int, double*, double, double*, int, struct cpu_factor_options const&, std::vector<Workspace>&, BuddyAllocator<double,std::allocator<double>> const& alloc);
 
 template <typename T>
 void ldlt_app_solve_fwd(int m, int n, T const* l, int ldl, int nrhs, T* x, int ldx) {

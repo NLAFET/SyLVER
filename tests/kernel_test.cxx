@@ -37,7 +37,8 @@ int main(int argc, char** argv) {
 
    printf("Matrix %dx%d\n", opts.m, opts.n);
    printf("Blocking, nb: %d, ib:%d\n", opts.nb, opts.ib);
-   printf("No cpu: %d\n", opts.ncpu);
+   printf("No CPU: %d\n", opts.ncpu);
 
-   factor_node_indef_test<double, 32, false>(0.01, 1e-20, true, false, opts.m, opts.n, opts.nb, opts.ncpu);
+   // factor_node_indef_test<double, 32, false>(0.01, 1e-20, true, false, opts.m, opts.n, opts.nb, opts.ncpu);
+   factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, opts.m, opts.n, opts.nb, opts.ncpu);
 }

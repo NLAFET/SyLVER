@@ -104,96 +104,97 @@ namespace spldlt {
       work.emplace_back(PAGE_SIZE);
       T* upd = nullptr;
       BuddyAllocator<T,std::allocator<T>> pool_alloc(m*n);
-      // int q1 = ldlt_app_factor(
-      //       m, n, perm, l, lda, d, 0.0, upd, 0, 
-      //       options, work, 
-      //       // allocT
-      //       pool_alloc
-      //       );
-      CopyBackup<T> backup(m, n, blksz);
-      int const use_tasks = false;
-      int q1 = LDLT
-         <T, iblksz, CopyBackup<T>, use_tasks, debug>
-         ::factor(
-               m, n, perm, l, lda, d, backup, options, options.pivot_method,
-               blksz, 0.0, nullptr, 0, work
-               );
-      if(debug) {
-         std::cout << "FIRST FACTOR CALL ELIMINATED " << q1 << " of " << n << " pivots" << std::endl;
-         std::cout << "L after first elim:" << std::endl;
-         print_mat("%10.2e", m, l, lda, perm);
-         std::cout << "D:" << std::endl;
-         print_d<T>(q1, d);
-      }
-      int q2 = 0;
-      if(q1 < n) {
-         // Finish off with simplistic kernel
-         T *ld = new T[2*m];
-         q1 += ldlt_tpp_factor(m-q1, n-q1, &perm[q1], &l[(q1)*(lda+1)], lda,
-                               &d[2*(q1)], ld, m, options.action, u, small, q1, &l[q1], lda);
-         delete[] ld;
-      }
-      if(m > n) {
-         // Apply outer product update
-         do_update<T>(m-n, q1, &l[n*(lda+1)], &l[n], lda, d);
-         // Second (m-n) x (m-n) matrix [but add delays if any]
-         int *perm2 = new int[m-q1];
-         for(int i=0; i<m-q1; i++)
-            perm2[i] = i;
+      // // int q1 = ldlt_app_factor(
+      // //       m, n, perm, l, lda, d, 0.0, upd, 0, 
+      // //       options, work, 
+      // //       // allocT
+      // //       pool_alloc
+      // //       );
+      // CopyBackup<T> backup(m, n, blksz);
+      // int const use_tasks = false;
+      // int q1 = LDLT
+      //    <T, iblksz, CopyBackup<T>, use_tasks, debug>
+      //    ::factor(
+      //          m, n, perm, l, lda, d, backup, options, options.pivot_method,
+      //          blksz, 0.0, nullptr, 0, work
+      //          );
+      // if(debug) {
+      //    std::cout << "FIRST FACTOR CALL ELIMINATED " << q1 << " of " << n << " pivots" << std::endl;
+      //    std::cout << "L after first elim:" << std::endl;
+      //    print_mat("%10.2e", m, l, lda, perm);
+      //    std::cout << "D:" << std::endl;
+      //    print_d<T>(q1, d);
+      // }
+      // int q2 = 0;
+      // if(q1 < n) {
+      //    // Finish off with simplistic kernel
+      //    T *ld = new T[2*m];
+      //    q1 += ldlt_tpp_factor(m-q1, n-q1, &perm[q1], &l[(q1)*(lda+1)], lda,
+      //                          &d[2*(q1)], ld, m, options.action, u, small, q1, &l[q1], lda);
+      //    delete[] ld;
+      // }
+      // if(m > n) {
+      //    // Apply outer product update
+      //    do_update<T>(m-n, q1, &l[n*(lda+1)], &l[n], lda, d);
+      //    // Second (m-n) x (m-n) matrix [but add delays if any]
+      //    int *perm2 = new int[m-q1];
+      //    for(int i=0; i<m-q1; i++)
+      //       perm2[i] = i;
          
-         // q2 = ldlt_app_factor(
-         //       m-q1, m-q1, perm2, &l[q1*(lda+1)], lda, &d[2*q1], 0.0, upd, 0,
-         //       options, work,
-         //       pool_alloc
-         //       );
-         CopyBackup<T> backup(m-q1, m-q1, blksz);
-         q2 = LDLT
-            <T, iblksz, CopyBackup<T>, use_tasks, debug>
-            ::factor(
-                  m-q1, m-q1, perm2, &l[q1*(lda+1)], lda, &d[2*q1], backup, options,
-                  options.pivot_method, blksz, 0.0, nullptr, 0, work
-                  );
-         permute_rows(m-q1, q1, perm2, &perm[q1], &l[q1], lda);
-         delete[] perm2;
-         if(q1+q2 < m) {
-            // Finish off with simplistic kernel
-            T *ld = new T[2*m];
-            q2 += ldlt_tpp_factor(m-q1-q2, m-q1-q2, &perm[q1+q2],
-                                  &l[(q1+q2)*(lda+1)], lda, &d[2*(q1+q2)], ld, m, options.action,
-                                  u, small, q1+q2, &l[q1+q2], lda);
-            delete[] ld;
-         }
-      }
-      EXPECT_EQ(m, q1+q2) << "(test " << test << " seed " << seed << ")" << std::endl;
+      //    // q2 = ldlt_app_factor(
+      //    //       m-q1, m-q1, perm2, &l[q1*(lda+1)], lda, &d[2*q1], 0.0, upd, 0,
+      //    //       options, work,
+      //    //       pool_alloc
+      //    //       );
+      //    CopyBackup<T> backup(m-q1, m-q1, blksz);
+      //    q2 = LDLT
+      //       <T, iblksz, CopyBackup<T>, use_tasks, debug>
+      //       ::factor(
+      //             m-q1, m-q1, perm2, &l[q1*(lda+1)], lda, &d[2*q1], backup, options,
+      //             options.pivot_method, blksz, 0.0, nullptr, 0, work
+      //             );
+      //    permute_rows(m-q1, q1, perm2, &perm[q1], &l[q1], lda);
+      //    delete[] perm2;
+      //    if(q1+q2 < m) {
+      //       // Finish off with simplistic kernel
+      //       T *ld = new T[2*m];
+      //       q2 += ldlt_tpp_factor(m-q1-q2, m-q1-q2, &perm[q1+q2],
+      //                             &l[(q1+q2)*(lda+1)], lda, &d[2*(q1+q2)], ld, m, options.action,
+      //                             u, small, q1+q2, &l[q1+q2], lda);
+      //       delete[] ld;
+      //    }
+      // }
+      // EXPECT_EQ(m, q1+q2) << "(test " << test << " seed " << seed << ")" << std::endl;
 
       // Print out matrices if requested
-      if(debug) {
-         std::cout << "q1=" << q1 << " q2=" << q2 << std::endl;
-         std::cout << "L:" << std::endl;
-         print_mat("%10.2e", m, l, lda, perm);
-         std::cout << "D:" << std::endl;
-         print_d<T>(m, d);
-      }
+      // if(debug) {
+      //    std::cout << "q1=" << q1 << " q2=" << q2 << std::endl;
+      //    std::cout << "L:" << std::endl;
+      //    print_mat("%10.2e", m, l, lda, perm);
+      //    std::cout << "D:" << std::endl;
+      //    print_d<T>(m, d);
+      // }
 
-      // Perform solve
-      T *soln = new T[m];
-      solve(m, q1, perm, l, lda, d, b, soln);
-      if(debug) {
-         printf("soln = ");
-         for(int i=0; i<m; i++) printf(" %le", soln[i]);
-         printf("\n");
-      }
+      // // Perform solve
+      // T *soln = new T[m];
+      // solve(m, q1, perm, l, lda, d, b, soln);
+      // if(debug) {
+      //    printf("soln = ");
+      //    for(int i=0; i<m; i++) printf(" %le", soln[i]);
+      //    printf("\n");
+      // }
 
-      // Check residual
-      T bwderr = backward_error(m, a, lda, b, 1, soln, m);
-      if(debug) printf("bwderr = %le\n", bwderr);
-      EXPECT_LE(bwderr, 5e-14) << "(test " << test << " seed " << seed << ")" << std::endl;
+      // // Check residual
+      // T bwderr = backward_error(m, a, lda, b, 1, soln, m);
+      // if(debug) printf("bwderr = %le\n", bwderr);
+      // EXPECT_LE(bwderr, 5e-14) << "(test " << test << " seed " << seed << ")" << std::endl;
 
       // Cleanup memory
       delete[] a; allocT.deallocate(l, m*lda);
       delete[] b;
       delete[] perm;
-      delete[] d; delete[] soln;
+      delete[] d; 
+      // delete[] soln;
 
       return failed ? -1 : 0;
    }
