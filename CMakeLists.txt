@@ -33,6 +33,8 @@ set(SPRAL_SRC_DIR $ENV{SPRALSRCDIR} CACHE PATH "Location of Spral sources")
 include_directories(${SPRAL_SRC_DIR})
 include_directories(${SPRAL_SRC_DIR}/src)
 
+MESSAGE(STATUS "spral source dir: " ${SPRAL_SRC_DIR})
+
 # Get object files 
 file(
   GLOB_RECURSE
@@ -41,6 +43,50 @@ file(
 
 MESSAGE(STATUS "object files: " ${obj})
 # add_library(spral_ssids_tests STATIC IMPORTED ${obj})
+
+# Use GPUs
+option(USE_GPU "Use GPU" OFF)
+MESSAGE( STATUS "Use GPU:         " ${USE_GPU} )
+
+# Use MPI
+option(USE_MPI "Use MPI" OFF)
+MESSAGE( STATUS "Use MPI:         " ${USE_MPI} )   
+
+## GPU
+if(${USE_GPU} MATCHES ON)
+
+  # Use GPU
+  add_definitions(-DSPLDLT_USE_GPU)
+
+  # set(CUDA_NVCC_FLAGS "-g -arch=compute_20 -code=compute_20,sm_20,sm_35" CACHE
+  #   STRING "NVCC flags")
+
+  find_package(CUDA REQUIRED)
+
+  # set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS};-g;-arch=compute_20,code=compute_20,sm_20,sm_35")
+  # set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS};-g;-arch=compute_20;-code=compute_20,sm_20,sm_35" CACHE STRING "NVCC flags")
+
+  # set(CUDA_NVCC_FLAGS "TET" CACHE STRING "NVCC flags")
+  list(APPEND CUDA_NVCC_FLAGS "-g")
+  
+  MESSAGE( STATUS "CUDA found:         " ${CUDA_FOUND} )
+  MESSAGE( STATUS "CUDA host compiler: " ${CUDA_HOST_COMPILER} )
+  MESSAGE( STATUS "CUDA nvcc compiler: " ${CUDA_NVCC_EXECUTABLE})
+  MESSAGE( STATUS "NVCC FLAGS:         " ${CUDA_NVCC_FLAGS} )
+
+  # enable_language(CUDA)
+  # include(FindCUDA)
+
+  # Allow for dynamic parallelism with CUBLAS
+  # set(CUDA_SEPARABLE_COMPILATION TRUE)
+
+  # MAGMA library
+  set(MAGMA_DIR $ENV{MAGMADIR} CACHE PATH "Location of MAGMA Library")
+  set(MAGMA_SRCDIR $ENV{MAGMASRCDIR} CACHE PATH "Location of MAGMA Sources")
+  include_directories(${MAGMA_DIR}/include)
+  include_directories(${MAGMA_SRCDIR}/control)     
+  find_library(MAGMA_LIBRARY magma PATHS ${MAGMA_DIR}/lib)
+endif()
 
 # Include source directory
 include_directories(${SpLDLT_SOURCE_DIR}/src)

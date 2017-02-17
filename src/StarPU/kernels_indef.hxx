@@ -163,7 +163,7 @@ namespace spldlt { namespace starpu {
 
       /* applyT_block_app StarPU codelet */
       // static
-      extern struct starpu_codelet cl_applyT_block_app;      
+      extern struct starpu_codelet cl_applyT_block_app;
 
       template<typename T, 
                typename Backup, 
@@ -269,6 +269,44 @@ namespace spldlt { namespace starpu {
                STARPU_VALUE, &options, sizeof(struct cpu_factor_options *),
                0);
          STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
+      }
+
+      /* restore_block_app StarPU codelet */
+      extern struct starpu_codelet cl_restore_block_app;      
+
+      /*  restore_block_app StarPU task
+         
+       */
+      template<typename T,
+               int iblksz,
+               typename Backup, 
+               typename IntAlloc>
+      void
+      restore_block_app_cpu_func(void *buffers[], void *cl_arg) {
+
+         T *a_ij = (T *)STARPU_MATRIX_GET_PTR(buffers[0]); // Get diagonal block pointer
+         unsigned ld_a_ij = STARPU_MATRIX_GET_LD(buffers[0]); // Get leading dimensions
+
+         int m, n; // node's dimensions
+         int iblk; // destination block's row index
+         int jblk; // destination block's column index     
+         int blk; // source block's column index     
+
+         ColumnData<T,IntAlloc> *cdata = nullptr;
+         Backup *backup = nullptr;
+
+         int blksz;
+
+         starpu_codelet_unpack_args (
+               cl_arg,
+               &m, &n,
+               &iblk, &jblk, &blk,
+               &cdata, &backup,
+               &blksz);
+
+         Block<T, iblksz, IntAlloc> ublk(iblk, jblk, m, n, *cdata, a_ij, ld_a_ij, blksz);
+
+         ublk.restore_if_required(*backup, blk);
       }
 
       /* updateN_block_app StarPU codelet */
@@ -570,6 +608,5 @@ namespace spldlt { namespace starpu {
          cl_adjust.nbuffers = STARPU_VARIABLE_NBUFFERS;
          cl_adjust.name = "ADJUST";
          cl_adjust.cpu_funcs[0] = adjust_cpu_func<T, IntAlloc>;
-
       }
 }} /* namespaces spldlt::starpu  */

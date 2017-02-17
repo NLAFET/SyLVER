@@ -19,5 +19,8 @@ namespace spldlt { namespace starpu {
 
       /* adjust StarPU codelet */
       struct starpu_codelet cl_adjust;
+
+      /* restore StarPU codelet */
+      struct starpu_codelet cl_restore_block_app;
       
 }} /* namespaces spldlt::starpu  */
