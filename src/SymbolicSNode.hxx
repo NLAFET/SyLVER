@@ -17,7 +17,8 @@ namespace spldlt {
 #if defined(SPLDLT_USE_STARPU)
       starpu_data_handle_t hdl; // symbolic handle representing the node
       std::vector<starpu_data_handle_t> handles; // array containing the block handles
+      std::vector<starpu_data_handle_t> contrib_handles; // array containing the block handles in the contribution block
 #endif
    };
-   
+
 }

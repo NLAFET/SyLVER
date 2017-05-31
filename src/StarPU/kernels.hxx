@@ -33,9 +33,9 @@ namespace spldlt { namespace starpu {
             int blkn = std::min(nb, n - j*nb);
                
             for(int i = j; i < nr; ++i) {
-               
+
                int blkm = std::min(nb, m - i*nb);
-                                 
+
                starpu_matrix_data_register(
                      &(snode.handles[i + j*nr]), // StarPU handle ptr 
                      STARPU_MAIN_RAM, // memory 
@@ -43,7 +43,10 @@ namespace spldlt { namespace starpu {
                      lda, blkm, blkn,
                      sizeof(T));
             }
-         }         
+         }
+
+         // int ncontrib =
+         // snode.contrib_handles.resize(nr*nc);
       }
 
       /* Unregister handles in StarPU*/
