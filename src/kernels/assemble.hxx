@@ -152,7 +152,7 @@ namespace spldlt {
       int c_sa = (csnode.ncol > jj*blksz) ? 0 : (jj*blksz-csnode.ncol); // first col in block
       int c_en = std::min((jj+1)*blksz-csnode.ncol, cm); // last col in block
       // row indexes
-      int r_sa = (csnode.ncol > ii*blksz) ? 0 : (ii*blksz-csnode.ncol); // first col in block
+      // int r_sa = (csnode.ncol > ii*blksz) ? 0 : (ii*blksz-csnode.ncol); // first col in block
       int r_en = std::min((ii+1)*blksz-csnode.ncol, cm); // last col in block
 
       // loop over column in block
@@ -173,6 +173,8 @@ namespace spldlt {
 
             // int const* idx = &cache[j];                           
             // loop over rows in block
+
+            int r_sa = (ii==jj) ? j : (ii*blksz-csnode.ncol); // first col in block
 
             for (int i=r_sa; i<r_en; i++) {              
 
@@ -222,7 +224,7 @@ namespace spldlt {
             // loop over rows in block
 
             // int r_sa = (csnode.ncol > ii*blksz) ? 0 : (ii*blksz-csnode.ncol); // first col in block
-            int r_sa = (ii == jj) ? j : (ii*blksz-csnode.ncol); // first col in block
+            int r_sa = (ii==jj) ? j : (ii*blksz-csnode.ncol); // first col in block
 
             for (int i=r_sa; i<r_en; i++) {              
             // for (int i=j; i<cm; i++) {          
