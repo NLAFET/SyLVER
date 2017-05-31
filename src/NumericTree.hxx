@@ -312,7 +312,7 @@ namespace spldlt {
                   for (int jj = csa; jj < cnr; ++jj) {
 
                      for (int ii = csa; ii < cnr; ++ii) {
-
+                        
                         assemble_block(nodes_[ni], *child, ii, jj, map, blksz);
                      }
                   }
@@ -354,9 +354,9 @@ namespace spldlt {
                      // int c_en = std::min((jj+1)*blksz-csnode.ncol, cm); // last col in block
 
                      // assemble_expected_contrib(c_sa, c_en, nodes_[ni], *child, map, cache);                     
-                     // int ii = 0;
+                     int ii = 0;
 
-                     for (int ii=csa; ii<cnr; ++ii) {
+                     for (int ii=jj; ii<cnr; ++ii) {
                         
                         assemble_contrib_block(nodes_[ni], *child, ii, jj, map, blksz);
                      }
@@ -369,7 +369,7 @@ namespace spldlt {
          }
       }
 
-      /* SN factorization. 
+      /* Factorization using a supernodal mode. 
          Note: Asynchronous routine i.e. no barrier at the end. 
        */
       void factor(
