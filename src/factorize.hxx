@@ -98,8 +98,13 @@ namespace spldlt {
       int blkn = std::min(blksz, n - kk*blksz);
       int lda = align_lda<T>(m);
       T *a = node.lcol;
+      T *contrib = node.contrib;
+      int ldcontrib = m-n;
 
-      factorize_diag_block(blkm, blkn, &a[kk*blksz*(lda+1)], lda);
+      factorize_diag_block(blkm, blkn, 
+                           &a[kk*blksz*(lda+1)], lda,
+                           contrib, ldcontrib,
+                           kk==0);
 
 #endif
    }
@@ -242,6 +247,8 @@ namespace spldlt {
    
       // printf("[factorize_node_posdef_mf] contrib: %p\n", contrib);
 
+      int FACTOR_PRIO = 3;
+
       for(int j = 0; j < nc; ++j) {
 
          int blkn = std::min(blksz, n - j*blksz);
@@ -250,11 +257,19 @@ namespace spldlt {
 
          int blkm = std::min(blksz, m - j*blksz);
          
-         factorize_diag_block(
-               blkm, blkn, 
-               &lcol[j*blksz*(lda+1)], lda,
-               contrib, ldcontrib,
-               j==0);
+         // factorize_diag_block(
+         //       blkm, blkn, 
+         //       &lcol[j*blksz*(lda+1)], lda,
+         //       contrib, ldcontrib,
+         //       j==0);
+
+         factorize_diag_block_task(
+               snode, node, j, // block  column (and row) index
+               blksz, FACTOR_PRIO);
+
+#if defined(SPLDLT_USE_STARPU)
+            starpu_task_wait_for_all();
+#endif
 
          /* Column Solve Tasks */
          for(int i = j+1; i < nr; ++i) {

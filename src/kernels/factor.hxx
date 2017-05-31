@@ -33,9 +33,9 @@ namespace spldlt {
     */
    template <typename T>
    void factorize_diag_block(
-         int m, int n, 
-         T *a, int lda, 
-         T* upd, int ldupd, 
+         int m, int n,
+         T *a, int lda,
+         T* upd, int ldupd,
          bool zero_upd) {
 
       int flag = lapack_potrf(FILL_MODE_LWR, n, a, lda);

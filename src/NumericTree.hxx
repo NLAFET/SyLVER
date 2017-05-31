@@ -268,6 +268,8 @@ namespace spldlt {
 
          int blksz = options.cpu_block_size;
 
+         int INIT_PRIO = 4;
+
          for(int ni = 0; ni < symb_.nnodes_; ++ni) {
 
             SymbolicSNode &snode = symb_[ni];
@@ -275,11 +277,19 @@ namespace spldlt {
             // Allocate front
             alloc_node_mf(snode, nodes_[ni], factor_alloc_, pool_alloc_);
 
+#if defined(SPLDLT_USE_STARPU)
+            // Register symbloic handle for current node
+            starpu_void_data_register(&(snode.hdl));
+#endif
             // Init
-            init_node(snode, nodes_[ni], aval);
-            
-            // Assemble front: fully-summed columns 
+            // init_node(snode, nodes_[ni], aval);
+            init_node_task(snode, nodes_[ni], aval, INIT_PRIO);
 
+#if defined(SPLDLT_USE_STARPU)
+            starpu_task_wait_for_all();
+#endif
+
+            // Assemble front: fully-summed columns
             typedef typename std::allocator_traits<PoolAllocator>::template rebind_alloc<int> PoolAllocInt;
 
             /* Build lookup vector, allowing for insertion of delayed vars */
@@ -327,6 +337,9 @@ namespace spldlt {
             // TODO overload factorize_node_posdef routine
             factorize_node_posdef_mf(snode, nodes_[ni], options);
 
+#if defined(SPLDLT_USE_STARPU)
+            starpu_task_wait_for_all();
+#endif
             // Assemble front: non fully-summed columns i.e. contribution block 
 
             for (auto* child=nodes_[ni].first_child; child!=NULL; child=child->next_child) {
