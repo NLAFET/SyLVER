@@ -45,6 +45,8 @@ namespace spldlt { namespace starpu {
             }
          }
 
+         int rsa = ();
+
          // int ncontrib =
          // snode.contrib_handles.resize(nr*nc);
       }
