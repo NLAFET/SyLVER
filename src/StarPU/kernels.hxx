@@ -44,11 +44,37 @@ namespace spldlt { namespace starpu {
                      sizeof(T));
             }
          }
+         
+         // Allocate and init handles in contribution blocks
+         // Index of first block in contrib
+         int rsa = n/nb;
+         // Number of block in contrib
+         int ncontrib = nr-rsa+1;
+         int ldd = align_lda<T>(m-n);
+         snode.contrib_handles.resize(ncontrib*ncontrib);
+         // Contrib array
+         T *contrib = node.contrib;
 
-         int rsa = ();
+         for(int j = rsa; j < nr; ++j) {
+            // First col in contrib block
+            int first_col = std::max(j*nb, n);
+            // Block width
+            int blkn = std::min((j+1)*nb, m) - first_col;
 
-         // int ncontrib =
-         // snode.contrib_handles.resize(nr*nc);
+            for(int i = j; i < nr; ++i) {
+               // First col in contrib block
+               int first_row = std::max(i*nb, n);
+               // Block height
+               int blkm = std::min((i+1)*nb, m) - first_row;
+
+               starpu_matrix_data_register(
+                     &(snode.contrib_handles[i + j*ncontrib]), // StarPU handle ptr 
+                     STARPU_MAIN_RAM, // memory 
+                     reinterpret_cast<uintptr_t>(&contrib[first_col*ldd+first_row]),
+                     ldd, blkm, blkn,
+                     sizeof(T));
+            }
+         }
       }
 
       /* Unregister handles in StarPU*/
