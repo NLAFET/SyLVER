@@ -84,24 +84,36 @@ namespace spldlt {
 
       // printf("[factorize_diag_block_task] \n");
 
-#if defined(SPLDLT_USE_STARPU)
-      
-      
-      starpu_data_handle_t node_hdl = NULL;
-      if (kk == 0) node_hdl = snode.hdl; 
-      // printf("[factorize_diag_block_task] handles size: %zu\n", snode.handles.size());
-      insert_factorize_block(snode.handles[kk*nr + kk], node_hdl, prio);
-
-#else
-
-      int blkm = std::min(blksz, m - kk*blksz); 
+      int blkm = std::min(blksz, m - kk*blksz);
       int blkn = std::min(blksz, n - kk*blksz);
+
       int lda = align_lda<T>(m);
       T *a = node.lcol;
       T *contrib = node.contrib;
       int ldcontrib = m-n;
 
-      factorize_diag_block(blkm, blkn, 
+#if defined(SPLDLT_USE_STARPU)
+
+      starpu_data_handle_t node_hdl = NULL;
+      if (kk==0) node_hdl = snode.hdl;
+
+      if ((blkm > blkn) && (ldcontrib > 0)) {
+         // factorize_diag_block(blkm, blkn,
+         //                      &a[kk*blksz*(lda+1)], lda,
+         //                      contrib, ldcontrib,
+         //                      kk==0);
+
+         insert_factorize_block(kk, snode.handles[kk*nr + kk], snode.contrib_handles[0], 
+                                snode.hdl, prio);
+      }
+      else {
+         // printf("blkm: %d, blkn: %d, ldcontrib:%d\n", blkm, blkn, ldcontrib);
+         insert_factorize_block(snode.handles[kk*nr + kk], snode.hdl, prio);
+      }
+
+#else
+
+      factorize_diag_block(blkm, blkn,
                            &a[kk*blksz*(lda+1)], lda,
                            contrib, ldcontrib,
                            kk==0);

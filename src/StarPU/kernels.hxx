@@ -10,7 +10,7 @@
 
 namespace spldlt { namespace starpu {
 
-      /* Register handles in StarPU*/
+      /* Register handles in StarPU */
 
       template <typename T, typename PoolAlloc>
       void register_node(
@@ -27,7 +27,7 @@ namespace spldlt { namespace starpu {
          int nc = (n-1) / nb + 1; // number of block columns
          // snode.handles.reserve(nr*nc);
          snode.handles.resize(nr*nc); // allocate handles
-
+         // printf("[register_node] nr: %d\n", nr);
          for(int j = 0; j < nc; ++j) {
                
             int blkn = std::min(nb, n - j*nb);
@@ -44,36 +44,39 @@ namespace spldlt { namespace starpu {
                      sizeof(T));
             }
          }
-         
-         // Allocate and init handles in contribution blocks
-         // Index of first block in contrib
-         int rsa = n/nb;
-         // Number of block in contrib
-         int ncontrib = nr-rsa+1;
-         int ldd = align_lda<T>(m-n);
-         snode.contrib_handles.resize(ncontrib*ncontrib);
-         // Contrib array
+
          T *contrib = node.contrib;
+         
+         if (contrib) {
+            // Allocate and init handles in contribution blocks
+            // Index of first block in contrib
+            int rsa = n/nb;
+            // Number of block in contrib
+            int ncontrib = nr-rsa;
+            int ldcontrib = m-n;
+            snode.contrib_handles.resize(ncontrib*ncontrib);
 
-         for(int j = rsa; j < nr; ++j) {
-            // First col in contrib block
-            int first_col = std::max(j*nb, n);
-            // Block width
-            int blkn = std::min((j+1)*nb, m) - first_col;
-
-            for(int i = j; i < nr; ++i) {
+            for(int j = rsa; j < nr; j++) {
                // First col in contrib block
-               int first_row = std::max(i*nb, n);
-               // Block height
-               int blkm = std::min((i+1)*nb, m) - first_row;
+               int first_col = std::max(j*nb, n);
+               // Block width
+               int blkn = std::min((j+1)*nb, m) - first_col;
 
-               starpu_matrix_data_register(
-                     &(snode.contrib_handles[i + j*ncontrib]), // StarPU handle ptr 
-                     STARPU_MAIN_RAM, // memory 
-                     reinterpret_cast<uintptr_t>(&contrib[first_col*ldd+first_row]),
-                     ldd, blkm, blkn,
-                     sizeof(T));
+               for(int i = j; i < nr; i++) {
+                  // First col in contrib block
+                  int first_row = std::max(i*nb, n);
+                  // Block height
+                  int blkm = std::min((i+1)*nb, m) - first_row;
+
+                  starpu_matrix_data_register(
+                        &(snode.contrib_handles[(i-rsa)+(j-rsa)*ncontrib]), // StarPU handle ptr
+                        STARPU_MAIN_RAM, // memory 
+                        reinterpret_cast<uintptr_t>(&contrib[(first_col-n)*ldcontrib+(first_row-n)]),
+                        ldcontrib, blkm, blkn,
+                        sizeof(T));
+               }
             }
+
          }
       }
 
@@ -134,8 +137,35 @@ namespace spldlt { namespace starpu {
          unsigned n = STARPU_MATRIX_GET_NY(buffers[0]);
          unsigned ld = STARPU_MATRIX_GET_LD(buffers[0]);
 
-
          factorize_diag_block(m, n, blk, ld);
+      }
+
+      /* TODO generic prec */
+      void factorize_contrib_block_cpu_func(void *buffers[], void *cl_arg) {
+         
+         double *blk = (double *)STARPU_MATRIX_GET_PTR(buffers[0]);
+         unsigned m = STARPU_MATRIX_GET_NX(buffers[0]);
+         unsigned n = STARPU_MATRIX_GET_NY(buffers[0]);
+         unsigned ld = STARPU_MATRIX_GET_LD(buffers[0]);
+
+         double *contrib = (double *)STARPU_MATRIX_GET_PTR(buffers[1]);
+         unsigned mcontrib = STARPU_MATRIX_GET_NX(buffers[1]);
+         unsigned ncontrib = STARPU_MATRIX_GET_NY(buffers[1]);
+         unsigned ldcontrib = STARPU_MATRIX_GET_LD(buffers[1]);
+
+         int kk;
+
+         starpu_codelet_unpack_args(
+               cl_arg,
+               &kk);
+
+         // printf("[factorize_contrib_block_cpu_func] kk: %d\n", kk);
+         // printf("[factorize_contrib_block_cpu_func] contrib: %p, ldcontrib: %d\n", 
+         // contrib, ldcontrib);
+         // printf("[factorize_contrib_block_cpu_func] mcontrib: %d, ncontrib: %d, ldcontrib: %d\n", mcontrib, ncontrib, ldcontrib);
+
+         factorize_diag_block(m, n, blk, ld, contrib, ldcontrib,
+                              kk==0);
       }
       
       /* FIXME: although it would be better to statically initialize
@@ -149,12 +179,46 @@ namespace spldlt { namespace starpu {
       // };
 
       /* factorize block codelet */
+      struct starpu_codelet cl_factorize_contrib_block;
+
+      void insert_factorize_block(
+            int kk,
+            starpu_data_handle_t bc_hdl,
+            starpu_data_handle_t contrib_hdl,
+            starpu_data_handle_t node_hdl, // Symbolic node handle
+            int prio) {
+
+         int ret;
+
+         if (node_hdl) {
+            ret = starpu_insert_task(
+                  &cl_factorize_contrib_block,
+                  STARPU_VALUE, &kk, sizeof(int),
+                  STARPU_RW, bc_hdl,
+                  STARPU_RW, contrib_hdl,
+                  STARPU_R, node_hdl,
+                  STARPU_PRIORITY, prio,
+                  0);
+         }
+         else {
+            ret = starpu_insert_task(
+                  &cl_factorize_contrib_block,
+                  STARPU_VALUE, &kk, sizeof(int),
+                  STARPU_RW, bc_hdl,
+                  STARPU_RW, contrib_hdl,
+                  STARPU_PRIORITY, prio,
+                  0);
+         }
+
+         STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
+      }
+
+      /* factorize block codelet */
       struct starpu_codelet cl_factorize_block;      
 
-      /* Insert factorization of diag block into StarPU*/
       void insert_factorize_block(
             starpu_data_handle_t bc_hdl,
-            starpu_data_handle_t node_hdl,
+            starpu_data_handle_t node_hdl, // Symbolic node handle
             int prio) {
                   
          int ret;
@@ -499,6 +563,13 @@ namespace spldlt { namespace starpu {
          cl_factorize_block.nbuffers = STARPU_VARIABLE_NBUFFERS;
          cl_factorize_block.name = "FACTO_BLK";
          cl_factorize_block.cpu_funcs[0] = factorize_block_cpu_func;
+
+         // Initialize factorize_block StarPU codelet
+         starpu_codelet_init(&cl_factorize_contrib_block);
+         cl_factorize_contrib_block.where = STARPU_CPU;
+         cl_factorize_contrib_block.nbuffers = STARPU_VARIABLE_NBUFFERS;
+         cl_factorize_contrib_block.name = "FACTO_CONTRIB_BLK";
+         cl_factorize_contrib_block.cpu_funcs[0] = factorize_contrib_block_cpu_func;
 
          // Initialize solve_block StarPU codelet
          starpu_codelet_init(&cl_solve_block);

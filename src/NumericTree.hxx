@@ -278,8 +278,10 @@ namespace spldlt {
             alloc_node_mf(snode, nodes_[ni], factor_alloc_, pool_alloc_);
 
 #if defined(SPLDLT_USE_STARPU)
-            // Register symbloic handle for current node
+            // Register symbolic handle for current node in StarPU
             starpu_void_data_register(&(snode.hdl));
+            // Register block handles
+            register_node(snode, nodes_[ni], blksz);
 #endif
             // Init
             // init_node(snode, nodes_[ni], aval);
