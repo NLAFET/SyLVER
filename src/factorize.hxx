@@ -126,29 +126,43 @@ namespace spldlt {
    template <typename T>
    void solve_block_task(
          SymbolicSNode const& snode,
-         int kk, /* block column index of subdiag block */
-         int ii, /* block row index of subdiag block*/
+         int k, // Column index
+         int i, // Row index
          T *a, int lda, 
          T *a_ik, int lda_ik,         
          int blksz, int prio) {
       
       int m = snode.nrow;
       int n = snode.ncol;
+      int ldcontrib = m-n;
 
       int nr = (m-1) / blksz + 1; // number of block rows
       int nc = (n-1) / blksz + 1; // number of block columns
 
+      int rsa = n / blksz; // Row/Col index of first block in contrib 
+
+      int blkn = std::min(blksz, n - k*blksz);
+      int blkm = std::min(blksz, m - i*blksz);
+
 #if defined(SPLDLT_USE_STARPU)
       
-      insert_solve_block(
-            snode.handles[kk*nr + kk], // diag block handle 
-            snode.handles[kk*nr + ii], // subdiag block handle
-            prio);
-      
-#else
+      if((blkn<blksz) && (ldcontrib>0)) {
 
-      int blkn = std::min(blksz, n - kk*blksz);
-      int blkm = std::min(blksz, m - ii*blksz);
+         insert_solve_block(
+               k, blksz,
+               snode.handles[k*nr + k], // diag block handle 
+               snode.handles[k*nr + i], // subdiag block handle
+               snode.contrib_handles[i-rsa], // subdiag block handle
+               prio);
+      }
+      else {
+
+         insert_solve_block(
+               snode.handles[k*nr + k], // diag block handle 
+               snode.handles[k*nr + i], // subdiag block handle
+               prio);
+      }
+#else
       
       solve_block(blkm, blkn, a, lda, a_ik, lda_ik);
 
@@ -160,9 +174,9 @@ namespace spldlt {
    template <typename T>
    void update_block_task(
          SymbolicSNode const& snode,
-         int kk, /* block column index of A_ik and A_jk blocks */
-         int ii, /* block row index of A_ik and A_ij blocks  */
-         int jj, /* block row index of A_jk and block column index of
+         int k, /* block column index of A_ik and A_jk blocks */
+         int i, /* block row index of A_ik and A_ij blocks  */
+         int j, /* block row index of A_jk and block column index of
                     A_ij blocks */
          T *a_ij, int lda_ij,
          T *a_ik, int lda_ik,
@@ -171,22 +185,38 @@ namespace spldlt {
 
       int m = snode.nrow;
       int n = snode.ncol;
+      int ldcontrib = m-n;
+
+      int blkm = std::min(blksz, m - i*blksz);
+      int blkn = std::min(blksz, n - j*blksz);
+      int blkk = std::min(blksz, n - k*blksz);
 
 #if defined(SPLDLT_USE_STARPU)
 
-      int nr = (m-1) / blksz + 1; // number of block rows
-      int nc = (n-1) / blksz + 1; // number of block columns
+      int nr = (m-1)/blksz + 1; // number of block rows
+      int nc = (n-1)/blksz + 1; // number of block columns
 
-      insert_update_block(
-            snode.handles[jj*nr + ii], // A_ij block handle 
-            snode.handles[kk*nr + ii], // A_ik block handle
-            snode.handles[kk*nr + jj],  // A_jk block handle
-            prio);
+      // TODO doen't work in supernodal mode
+      if ((ldcontrib>0) && (blkn<blksz)) {
+
+         int rsa = n/blksz; // Row/Col index of first block in contrib 
+
+         insert_update_block(
+               k, blksz,
+               snode.handles[j*nr + i], // A_ij block handle 
+               snode.handles[k*nr + i], // A_ik block handle
+               snode.handles[k*nr + j],  // A_jk block handle
+               snode.contrib_handles[i-rsa],
+               prio);
+      }
+      else {
+         insert_update_block(
+               snode.handles[j*nr + i], // A_ij block handle 
+               snode.handles[k*nr + i], // A_ik block handle
+               snode.handles[k*nr + j],  // A_jk block handle
+               prio);
+      }
 #else
-
-      int blkm = std::min(blksz, m - ii*blksz);
-      int blkn = std::min(blksz, n - jj*blksz);
-      int blkk = std::min(blksz, n - kk*blksz);
 
       update_block(blkm, blkn, a_ij, lda_ij,
                    blkk,
@@ -234,7 +264,60 @@ namespace spldlt {
                         a_jk, lda_jk);
 
 #endif
-   };
+   }
+
+   // Update contrib block task
+   template <typename T, typename PoolAlloc>
+   void update_contrib_task(
+         SymbolicSNode const& snode,
+         NumericNode<T, PoolAlloc> &node,
+         int k, int i, int j,
+         int blksz, int prio) {
+
+      int m = snode.nrow;
+      int n = snode.ncol;
+
+      int blkm = std::min(blksz, m - i*blksz);
+      int blkn = std::min(blksz, m - j*blksz);
+      int blkk = std::min(blksz, n - k*blksz);
+
+      int lda = align_lda<T>(m);
+      T *a = node.lcol;
+      int ldcontrib = m-n;
+      T *contrib = node.contrib;
+
+      int nr = (m-1)/blksz + 1; // number of block rows
+      int nc = (n-1)/blksz + 1; // number of block columns
+
+#if defined(SPLDLT_USE_STARPU)
+
+      int rsa = n/blksz;
+      int ncontrib = nr-rsa;
+
+      insert_update_contrib(k,
+                            snode.contrib_handles[(i-rsa)+(j-rsa)*ncontrib],
+                            snode.handles[k*nr + i],
+                            snode.handles[k*nr + j], 
+                            prio);
+
+      // update_block(blkm, blkn,
+      //              &contrib[((j*blksz-n)*ldcontrib) + (i*blksz)-n], ldcontrib,
+      //              blkk,
+      //              &a[(k*blksz*lda) + (i*blksz)], lda, 
+      //              &a[(k*blksz*lda) + (j*blksz)], lda,
+      //              k==0);
+      
+#else
+
+      update_block(blkm, blkn,
+                   &contrib[((j*blksz-n)*ldcontrib) + (i*blksz)-n], ldcontrib,
+                   blkk,
+                   &a[(k*blksz*lda) + (i*blksz)], lda, 
+                   &a[(k*blksz*lda) + (j*blksz)], lda,
+                   k==0);
+
+#endif      
+   }   
 
    /* Factorize node in a MF context
     */
@@ -260,6 +343,8 @@ namespace spldlt {
       // printf("[factorize_node_posdef_mf] contrib: %p\n", contrib);
 
       int FACTOR_PRIO = 3;
+      int SOLVE_PRIO = 2;
+      int UPDATE_PRIO = 1;
 
       for(int j = 0; j < nc; ++j) {
 
@@ -279,9 +364,9 @@ namespace spldlt {
                snode, node, j, // block  column (and row) index
                blksz, FACTOR_PRIO);
 
-#if defined(SPLDLT_USE_STARPU)
-            starpu_task_wait_for_all();
-#endif
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
 
          /* Column Solve Tasks */
          for(int i = j+1; i < nr; ++i) {
@@ -289,14 +374,29 @@ namespace spldlt {
             int blkm = std::min(blksz, m - i*blksz);
 
             // printf("[factorize_node_posdef_mf] contrib start: %d\n", (i*blksz)-n);
+            // TODO fix STF version
+            solve_block_task(
+                  snode, j, i,
+                  &lcol[j*blksz*(lda+1)], lda,
+                  &lcol[(j*blksz*lda) + (i*blksz)], lda,
+                  blksz, SOLVE_PRIO);
 
-            solve_block(blkm, blkn, 
-                        &lcol[j*blksz*(lda+1)], lda, 
-                        &lcol[(j*blksz*lda) + (i*blksz)], lda,
-                        (contrib) ? &contrib[(i*blksz)-n] : nullptr, ldcontrib,
-                        j==0, 
-                        blksz);
+            // solve_block(blkm, blkn, 
+            //             &lcol[j*blksz*(lda+1)], lda, 
+            //             &lcol[(j*blksz*lda) + (i*blksz)], lda,
+            //             (contrib) ? &contrib[(i*blksz)-n] : nullptr, ldcontrib,
+            //             j==0, 
+            //             blksz);
+
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
+
          }
+
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
 
          /* Schur Update Tasks: mostly internal */
          for(int k = j+1; k < nc; ++k) {
@@ -320,15 +420,25 @@ namespace spldlt {
                
                // printf("[factorize_node_posdef_mf] m: %d, k: %d\n", m, k);
                // printf("[factorize_node_posdef_mf] cbm: %d, cbn: %d\n", cbm, cbn);
+               // TODO fix STF version
+               update_block_task(snode, j, i, k,
+                                 &lcol[ (k*blksz*lda) + (i*blksz)], lda,
+                                 &lcol[(j*blksz*lda) + (i*blksz)], lda, 
+                                 &lcol[(j*blksz*lda) + (k*blksz)], lda,
+                                 blksz, UPDATE_PRIO);
+
+// #if defined(SPLDLT_USE_STARPU)
+//                starpu_task_wait_for_all();
+// #endif
                
-               update_block(blkm, blkk, &lcol[ (k*blksz*lda) + (i*blksz)], lda,
-                            blkn,
-                            &lcol[(j*blksz*lda) + (i*blksz)], lda, 
-                            &lcol[(j*blksz*lda) + (k*blksz)], lda,
-                            upd, ldcontrib,
-                            cbm, cbn,
-                            j==0,
-                            blksz);
+               // update_block(blkm, blkk, &lcol[ (k*blksz*lda) + (i*blksz)], lda,
+               //              blkn,
+               //              &lcol[(j*blksz*lda) + (i*blksz)], lda, 
+               //              &lcol[(j*blksz*lda) + (k*blksz)], lda,
+               //              upd, ldcontrib,
+               //              cbm, cbn,
+               //              j==0,
+               //              blksz);
 
             }
          }
@@ -350,13 +460,21 @@ namespace spldlt {
                   
                   // printf("[factorize_node_posdef_mf] row: %d, col: %d\n", (i*blksz)-n, (k*blksz-n));
 
-                  update_block(
-                        blkm, blkk,
-                        &contrib[((k*blksz-n)*ldcontrib) + (i*blksz)-n], ldcontrib,
-                        blkn,
-                        &lcol[(j*blksz*lda) + (i*blksz)], lda, 
-                        &lcol[(j*blksz*lda) + (k*blksz)], lda,
-                        j==0);
+                  update_contrib_task(snode, node,
+                                      j, i, k, blksz, 
+                                      UPDATE_PRIO);
+
+// #if defined(SPLDLT_USE_STARPU)
+//                starpu_task_wait_for_all();
+// #endif
+
+                  // update_block(
+                  //       blkm, blkk,
+                  //       &contrib[((k*blksz-n)*ldcontrib) + (i*blksz)-n], ldcontrib,
+                  //       blkn,
+                  //       &lcol[(j*blksz*lda) + (i*blksz)], lda, 
+                  //       &lcol[(j*blksz*lda) + (k*blksz)], lda,
+                  //       j==0);
                   
                   // update_block(blkm, blkk, &contrib[ (k*blksz*lda) + (i*blksz)], lda,
                   //              blkn,
