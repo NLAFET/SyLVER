@@ -27,7 +27,7 @@ namespace spldlt {
          FactorAlloc& factor_alloc,
          PoolAlloc& pool_alloc) {
 
-      alloc_node(snode, node, factor_alloc, pool_alloc);            
+      alloc_node(snode, node, factor_alloc, pool_alloc);
 
 #if defined(SPLDLT_USE_STARPU)
       starpu_void_data_register(&(snode.hdl));
@@ -37,8 +37,7 @@ namespace spldlt {
       register_node(snode, node, blksz);
 
       // activate_node(snode, nodes_[ni], nb);
-#endif
-      
+#endif      
    }
 
    /* Initialize node */ 
@@ -318,6 +317,70 @@ namespace spldlt {
 
 #endif      
    }   
+
+   // Assemble block task
+   template <typename T, typename PoolAlloc, typename MapVector>   
+   void assemble_block_task(
+         NumericNode<T,PoolAlloc>& node, NumericNode<T,PoolAlloc> const& cnode, 
+         int i, int j, MapVector const& map, int blksz) {
+
+#if defined(SPLDLT_USE_STARPU)
+
+      int nrow = snode.nrow;
+      int ncol = node.symb.ncol; // no delays!
+
+      int nr = (nrow-1)/blksz+1; // number of block rows
+      int nc = (ncol-1)/blksz+1; // number of block columns
+
+      starpu_data_handle_t *hdls = (starpu_data_handle_t *)malloc(nr*nc*sizeof(starpu_data_handle_t));
+      int nh = 0;
+
+      SymbolicNode const& csnode = cnode.symb;
+      
+      int cm = csnode.nrow - csnode.ncol;
+
+      // colum indexes
+      int c_sa = (csnode.ncol > jj*blksz) ? 0 : (jj*blksz-csnode.ncol); // first col in block
+      int c_en = std::min((jj+1)*blksz-csnode.ncol, cm); // last col in block
+      // row indexes
+      int r_en = std::min((ii+1)*blksz-csnode.ncol, cm); // last row in block
+
+      int cc = -1;
+      int rr = -1;
+
+      // loop over column in block
+      for (int j=c_sa; j<c_en; j++) {
+         
+         // Column index in parent node
+         int c = map[ csnode.rlist[csnode.ncol+j] ];
+         
+         if (cc==(c/blksz)) continue;
+         cc = c/blksz;
+         rr = -1
+
+         if (c < ncol) {
+
+            int r_sa = (i==j) ? j : (ii*blksz-csnode.ncol); // first row in block
+
+            for (int i=r_sa; i<r_en; i++) {
+
+               int r = map[ csnode.rlist[csnode.ncol+i] ];
+               if (rr==(r/blksz)) continue; 
+               rr = r/blksz;
+               
+               hdls[nh] = node.handles[cc*nr+rr]; 
+               nh++;
+            }
+         }
+      }
+
+      // assemble_block(node, cnode, i, j, map, blksz);
+#else
+
+      assemble_block(node, cnode, i, j, map, blksz);
+#endif
+
+   }
 
    /* Factorize node in a MF context
     */

@@ -325,7 +325,8 @@ namespace spldlt {
 
                      for (int ii = jj; ii < cnr; ++ii) {
                         
-                        assemble_block(nodes_[ni], *child, ii, jj, map, blksz);
+                        // assemble_block(nodes_[ni], *child, ii, jj, map, blksz);
+                        assemble_block_task(nodes_[ni], *child, ii, jj, map, blksz);
                      }
                   }
 
