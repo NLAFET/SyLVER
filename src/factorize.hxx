@@ -319,15 +319,20 @@ namespace spldlt {
    }   
 
    // Assemble block task
+   /*
+     ii: Row index in frontal matrix
+     jj: Col index in frontal matrix
+    */
    template <typename T, typename PoolAlloc, typename MapVector>   
    void assemble_block_task(
-         NumericNode<T,PoolAlloc>& node, NumericNode<T,PoolAlloc> const& cnode, 
-         int i, int j, MapVector const& map, int blksz) {
+         SymbolicSNode const& snode, NumericNode<T,PoolAlloc>& node, 
+         SymbolicSNode const& csnode, NumericNode<T,PoolAlloc>& cnode, 
+         int ii, int jj, MapVector& map, int blksz, int prio) {
 
 #if defined(SPLDLT_USE_STARPU)
 
       int nrow = snode.nrow;
-      int ncol = node.symb.ncol; // no delays!
+      int ncol = snode.ncol; // no delays!
 
       int nr = (nrow-1)/blksz+1; // number of block rows
       int nc = (ncol-1)/blksz+1; // number of block columns
@@ -335,8 +340,6 @@ namespace spldlt {
       starpu_data_handle_t *hdls = (starpu_data_handle_t *)malloc(nr*nc*sizeof(starpu_data_handle_t));
       int nh = 0;
 
-      SymbolicNode const& csnode = cnode.symb;
-      
       int cm = csnode.nrow - csnode.ncol;
 
       // colum indexes
@@ -356,11 +359,11 @@ namespace spldlt {
          
          if (cc==(c/blksz)) continue;
          cc = c/blksz;
-         rr = -1
+         rr = -1;
 
          if (c < ncol) {
 
-            int r_sa = (i==j) ? j : (ii*blksz-csnode.ncol); // first row in block
+            int r_sa = (ii==jj) ? j : (ii*blksz-csnode.ncol); // first row in block
 
             for (int i=r_sa; i<r_en; i++) {
 
@@ -368,19 +371,118 @@ namespace spldlt {
                if (rr==(r/blksz)) continue; 
                rr = r/blksz;
                
-               hdls[nh] = node.handles[cc*nr+rr]; 
+               hdls[nh] = snode.handles[cc*nr+rr]; 
                nh++;
             }
          }
       }
+      
+      // Insert assembly tasks if there are contribution
+      if (nh>0) {
+         
+         int cnr = (csnode.nrow-1)/blksz+1;  
+         int crsa = csnode.ncol/blksz;
+         int cncontrib = cnr-crsa;
+      
+         insert_assemble_block(&node, &cnode, ii, jj, &map, blksz, 
+                               csnode.contrib_handles[(jj-crsa)*cncontrib+(ii-crsa)], 
+                               hdls, nh, prio);
+
+      }
+      free(hdls);
 
       // assemble_block(node, cnode, i, j, map, blksz);
 #else
 
+      assemble_block(node, cnode, ii, jj, map, blksz);
+#endif
+   }
+
+   // Assemble contrib block task
+   /*
+     ii: Row index in frontal matrix
+     jj: Col index in frontal matrix
+   */
+   template <typename T, typename PoolAlloc, typename MapVector>   
+   void assemble_contrib_block_task(
+         SymbolicSNode const& snode, NumericNode<T,PoolAlloc>& node, 
+         SymbolicSNode const& csnode, NumericNode<T,PoolAlloc>& cnode, 
+         int ii, int jj, MapVector& map, int blksz, int prio) {
+
+#if defined(SPLDLT_USE_STARPU)
+
+      int nrow = snode.nrow;
+      int ncol = snode.ncol; // no delays!
+      int nr = (nrow-1)/blksz+1; // number of block rows
+      int nc = (ncol-1)/blksz+1; // number of block columns
+      int rsa = ncol/blksz; // rows/cols index of first block in contrib 
+      int ncontrib = nr-rsa; // number of block rows/cols in contrib
+
+      // Array of block handles in parent front
+      starpu_data_handle_t *hdls = (starpu_data_handle_t *)malloc(ncontrib*ncontrib*sizeof(starpu_data_handle_t));
+      int nh = 0;
+
+      int cm = csnode.nrow - csnode.ncol;
+
+      // colum indexes
+      int c_sa = (csnode.ncol > jj*blksz) ? 0 : (jj*blksz-csnode.ncol); // first col in block
+      int c_en = std::min((jj+1)*blksz-csnode.ncol, cm); // last col in block
+      // row indexes
+      int r_en = std::min((ii+1)*blksz-csnode.ncol, cm); // last row in block
+
+      int cc = -1;
+      int rr = -1;
+
+      // loop over column in block
+      for (int j=c_sa; j<c_en; j++) {
+         
+         // Column index in parent node
+         int c = map[ csnode.rlist[csnode.ncol+j] ];
+         
+         if (cc==(c/blksz)) continue;
+         cc = c/blksz;
+         rr = -1;
+
+         if (c >= ncol) {
+
+            int r_sa = (ii == jj) ? j : (ii*blksz-csnode.ncol); // first row in block
+
+            for (int i=r_sa; i<r_en; i++) {
+
+               int r = map[ csnode.rlist[csnode.ncol+i] ];
+               if (rr==(r/blksz)) continue;
+               rr = r/blksz;
+               
+               hdls[nh] = snode.contrib_handles[(cc-rsa)*ncontrib+(rr-rsa)];
+               // hdls[nh] = snode.contrib_handles[0];
+               nh++;
+            }
+         }
+      }
+      
+      // Insert assembly tasks if there are contribution
+      if (nh>0) {
+         
+         int cnr = (csnode.nrow-1)/blksz+1;  
+         int crsa = csnode.ncol/blksz;
+         int cncontrib = cnr-crsa;
+
+         // insert_assemble_contrib_block(&node, &cnode, ii, jj, &map, blksz, 
+         //                               csnode.contrib_handles[(jj-crsa)*cncontrib+(ii-crsa)], 
+         //                               hdls, nh, prio);
+
+         // assemble_contrib_block(node, cnode, ii, jj, map, blksz);
+
+      }
+
+      free(hdls);
+
+      assemble_contrib_block(node, cnode, ii, jj, map, blksz);
+#else
+
       assemble_block(node, cnode, i, j, map, blksz);
 #endif
-
-   }
+   }   
 
    /* Factorize node in a MF context
     */

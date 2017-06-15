@@ -269,6 +269,7 @@ namespace spldlt {
          int blksz = options.cpu_block_size;
 
          int INIT_PRIO = 4;
+         int ASSEMBLE_PRIO = 4;
 
          for(int ni = 0; ni < symb_.nnodes_; ++ni) {
 
@@ -305,7 +306,8 @@ namespace spldlt {
             
             for (auto* child=nodes_[ni].first_child; child!=NULL; child=child->next_child) {
                
-               SymbolicNode const& csnode = child->symb;
+               // SymbolicNode const& csnode = child->symb;
+               SymbolicSNode const& csnode = symb_[child->symb.idx];
                
                /* Handle expected contributions (only if something there) */
                if (child->contrib) {
@@ -326,7 +328,9 @@ namespace spldlt {
                      for (int ii = jj; ii < cnr; ++ii) {
                         
                         // assemble_block(nodes_[ni], *child, ii, jj, map, blksz);
-                        assemble_block_task(nodes_[ni], *child, ii, jj, map, blksz);
+                        assemble_block_task(snode, nodes_[ni],
+                                            csnode, *child, 
+                                            ii, jj, map, blksz, ASSEMBLE_PRIO);
                      }
                   }
 
@@ -347,7 +351,8 @@ namespace spldlt {
 
             for (auto* child=nodes_[ni].first_child; child!=NULL; child=child->next_child) {
                
-               SymbolicNode const& csnode = child->symb;
+               // SymbolicNode const& csnode = child->symb;
+               SymbolicSNode const& csnode = symb_[child->symb.idx];
                
                /* Handle expected contributions (only if something there) */
                if (child->contrib) {
@@ -371,10 +376,20 @@ namespace spldlt {
 
                      // assemble_expected_contrib(c_sa, c_en, nodes_[ni], *child, map, cache);                     
                      // int ii = 0;
-
+            
                      for (int ii=jj; ii<cnr; ++ii) {
                         
-                        assemble_contrib_block(nodes_[ni], *child, ii, jj, map, blksz);
+                        assemble_contrib_block_task(snode, nodes_[ni],
+                                                    csnode, *child,
+                                                    ii, jj, map, blksz, ASSEMBLE_PRIO);
+
+                        
+                        // assemble_contrib_block(nodes_[ni], *child, ii, jj, map, blksz);
+
+#if defined(SPLDLT_USE_STARPU)
+            starpu_task_wait_for_all();
+#endif
+
                      }
                   }
                   
@@ -382,6 +397,11 @@ namespace spldlt {
 
                }
             }
+
+#if defined(SPLDLT_USE_STARPU)
+            starpu_task_wait_for_all();
+#endif
+
          }
       }
 

@@ -713,6 +713,131 @@ namespace spldlt { namespace starpu {
          delete[] descrs;
       }
 
+      // Assemble block task
+      
+      // CPU kernel
+      template <typename T, typename PoolAlloc>
+      void assemble_block_cpu_func(void *buffers[], void *cl_arg) {
+
+         typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> PoolAllocInt;
+         std::vector<int, PoolAllocInt> *map;
+
+         NumericNode<T, PoolAlloc> *node = nullptr, *cnode = nullptr;
+         int ii, jj; // Block indexes
+         int blksz; // Block size
+
+         starpu_codelet_unpack_args(
+               cl_arg, &node, &cnode,
+               &ii, &jj, &map, &blksz);
+
+         // printf("[assemble_block_cpu_func]\n");
+
+         assemble_block(*node, *cnode, ii, jj, *map, blksz);
+         
+      }
+
+      // StarPU codelet
+      struct starpu_codelet cl_assemble_block;
+
+      template <typename T, typename PoolAlloc, typename MapVector>
+      void insert_assemble_block(
+            NumericNode<T, PoolAlloc> *node,
+            NumericNode<T, PoolAlloc> *cnode,
+            int ii, int jj,
+            MapVector *map, int nb,
+            starpu_data_handle_t bc_hdl,
+            starpu_data_handle_t *dest_hdls, int ndest,
+            int prio) {
+
+         int ret;
+         int nh = 0;
+         
+         struct starpu_data_descr *descrs = new starpu_data_descr[ndest+1];
+
+         descrs[nh].handle = bc_hdl; descrs[nh].mode = STARPU_R;
+         nh++;
+         
+         for (int i=0; i<ndest; i++){
+            descrs[nh].handle = dest_hdls[i]; descrs[nh].mode = STARPU_RW;
+            nh++;
+         }
+
+         ret = starpu_task_insert(&cl_assemble_block,
+                                  STARPU_DATA_MODE_ARRAY, descrs, nh,
+                                  STARPU_VALUE, &node, sizeof(NumericNode<T, PoolAlloc>*),
+                                  STARPU_VALUE, &cnode, sizeof(NumericNode<T, PoolAlloc>*),
+                                  STARPU_VALUE, &ii, sizeof(int),
+                                  STARPU_VALUE, &jj, sizeof(int),
+                                  STARPU_VALUE, &map, sizeof(MapVector*),
+                                  STARPU_VALUE, &nb, sizeof(int),
+                                  STARPU_PRIORITY, prio,
+                                  0);
+         delete[] descrs;
+
+      }
+
+      // Assemble contrib block task
+
+      // CPU kernel
+      template <typename T, typename PoolAlloc>
+      void assemble_contrib_block_cpu_func(void *buffers[], void *cl_arg) {
+
+         typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> PoolAllocInt;
+         std::vector<int, PoolAllocInt> *map;
+
+         NumericNode<T, PoolAlloc> *node = nullptr, *cnode = nullptr;
+         int ii, jj; // Block indexes
+         int blksz; // Block size
+
+         starpu_codelet_unpack_args(
+               cl_arg, &node, &cnode,
+               &ii, &jj, &map, &blksz);
+
+         // printf("[assemble_contrib_block_cpu_func]\n");
+
+         assemble_contrib_block(*node, *cnode, ii, jj, *map, blksz);         
+      }
+
+      // StarPU codelet
+      struct starpu_codelet cl_assemble_contrib_block;
+
+      template <typename T, typename PoolAlloc, typename MapVector>
+      void insert_assemble_contrib_block(
+            NumericNode<T, PoolAlloc> *node,
+            NumericNode<T, PoolAlloc> *cnode,
+            int ii, int jj,
+            MapVector *map, int nb,
+            starpu_data_handle_t bc_hdl,
+            starpu_data_handle_t *dest_hdls, int ndest,
+            int prio) {
+
+         int ret;
+         int nh = 0;
+         
+         struct starpu_data_descr *descrs = new starpu_data_descr[ndest+1];
+
+         descrs[nh].handle = bc_hdl; descrs[nh].mode = STARPU_R;
+         nh++;
+         
+         for (int i=0; i<ndest; i++){
+            descrs[nh].handle = dest_hdls[i]; descrs[nh].mode = STARPU_RW;
+            nh++;
+         }
+
+         ret = starpu_task_insert(&cl_assemble_contrib_block,
+                                  STARPU_DATA_MODE_ARRAY, descrs, nh,
+                                  STARPU_VALUE, &node, sizeof(NumericNode<T, PoolAlloc>*),
+                                  STARPU_VALUE, &cnode, sizeof(NumericNode<T, PoolAlloc>*),
+                                  STARPU_VALUE, &ii, sizeof(int),
+                                  STARPU_VALUE, &jj, sizeof(int),
+                                  STARPU_VALUE, &map, sizeof(MapVector*),
+                                  STARPU_VALUE, &nb, sizeof(int),
+                                  STARPU_PRIORITY, prio,
+                                  0);
+         delete[] descrs;
+
+      }
+
       /* As it is not possible to statically intialize codelet in C++,
          we do it via this function */
       template <typename T, typename PoolAlloc>
@@ -787,6 +912,20 @@ namespace spldlt { namespace starpu {
          cl_update_between.nbuffers = STARPU_VARIABLE_NBUFFERS;
          cl_update_between.name = "UPDATE_BETWEEN_BLK";
          cl_update_between.cpu_funcs[0] = update_between_cpu_func<T, PoolAlloc>;
+
+         // Initialize assemble_block StarPU codelet
+         starpu_codelet_init(&cl_assemble_block);
+         cl_assemble_block.where = STARPU_CPU;
+         cl_assemble_block.nbuffers = STARPU_VARIABLE_NBUFFERS;
+         cl_assemble_block.name = "ASSEMBLE_BLK";
+         cl_assemble_block.cpu_funcs[0] = assemble_block_cpu_func<T, PoolAlloc>;
+
+         // Initialize assemble_contrib_block StarPU codelet
+         starpu_codelet_init(&cl_assemble_contrib_block);
+         cl_assemble_contrib_block.where = STARPU_CPU;
+         cl_assemble_contrib_block.nbuffers = STARPU_VARIABLE_NBUFFERS;
+         cl_assemble_contrib_block.name = "ASSEMBLE_CONTRIB_BLK";
+         cl_assemble_contrib_block.cpu_funcs[0] = assemble_contrib_block_cpu_func<T, PoolAlloc>;
 
       }   
 }} /* namespaces spldlt::starpu  */

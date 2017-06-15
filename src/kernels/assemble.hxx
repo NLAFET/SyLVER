@@ -224,7 +224,7 @@ namespace spldlt {
             // loop over rows in block
 
             // int r_sa = (csnode.ncol > ii*blksz) ? 0 : (ii*blksz-csnode.ncol); // first col in block
-            int r_sa = (ii==jj) ? j : (ii*blksz-csnode.ncol); // first col in block
+            int r_sa = (ii == jj) ? j : (ii*blksz-csnode.ncol); // first col in block
 
             for (int i=r_sa; i<r_en; i++) {              
             // for (int i=j; i<cm; i++) {          
