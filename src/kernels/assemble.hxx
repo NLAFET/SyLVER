@@ -140,9 +140,9 @@ namespace spldlt {
     * r block row
     * c block col
     */ 
-   template <typename T, typename PoolAlloc, typename MapVector>
+   template <typename T, typename PoolAlloc>
    void assemble_block(NumericNode<T,PoolAlloc>& node, NumericNode<T,PoolAlloc> const& cnode, 
-                       int ii, int jj, MapVector const& map, int blksz) {
+                       int ii, int jj, int *map, int blksz) {
       
       SymbolicNode const& csnode = cnode.symb;
       
@@ -189,9 +189,9 @@ namespace spldlt {
 
    }
    
-   template <typename T, typename PoolAlloc, typename MapVector>
+   template <typename T, typename PoolAlloc>
    void assemble_contrib_block(NumericNode<T,PoolAlloc>& node, NumericNode<T,PoolAlloc> const& cnode, 
-                               int ii, int jj, MapVector const& map, int blksz) {
+                               int ii, int jj, int *map, int blksz) {
 
 
       SymbolicNode const& csnode = cnode.symb;

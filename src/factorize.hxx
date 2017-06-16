@@ -323,11 +323,11 @@ namespace spldlt {
      ii: Row index in frontal matrix
      jj: Col index in frontal matrix
     */
-   template <typename T, typename PoolAlloc, typename MapVector>   
+   template <typename T, typename PoolAlloc>   
    void assemble_block_task(
          SymbolicSNode const& snode, NumericNode<T,PoolAlloc>& node, 
          SymbolicSNode const& csnode, NumericNode<T,PoolAlloc>& cnode, 
-         int ii, int jj, MapVector& map, int blksz, int prio) {
+         int ii, int jj, int *map, int blksz, int prio) {
 
 #if defined(SPLDLT_USE_STARPU)
 
@@ -385,9 +385,10 @@ namespace spldlt {
          int crsa = csnode.ncol/blksz;
          int cncontrib = cnr-crsa;
       
-         insert_assemble_block(&node, &cnode, ii, jj, &map, blksz, 
+         insert_assemble_block(&node, &cnode, ii, jj, map, blksz, 
                                csnode.contrib_handles[(jj-crsa)*cncontrib+(ii-crsa)], 
-                               hdls, nh, prio);
+                               hdls, nh, snode.hdl,
+                               prio);
 
       }
       free(hdls);
@@ -404,11 +405,11 @@ namespace spldlt {
      ii: Row index in frontal matrix
      jj: Col index in frontal matrix
    */
-   template <typename T, typename PoolAlloc, typename MapVector>   
+   template <typename T, typename PoolAlloc>   
    void assemble_contrib_block_task(
          SymbolicSNode const& snode, NumericNode<T,PoolAlloc>& node, 
          SymbolicSNode const& csnode, NumericNode<T,PoolAlloc>& cnode, 
-         int ii, int jj, MapVector& map, int blksz, int prio) {
+         int ii, int jj, int *map, int blksz, int prio) {
 
 #if defined(SPLDLT_USE_STARPU)
 
@@ -469,7 +470,7 @@ namespace spldlt {
          int crsa = csnode.ncol/blksz;
          int cncontrib = cnr-crsa;
 
-         insert_assemble_contrib_block(&node, &cnode, ii, jj, &map, blksz, 
+         insert_assemble_contrib_block(&node, &cnode, ii, jj, map, blksz, 
                                        csnode.contrib_handles[(jj-crsa)*cncontrib+(ii-crsa)], 
                                        hdls, nh, prio);
 

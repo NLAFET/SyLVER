@@ -272,6 +272,8 @@ namespace spldlt {
          int ASSEMBLE_PRIO = 4;
 
          for(int ni = 0; ni < symb_.nnodes_; ++ni) {
+            
+            // printf("[factor_mf] ni: %d\n", ni);
 
             SymbolicSNode &snode = symb_[ni];
             
@@ -284,13 +286,14 @@ namespace spldlt {
             // Register block handles
             register_node(snode, nodes_[ni], blksz);
 #endif
-            // Init
+
+            // Initialize frontal matrix 
             // init_node(snode, nodes_[ni], aval);
             init_node_task(snode, nodes_[ni], aval, INIT_PRIO);
 
-#if defined(SPLDLT_USE_STARPU)
-            starpu_task_wait_for_all();
-#endif
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
 
             // Assemble front: fully-summed columns
             typedef typename std::allocator_traits<PoolAllocator>::template rebind_alloc<int> PoolAllocInt;
@@ -298,7 +301,14 @@ namespace spldlt {
             /* Build lookup vector, allowing for insertion of delayed vars */
             /* Note that while rlist[] is 1-indexed this is fine so long as lookup
              * is also 1-indexed (which it is as it is another node's rlist[] */
-            std::vector<int, PoolAllocInt> map(symb_.n+1, PoolAllocInt(pool_alloc_));
+// #if defined(SPLDLT_USE_STARPU)
+            // TODO deallocate array
+            snode.map = new int[symb_.n+1];
+            int *map = snode.map;
+// #else            
+//             std::vector<int, PoolAllocInt> map(symb_.n+1, PoolAllocInt(pool_alloc_));
+// #endif
+
             for(int i=0; i<snode.ncol; i++)
                map[ snode.rlist[i] ] = i;
             for(int i=snode.ncol; i<snode.nrow; i++)
@@ -307,7 +317,7 @@ namespace spldlt {
             for (auto* child=nodes_[ni].first_child; child!=NULL; child=child->next_child) {
                
                // SymbolicNode const& csnode = child->symb;
-               SymbolicSNode const& csnode = symb_[child->symb.idx];
+               SymbolicSNode &csnode = symb_[child->symb.idx];
                
                /* Handle expected contributions (only if something there) */
                if (child->contrib) {
@@ -340,19 +350,23 @@ namespace spldlt {
                }
             }
 
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
+
             // Factorize
             // TODO overload factorize_node_posdef routine
             factorize_node_posdef_mf(snode, nodes_[ni], options);
 
-#if defined(SPLDLT_USE_STARPU)
-            starpu_task_wait_for_all();
-#endif
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
             // Assemble front: non fully-summed columns i.e. contribution block 
 
             for (auto* child=nodes_[ni].first_child; child!=NULL; child=child->next_child) {
                
                // SymbolicNode const& csnode = child->symb;
-               SymbolicSNode const& csnode = symb_[child->symb.idx];
+               SymbolicSNode &csnode = symb_[child->symb.idx];
                
                /* Handle expected contributions (only if something there) */
                if (child->contrib) {
@@ -383,12 +397,11 @@ namespace spldlt {
                                                     csnode, *child,
                                                     ii, jj, map, blksz, ASSEMBLE_PRIO);
 
-                        
                         // assemble_contrib_block(nodes_[ni], *child, ii, jj, map, blksz);
 
-#if defined(SPLDLT_USE_STARPU)
-            starpu_task_wait_for_all();
-#endif
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
 
                      }
                   }
@@ -398,9 +411,9 @@ namespace spldlt {
                }
             }
 
-#if defined(SPLDLT_USE_STARPU)
-            starpu_task_wait_for_all();
-#endif
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
 
          }
       }

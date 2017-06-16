@@ -719,11 +719,12 @@ namespace spldlt { namespace starpu {
       template <typename T, typename PoolAlloc>
       void assemble_block_cpu_func(void *buffers[], void *cl_arg) {
 
-         typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> PoolAllocInt;
-         std::vector<int, PoolAllocInt> *map;
+         // typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> PoolAllocInt;
+         // std::vector<int, PoolAllocInt> *map;
 
          NumericNode<T, PoolAlloc> *node = nullptr, *cnode = nullptr;
          int ii, jj; // Block indexes
+         int *map;
          int blksz; // Block size
 
          starpu_codelet_unpack_args(
@@ -732,27 +733,28 @@ namespace spldlt { namespace starpu {
 
          // printf("[assemble_block_cpu_func]\n");
 
-         assemble_block(*node, *cnode, ii, jj, *map, blksz);
+         assemble_block(*node, *cnode, ii, jj, map, blksz);
          
       }
 
       // StarPU codelet
       struct starpu_codelet cl_assemble_block;
 
-      template <typename T, typename PoolAlloc, typename MapVector>
+      template <typename T, typename PoolAlloc>
       void insert_assemble_block(
             NumericNode<T, PoolAlloc> *node,
             NumericNode<T, PoolAlloc> *cnode,
             int ii, int jj,
-            MapVector *map, int nb,
+            int *map, int nb,
             starpu_data_handle_t bc_hdl,
             starpu_data_handle_t *dest_hdls, int ndest,
+            starpu_data_handle_t node_hdl, // Symbolic node handle
             int prio) {
 
          int ret;
          int nh = 0;
          
-         struct starpu_data_descr *descrs = new starpu_data_descr[ndest+1];
+         struct starpu_data_descr *descrs = new starpu_data_descr[ndest+2];
 
          descrs[nh].handle = bc_hdl; descrs[nh].mode = STARPU_R;
          nh++;
@@ -762,13 +764,20 @@ namespace spldlt { namespace starpu {
             nh++;
          }
 
+         // printf("[insert_assemble_block] node_hdl: %p\n", node_hdl);
+
+         // Add symbolic node handle to make sure that the node is
+         // initialized
+         descrs[nh].handle = node_hdl; descrs[nh].mode = STARPU_R;
+         nh++;
+
          ret = starpu_task_insert(&cl_assemble_block,
                                   STARPU_DATA_MODE_ARRAY, descrs, nh,
                                   STARPU_VALUE, &node, sizeof(NumericNode<T, PoolAlloc>*),
                                   STARPU_VALUE, &cnode, sizeof(NumericNode<T, PoolAlloc>*),
                                   STARPU_VALUE, &ii, sizeof(int),
                                   STARPU_VALUE, &jj, sizeof(int),
-                                  STARPU_VALUE, &map, sizeof(MapVector*),
+                                  STARPU_VALUE, &map, sizeof(int*),
                                   STARPU_VALUE, &nb, sizeof(int),
                                   STARPU_PRIORITY, prio,
                                   0);
@@ -782,11 +791,12 @@ namespace spldlt { namespace starpu {
       template <typename T, typename PoolAlloc>
       void assemble_contrib_block_cpu_func(void *buffers[], void *cl_arg) {
 
-         typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> PoolAllocInt;
-         std::vector<int, PoolAllocInt> *map;
+         // typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> PoolAllocInt;
+         // std::vector<int, PoolAllocInt> *map;
 
          NumericNode<T, PoolAlloc> *node = nullptr, *cnode = nullptr;
          int ii, jj; // Block row and col indexes
+         int *map;
          int blksz; // Block size
 
          starpu_codelet_unpack_args(
@@ -795,18 +805,18 @@ namespace spldlt { namespace starpu {
 
          // printf("[assemble_contrib_block_cpu_func]\n");
 
-         assemble_contrib_block(*node, *cnode, ii, jj, *map, blksz);         
+         assemble_contrib_block(*node, *cnode, ii, jj, map, blksz);         
       }
 
       // StarPU codelet
       struct starpu_codelet cl_assemble_contrib_block;
 
-      template <typename T, typename PoolAlloc, typename MapVector>
+      template <typename T, typename PoolAlloc>
       void insert_assemble_contrib_block(
             NumericNode<T, PoolAlloc> *node,
             NumericNode<T, PoolAlloc> *cnode,
             int ii, int jj,
-            MapVector *map, int nb,
+            int *map, int nb,
             starpu_data_handle_t bc_hdl,
             starpu_data_handle_t *dest_hdls, int ndest,
             int prio) {
@@ -830,7 +840,7 @@ namespace spldlt { namespace starpu {
                                   STARPU_VALUE, &cnode, sizeof(NumericNode<T, PoolAlloc>*),
                                   STARPU_VALUE, &ii, sizeof(int),
                                   STARPU_VALUE, &jj, sizeof(int),
-                                  STARPU_VALUE, &map, sizeof(MapVector*),
+                                  STARPU_VALUE, &map, sizeof(int*),
                                   STARPU_VALUE, &nb, sizeof(int),
                                   STARPU_PRIORITY, prio,
                                   0);
