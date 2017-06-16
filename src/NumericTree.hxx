@@ -291,10 +291,6 @@ namespace spldlt {
             // init_node(snode, nodes_[ni], aval);
             init_node_task(snode, nodes_[ni], aval, INIT_PRIO);
 
-// #if defined(SPLDLT_USE_STARPU)
-//             starpu_task_wait_for_all();
-// #endif
-
             // Assemble front: fully-summed columns
             typedef typename std::allocator_traits<PoolAllocator>::template rebind_alloc<int> PoolAllocInt;
 
@@ -308,7 +304,6 @@ namespace spldlt {
 // #else            
 //             std::vector<int, PoolAllocInt> map(symb_.n+1, PoolAllocInt(pool_alloc_));
 // #endif
-
             for(int i=0; i<snode.ncol; i++)
                map[ snode.rlist[i] ] = i;
             for(int i=snode.ncol; i<snode.nrow; i++)
@@ -343,26 +338,16 @@ namespace spldlt {
                                             ii, jj, map, blksz, ASSEMBLE_PRIO);
                      }
                   }
-
                   // assemble_expected(0, cm, nodes_[ni], *child, map, cache);
-
                   // assemble_expected_contrib(0, cm, nodes_[ni], *child, map, cache);
                }
             }
-
-// #if defined(SPLDLT_USE_STARPU)
-//             starpu_task_wait_for_all();
-// #endif
 
             // Factorize
             // TODO overload factorize_node_posdef routine
             factorize_node_posdef_mf(snode, nodes_[ni], options);
 
-// #if defined(SPLDLT_USE_STARPU)
-//             starpu_task_wait_for_all();
-// #endif
             // Assemble front: non fully-summed columns i.e. contribution block 
-
             for (auto* child=nodes_[ni].first_child; child!=NULL; child=child->next_child) {
                
                // SymbolicNode const& csnode = child->symb;
