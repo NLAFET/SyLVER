@@ -456,7 +456,7 @@ namespace spldlt {
                if (rr == (r/blksz)) continue;
                rr = r/blksz;
                
-               // hdls[nh] = snode.contrib_handles[(cc-rsa)*ncontrib+(rr-rsa)];
+               hdls[nh] = snode.contrib_handles[(cc-rsa)*ncontrib+(rr-rsa)];
                nh++;
             }
          }
@@ -469,11 +469,11 @@ namespace spldlt {
          int crsa = csnode.ncol/blksz;
          int cncontrib = cnr-crsa;
 
-         // insert_assemble_contrib_block(&node, &cnode, ii, jj, &map, blksz, 
-         //                               csnode.contrib_handles[(jj-crsa)*cncontrib+(ii-crsa)], 
-         //                               hdls, nh, prio);
+         insert_assemble_contrib_block(&node, &cnode, ii, jj, &map, blksz, 
+                                       csnode.contrib_handles[(jj-crsa)*cncontrib+(ii-crsa)], 
+                                       hdls, nh, prio);
 
-         assemble_contrib_block(node, cnode, ii, jj, map, blksz);
+         // assemble_contrib_block(node, cnode, ii, jj, map, blksz);
 
       }
 
