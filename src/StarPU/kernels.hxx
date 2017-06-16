@@ -757,7 +757,7 @@ namespace spldlt { namespace starpu {
          descrs[nh].handle = bc_hdl; descrs[nh].mode = STARPU_R;
          nh++;
          
-         for (int i=0; i<ndest; i++){
+         for (int i=0; i<ndest; i++) {
             descrs[nh].handle = dest_hdls[i]; descrs[nh].mode = STARPU_RW;
             nh++;
          }
@@ -786,7 +786,7 @@ namespace spldlt { namespace starpu {
          std::vector<int, PoolAllocInt> *map;
 
          NumericNode<T, PoolAlloc> *node = nullptr, *cnode = nullptr;
-         int ii, jj; // Block indexes
+         int ii, jj; // Block row and col indexes
          int blksz; // Block size
 
          starpu_codelet_unpack_args(
@@ -819,7 +819,7 @@ namespace spldlt { namespace starpu {
          descrs[nh].handle = bc_hdl; descrs[nh].mode = STARPU_R;
          nh++;
          
-         for (int i=0; i<ndest; i++){
+         for (int i=0; i<ndest; i++) {
             descrs[nh].handle = dest_hdls[i]; descrs[nh].mode = STARPU_RW;
             nh++;
          }

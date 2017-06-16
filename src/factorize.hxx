@@ -357,13 +357,14 @@ namespace spldlt {
          // Column index in parent node
          int c = map[ csnode.rlist[csnode.ncol+j] ];
          
-         if (cc==(c/blksz)) continue;
-         cc = c/blksz;
-         rr = -1;
+         if (cc == (c/blksz)) continue;
 
          if (c < ncol) {
 
-            int r_sa = (ii==jj) ? j : (ii*blksz-csnode.ncol); // first row in block
+            cc = c/blksz;
+            rr = -1;
+
+            int r_sa = (ii == jj) ? j : (ii*blksz-csnode.ncol); // first row in block
 
             for (int i=r_sa; i<r_en; i++) {
 
@@ -419,7 +420,8 @@ namespace spldlt {
       int ncontrib = nr-rsa; // number of block rows/cols in contrib
 
       // Array of block handles in parent front
-      starpu_data_handle_t *hdls = (starpu_data_handle_t *)malloc(ncontrib*ncontrib*sizeof(starpu_data_handle_t));
+      starpu_data_handle_t *hdls = 
+         (starpu_data_handle_t *)malloc(ncontrib*ncontrib*sizeof(starpu_data_handle_t));
       int nh = 0;
 
       int cm = csnode.nrow - csnode.ncol;
@@ -434,27 +436,27 @@ namespace spldlt {
       int rr = -1;
 
       // loop over column in block
-      for (int j=c_sa; j<c_en; j++) {
-         
+      for (int j = c_sa; j < c_en; j++) {
+
          // Column index in parent node
          int c = map[ csnode.rlist[csnode.ncol+j] ];
-         
-         if (cc==(c/blksz)) continue;
-         cc = c/blksz;
-         rr = -1;
+
+         if (cc == (c/blksz)) continue;
 
          if (c >= ncol) {
 
+            cc = c/blksz;
+            rr = -1;
+
             int r_sa = (ii == jj) ? j : (ii*blksz-csnode.ncol); // first row in block
 
-            for (int i=r_sa; i<r_en; i++) {
+            for (int i = r_sa; i < r_en; i++) {
 
                int r = map[ csnode.rlist[csnode.ncol+i] ];
-               if (rr==(r/blksz)) continue;
+               if (rr == (r/blksz)) continue;
                rr = r/blksz;
                
-               hdls[nh] = snode.contrib_handles[(cc-rsa)*ncontrib+(rr-rsa)];
-               // hdls[nh] = snode.contrib_handles[0];
+               // hdls[nh] = snode.contrib_handles[(cc-rsa)*ncontrib+(rr-rsa)];
                nh++;
             }
          }
@@ -471,16 +473,16 @@ namespace spldlt {
          //                               csnode.contrib_handles[(jj-crsa)*cncontrib+(ii-crsa)], 
          //                               hdls, nh, prio);
 
-         // assemble_contrib_block(node, cnode, ii, jj, map, blksz);
+         assemble_contrib_block(node, cnode, ii, jj, map, blksz);
 
       }
 
       free(hdls);
 
-      assemble_contrib_block(node, cnode, ii, jj, map, blksz);
+      // assemble_contrib_block(node, cnode, ii, jj, map, blksz);
 #else
 
-      assemble_block(node, cnode, i, j, map, blksz);
+      assemble_block(node, cnode, ii, jj, map, blksz);
 #endif
    }   
 
