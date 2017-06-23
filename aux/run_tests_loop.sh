@@ -12,7 +12,7 @@ do
     echo "[run_tests] test matrix: $matname"
     # set up matrix
     echo "[run_tests] extract matrix: $matname"
-    ./prep.sh $matrix
+    ./prep2.sh $matrix
 
     for ncpu in ${ncpu_list[@]}
     do
@@ -27,20 +27,20 @@ do
                 echo "[run_tests] nemin: $nemin"
 
                 # ./run_ma87
-                echo "[run_tests] run SPLLT_STARPU"
+                echo "[run_tests] run SPLDLT"
                 rm -rf $trace_dir/$prof_file
                 # just to make sure
                 export OMP_NUM_THREADS=1
                 case $build in
                     starpu)
-                        ../builds/starpu/spllt_test --posdef --ncpu ${ncpu} --nb ${nb} --nemin ${nemin} > $outdir/starpu/${matname}_NCPU-${ncpu}_NB-${nb}_NEMIN-${nemin}${outsuffix}
+                        ../builds/starpu/spldlt_test --posdef --ncpu ${ncpu} --nb ${nb} --nemin ${nemin} > $outdir/starpu/${matname}_NCPU-${ncpu}_NB-${nb}_NEMIN-${nemin}${outsuffix}
                         ;;
                 esac
 
                 if [ -f $trace_dir/$prof_file ];
                 then
-                    mv $trace_dir/$prof_file $outdir/spllt_starpu/traces/${matname}_NCPU-${ncpu}_NB-${nb}.prof
-                    starpu_fxt_tool -c -i $outdir/spllt_starpu/traces/${matname}_NCPU-${ncpu}_NB-${nb}.prof -o $outdir/spllt_starpu/traces/${matname}_NCPU-${ncpu}_NB-${nb}.trace
+                    mv $trace_dir/$prof_file $outdir/starpu/traces/${matname}_NCPU-${ncpu}_NB-${nb}.prof
+                    starpu_fxt_tool -c -i $outdir/starpu/traces/${matname}_NCPU-${ncpu}_NB-${nb}.prof -o $outdir/starpu/traces/${matname}_NCPU-${ncpu}_NB-${nb}.trace
                 fi
             done
         done
