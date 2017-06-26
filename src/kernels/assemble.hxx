@@ -142,7 +142,7 @@ namespace spldlt {
     */ 
    template <typename T, typename PoolAlloc>
    void assemble_block(NumericNode<T,PoolAlloc>& node, NumericNode<T,PoolAlloc> const& cnode, 
-                       int ii, int jj, int *map, int blksz) {
+                       int ii, int jj, int *cmap, int blksz) {
       
       SymbolicNode const& csnode = cnode.symb;
       
@@ -158,9 +158,8 @@ namespace spldlt {
       // loop over column in block
       for (int j=c_sa; j<c_en; j++) {
 
-         // printf("[factor_mf] col size: %d\n", cm-j);
-         // printf("jj: %d, col: %d\n", jj, col);
-         int c = map[ csnode.rlist[csnode.ncol+j] ];
+         // int c = map[ csnode.rlist[csnode.ncol+j] ];
+         int c = cmap[ j ];
          T *src = &(cnode.contrib[j*cm]);
                         
          int ncol = node.symb.ncol; // no delays!
@@ -176,13 +175,13 @@ namespace spldlt {
 
             int r_sa = (ii==jj) ? j : (ii*blksz-csnode.ncol); // first row in block
 
-            for (int i=r_sa; i<r_en; i++) {              
-
-               // printf("[factor_mf] i: %d\n", i);
+            for (int i=r_sa; i<r_en; i++) {
 
                // int ii = map[ csnode.rlist[csnode.ncol+col+row] ];
                // dest[ idx[i] ] += src[i];
-               dest[ map[ csnode.rlist[csnode.ncol+i] ] ] += src[i];
+
+               // dest[ map[ csnode.rlist[csnode.ncol+i] ] ] += src[i];               
+               dest[ cmap[i] ] += src[i];
             }
          }
       }
@@ -191,7 +190,7 @@ namespace spldlt {
    
    template <typename T, typename PoolAlloc>
    void assemble_contrib_block(NumericNode<T,PoolAlloc>& node, NumericNode<T,PoolAlloc> const& cnode, 
-                               int ii, int jj, int *map, int blksz) {
+                               int ii, int jj, int *cmap, int blksz) {
 
 
       SymbolicNode const& csnode = cnode.symb;
@@ -209,13 +208,10 @@ namespace spldlt {
       // loop over columns in block jj
       for (int j=c_sa; j<c_en; j++) {
 
-         // printf("[factor_mf] col size: %d\n", cm-j);
-         // printf("jj: %d, col: %d\n", jj, col);
-         int c = map[ csnode.rlist[csnode.ncol+j] ];
+         // int c = map[ csnode.rlist[csnode.ncol+j] ];
+         int c = cmap[j] ;
          T *src = &(cnode.contrib[j*cm]);
-                        
-         // printf("[factor_mf] c: %d, ncol: %d\n", c, ncol);
-         
+                                 
          if (c >= ncol) {
             int ldd = node.symb.nrow - node.symb.ncol;
             T *dest = &node.contrib[(c-ncol)*ldd];
@@ -226,14 +222,15 @@ namespace spldlt {
             // int r_sa = (csnode.ncol > ii*blksz) ? 0 : (ii*blksz-csnode.ncol); // first col in block
             int r_sa = (ii == jj) ? j : (ii*blksz-csnode.ncol); // first col in block
 
-            for (int i=r_sa; i<r_en; i++) {              
-            // for (int i=j; i<cm; i++) {          
+            for (int i=r_sa; i<r_en; i++) {
 
                // printf("[factor_mf] i: %d\n", i);
 
                // int ii = map[ csnode.rlist[csnode.ncol+col+row] ];
                // dest[ idx[i] ] += src[i];
-               dest[ map[ csnode.rlist[csnode.ncol+i] ] - ncol ] += src[i];
+
+               // dest[ map[ csnode.rlist[csnode.ncol+i] ] - ncol ] += src[i];
+               dest[ cmap[ i ] - ncol ] += src[i];
             }
          }
       }

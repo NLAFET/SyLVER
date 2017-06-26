@@ -511,8 +511,7 @@ namespace spldlt { namespace starpu {
         
          int kk;
 
-         starpu_codelet_unpack_args(
-               cl_arg, &kk);
+         starpu_codelet_unpack_args(cl_arg, &kk);
 
          update_block(m, n, blk_ij, ld_ij,
                       k,
@@ -731,10 +730,7 @@ namespace spldlt { namespace starpu {
                cl_arg, &node, &cnode,
                &ii, &jj, &map, &blksz);
 
-         // printf("[assemble_block_cpu_func]\n");
-
          assemble_block(*node, *cnode, ii, jj, map, blksz);
-         
       }
 
       // StarPU codelet
@@ -745,7 +741,7 @@ namespace spldlt { namespace starpu {
             NumericNode<T, PoolAlloc> *node,
             NumericNode<T, PoolAlloc> *cnode,
             int ii, int jj,
-            int *map, int nb,
+            int *cmap, int nb,
             starpu_data_handle_t bc_hdl,
             starpu_data_handle_t *dest_hdls, int ndest,
             starpu_data_handle_t node_hdl, // Symbolic node handle
@@ -777,7 +773,7 @@ namespace spldlt { namespace starpu {
                                   STARPU_VALUE, &cnode, sizeof(NumericNode<T, PoolAlloc>*),
                                   STARPU_VALUE, &ii, sizeof(int),
                                   STARPU_VALUE, &jj, sizeof(int),
-                                  STARPU_VALUE, &map, sizeof(int*),
+                                  STARPU_VALUE, &cmap, sizeof(int*),
                                   STARPU_VALUE, &nb, sizeof(int),
                                   STARPU_PRIORITY, prio,
                                   0);
@@ -816,7 +812,7 @@ namespace spldlt { namespace starpu {
             NumericNode<T, PoolAlloc> *node,
             NumericNode<T, PoolAlloc> *cnode,
             int ii, int jj,
-            int *map, int nb,
+            int *cmap, int nb,
             starpu_data_handle_t bc_hdl,
             starpu_data_handle_t *dest_hdls, int ndest,
             int prio) {
@@ -840,7 +836,7 @@ namespace spldlt { namespace starpu {
                                   STARPU_VALUE, &cnode, sizeof(NumericNode<T, PoolAlloc>*),
                                   STARPU_VALUE, &ii, sizeof(int),
                                   STARPU_VALUE, &jj, sizeof(int),
-                                  STARPU_VALUE, &map, sizeof(int*),
+                                  STARPU_VALUE, &cmap, sizeof(int*),
                                   STARPU_VALUE, &nb, sizeof(int),
                                   STARPU_PRIORITY, prio,
                                   0);

@@ -256,8 +256,8 @@ namespace spldlt {
 
    private:
 
-      /* MF factorization. 
-         Note: Asynchronous routine i.e. no barrier at the end. 
+      /* Factorization using a multifrontal mode
+         Note: Asynchronous routine i.e. no barrier at the end 
        */
       void factor_mf(
             T *aval,
@@ -270,6 +270,9 @@ namespace spldlt {
 
          int INIT_PRIO = 4;
          int ASSEMBLE_PRIO = 4;
+
+         // Map array
+         int *map = new int[symb_.n+1];
 
          for(int ni = 0; ni < symb_.nnodes_; ++ni) {
             
@@ -286,10 +289,14 @@ namespace spldlt {
             // Register block handles
             register_node(snode, nodes_[ni], blksz);
 #endif
-
+            
             // Initialize frontal matrix 
             // init_node(snode, nodes_[ni], aval);
             init_node_task(snode, nodes_[ni], aval, INIT_PRIO);
+
+#if defined(SPLDLT_USE_STARPU)
+            starpu_task_wait_for_all();
+#endif
 
             // Assemble front: fully-summed columns
             typedef typename std::allocator_traits<PoolAllocator>::template rebind_alloc<int> PoolAllocInt;
@@ -297,10 +304,8 @@ namespace spldlt {
             /* Build lookup vector, allowing for insertion of delayed vars */
             /* Note that while rlist[] is 1-indexed this is fine so long as lookup
              * is also 1-indexed (which it is as it is another node's rlist[] */
-// #if defined(SPLDLT_USE_STARPU)
-            // TODO deallocate array
-            snode.map = new int[symb_.n+1];
-            int *map = snode.map;
+            // #if defined(SPLDLT_USE_STARPU)
+
 // #else            
 //             std::vector<int, PoolAllocInt> map(symb_.n+1, PoolAllocInt(pool_alloc_));
 // #endif
@@ -318,8 +323,11 @@ namespace spldlt {
                if (child->contrib) {
                   
                   int cm = csnode.nrow - csnode.ncol;
-                  int* cache = work.get_ptr<int>(cm); // TODO move cache array
+                  // int* cache = work.get_ptr<int>(cm); // TODO move cache array
                   // printf("[factor_mf] cm: %d\n", cm);
+                  csnode.map = new int[cm];
+                  for (int i=0; i<cm; i++)
+                     csnode.map[i] = map[ csnode.rlist[csnode.ncol+i] ];
 
                   int csa = csnode.ncol / blksz;
                   int cnr = (csnode.nrow-1) / blksz + 1; // number of block rows in child node
@@ -328,14 +336,15 @@ namespace spldlt {
                   // printf("[factor_mf] ncol: %d\n", csnode.ncol);
 
                   // Lopp over blocks in contribution blocks
-                  for (int jj = csa; jj < cnr; ++jj) {
+                  for (int jj=csa; jj<cnr; ++jj) {
 
-                     for (int ii = jj; ii < cnr; ++ii) {
-                        
-                        // assemble_block(nodes_[ni], *child, ii, jj, map, blksz);
-                        assemble_block_task(snode, nodes_[ni],
-                                            csnode, *child, 
-                                            ii, jj, map, blksz, ASSEMBLE_PRIO);
+                     for (int ii=jj; ii<cnr; ++ii) {
+                       
+                        assemble_block(nodes_[ni], *child, ii, jj, csnode.map, blksz);
+
+                        // assemble_block_task(snode, nodes_[ni],
+                        //                     csnode, *child, 
+                        //                     ii, jj, csnode.map, blksz, ASSEMBLE_PRIO);
                      }
                   }
                   // assemble_expected(0, cm, nodes_[ni], *child, map, cache);
@@ -343,9 +352,17 @@ namespace spldlt {
                }
             }
 
-            // Factorize
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
+
+            // Compute factors
             // TODO overload factorize_node_posdef routine
             factorize_node_posdef_mf(snode, nodes_[ni], options);
+
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
 
             // Assemble front: non fully-summed columns i.e. contribution block 
             for (auto* child=nodes_[ni].first_child; child!=NULL; child=child->next_child) {
@@ -356,10 +373,10 @@ namespace spldlt {
                /* Handle expected contributions (only if something there) */
                if (child->contrib) {
 
-                  int cm = csnode.nrow - csnode.ncol;
-                  int* cache = work.get_ptr<int>(cm); // TODO move cache array
-
-                  // printf("[factor_mf] childnum: %d, cm: %d\n", csnode.idx, cm);
+                  // int cm = csnode.nrow - csnode.ncol;
+                  // int* cache = work.get_ptr<int>(cm); // TODO move cache array
+                  // for (int i=0; i<cm; i++)
+                     // csnode.map[i] = map[ csnode.rlist[csnode.ncol+i] ];
 
                   int csa = csnode.ncol / blksz;
                   int cnr = (csnode.nrow-1) / blksz + 1; // number of block rows in child node
@@ -373,16 +390,21 @@ namespace spldlt {
                      // int c_sa = (csnode.ncol > jj*blksz) ? 0 : (jj*blksz-csnode.ncol); // first col in block
                      // int c_en = std::min((jj+1)*blksz-csnode.ncol, cm); // last col in block
 
-                     // assemble_expected_contrib(c_sa, c_en, nodes_[ni], *child, map, cache);                     
+                     // assemble_expected_contrib(c_sa, c_en, nodes_[ni], *child, map, cache);                    
                      // int ii = 0;
             
                      for (int ii=jj; ii<cnr; ++ii) {
                         
+
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
+
+                        // assemble_contrib_block(nodes_[ni], *child, ii, jj, csnode.map, blksz);
+
                         assemble_contrib_block_task(snode, nodes_[ni],
                                                     csnode, *child,
-                                                    ii, jj, map, blksz, ASSEMBLE_PRIO);
-
-                        // assemble_contrib_block(nodes_[ni], *child, ii, jj, map, blksz);
+                                                    ii, jj, csnode.map, blksz, ASSEMBLE_PRIO);
 
 // #if defined(SPLDLT_USE_STARPU)
 //             starpu_task_wait_for_all();
@@ -396,9 +418,9 @@ namespace spldlt {
                }
             }
 
-// #if defined(SPLDLT_USE_STARPU)
-//             starpu_task_wait_for_all();
-// #endif
+#if defined(SPLDLT_USE_STARPU)
+            starpu_task_wait_for_all();
+#endif
 
          }
       }
@@ -474,7 +496,7 @@ namespace spldlt {
 
             // start = std::chrono::high_resolution_clock::now();
  
-            /* Apply factorization operation to ancestors */
+            // Apply factorization operation to ancestors
             apply_node(symb_[ni], nodes_[ni],
                        symb_.nnodes_, symb_, nodes_,
                        blksz, work, rowmap, colmap);

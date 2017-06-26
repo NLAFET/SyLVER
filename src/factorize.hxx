@@ -318,30 +318,26 @@ namespace spldlt {
 #endif      
    }   
 
-   // Assemble block task
-   /*
-     ii: Row index in frontal matrix
-     jj: Col index in frontal matrix
+   /* Assemble block task
+     
+     ii: Row index in frontal matrix node
+     jj: Col index in frontal matrix node
     */
    template <typename T, typename PoolAlloc>   
    void assemble_block_task(
          SymbolicSNode const& snode, NumericNode<T,PoolAlloc>& node, 
          SymbolicSNode const& csnode, NumericNode<T,PoolAlloc>& cnode, 
-         int ii, int jj, int *map, int blksz, int prio) {
+         int ii, int jj, int *cmap, int blksz, int prio) {
 
 #if defined(SPLDLT_USE_STARPU)
 
       int nrow = snode.nrow;
       int ncol = snode.ncol; // no delays!
-
       int nr = (nrow-1)/blksz+1; // number of block rows
       int nc = (ncol-1)/blksz+1; // number of block columns
-
-      starpu_data_handle_t *hdls = (starpu_data_handle_t *)malloc(nr*nc*sizeof(starpu_data_handle_t));
+      starpu_data_handle_t *hdls = new starpu_data_handle_t[nr*nc];
       int nh = 0;
-
       int cm = csnode.nrow - csnode.ncol;
-
       // colum indexes
       int c_sa = (csnode.ncol > jj*blksz) ? 0 : (jj*blksz-csnode.ncol); // first col in block
       int c_en = std::min((jj+1)*blksz-csnode.ncol, cm); // last col in block
@@ -355,8 +351,9 @@ namespace spldlt {
       for (int j=c_sa; j<c_en; j++) {
          
          // Column index in parent node
-         int c = map[ csnode.rlist[csnode.ncol+j] ];
-         
+         // int c = map[ csnode.rlist[csnode.ncol+j] ];
+         int c = cmap[ j ];
+
          if (cc == (c/blksz)) continue;
 
          if (c < ncol) {
@@ -368,11 +365,12 @@ namespace spldlt {
 
             for (int i=r_sa; i<r_en; i++) {
 
-               int r = map[ csnode.rlist[csnode.ncol+i] ];
-               if (rr==(r/blksz)) continue; 
+               // int r = map[ csnode.rlist[csnode.ncol+i] ];
+               int r = cmap[ i ];
+               if (rr==(r/blksz)) continue;
                rr = r/blksz;
                
-               hdls[nh] = snode.handles[cc*nr+rr]; 
+               hdls[nh] = snode.handles[cc*nr+rr];
                nh++;
             }
          }
@@ -385,18 +383,18 @@ namespace spldlt {
          int crsa = csnode.ncol/blksz;
          int cncontrib = cnr-crsa;
       
-         insert_assemble_block(&node, &cnode, ii, jj, map, blksz, 
+         insert_assemble_block(&node, &cnode, ii, jj, cmap, blksz, 
                                csnode.contrib_handles[(jj-crsa)*cncontrib+(ii-crsa)], 
                                hdls, nh, snode.hdl,
                                prio);
-
       }
-      free(hdls);
 
-      // assemble_block(node, cnode, i, j, map, blksz);
+      delete[] hdls;
+
+      // assemble_block(node, cnode, ii, jj, cmap, blksz);
 #else
 
-      assemble_block(node, cnode, ii, jj, map, blksz);
+      assemble_block(node, cnode, ii, jj, cmap, blksz);
 #endif
    }
 
@@ -409,7 +407,7 @@ namespace spldlt {
    void assemble_contrib_block_task(
          SymbolicSNode const& snode, NumericNode<T,PoolAlloc>& node, 
          SymbolicSNode const& csnode, NumericNode<T,PoolAlloc>& cnode, 
-         int ii, int jj, int *map, int blksz, int prio) {
+         int ii, int jj, int *cmap, int blksz, int prio) {
 
 #if defined(SPLDLT_USE_STARPU)
 
@@ -421,8 +419,7 @@ namespace spldlt {
       int ncontrib = nr-rsa; // number of block rows/cols in contrib
 
       // Array of block handles in parent front
-      starpu_data_handle_t *hdls = 
-         (starpu_data_handle_t *)malloc(ncontrib*ncontrib*sizeof(starpu_data_handle_t));
+      starpu_data_handle_t *hdls = new starpu_data_handle_t[ncontrib*ncontrib];
       int nh = 0;
 
       int cm = csnode.nrow - csnode.ncol;
@@ -440,7 +437,7 @@ namespace spldlt {
       for (int j = c_sa; j < c_en; j++) {
 
          // Column index in parent node
-         int c = map[ csnode.rlist[csnode.ncol+j] ];
+         int c = cmap[ j ];
 
          if (cc == (c/blksz)) continue;
 
@@ -453,7 +450,7 @@ namespace spldlt {
 
             for (int i = r_sa; i < r_en; i++) {
 
-               int r = map[ csnode.rlist[csnode.ncol+i] ];
+               int r = cmap[ i ];
                if (rr == (r/blksz)) continue;
                rr = r/blksz;
                
@@ -462,7 +459,7 @@ namespace spldlt {
             }
          }
       }
-      
+
       // Insert assembly tasks if there are contribution
       if (nh>0) {
          
@@ -470,20 +467,17 @@ namespace spldlt {
          int crsa = csnode.ncol/blksz;
          int cncontrib = cnr-crsa;
 
-         insert_assemble_contrib_block(&node, &cnode, ii, jj, map, blksz, 
+         insert_assemble_contrib_block(&node, &cnode, ii, jj, cmap, blksz, 
                                        csnode.contrib_handles[(jj-crsa)*cncontrib+(ii-crsa)], 
-                                       hdls, nh, prio);
-
-         // assemble_contrib_block(node, cnode, ii, jj, map, blksz);
-
+                                       hdls, nh, 
+                                       prio);
       }
+      delete[] hdls;
 
-      free(hdls);
-
-      // assemble_contrib_block(node, cnode, ii, jj, map, blksz);
+      // assemble_contrib_block(node, cnode, ii, jj, cmap, blksz);
 #else
 
-      assemble_block(node, cnode, ii, jj, map, blksz);
+      assemble_contrib_block(node, cnode, ii, jj, cmap, blksz);
 #endif
    }   
 
@@ -611,6 +605,10 @@ namespace spldlt {
             }
          }
 
+// #if defined(SPLDLT_USE_STARPU)
+//          starpu_task_wait_for_all();
+// #endif
+
          /* Contrib Schur complement update: external */
          if (contrib) {
             // printf("[factorize_node_posdef_mf] node: %d\n", snode.idx);
@@ -623,18 +621,9 @@ namespace spldlt {
                
                   int blkm = std::min(blksz, m - i*blksz);
 
-                  // printf("[factorize_node_posdef_mf] row: %d, col: %d\n", i, k);
-                  // printf("[factorize_node_posdef_mf] blkm: %d, blkk: %d\n", i, k);
-                  
-                  // printf("[factorize_node_posdef_mf] row: %d, col: %d\n", (i*blksz)-n, (k*blksz-n));
-
                   update_contrib_task(snode, node,
                                       j, i, k, blksz, 
                                       UPDATE_PRIO);
-
-// #if defined(SPLDLT_USE_STARPU)
-//                starpu_task_wait_for_all();
-// #endif
 
                   // update_block(
                   //       blkm, blkk,
