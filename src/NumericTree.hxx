@@ -267,7 +267,8 @@ namespace spldlt {
          int INIT_PRIO = 4;
          int ASSEMBLE_PRIO = 4;
 
-         // Map array
+         // Allocate mapping array
+         // TODO use proper allocator 
          int *map = new int[symb_.n+1];
 
          for(int ni = 0; ni < symb_.nnodes_; ++ni) {
@@ -410,12 +411,19 @@ namespace spldlt {
                   
                   // assemble_expected_contrib(0, cm, nodes_[ni], *child, map, cache);
 
-               }
-            }
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
+            
+            // Terminate child node
+            fini_node_task(csnode, *child, INIT_PRIO);
 
 // #if defined(SPLDLT_USE_STARPU)
 //             starpu_task_wait_for_all();
 // #endif
+                  
+               }
+            }
 
          }
       }

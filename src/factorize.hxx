@@ -40,11 +40,10 @@ namespace spldlt {
 #endif      
    }
 
-   /* Initialize node */ 
+   // Initialize node 
    template <typename T, typename PoolAlloc>
    void init_node_task(
-         SymbolicSNode &snode,
-         NumericNode<T, PoolAlloc> &node,
+         SymbolicSNode &snode, NumericNode<T, PoolAlloc> &node,
          T *aval, int prio) {
 
 #if defined(SPLDLT_USE_STARPU)
@@ -58,6 +57,19 @@ namespace spldlt {
 
       init_node(snode, node, aval);
 
+#endif
+
+   }
+
+   // Terminate node
+   template <typename T, typename PoolAlloc>
+   void fini_node_task(SymbolicSNode &snode, NumericNode<T, PoolAlloc> &node, 
+                       int prio) {
+
+#if defined(SPLDLT_USE_STARPU)
+      insert_fini_node(&node, snode.hdl, prio);
+#else
+      fini_node(node);
 #endif
 
    }
@@ -318,11 +330,9 @@ namespace spldlt {
 #endif      
    }   
 
-   /* Assemble block task
-     
-     ii: Row index in frontal matrix node
-     jj: Col index in frontal matrix node
-    */
+   // Assemble block task
+   // ii: Row index in frontal matrix node
+   // jj: Col index in frontal matrix node
    template <typename T, typename PoolAlloc>   
    void assemble_block_task(
          SymbolicSNode const& snode, NumericNode<T,PoolAlloc>& node, 
@@ -350,7 +360,7 @@ namespace spldlt {
       // loop over column in block
       for (int j=c_sa; j<c_en; j++) {
          
-         // Column index in parent node
+         // Column index in parent node.
          // int c = map[ csnode.rlist[csnode.ncol+j] ];
          int c = cmap[ j ];
 
@@ -385,7 +395,7 @@ namespace spldlt {
       
          insert_assemble_block(&node, &cnode, ii, jj, cmap, blksz, 
                                csnode.contrib_handles[(jj-crsa)*cncontrib+(ii-crsa)], 
-                               hdls, nh, snode.hdl,
+                               hdls, nh, snode.hdl, csnode.hdl,
                                prio);
       }
 
@@ -398,11 +408,9 @@ namespace spldlt {
 #endif
    }
 
-   // Assemble contrib block task
-   /*
-     ii: Row index in frontal matrix
-     jj: Col index in frontal matrix
-   */
+   // Assemble contrib block task.   
+   // ii: Row index in frontal matrix.
+   // jj: Col index in frontal matrix.
    template <typename T, typename PoolAlloc>   
    void assemble_contrib_block_task(
          SymbolicSNode const& snode, NumericNode<T,PoolAlloc>& node, 
@@ -469,7 +477,7 @@ namespace spldlt {
 
          insert_assemble_contrib_block(&node, &cnode, ii, jj, cmap, blksz, 
                                        csnode.contrib_handles[(jj-crsa)*cncontrib+(ii-crsa)], 
-                                       hdls, nh, 
+                                       hdls, nh, csnode.hdl,
                                        prio);
       }
       delete[] hdls;

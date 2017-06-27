@@ -136,10 +136,18 @@ namespace spldlt {
       add_a_block(0, snode.num_a, node, aval, scaling);
    }
 
-   /*
-    * r block row
-    * c block col
-    */ 
+   // Terminate node.
+   // Deallocate contribution block
+   template <typename T, typename PoolAlloc>
+   void fini_node(NumericNode<T,PoolAlloc>& node) {
+      
+      // deallocate contribution block
+      node.free_contrib();
+   }
+   
+   // Assemble block fully-summed coefficient    
+   // ii block row
+   // jj block col 
    template <typename T, typename PoolAlloc>
    void assemble_block(NumericNode<T,PoolAlloc>& node, NumericNode<T,PoolAlloc> const& cnode, 
                        int ii, int jj, int *cmap, int blksz) {
