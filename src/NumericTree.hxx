@@ -84,13 +84,13 @@ namespace spldlt {
                nb, nb, nb,
                sizeof(T));
          // Init colmap workspace (int array)
-         starpu_vector_data_register(
-               &(colmap.hdl), -1, 0, nb, 
-               sizeof(int));
+         // starpu_vector_data_register(
+         //       &(colmap.hdl), -1, 0, nb, 
+         //       sizeof(int));
          // Init rowmap workspace (int array)
-         starpu_vector_data_register(
-               &(rowmap.hdl), -1, 0, nb,
-               sizeof(int));
+         // starpu_vector_data_register(
+         //       &(rowmap.hdl), -1, 0, nb,
+         //       sizeof(int));
 #endif
 
          auto start = std::chrono::high_resolution_clock::now();
@@ -98,7 +98,7 @@ namespace spldlt {
          // Perform the factorization of the numeric tree
          // factor(aval, work, rowmap, colmap, options);
 
-         factor_mf(aval, work, rowmap, colmap, options);
+         factor_mf(aval, work, options);
 
          auto end = std::chrono::high_resolution_clock::now();
          long ttotal = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count();
@@ -106,8 +106,8 @@ namespace spldlt {
 
 #if defined(SPLDLT_USE_STARPU)
          starpu_data_unregister_submit(work.hdl);
-         starpu_data_unregister_submit(colmap.hdl);
-         starpu_data_unregister_submit(rowmap.hdl);
+         // starpu_data_unregister_submit(colmap.hdl);
+         // starpu_data_unregister_submit(rowmap.hdl);
 #endif        
 
 #if defined(SPLDLT_USE_STARPU)
@@ -259,11 +259,7 @@ namespace spldlt {
       /* Factorization using a multifrontal mode
          Note: Asynchronous routine i.e. no barrier at the end 
        */
-      void factor_mf(
-            T *aval,
-            Workspace &work,
-            Workspace &rowmap,
-            Workspace &colmap,
+      void factor_mf(T *aval, Workspace &work,
             struct cpu_factor_options const& options) {
 
          int blksz = options.cpu_block_size;
@@ -294,12 +290,12 @@ namespace spldlt {
             // init_node(snode, nodes_[ni], aval);
             init_node_task(snode, nodes_[ni], aval, INIT_PRIO);
 
-#if defined(SPLDLT_USE_STARPU)
-            starpu_task_wait_for_all();
-#endif
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
 
             // Assemble front: fully-summed columns
-            typedef typename std::allocator_traits<PoolAllocator>::template rebind_alloc<int> PoolAllocInt;
+            // typedef typename std::allocator_traits<PoolAllocator>::template rebind_alloc<int> PoolAllocInt;
 
             /* Build lookup vector, allowing for insertion of delayed vars */
             /* Note that while rlist[] is 1-indexed this is fine so long as lookup
@@ -340,11 +336,10 @@ namespace spldlt {
 
                      for (int ii=jj; ii<cnr; ++ii) {
                        
-                        assemble_block(nodes_[ni], *child, ii, jj, csnode.map, blksz);
+                        // assemble_block(nodes_[ni], *child, ii, jj, csnode.map, blksz);
 
-                        // assemble_block_task(snode, nodes_[ni],
-                        //                     csnode, *child, 
-                        //                     ii, jj, csnode.map, blksz, ASSEMBLE_PRIO);
+                        assemble_block_task(snode, nodes_[ni], csnode, *child, 
+                                            ii, jj, csnode.map, blksz, ASSEMBLE_PRIO);
                      }
                   }
                   // assemble_expected(0, cm, nodes_[ni], *child, map, cache);
@@ -418,9 +413,9 @@ namespace spldlt {
                }
             }
 
-#if defined(SPLDLT_USE_STARPU)
-            starpu_task_wait_for_all();
-#endif
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
 
          }
       }
