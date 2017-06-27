@@ -12,7 +12,7 @@
 #include "SymbolicTree.hxx"
 #include "kernels/assemble.hxx"
 #include "kernels/common.hxx"
-#include "factorize.hxx"
+#include "tasks.hxx"
 
 #if defined(SPLDLT_USE_STARPU)
 #include <starpu.h>

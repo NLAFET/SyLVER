@@ -1,6 +1,5 @@
 #pragma once
 
-// #include "factorize.hxx"
 #include "kernels/ldlt_app.hxx"
 
 #if defined(SPLDLT_USE_STARPU)
