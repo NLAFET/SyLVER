@@ -287,12 +287,12 @@ namespace spldlt {
             // Register symbolic handle for current node in StarPU
             starpu_void_data_register(&(snode.hdl));
             // Register block handles
-            // register_node(snode, nodes_[ni], blksz);
+            register_node(snode, nodes_[ni], blksz);
 #endif
             
             // Initialize frontal matrix 
             // init_node(snode, nodes_[ni], aval);
-            // init_node_task(snode, nodes_[ni], aval, INIT_PRIO);
+            init_node_task(snode, nodes_[ni], aval, INIT_PRIO);
 
             // Assemble front: fully-summed columns
             // typedef typename std::allocator_traits<PoolAllocator>::template rebind_alloc<int> PoolAllocInt;
@@ -337,9 +337,7 @@ namespace spldlt {
                      for (int ii=jj; ii<cnr; ++ii) {
                        
                         // assemble_block(nodes_[ni], *child, ii, jj, csnode.map, blksz);
-
-                        // assemble_block_task(snode, nodes_[ni], csnode, *child, 
-                        //                     ii, jj, csnode.map, blksz, ASSEMBLE_PRIO);
+                        assemble_block_task(snode, nodes_[ni], csnode, *child, ii, jj, csnode.map, blksz, ASSEMBLE_PRIO);
                      }
                   }
                   // assemble_expected(0, cm, nodes_[ni], *child, map, cache);
@@ -347,17 +345,9 @@ namespace spldlt {
                }
             }
 
-// #if defined(SPLDLT_USE_STARPU)
-//             starpu_task_wait_for_all();
-// #endif
-
             // Compute factors
             // TODO overload factorize_node_posdef routine
-            // factorize_node_posdef_mf(snode, nodes_[ni], options);
-
-// #if defined(SPLDLT_USE_STARPU)
-//             starpu_task_wait_for_all();
-// #endif
+            factorize_node_posdef_mf(snode, nodes_[ni], options);
 
             // Assemble front: non fully-summed columns i.e. contribution block 
             for (auto* child=nodes_[ni].first_child; child!=NULL; child=child->next_child) {
@@ -397,9 +387,7 @@ namespace spldlt {
 
                         // assemble_contrib_block(nodes_[ni], *child, ii, jj, csnode.map, blksz);
 
-                        // assemble_contrib_block_task(snode, nodes_[ni],
-                        //                             csnode, *child,
-                        //                             ii, jj, csnode.map, blksz, ASSEMBLE_PRIO);
+                        assemble_contrib_block_task(snode, nodes_[ni], csnode, *child, ii, jj, csnode.map, blksz, ASSEMBLE_PRIO);
 
                         // #if defined(SPLDLT_USE_STARPU)
                         //             starpu_task_wait_for_all();
@@ -420,26 +408,16 @@ namespace spldlt {
                
                // fini_node(*child);
                fini_node_task(csnode, *child, INIT_PRIO);      
-               // fini_node_task(csnode, nodes_[child->symb.idx], INIT_PRIO);
 
 // #if defined(SPLDLT_USE_STARPU)
 //             starpu_task_wait_for_all();
 // #endif
-            } // loop over children nodes
-
-            // for (auto* child=nodes_[ni].first_child; child!=NULL; child=child->next_child) {
-
-            //    SymbolicSNode &csnode = symb_[child->symb.idx];
-
-            //    // Terminate child node
-            //    fini_node_task(csnode, nodes_[child->symb.idx], INIT_PRIO);            
-            // }
-            
+            } // loop over children nodes            
          } // loop over nodes
 
-#if defined(SPLDLT_USE_STARPU)
-            starpu_task_wait_for_all();
-#endif
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
 
       }
 
