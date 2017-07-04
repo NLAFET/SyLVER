@@ -1,3 +1,7 @@
+/// \file
+/// \copyright 2016- The Science and Technology Facilities Council (STFC)
+/// \author Florent Lopez
+
 #pragma once
 
 #include "ssids/cpu/cpu_iface.hxx"
@@ -21,7 +25,7 @@
 #include "StarPU/kernels.hxx"
 #endif
 
-/* profiling */
+// profiling
 #include <chrono>
 
 using namespace spral::ssids::cpu;
@@ -40,7 +44,7 @@ namespace spldlt {
    class NumericTree {
       typedef spldlt::BuddyAllocator<T,std::allocator<T>> PoolAllocator;
    public:
-      /* Delete copy constructors for safety re allocated memory */
+      // Delete copy constructors for safety re allocated memory
       NumericTree(const NumericTree&) =delete;
       NumericTree& operator=(const NumericTree&) =delete;
 
@@ -53,7 +57,7 @@ namespace spldlt {
            pool_alloc_(symbolic_tree.get_pool_size<T>())
       {
          // printf("[NumericTree] block size: %d\n",  options.cpu_block_size);
-         /* Associate symbolic nodes to numeric ones; copy tree structure */
+         // Associate symbolic nodes to numeric ones; copy tree structure
          nodes_.reserve(symbolic_tree.nnodes_+1);
          for(int ni=0; ni<symb_.nnodes_+1; ++ni) {
             nodes_.emplace_back(symbolic_tree[ni], pool_alloc_);
@@ -63,11 +67,10 @@ namespace spldlt {
             nodes_[ni].next_child = nc ? &nodes_[nc->idx] :  nullptr;
          }
 
-         /* blocking size */
-         int nb = options.cpu_block_size;
+         // blocking size
+         int blksz = options.cpu_block_size;
 
-         /* Allocate workspace */
-         // Workspace *work = new Workspace(PAGE_SIZE);
+         // Allocate workspace
          spldlt::Workspace work(PAGE_SIZE);
          spldlt::Workspace colmap(PAGE_SIZE);
          spldlt::Workspace rowmap(PAGE_SIZE);
@@ -80,18 +83,18 @@ namespace spldlt {
          codelet_init<T,PoolAllocator>();
          // Init scratch memory data
          // Init workspace
-         // int ldw = align_lda<T>(nb);
+         // int ldw = align_lda<T>(blksz);
          starpu_matrix_data_register(
                &(work.hdl), -1, 0,
-               nb, nb, nb,
+               blksz, blksz, blksz,
                sizeof(T));
          // Init colmap workspace (int array)
          // starpu_vector_data_register(
-         //       &(colmap.hdl), -1, 0, nb, 
+         //       &(colmap.hdl), -1, 0, blksz, 
          //       sizeof(int));
          // Init rowmap workspace (int array)
          // starpu_vector_data_register(
-         //       &(rowmap.hdl), -1, 0, nb,
+         //       &(rowmap.hdl), -1, 0, blksz,
          //       sizeof(int));
 #endif
 
@@ -287,12 +290,12 @@ namespace spldlt {
             // Register symbolic handle for current node in StarPU
             starpu_void_data_register(&(snode.hdl));
             // Register block handles
-            register_node(snode, nodes_[ni], blksz);
+            // register_node(snode, nodes_[ni], blksz);
 #endif
             
             // Initialize frontal matrix 
             // init_node(snode, nodes_[ni], aval);
-            init_node_task(snode, nodes_[ni], aval, INIT_PRIO);
+            // init_node_task(snode, nodes_[ni], aval, INIT_PRIO);
 
             // Assemble front: fully-summed columns
             // typedef typename std::allocator_traits<PoolAllocator>::template rebind_alloc<int> PoolAllocInt;
@@ -337,7 +340,7 @@ namespace spldlt {
                      for (int ii=jj; ii<cnr; ++ii) {
                        
                         // assemble_block(nodes_[ni], *child, ii, jj, csnode.map, blksz);
-                        assemble_block_task(snode, nodes_[ni], csnode, *child, ii, jj, csnode.map, blksz, ASSEMBLE_PRIO);
+                        // assemble_block_task(snode, nodes_[ni], csnode, *child, ii, jj, csnode.map, blksz, ASSEMBLE_PRIO);
                      }
                   }
                   // assemble_expected(0, cm, nodes_[ni], *child, map, cache);
@@ -347,7 +350,7 @@ namespace spldlt {
 
             // Compute factors
             // TODO overload factorize_node_posdef routine
-            factorize_node_posdef_mf(snode, nodes_[ni], options);
+            // factorize_node_posdef_mf(snode, nodes_[ni], options);
 
             // Assemble front: non fully-summed columns i.e. contribution block 
             for (auto* child=nodes_[ni].first_child; child!=NULL; child=child->next_child) {
@@ -387,7 +390,7 @@ namespace spldlt {
 
                         // assemble_contrib_block(nodes_[ni], *child, ii, jj, csnode.map, blksz);
 
-                        assemble_contrib_block_task(snode, nodes_[ni], csnode, *child, ii, jj, csnode.map, blksz, ASSEMBLE_PRIO);
+                        // assemble_contrib_block_task(snode, nodes_[ni], csnode, *child, ii, jj, csnode.map, blksz, ASSEMBLE_PRIO);
 
                         // #if defined(SPLDLT_USE_STARPU)
                         //             starpu_task_wait_for_all();
@@ -407,7 +410,7 @@ namespace spldlt {
                }
                
                // fini_node(*child);
-               fini_node_task(csnode, *child, INIT_PRIO);      
+               // fini_node_task(csnode, *child, INIT_PRIO);      
 
 // #if defined(SPLDLT_USE_STARPU)
 //             starpu_task_wait_for_all();
@@ -461,9 +464,9 @@ namespace spldlt {
 
             //             /* Register blocks in StarPU */
             //             // printf("[NumericTree] regiter node: %d\n", ni);
-            //             register_node(snode, nodes_[ni], nb);
+            //             register_node(snode, nodes_[ni], blksz);
 
-            //             // activate_node(snode, nodes_[ni], nb);
+            //             // activate_node(snode, nodes_[ni], blksz);
             // #endif
             
             init_node_task(snode, nodes_[ni], aval, 4);
