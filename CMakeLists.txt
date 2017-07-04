@@ -25,7 +25,7 @@ MESSAGE( STATUS "Runtime:         " ${RUNTIME} )
 option(KERNEL_TEST "Kernel test" OFF)
 # MESSAGE( STATUS "Kernel test:         " ${KERNEL_TEST})
 
-## spral
+# spral
 set(SPRAL_DIR $ENV{SPRALDIR} CACHE PATH "Location of Spral Library")
 include_directories(${SPRAL_DIR})
 
@@ -52,7 +52,10 @@ MESSAGE( STATUS "Use GPU:         " ${USE_GPU} )
 option(USE_MPI "Use MPI" OFF)
 MESSAGE( STATUS "Use MPI:         " ${USE_MPI} )   
 
-## GPU
+# # Use tile layout
+# option(USE_TILE_LAYOUT "Use tile layout" OFF)
+
+# GPU
 if(${USE_GPU} MATCHES ON)
 
   # Use GPU
@@ -125,7 +128,7 @@ add_executable(spldlt_test drivers/spldlt_test.F90)
 target_include_directories(spldlt_test PUBLIC ${CMAKE_BINARY_DIR}/src)
 target_link_libraries(spldlt_test spldlt)
 
-## Kernel test driver
+# Kernel test driver
 if (${KERNEL_TEST} MATCHES "ON")
 
   file(
@@ -153,14 +156,14 @@ if (${KERNEL_TEST} MATCHES "ON")
   target_link_libraries(spldlt_kernel_test ${SPRAL_LIBRARY})
 endif()
 
-## HWLOC
+# HWLOC
 set(HWLOC_DIR $ENV{HWLOCDIR} CACHE PATH "Location of HWLOC Library")
 include_directories(${HWLOC_DIR}/include)  
 find_library(HWLOC_LIBRARY hwloc PATHS ${HWLOC_DIR}/lib)
 target_link_libraries(spldlt_test ${HWLOC_LIBRARY})
 
-## BLAS and LAPACK
-### MKL
+# BLAS and LAPACK
+## MKL
 set(MKL_LIBS $ENV{MKL_LIBS})
 set(MKL_ROOT "/opt/intel/mkl" CACHE PATH "Location of MKL Library")
 set(MKL_DIR $ENV{MKLROOT})
@@ -178,8 +181,8 @@ if (${KERNEL_TEST} MATCHES "ON")
   target_link_libraries(spldlt_kernel_test ${MKL_LIBRARIES})
 endif()
 
-## Ordering
-### Metis
+# Ordering
+## Metis
 set(METIS_DIR $ENV{METISDIR} CACHE PATH "Location of Metis Library")
 find_library(METIS_LIBRARY metis PATHS ${METIS_DIR})
 target_link_libraries(spldlt_test ${METIS_LIBRARY})
@@ -190,8 +193,8 @@ target_link_libraries(spldlt_test pthread)
 ## std C++
 target_link_libraries(spldlt_test stdc++)
 
-## runtime system
-### StarPU
+# runtime system
+## StarPU
 if(${RUNTIME} MATCHES "StarPU")
   # StarPU
   target_link_libraries(spldlt_test ${STARPU_LIBRARY})
