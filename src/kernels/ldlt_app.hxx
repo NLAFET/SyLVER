@@ -24,7 +24,7 @@
 #include "compat.hxx"
 #include "ssids/profile.hxx"
 #include "ssids/cpu/BlockPool.hxx"
-#include "ssids/cpu/BuddyAllocator.hxx"
+// #include "ssids/cpu/BuddyAllocator.hxx"
 #include "ssids/cpu/cpu_iface.hxx"
 #include "ssids/cpu/Workspace.hxx"
 #include "ssids/cpu/kernels/block_ldlt.hxx"
@@ -38,6 +38,8 @@
 #include <mutex>
 // #include <atomic>
 #endif
+
+#include "BuddyAllocator.hxx"
 
 // namespace spral { namespace ssids { namespace cpu {
 namespace spldlt {

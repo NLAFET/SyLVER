@@ -134,7 +134,7 @@ namespace spldlt { namespace starpu {
          NumericNode<T, PoolAlloc> *node = nullptr;
          
          starpu_codelet_unpack_args(cl_arg, &node);
-         
+
          fini_node(*node);
       }
 
@@ -143,7 +143,8 @@ namespace spldlt { namespace starpu {
       
       template <typename T, typename PoolAlloc>
       void insert_fini_node(NumericNode<T, PoolAlloc> *node,
-                            starpu_data_handle_t node_hdl, int prio) {
+                            starpu_data_handle_t node_hdl, 
+                            int prio) {
 
          int ret;
          
@@ -297,6 +298,7 @@ namespace spldlt { namespace starpu {
       void insert_solve_block(
             starpu_data_handle_t bc_kk_hdl, /* diag block handle */
             starpu_data_handle_t bc_ik_hdl, /* sub diag block handle */
+            starpu_data_handle_t node_hdl,
             int prio
             ) {
 
@@ -306,6 +308,7 @@ namespace spldlt { namespace starpu {
                &cl_solve_block,
                STARPU_R, bc_kk_hdl,
                STARPU_RW, bc_ik_hdl,
+               STARPU_R, node_hdl,
                STARPU_PRIORITY, prio,
                0);
 
@@ -345,6 +348,7 @@ namespace spldlt { namespace starpu {
             starpu_data_handle_t bc_kk_hdl, // Diag block handle
             starpu_data_handle_t bc_ik_hdl, // Sub diag block handle
             starpu_data_handle_t contrib_hdl, // Contrib block handle
+            starpu_data_handle_t node_hdl,
             int prio) {
 
          int ret;
@@ -354,6 +358,7 @@ namespace spldlt { namespace starpu {
                STARPU_R, bc_kk_hdl,
                STARPU_RW, bc_ik_hdl,
                STARPU_RW, contrib_hdl,
+               STARPU_R, node_hdl,
                STARPU_PRIORITY, prio,
                STARPU_VALUE, &k, sizeof(int),
                STARPU_VALUE, &nb, sizeof(int),
@@ -394,6 +399,7 @@ namespace spldlt { namespace starpu {
             starpu_data_handle_t bc_ij_hdl, /* A_ij block handle */
             starpu_data_handle_t bc_ik_hdl, /* A_ik block handle */
             starpu_data_handle_t bc_jk_hdl, /* A_jk block handle */
+            starpu_data_handle_t node_hdl,
             int prio) {
 
          int ret;
@@ -403,6 +409,7 @@ namespace spldlt { namespace starpu {
                STARPU_RW, bc_ij_hdl,
                STARPU_R, bc_ik_hdl,
                STARPU_R, bc_jk_hdl,
+               STARPU_R, node_hdl,
                STARPU_PRIORITY, prio,
                0);
 
@@ -454,6 +461,7 @@ namespace spldlt { namespace starpu {
             starpu_data_handle_t bc_ik_hdl, /* A_ik block handle */
             starpu_data_handle_t bc_jk_hdl, /* A_jk block handle */
             starpu_data_handle_t contrib_hdl, /* A_ij block handle */
+            starpu_data_handle_t node_hdl,
             int prio) {
 
          int ret;
@@ -464,6 +472,7 @@ namespace spldlt { namespace starpu {
                STARPU_R, bc_ik_hdl,
                STARPU_R, bc_jk_hdl,
                STARPU_RW, contrib_hdl,
+               STARPU_R, node_hdl,
                STARPU_PRIORITY, prio,
                STARPU_VALUE, &k, sizeof(int),
                STARPU_VALUE, &nb, sizeof(int),
@@ -557,6 +566,7 @@ namespace spldlt { namespace starpu {
             starpu_data_handle_t bc_ij_hdl, /* A_ij block handle */
             starpu_data_handle_t bc_ik_hdl, /* A_ik block handle */
             starpu_data_handle_t bc_jk_hdl, /* A_jk block handle */
+            starpu_data_handle_t node_hdl,
             int prio) {
 
          int ret;
@@ -566,6 +576,7 @@ namespace spldlt { namespace starpu {
                STARPU_RW, bc_ij_hdl,
                STARPU_R, bc_ik_hdl,
                STARPU_R, bc_jk_hdl,
+               STARPU_R, node_hdl,
                STARPU_PRIORITY, prio,
                STARPU_VALUE, &k, sizeof(int),
                0);
@@ -773,7 +784,7 @@ namespace spldlt { namespace starpu {
             int *cmap, int nb,
             starpu_data_handle_t bc_hdl,
             starpu_data_handle_t *dest_hdls, int ndest,
-            starpu_data_handle_t node_hdl, // Symbolic node handle
+            starpu_data_handle_t node_hdl, // Symbolic handle for destination node
             starpu_data_handle_t cnode_hdl,
             int prio) {
 
@@ -853,13 +864,14 @@ namespace spldlt { namespace starpu {
             int blksz,
             starpu_data_handle_t bc_hdl,
             starpu_data_handle_t *dest_hdls, int ndest,
-            starpu_data_handle_t cnode_hdl, // Symbolic handle of child node
+            starpu_data_handle_t node_hdl, // Symbolic handle of destination node
+            starpu_data_handle_t cnode_hdl, // Symbolic handle of source node
             int prio) {
 
          int ret;
          int nh = 0;
          
-         struct starpu_data_descr *descrs = new starpu_data_descr[ndest+2];
+         struct starpu_data_descr *descrs = new starpu_data_descr[ndest+3];
 
          descrs[nh].handle = bc_hdl; descrs[nh].mode = STARPU_R;
          nh++;
@@ -869,6 +881,13 @@ namespace spldlt { namespace starpu {
             nh++;
          }
 
+         // Access symbolic handle of node in read mode to ensure that
+         // it has been initialized
+         descrs[nh].handle = node_hdl; descrs[nh].mode = STARPU_R;
+         nh++;
+
+         // Access symbolic handle of child node in read mode to
+         // ensure that assemblies are done before cleaning it
          descrs[nh].handle = cnode_hdl; descrs[nh].mode = STARPU_R;
          nh++;
 

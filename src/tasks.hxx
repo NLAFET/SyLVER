@@ -105,8 +105,9 @@ namespace spldlt {
 
 #if defined(SPLDLT_USE_STARPU)
 
-      starpu_data_handle_t node_hdl = NULL;
-      if (kk==0) node_hdl = snode.hdl;
+      // starpu_data_handle_t node_hdl = NULL;
+      // if (kk==0) node_hdl = snode.hdl;
+      starpu_data_handle_t node_hdl = snode.hdl;
 
       if ((blkm > blkn) && (ldcontrib > 0)) {
          // factorize_diag_block(blkm, blkn,
@@ -164,6 +165,7 @@ namespace spldlt {
                snode.handles[k*nr + k], // diag block handle 
                snode.handles[k*nr + i], // subdiag block handle
                snode.contrib_handles[i-rsa], // subdiag block handle
+               snode.hdl,
                prio);
       }
       else {
@@ -171,6 +173,7 @@ namespace spldlt {
          insert_solve_block(
                snode.handles[k*nr + k], // diag block handle 
                snode.handles[k*nr + i], // subdiag block handle
+               snode.hdl,
                prio);
       }
 #else
@@ -218,6 +221,7 @@ namespace spldlt {
                snode.handles[k*nr + i], // A_ik block handle
                snode.handles[k*nr + j],  // A_jk block handle
                snode.contrib_handles[i-rsa],
+               snode.hdl,
                prio);
       }
       else {
@@ -225,6 +229,7 @@ namespace spldlt {
                snode.handles[j*nr + i], // A_ij block handle 
                snode.handles[k*nr + i], // A_ik block handle
                snode.handles[k*nr + j],  // A_jk block handle
+               snode.hdl,
                prio);
       }
 #else
@@ -308,7 +313,8 @@ namespace spldlt {
       insert_update_contrib(k,
                             snode.contrib_handles[(i-rsa)+(j-rsa)*ncontrib],
                             snode.handles[k*nr + i],
-                            snode.handles[k*nr + j], 
+                            snode.handles[k*nr + j],
+                            snode.hdl,
                             prio);
 
       // update_block(blkm, blkn,
@@ -317,7 +323,7 @@ namespace spldlt {
       //              &a[(k*blksz*lda) + (i*blksz)], lda, 
       //              &a[(k*blksz*lda) + (j*blksz)], lda,
       //              k==0);
-      
+
 #else
 
       update_block(blkm, blkn,
@@ -477,7 +483,7 @@ namespace spldlt {
 
          insert_assemble_contrib_block(&node, &cnode, ii, jj, cmap, blksz, 
                                        csnode.contrib_handles[(jj-crsa)*cncontrib+(ii-crsa)], 
-                                       hdls, nh, csnode.hdl,
+                                       hdls, nh, snode.hdl, csnode.hdl,
                                        prio);
       }
       delete[] hdls;

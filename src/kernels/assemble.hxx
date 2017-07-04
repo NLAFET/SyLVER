@@ -83,7 +83,7 @@ namespace spldlt {
       /* Get space for contribution block + (explicitly do not zero it!) */
       node.alloc_contrib();
 
-      // TODO: pivoting
+      // TODO pivoting
 
       /* Alloc + set perm for expected eliminations at this node (delays are set
        * when they are imported from children) */
