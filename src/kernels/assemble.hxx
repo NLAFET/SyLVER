@@ -1,13 +1,16 @@
 /// \file
 /// \copyright 2016- The Science and Technology Facilities Council (STFC)
+/// \author Jonathan Hogg
 /// \author Florent Lopez
 
 #pragma once
 
-#include "ssids/cpu/NumericNode.hxx"
+// #include "ssids/cpu/NumericNode.hxx"
 #include "ssids/cpu/SymbolicNode.hxx"
 // #include "ssids/cpu/Workspace.hxx"
 #include "ssids/cpu/kernels/assemble.hxx"
+
+#include "NumericNode.hxx"
 
 using namespace spral::ssids::cpu;
 
@@ -20,7 +23,7 @@ namespace spldlt {
              int posdef = true>
    void alloc_node(
          SymbolicNode const& snode,
-         NumericNode<T,PoolAlloc>& node,
+         spldlt::NumericNode<T,PoolAlloc>& node,
          FactorAlloc& factor_alloc,
          PoolAlloc& pool_alloc
          ) {
@@ -55,9 +58,8 @@ namespace spldlt {
             typename FactorAlloc, 
             typename PoolAlloc,
             bool posdef = true>
-   void alloc_node_mf(
-         SymbolicNode const& snode,
-         NumericNode<T,PoolAlloc>& node,
+   void alloc_front(
+         spldlt::NumericNode<T,PoolAlloc>& node,
          FactorAlloc& factor_alloc,
          PoolAlloc& pool_alloc
          ) {
@@ -73,7 +75,8 @@ namespace spldlt {
 
       /* Count incoming delays and determine size of node */
       node.ndelay_in = 0;
-      
+
+      SymbolicNode const& snode = node.symb;
       int nrow = snode.nrow + node.ndelay_in;
       int ncol = snode.ncol + node.ndelay_in;
 
@@ -84,8 +87,9 @@ namespace spldlt {
          : (ldl+2) * ncol; // indef (includes D)
       node.lcol = FADoubleTraits::allocate(factor_alloc_double, len);
 
-      /* Get space for contribution block + (explicitly do not zero it!) */
-      node.alloc_contrib();
+      // /* Get space for contribution block + (explicitly do not zero it!) */
+      // node.alloc_contrib();
+      node.alloc_contrib_blocks();
 
       // TODO pivoting
 
@@ -104,7 +108,7 @@ namespace spldlt {
              typename PoolAlloc>
    void init_node(
          SymbolicNode const& snode,
-         NumericNode<T,PoolAlloc>& node,
+         spldlt::NumericNode<T,PoolAlloc>& node,
          // FactorAlloc& factor_alloc,
          // PoolAlloc& pool_alloc,
          //         Workspace *work,
@@ -143,65 +147,158 @@ namespace spldlt {
    // Terminate node.
    // Deallocate contribution block
    template <typename T, typename PoolAlloc>
-   void fini_node(NumericNode<T,PoolAlloc>& node) {
+   void fini_node(spldlt::NumericNode<T,PoolAlloc>& node) {
       
       // deallocate contribution block
-      node.free_contrib();
+      // node.free_contrib();
+
+      // deallocate contribution block
+      // node.free_contrib_blocks();
    }
    
-   // Assemble block fully-summed coefficient    
-   // ii block row
-   // jj block col 
    template <typename T, typename PoolAlloc>
-   void assemble_block(NumericNode<T,PoolAlloc>& node, NumericNode<T,PoolAlloc> const& cnode, 
+   void assemble_block(spldlt::NumericNode<T,PoolAlloc>& node, 
+                       spldlt::NumericNode<T,PoolAlloc>& cnode, 
                        int ii, int jj, int *cmap, int blksz) {
       
       SymbolicNode const& csnode = cnode.symb;
       
       int cm = csnode.nrow - csnode.ncol;
 
-      // colum indexes
-      int c_sa = (csnode.ncol > jj*blksz) ? 0 : (jj*blksz-csnode.ncol); // first col in block
-      int c_en = std::min((jj+1)*blksz-csnode.ncol, cm); // last col in block
-      // row indexes
+      int csa = csnode.ncol / blksz; // Index of first block in contrib
+      int cnr = (csnode.nrow-1) / blksz + 1; // number of block rows in child node
+      int cncontrib = cnr-csa;
+      Block<T, PoolAlloc> &blk = cnode.contrib_blocks[(ii-csa)+(jj-csa)*cncontrib];
+      int blk_lda = blk.lda;
+      int blk_m = blk.m;
+      int blk_n = blk.n;
+
+      // printf("[assemble_block] blk_m: %d, blk_n: %d\n", blk_m, blk_n);
+
+      // index of first column in CB
+      int col_sa = (csnode.ncol > jj*blksz) ? 0 : (jj*blksz-csnode.ncol);
+      // Global index of last column
+      // int c_en = std::min((jj+1)*blksz-csnode.ncol, cm); 
       // int r_sa = (csnode.ncol > ii*blksz) ? 0 : (ii*blksz-csnode.ncol); // first col in block
-      int r_en = std::min((ii+1)*blksz-csnode.ncol, cm); // last row in block
+      // Global index of last row
+      // int r_en = std::min((ii+1)*blksz-csnode.ncol, cm);
+      
+      // Index of first row in CB
+      int row_sa = (csnode.ncol > ii*blksz) ? 0 : (ii*blksz-csnode.ncol); 
 
-      // loop over column in block
-      for (int j=c_sa; j<c_en; j++) {
+      for (int j = 0; j < blk_n; ++j) {
 
-         // int c = map[ csnode.rlist[csnode.ncol+j] ];
-         int c = cmap[ j ];
-         T *src = &(cnode.contrib[j*cm]);
-                        
+         int c = cmap[ col_sa + j ]; // Destination column in parent front
+
+         T *src = &(blk.a[j*blk_lda]); // Source column
+         
          int ncol = node.symb.ncol; // no delays!
 
-         // printf("[factor_mf] c: %d, ncol: %d\n", c, ncol);
-
+         // Enusre the destination column is in the fully-summed elements
          if (c < ncol) {
+
             int ldd = node.get_ldl();
             T *dest = &node.lcol[c*ldd];
+            
+            int i_sa = (ii==jj) ? j : 0;
 
-            // int const* idx = &cache[j];                           
-            // loop over rows in block
-
-            int r_sa = (ii==jj) ? j : (ii*blksz-csnode.ncol); // first row in block
-
-            for (int i=r_sa; i<r_en; i++) {
-
-               // int ii = map[ csnode.rlist[csnode.ncol+col+row] ];
-               // dest[ idx[i] ] += src[i];
-
-               // dest[ map[ csnode.rlist[csnode.ncol+i] ] ] += src[i];               
-               dest[ cmap[i] ] += src[i];
+            for (int i = i_sa ; i < blk_m; i++) {
+               dest[ cmap[ row_sa + i ] ] += src[i];               
             }
-         }
+         }    
       }
+
+      // loop over column in block
+      // for (int j=c_sa; j<c_en; j++) {
+
+      //    // int c = map[ csnode.rlist[csnode.ncol+j] ];
+      //    int c = cmap[ j ];
+      //    // T *src = &(cnode.contrib[j*cm]);
+      //    T *src = &(src_blk.a[(j-c_sa)*ld_src_blk]);
+                        
+      //    int ncol = node.symb.ncol; // no delays!
+
+      //    // printf("[factor_mf] c: %d, ncol: %d\n", c, ncol);
+
+      //    if (c < ncol) {
+      //       int ldd = node.get_ldl();
+      //       T *dest = &node.lcol[c*ldd];
+
+      //       // int const* idx = &cache[j];                           
+      //       // loop over rows in block
+
+      //       int r_sa = (ii==jj) ? j : (ii*blksz-csnode.ncol); // first row in block
+
+      //       for (int i=r_sa; i<r_en; i++) {
+
+      //          // int ii = map[ csnode.rlist[csnode.ncol+col+row] ];
+      //          // dest[ idx[i] ] += src[i];
+
+      //          // dest[ map[ csnode.rlist[csnode.ncol+i] ] ] += src[i];               
+      //          dest[ cmap[i] ] += src[i-r_sa];
+      //       }
+      //    }
+      // }
 
    }
    
+   
+   // Assemble block fully-summed coefficient    
+   // ii block row index
+   // jj block col index
+   // template <typename T, typename PoolAlloc>
+   // void assemble_block(spldlt::NumericNode<T,PoolAlloc>& node, 
+   //                     spldlt::NumericNode<T,PoolAlloc>& cnode, 
+   //                     int ii, int jj, int *cmap, int blksz) {
+      
+   //    SymbolicNode const& csnode = cnode.symb;
+      
+   //    int cm = csnode.nrow - csnode.ncol;
+
+   //    // colum indexes
+   //    int c_sa = (csnode.ncol > jj*blksz) ? 0 : (jj*blksz-csnode.ncol); // first col in block
+   //    int c_en = std::min((jj+1)*blksz-csnode.ncol, cm); // last col in block
+   //    // row indexes
+   //    // int r_sa = (csnode.ncol > ii*blksz) ? 0 : (ii*blksz-csnode.ncol); // first col in block
+   //    int r_en = std::min((ii+1)*blksz-csnode.ncol, cm); // last row in block
+
+   //    // loop over column in block
+   //    for (int j=c_sa; j<c_en; j++) {
+
+   //       // int c = map[ csnode.rlist[csnode.ncol+j] ];
+   //       int c = cmap[ j ];
+   //       T *src = &(cnode.contrib[j*cm]);
+   //       // T *src = &(src_blk.a[(j-c_sa)*ld_src_blk]);
+                        
+   //       int ncol = node.symb.ncol; // no delays!
+
+   //       // printf("[factor_mf] c: %d, ncol: %d\n", c, ncol);
+
+   //       if (c < ncol) {
+   //          int ldd = node.get_ldl();
+   //          T *dest = &node.lcol[c*ldd];
+
+   //          // int const* idx = &cache[j];                           
+   //          // loop over rows in block
+
+   //          int r_sa = (ii==jj) ? j : (ii*blksz-csnode.ncol); // first row in block
+
+   //          for (int i=r_sa; i<r_en; i++) {
+
+   //             // int ii = map[ csnode.rlist[csnode.ncol+col+row] ];
+   //             // dest[ idx[i] ] += src[i];
+
+   //             dest[ map[ csnode.rlist[csnode.ncol+i] ] ] += src[i];               
+   //             // dest[ cmap[i] ] += src[i-r_sa];
+   //          }
+   //       }
+   //    }
+   // }
+   
+
    template <typename T, typename PoolAlloc>
-   void assemble_contrib_block(NumericNode<T,PoolAlloc>& node, NumericNode<T,PoolAlloc> const& cnode, 
+   void assemble_contrib_block(spldlt::NumericNode<T,PoolAlloc>& node, 
+                               spldlt::NumericNode<T,PoolAlloc> const& cnode, 
                                int ii, int jj, int *cmap, int blksz) {
 
 
@@ -209,32 +306,54 @@ namespace spldlt {
       
       int cm = csnode.nrow - csnode.ncol;
       int ncol = node.symb.ncol; // no delays!
+      int nrow = node.symb.nrow;
 
-      // colum indexes
-      int c_sa = (csnode.ncol > jj*blksz) ? 0 : (jj*blksz-csnode.ncol); // first col in block
-      int c_en = std::min((jj+1)*blksz-csnode.ncol, cm); // last col in block
+      int csa = csnode.ncol / blksz; // Index of first block in contrib
+      int cnr = (csnode.nrow-1) / blksz + 1; // number of block rows in child node
+      int cncontrib = cnr-csa;
+      Block<T, PoolAlloc> &src_blk = cnode.contrib_blocks[(ii-csa)+(jj-csa)*cncontrib];
+      int src_blk_lda = src_blk.lda;
+      int src_blk_m = src_blk.m;
+      int src_blk_n = src_blk.n;
+
+      int sa = ncol / blksz; // Index of first block in contrib
+      int nr = (nrow-1) / blksz + 1;
+      int ncontrib = nr-sa;
+      
+      // Colum indexes
+      int col_sa = (csnode.ncol > jj*blksz) ? 0 : (jj*blksz-csnode.ncol); // first col in block
+      // int c_en = std::min((jj+1)*blksz-csnode.ncol, cm); // last col in block
       // row indexes
       // int r_sa = (csnode.ncol > ii*blksz) ? 0 : (ii*blksz-csnode.ncol); // first col in block
-      int r_en = std::min((ii+1)*blksz-csnode.ncol, cm); // last col in block
+      // int r_en = std::min((ii+1)*blksz-csnode.ncol, cm); // last col in block
+
+      // Index of first row in CB
+      int row_sa = (csnode.ncol > ii*blksz) ? 0 : (ii*blksz-csnode.ncol); 
 
       // loop over columns in block jj
-      for (int j=c_sa; j<c_en; j++) {
+      for (int j=0; j < src_blk_n; j++) {
 
          // int c = map[ csnode.rlist[csnode.ncol+j] ];
-         int c = cmap[j] ;
-         T *src = &(cnode.contrib[j*cm]);
-                                 
+         int c = cmap[ col_sa + j ]; // Destination column in parent front
+         int cc = c / blksz; 
+
+         // j-th column in source block 
+         T *src = &(src_blk.a[ j*src_blk_lda ]);
+
+         // Enusre the destination column is in the contribution blocks
          if (c >= ncol) {
-            int ldd = node.symb.nrow - node.symb.ncol;
-            T *dest = &node.contrib[(c-ncol)*ldd];
+
+            // int ldd = node.symb.nrow - node.symb.ncol;
+            // T *dest = &node.contrib[(c-ncol)*ldd];
 
             // int const* idx = &cache[j];               
             // loop over rows in block
 
             // int r_sa = (csnode.ncol > ii*blksz) ? 0 : (ii*blksz-csnode.ncol); // first col in block
-            int r_sa = (ii == jj) ? j : (ii*blksz-csnode.ncol); // first col in block
 
-            for (int i=r_sa; i<r_en; i++) {
+            int i_sa = (ii==jj) ? j : 0;
+
+            for (int i = i_sa; i < src_blk_m; ++i) {
 
                // printf("[factor_mf] i: %d\n", i);
 
@@ -242,12 +361,69 @@ namespace spldlt {
                // dest[ idx[i] ] += src[i];
 
                // dest[ map[ csnode.rlist[csnode.ncol+i] ] - ncol ] += src[i];
-               dest[ cmap[ i ] - ncol ] += src[i];
+               // dest[ cmap[ row_sa + i ] - ncol ] += src[i];
+
+               int r = cmap[ row_sa + i ]; // Destination row in parent front
+               int rr = r / blksz; 
+               
+               Block<T, PoolAlloc> &dest_blk = node.contrib_blocks[(rr-sa)+(cc-sa)*ncontrib];
+               int dest_blk_lda = dest_blk.lda;
+               
             }
          }
       }
 
    }
+
+   // template <typename T, typename PoolAlloc>
+   // void assemble_contrib_block(spldlt::NumericNode<T,PoolAlloc>& node, 
+   //                             spldlt::NumericNode<T,PoolAlloc> const& cnode, 
+   //                             int ii, int jj, int *cmap, int blksz) {
+
+
+   //    SymbolicNode const& csnode = cnode.symb;
+      
+   //    int cm = csnode.nrow - csnode.ncol;
+   //    int ncol = node.symb.ncol; // no delays!
+
+   //    // colum indexes
+   //    int c_sa = (csnode.ncol > jj*blksz) ? 0 : (jj*blksz-csnode.ncol); // first col in block
+   //    int c_en = std::min((jj+1)*blksz-csnode.ncol, cm); // last col in block
+   //    // row indexes
+   //    // int r_sa = (csnode.ncol > ii*blksz) ? 0 : (ii*blksz-csnode.ncol); // first col in block
+   //    int r_en = std::min((ii+1)*blksz-csnode.ncol, cm); // last col in block
+
+   //    // loop over columns in block jj
+   //    for (int j=c_sa; j<c_en; j++) {
+
+   //       // int c = map[ csnode.rlist[csnode.ncol+j] ];
+   //       int c = cmap[j] ;
+   //       T *src = &(cnode.contrib[j*cm]);
+                                 
+   //       if (c >= ncol) {
+   //          int ldd = node.symb.nrow - node.symb.ncol;
+   //          T *dest = &node.contrib[(c-ncol)*ldd];
+
+   //          // int const* idx = &cache[j];               
+   //          // loop over rows in block
+
+   //          // int r_sa = (csnode.ncol > ii*blksz) ? 0 : (ii*blksz-csnode.ncol); // first col in block
+   //          int r_sa = (ii == jj) ? j : (ii*blksz-csnode.ncol); // first col in block
+
+   //          for (int i=r_sa; i<r_en; i++) {
+
+   //             // printf("[factor_mf] i: %d\n", i);
+
+   //             // int ii = map[ csnode.rlist[csnode.ncol+col+row] ];
+   //             // dest[ idx[i] ] += src[i];
+
+   //             // dest[ map[ csnode.rlist[csnode.ncol+i] ] - ncol ] += src[i];
+   //             dest[ cmap[ i ] - ncol ] += src[i];
+   //          }
+   //       }
+   //    }
+
+   // }
 
 } /* end of namespace spldlt */
 

@@ -1,13 +1,13 @@
 /// \file
 /// \copyright 2016- The Science and Technology Facilities Council (STFC)
-/// \author Florent Lopez
+/// \author    Florent Lopez
 
 #pragma once
 
 #include "ssids/cpu/cpu_iface.hxx"
 #include "ssids/cpu/factor.hxx"
 // #include "ssids/cpu/BuddyAllocator.hxx"
-#include "ssids/cpu/NumericNode.hxx"
+// #include "ssids/cpu/NumericNode.hxx"
 #include "ssids/cpu/ThreadStats.hxx"
 #include "ssids/cpu/kernels/cholesky.hxx"
 
@@ -16,6 +16,7 @@
 #include "Workspace.hxx"
 #include "SymbolicSNode.hxx"
 #include "SymbolicTree.hxx"
+#include "NumericNode.hxx"
 #include "kernels/assemble.hxx"
 #include "kernels/common.hxx"
 #include "tasks.hxx"
@@ -56,19 +57,20 @@ namespace spldlt {
            factor_alloc_(symbolic_tree.get_factor_mem_est(1.0)),
            pool_alloc_(symbolic_tree.get_pool_size<T>())
       {
+
+         // Blocking size
+         int blksz = options.cpu_block_size;
+
          // printf("[NumericTree] block size: %d\n",  options.cpu_block_size);
          // Associate symbolic nodes to numeric ones; copy tree structure
          nodes_.reserve(symbolic_tree.nnodes_+1);
          for(int ni=0; ni<symb_.nnodes_+1; ++ni) {
-            nodes_.emplace_back(symbolic_tree[ni], pool_alloc_);
+            nodes_.emplace_back(symbolic_tree[ni], pool_alloc_, blksz);
             auto* fc = symbolic_tree[ni].first_child;
             nodes_[ni].first_child = fc ? &nodes_[fc->idx] : nullptr;
             auto* nc = symbolic_tree[ni].next_child;
             nodes_[ni].next_child = nc ? &nodes_[nc->idx] :  nullptr;
          }
-
-         // blocking size
-         int blksz = options.cpu_block_size;
 
          // Allocate workspace
          spldlt::Workspace work(PAGE_SIZE);
@@ -261,9 +263,8 @@ namespace spldlt {
 
    private:
 
-      /* Factorization using a multifrontal mode
-         Note: Asynchronous routine i.e. no barrier at the end 
-       */
+      // Factorization using a multifrontal mode
+      //    Note: Asynchronous routine i.e. no barrier at the end 
       void factor_mf(T *aval, Workspace &work,
             struct cpu_factor_options const& options) {
 
@@ -281,21 +282,12 @@ namespace spldlt {
             
             SymbolicSNode &snode = symb_[ni];
 
-            // printf("[factor_mf] ni: %d\n", ni);
-            
-            // Allocate frontal matrix
-            alloc_node_mf(snode, nodes_[ni], factor_alloc_, pool_alloc_);
-
-#if defined(SPLDLT_USE_STARPU)
-            // Register symbolic handle for current node in StarPU
-            starpu_void_data_register(&(snode.hdl));
-            // Register block handles
-            // register_node(snode, nodes_[ni], blksz);
-#endif
+            // Activate frontal matrix
+            activate_front(snode, nodes_[ni], blksz, factor_alloc_, pool_alloc_);
             
             // Initialize frontal matrix 
             // init_node(snode, nodes_[ni], aval);
-            // init_node_task(snode, nodes_[ni], aval, INIT_PRIO);
+            init_node_task(snode, nodes_[ni], aval, INIT_PRIO);
 
             // Assemble front: fully-summed columns
             // typedef typename std::allocator_traits<PoolAllocator>::template rebind_alloc<int> PoolAllocInt;
@@ -317,13 +309,17 @@ namespace spldlt {
                
                // SymbolicNode const& csnode = child->symb;
                SymbolicSNode &csnode = symb_[child->symb.idx];
-               
-               /* Handle expected contributions (only if something there) */
-               if (child->contrib) {
+
+               int ldcontrib = csnode.nrow - csnode.ncol;
+               // Handle expected contributions (only if something there)
+               // if (child->contrib) {
+               if (ldcontrib>0) {
                   
                   int cm = csnode.nrow - csnode.ncol;
                   // int* cache = work.get_ptr<int>(cm); // TODO move cache array
                   // printf("[factor_mf] cm: %d\n", cm);
+
+                  // Compute column mapping from child front into parent 
                   csnode.map = new int[cm];
                   for (int i=0; i<cm; i++)
                      csnode.map[i] = map[ csnode.rlist[csnode.ncol+i] ];
@@ -336,30 +332,35 @@ namespace spldlt {
 
                   // Lopp over blocks in contribution blocks
                   for (int jj=csa; jj<cnr; ++jj) {
-
                      for (int ii=jj; ii<cnr; ++ii) {
-                       
-                        // assemble_block(nodes_[ni], *child, ii, jj, csnode.map, blksz);
+                        assemble_block(nodes_[ni], *child, ii, jj, csnode.map, blksz);
                         // assemble_block_task(snode, nodes_[ni], csnode, *child, ii, jj, csnode.map, blksz, ASSEMBLE_PRIO);
                      }
                   }
-                  // assemble_expected(0, cm, nodes_[ni], *child, map, cache);
-                  // assemble_expected_contrib(0, cm, nodes_[ni], *child, map, cache);
                }
             }
 
-            // Compute factors
-            // TODO overload factorize_node_posdef routine
-            // factorize_node_posdef_mf(snode, nodes_[ni], options);
+#if defined(SPLDLT_USE_STARPU)
+            starpu_task_wait_for_all();
+#endif
+
+            // Compute factors and Schur complement 
+            factorize_front_posdef(snode, nodes_[ni], options);
+
+#if defined(SPLDLT_USE_STARPU)
+            starpu_task_wait_for_all();
+#endif
 
             // Assemble front: non fully-summed columns i.e. contribution block 
             for (auto* child=nodes_[ni].first_child; child!=NULL; child=child->next_child) {
                
                // SymbolicNode const& csnode = child->symb;
                SymbolicSNode &csnode = symb_[child->symb.idx];
-               
-               /* Handle expected contributions (only if something there) */
-               if (child->contrib) {
+
+               int ldcontrib = csnode.nrow - csnode.ncol;
+               // Handle expected contributions (only if something there)
+               // if (child->contrib) {
+               if (ldcontrib>0) {
 
                   // int cm = csnode.nrow - csnode.ncol;
                   // int* cache = work.get_ptr<int>(cm); // TODO move cache array
@@ -380,7 +381,7 @@ namespace spldlt {
 
                      // assemble_expected_contrib(c_sa, c_en, nodes_[ni], *child, map, cache);                    
                      // int ii = 0;
-            
+
                      for (int ii=jj; ii<cnr; ++ii) {
                         
 
@@ -388,7 +389,7 @@ namespace spldlt {
                         //             starpu_task_wait_for_all();
                         // #endif
 
-                        // assemble_contrib_block(nodes_[ni], *child, ii, jj, csnode.map, blksz);
+                        assemble_contrib_block(nodes_[ni], *child, ii, jj, csnode.map, blksz);
 
                         // assemble_contrib_block_task(snode, nodes_[ni], csnode, *child, ii, jj, csnode.map, blksz, ASSEMBLE_PRIO);
 
@@ -398,15 +399,6 @@ namespace spldlt {
 
                      }
                   }
-                  
-                  // assemble_expected_contrib(0, cm, nodes_[ni], *child, map, cache);
-
-// #if defined(SPLDLT_USE_STARPU)
-//                   starpu_task_wait_for_all();
-// #endif
-            
-
-                  
                }
                
                // fini_node(*child);
@@ -418,10 +410,9 @@ namespace spldlt {
             } // loop over children nodes            
          } // loop over nodes
 
-// #if defined(SPLDLT_USE_STARPU)
-//             starpu_task_wait_for_all();
-// #endif
-
+#if defined(SPLDLT_USE_STARPU)
+            starpu_task_wait_for_all();
+#endif
       }
 
       /* Factorization using a supernodal mode. 
@@ -517,7 +508,7 @@ namespace spldlt {
       SymbolicTree& symb_;
       FactorAllocator factor_alloc_;
       PoolAllocator pool_alloc_;
-      std::vector<NumericNode<T,PoolAllocator>> nodes_;
+      std::vector<spldlt::NumericNode<T,PoolAllocator>> nodes_;
    };
 
 } /* end of namespace spldlt */

@@ -5,6 +5,7 @@
 
 #include "Workspace.hxx"
 #include "SymbolicSNode.hxx"
+#include "NumericNode.hxx"
 #include "kernels/factor.hxx"
 #include "SymbolicTree.hxx"
 
@@ -22,7 +23,7 @@ namespace spldlt {
    template <typename T, typename FactorAlloc, typename PoolAlloc>
    void activate_node(
          SymbolicSNode &snode,
-         NumericNode<T, PoolAlloc> &node,
+         spldlt::NumericNode<T, PoolAlloc> &node,
          int blksz,
          FactorAlloc& factor_alloc,
          PoolAlloc& pool_alloc) {
@@ -40,10 +41,31 @@ namespace spldlt {
 #endif      
    }
 
+
+   // Activate frontal matrix: allocate data structures
+   template <typename T, typename FactorAlloc, typename PoolAlloc>
+   void activate_front(
+         SymbolicSNode &snode,
+         spldlt::NumericNode<T, PoolAlloc> &node,
+         int blksz,
+         FactorAlloc& factor_alloc,
+         PoolAlloc& pool_alloc) {
+
+      // Allocate frontal matrix
+      alloc_front(node, factor_alloc, pool_alloc);
+
+#if defined(SPLDLT_USE_STARPU)
+      // Register symbolic handle for current node in StarPU
+      starpu_void_data_register(&(snode.hdl));
+      // Register block handles
+      register_node(snode, node, blksz);
+#endif
+   }
+
    // Initialize node 
    template <typename T, typename PoolAlloc>
    void init_node_task(
-         SymbolicSNode &snode, NumericNode<T, PoolAlloc> &node,
+         SymbolicSNode &snode, spldlt::NumericNode<T, PoolAlloc> &node,
          T *aval, int prio) {
 
 #if defined(SPLDLT_USE_STARPU)
@@ -63,7 +85,7 @@ namespace spldlt {
 
    // Terminate node
    template <typename T, typename PoolAlloc>
-   void fini_node_task(SymbolicSNode &snode, NumericNode<T, PoolAlloc> &node, 
+   void fini_node_task(SymbolicSNode &snode, spldlt::NumericNode<T, PoolAlloc> &node, 
                        int prio) {
 
 #if defined(SPLDLT_USE_STARPU)
@@ -80,7 +102,7 @@ namespace spldlt {
    template <typename T, typename PoolAlloc>
    void factorize_diag_block_task(
          SymbolicSNode const& snode,
-         NumericNode<T, PoolAlloc> &node,
+         spldlt::NumericNode<T, PoolAlloc> &node,
          int kk, // block  column (and row) index
          int blksz, int prio) {
 
@@ -115,7 +137,7 @@ namespace spldlt {
          //                      contrib, ldcontrib,
          //                      kk==0);
 
-         insert_factorize_block(kk, snode.handles[kk*nr + kk], snode.contrib_handles[0], 
+         insert_factorize_block(kk, snode.handles[kk*nr + kk], node.contrib_blocks[0].hdl, 
                                 snode.hdl, prio);
       }
       else {
@@ -135,9 +157,10 @@ namespace spldlt {
 
    /* Solve block (on subdaig) task */
 
-   template <typename T>
+   template <typename T, typename PoolAlloc>
    void solve_block_task(
          SymbolicSNode const& snode,
+         spldlt::NumericNode<T, PoolAlloc> &node,
          int k, // Column index
          int i, // Row index
          T *a, int lda, 
@@ -164,7 +187,8 @@ namespace spldlt {
                k, blksz,
                snode.handles[k*nr + k], // diag block handle 
                snode.handles[k*nr + i], // subdiag block handle
-               snode.contrib_handles[i-rsa], // subdiag block handle
+               // snode.contrib_handles[i-rsa], // subdiag block handle
+               node.contrib_blocks[i-rsa].hdl, // subdiag block handle
                snode.hdl,
                prio);
       }
@@ -185,9 +209,10 @@ namespace spldlt {
 
    /* Update block on subdaig task */
    
-   template <typename T>
+   template <typename T, typename PoolAlloc>
    void update_block_task(
          SymbolicSNode const& snode,
+         spldlt::NumericNode<T, PoolAlloc> &node,
          int k, /* block column index of A_ik and A_jk blocks */
          int i, /* block row index of A_ik and A_ij blocks  */
          int j, /* block row index of A_jk and block column index of
@@ -220,7 +245,8 @@ namespace spldlt {
                snode.handles[j*nr + i], // A_ij block handle 
                snode.handles[k*nr + i], // A_ik block handle
                snode.handles[k*nr + j],  // A_jk block handle
-               snode.contrib_handles[i-rsa],
+               // snode.contrib_handles[i-rsa],
+               node.contrib_blocks[i-rsa].hdl,
                snode.hdl,
                prio);
       }
@@ -286,7 +312,7 @@ namespace spldlt {
    template <typename T, typename PoolAlloc>
    void update_contrib_task(
          SymbolicSNode const& snode,
-         NumericNode<T, PoolAlloc> &node,
+         spldlt::NumericNode<T, PoolAlloc> &node,
          int k, int i, int j,
          int blksz, int prio) {
 
@@ -311,7 +337,8 @@ namespace spldlt {
       int ncontrib = nr-rsa;
 
       insert_update_contrib(k,
-                            snode.contrib_handles[(i-rsa)+(j-rsa)*ncontrib],
+                            // snode.contrib_handles[(i-rsa)+(j-rsa)*ncontrib],
+                            node.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib].hdl,
                             snode.handles[k*nr + i],
                             snode.handles[k*nr + j],
                             snode.hdl,
@@ -341,8 +368,8 @@ namespace spldlt {
    // jj: Col index in frontal matrix node
    template <typename T, typename PoolAlloc>   
    void assemble_block_task(
-         SymbolicSNode const& snode, NumericNode<T,PoolAlloc>& node, 
-         SymbolicSNode const& csnode, NumericNode<T,PoolAlloc>& cnode, 
+         SymbolicSNode const& snode, spldlt::NumericNode<T,PoolAlloc>& node, 
+         SymbolicSNode const& csnode, spldlt::NumericNode<T,PoolAlloc>& cnode, 
          int ii, int jj, int *cmap, int blksz, int prio) {
 
 #if defined(SPLDLT_USE_STARPU)
@@ -400,7 +427,8 @@ namespace spldlt {
          int cncontrib = cnr-crsa;
       
          insert_assemble_block(&node, &cnode, ii, jj, cmap, blksz, 
-                               csnode.contrib_handles[(jj-crsa)*cncontrib+(ii-crsa)], 
+                               // csnode.contrib_handles[(jj-crsa)*cncontrib+(ii-crsa)],
+                               cnode.contrib_blocks[(jj-crsa)*cncontrib+(ii-crsa)].hdl,
                                hdls, nh, snode.hdl, csnode.hdl,
                                prio);
       }
@@ -419,8 +447,8 @@ namespace spldlt {
    // jj: Col index in frontal matrix.
    template <typename T, typename PoolAlloc>   
    void assemble_contrib_block_task(
-         SymbolicSNode const& snode, NumericNode<T,PoolAlloc>& node, 
-         SymbolicSNode const& csnode, NumericNode<T,PoolAlloc>& cnode, 
+         SymbolicSNode const& snode, spldlt::NumericNode<T,PoolAlloc>& node, 
+         SymbolicSNode const& csnode, spldlt::NumericNode<T,PoolAlloc>& cnode, 
          int ii, int jj, int *cmap, int blksz, int prio) {
 
 #if defined(SPLDLT_USE_STARPU)
@@ -468,7 +496,8 @@ namespace spldlt {
                if (rr == (r/blksz)) continue;
                rr = r/blksz;
                
-               hdls[nh] = snode.contrib_handles[(cc-rsa)*ncontrib+(rr-rsa)];
+               // hdls[nh] = snode.contrib_handles[(cc-rsa)*ncontrib+(rr-rsa)];
+               hdls[nh] = node.contrib_blocks[(cc-rsa)*ncontrib+(rr-rsa)].hdl;
                nh++;
             }
          }
@@ -482,7 +511,8 @@ namespace spldlt {
          int cncontrib = cnr-crsa;
 
          insert_assemble_contrib_block(&node, &cnode, ii, jj, cmap, blksz, 
-                                       csnode.contrib_handles[(jj-crsa)*cncontrib+(ii-crsa)], 
+                                       // csnode.contrib_handles[(jj-crsa)*cncontrib+(ii-crsa)], 
+                                       cnode.contrib_blocks[(jj-crsa)*cncontrib+(ii-crsa)].hdl,
                                        hdls, nh, snode.hdl, csnode.hdl,
                                        prio);
       }
@@ -498,9 +528,9 @@ namespace spldlt {
    /* Factorize node in a MF context
     */
    template <typename T, typename PoolAlloc>
-   void factorize_node_posdef_mf(
+   void factorize_front_posdef(
          SymbolicSNode const& snode,
-         NumericNode<T, PoolAlloc> &node,
+         spldlt::NumericNode<T, PoolAlloc> &node,
          struct cpu_factor_options const& options
          ) {
 
@@ -552,7 +582,7 @@ namespace spldlt {
             // printf("[factorize_node_posdef_mf] contrib start: %d\n", (i*blksz)-n);
             // TODO fix STF version
             solve_block_task(
-                  snode, j, i,
+                  snode, node, j, i,
                   &lcol[j*blksz*(lda+1)], lda,
                   &lcol[(j*blksz*lda) + (i*blksz)], lda,
                   blksz, SOLVE_PRIO);
@@ -597,7 +627,7 @@ namespace spldlt {
                // printf("[factorize_node_posdef_mf] m: %d, k: %d\n", m, k);
                // printf("[factorize_node_posdef_mf] cbm: %d, cbn: %d\n", cbm, cbn);
                // TODO fix STF version
-               update_block_task(snode, j, i, k,
+               update_block_task(snode, node, j, i, k,
                                  &lcol[ (k*blksz*lda) + (i*blksz)], lda,
                                  &lcol[(j*blksz*lda) + (i*blksz)], lda, 
                                  &lcol[(j*blksz*lda) + (k*blksz)], lda,
@@ -624,7 +654,8 @@ namespace spldlt {
 // #endif
 
          /* Contrib Schur complement update: external */
-         if (contrib) {
+         // if (contrib) {
+         if (ldcontrib>0) {
             // printf("[factorize_node_posdef_mf] node: %d\n", snode.idx);
             // printf("[factorize_node_posdef_mf] nc: %d, nr: %d\n", nc, nr);
             for (int k = nc; k < nr; ++k) {
@@ -666,7 +697,7 @@ namespace spldlt {
    template <typename T, typename PoolAlloc>
    void factorize_node_posdef(
          SymbolicSNode const& snode,
-         NumericNode<T, PoolAlloc> &node,
+         spldlt::NumericNode<T, PoolAlloc> &node,
          struct cpu_factor_options const& options
          ) {
 
@@ -766,7 +797,7 @@ namespace spldlt {
    template <typename T, typename PoolAlloc>
    void factorize_node_posdef_notask(
          SymbolicSNode const& snode,
-         NumericNode<T, PoolAlloc> &node,
+         spldlt::NumericNode<T, PoolAlloc> &node,
          struct cpu_factor_options const& options
          ) {
 
@@ -873,14 +904,14 @@ namespace spldlt {
    template <typename T, typename PoolAlloc>
    void update_between_block_task(
          SymbolicSNode &snode, // symbolic source node
-         NumericNode<T, PoolAlloc> &node, // numeric source node
+         spldlt::NumericNode<T, PoolAlloc> &node, // numeric source node
          int cptr, int cptr2, // pointer to the first and last row of
                               // A_jk block
          int rptr, int rptr2, // pointer to the first and last row of
                               // A_ik block
          int kk, // column index of A_jk and A_ik blocks
          SymbolicSNode &asnode, // symbolic destination node
-         NumericNode<T, PoolAlloc> &anode, // numeric destination node
+         spldlt::NumericNode<T, PoolAlloc> &anode, // numeric destination node
          int ii, /* block row index of A_ij block in ancestor node  */
          int jj, /* block column index of A_ij block in ancestor node */
          int blksz, // blocking size
@@ -996,10 +1027,10 @@ namespace spldlt {
    template <typename T, typename PoolAlloc>
    void apply_node(
          SymbolicSNode &snode, // symbolic node to be applied 
-         NumericNode<T, PoolAlloc> &node, // numeric node to be applied
+         spldlt::NumericNode<T, PoolAlloc> &node, // numeric node to be applied
          int nnodes,
          SymbolicTree &stree, // symbolic tree
-         std::vector<NumericNode<T,PoolAlloc>> &nodes, // list of nodes in the tree
+         std::vector<spldlt::NumericNode<T,PoolAlloc>> &nodes, // list of nodes in the tree
          int blksz, // blocking size
          // // struct cpu_factor_options const& options
          Workspace &work,
@@ -1168,10 +1199,10 @@ namespace spldlt {
    template <typename T, typename PoolAlloc>
    void apply_node_notask(
          SymbolicSNode const& snode, // symbolic node to be applied 
-         NumericNode<T, PoolAlloc> &node, // numeric node to be applied
+         spldlt::NumericNode<T, PoolAlloc> &node, // numeric node to be applied
          int nnodes,
          SymbolicTree const& stree, // symbolic tree
-         std::vector<NumericNode<T,PoolAlloc>> &nodes, // list of nodes in the tree
+         std::vector<spldlt::NumericNode<T,PoolAlloc>> &nodes, // list of nodes in the tree
          int nb, // blocking size
          // struct cpu_factor_options const& options
          Workspace &work,

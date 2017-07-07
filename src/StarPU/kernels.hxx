@@ -3,6 +3,7 @@
 #include <vector>
 // SpLDLT
 #include "SymbolicSNode.hxx"
+#include "NumericNode.hxx"
 #include "kernels/factor.hxx"
 #include "kernels/assemble.hxx"
 
@@ -15,69 +16,86 @@ namespace spldlt { namespace starpu {
       template <typename T, typename PoolAlloc>
       void register_node(
             SymbolicSNode &snode,
-            NumericNode<T, PoolAlloc> &node,
-            int nb
+            spldlt::NumericNode<T, PoolAlloc> &node,
+            int blksz
             ) {
 
          int m = snode.nrow;
          int n = snode.ncol;
          T *a = node.lcol;
          int lda = align_lda<T>(m);
-         int nr = (m-1) / nb + 1; // number of block rows
-         int nc = (n-1) / nb + 1; // number of block columns
+         int nr = (m-1) / blksz + 1; // number of block rows
+         int nc = (n-1) / blksz + 1; // number of block columns
          // snode.handles.reserve(nr*nc);
          snode.handles.resize(nr*nc); // allocate handles
          // printf("[register_node] nr: %d\n", nr);
          for(int j = 0; j < nc; ++j) {
                
-            int blkn = std::min(nb, n - j*nb);
+            int blkn = std::min(blksz, n - j*blksz);
                
             for(int i = j; i < nr; ++i) {
 
-               int blkm = std::min(nb, m - i*nb);
+               int blkm = std::min(blksz, m - i*blksz);
 
                starpu_matrix_data_register(
                      &(snode.handles[i + j*nr]), // StarPU handle ptr 
                      STARPU_MAIN_RAM, // memory 
-                     reinterpret_cast<uintptr_t>(&a[(j*nb)*lda+(i*nb)]),
+                     reinterpret_cast<uintptr_t>(&a[(j*blksz)*lda+(i*blksz)]),
                      lda, blkm, blkn,
                      sizeof(T));
             }
          }
 
-         T *contrib = node.contrib;
-
+         int ldcontrib = m-n;
+         
          // Allocate and init handles in contribution blocks         
-         if (contrib) {
+         if (ldcontrib>0) {
             // Index of first block in contrib
-            int rsa = n/nb;
+            int rsa = n/blksz;
             // Number of block in contrib
             int ncontrib = nr-rsa;
-            int ldcontrib = m-n;
-            snode.contrib_handles.resize(ncontrib*ncontrib);
 
             for(int j = rsa; j < nr; j++) {
-               // First col in contrib block
-               int first_col = std::max(j*nb, n);
-               // Block width
-               int blkn = std::min((j+1)*nb, m) - first_col;
-
                for(int i = j; i < nr; i++) {
-                  // First col in contrib block
-                  int first_row = std::max(i*nb, n);
-                  // Block height
-                  int blkm = std::min((i+1)*nb, m) - first_row;
-
-                  starpu_matrix_data_register(
-                        &(snode.contrib_handles[(i-rsa)+(j-rsa)*ncontrib]), // StarPU handle ptr
-                        STARPU_MAIN_RAM, // memory 
-                        reinterpret_cast<uintptr_t>(&contrib[(first_col-n)*ldcontrib+(first_row-n)]),
-                        ldcontrib, blkm, blkn,
-                        sizeof(T));
+                  // Register block in StarPU
+                  node.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib].register_handle();
                }
             }
-
          }
+
+         // T *contrib = node.contrib;
+
+         // // Allocate and init handles in contribution blocks         
+         // if (contrib) {
+         //    // Index of first block in contrib
+         //    int rsa = n/blksz;
+         //    // Number of block in contrib
+         //    int ncontrib = nr-rsa;
+         //    snode.contrib_handles.resize(ncontrib*ncontrib);
+
+         //    for(int j = rsa; j < nr; j++) {
+         //       // First col in contrib block
+         //       int first_col = std::max(j*blksz, n);
+         //       // Block width
+         //       int blkn = std::min((j+1)*blksz, m) - first_col;
+
+         //       for(int i = j; i < nr; i++) {
+         //          // First col in contrib block
+         //          int first_row = std::max(i*blksz, n);
+         //          // Block height
+         //          int blkm = std::min((i+1)*blksz, m) - first_row;
+
+         //          // starpu_matrix_data_register(
+         //          //       &(snode.contrib_handles[(i-rsa)+(j-rsa)*ncontrib]), // StarPU handle ptr
+         //          //       STARPU_MAIN_RAM, // memory 
+         //          //       reinterpret_cast<uintptr_t>(&contrib[(first_col-n)*ldcontrib+(first_row-n)]),
+         //          //       ldcontrib, blkm, blkn, sizeof(T));
+                  
+         //          node.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib].register_handle();
+         //       }
+         //    }
+
+         // }
       }
 
       /* Unregister handles in StarPU*/
@@ -89,7 +107,7 @@ namespace spldlt { namespace starpu {
       void init_node_cpu_func(void *buffers[], void *cl_arg) {
 
          SymbolicSNode *snode = nullptr;
-         NumericNode<T, PoolAlloc> *node = nullptr;
+         spldlt::NumericNode<T, PoolAlloc> *node = nullptr;
          T *aval;
 
          starpu_codelet_unpack_args(
@@ -107,7 +125,7 @@ namespace spldlt { namespace starpu {
       template <typename T, typename PoolAlloc>
       void insert_init_node(
             SymbolicSNode *snode,
-            NumericNode<T, PoolAlloc> *node,
+            spldlt::NumericNode<T, PoolAlloc> *node,
             starpu_data_handle_t node_hdl,
             T *aval, int prio) {
                   
@@ -117,7 +135,7 @@ namespace spldlt { namespace starpu {
                &cl_init_node,
                STARPU_RW, node_hdl,
                STARPU_VALUE, &snode, sizeof(SymbolicSNode*),
-               STARPU_VALUE, &node, sizeof(NumericNode<T, PoolAlloc>*),
+               STARPU_VALUE, &node, sizeof(spldlt::NumericNode<T, PoolAlloc>*),
                STARPU_VALUE, &aval, sizeof(T*),
                STARPU_PRIORITY, prio,
                0);
@@ -131,7 +149,7 @@ namespace spldlt { namespace starpu {
       template <typename T, typename PoolAlloc>
       void fini_node_cpu_func(void *buffers[], void *cl_arg) {
          
-         NumericNode<T, PoolAlloc> *node = nullptr;
+         spldlt::NumericNode<T, PoolAlloc> *node = nullptr;
          
          starpu_codelet_unpack_args(cl_arg, &node);
 
@@ -142,7 +160,7 @@ namespace spldlt { namespace starpu {
       struct starpu_codelet cl_fini_node;
       
       template <typename T, typename PoolAlloc>
-      void insert_fini_node(NumericNode<T, PoolAlloc> *node,
+      void insert_fini_node(spldlt::NumericNode<T, PoolAlloc> *node,
                             starpu_data_handle_t node_hdl, 
                             int prio) {
 
@@ -151,7 +169,7 @@ namespace spldlt { namespace starpu {
          ret = starpu_insert_task(
                &cl_fini_node,
                STARPU_RW, node_hdl,
-               STARPU_VALUE, &node, sizeof(NumericNode<T, PoolAlloc>*),
+               STARPU_VALUE, &node, sizeof(spldlt::NumericNode<T, PoolAlloc>*),
                STARPU_PRIORITY, prio,
                0);
       }
@@ -613,7 +631,7 @@ namespace spldlt { namespace starpu {
          int rptr, rptr2;
 
          SymbolicSNode *snode = nullptr, *asnode = nullptr;
-         NumericNode<T, PoolAlloc> *node = nullptr;
+         spldlt::NumericNode<T, PoolAlloc> *node = nullptr;
 
          starpu_codelet_unpack_args(
                cl_arg,
@@ -674,7 +692,7 @@ namespace spldlt { namespace starpu {
       template <typename T, typename PoolAlloc>
       void insert_update_between(
             SymbolicSNode *snode,
-            NumericNode<T, PoolAlloc> *node,
+            spldlt::NumericNode<T, PoolAlloc> *node,
             starpu_data_handle_t *bc_ik_hdls, int nblk_ik, /* A_ij block handle */
             starpu_data_handle_t *bc_jk_hdls, int nblk_jk, /* A_ik block handle */
             int kk,
@@ -734,7 +752,7 @@ namespace spldlt { namespace starpu {
          ret = starpu_task_insert(&cl_update_between,
                                   STARPU_DATA_MODE_ARRAY, descrs,   nh,
                                   STARPU_VALUE, &snode, sizeof(SymbolicSNode*),
-                                  STARPU_VALUE, &node, sizeof(NumericNode<T, PoolAlloc>*),
+                                  STARPU_VALUE, &node, sizeof(spldlt::NumericNode<T, PoolAlloc>*),
                                   STARPU_VALUE, &kk, sizeof(int),
                                   STARPU_VALUE, &asnode, sizeof(SymbolicSNode*),
                                   STARPU_VALUE, &ii, sizeof(int),
@@ -761,7 +779,7 @@ namespace spldlt { namespace starpu {
          // typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> PoolAllocInt;
          // std::vector<int, PoolAllocInt> *map;
 
-         NumericNode<T, PoolAlloc> *node = nullptr, *cnode = nullptr;
+         spldlt::NumericNode<T, PoolAlloc> *node = nullptr, *cnode = nullptr;
          int ii, jj; // Block indexes
          int *map;
          int blksz; // Block size
@@ -778,8 +796,8 @@ namespace spldlt { namespace starpu {
 
       template <typename T, typename PoolAlloc>
       void insert_assemble_block(
-            NumericNode<T, PoolAlloc> *node,
-            NumericNode<T, PoolAlloc> *cnode,
+            spldlt::NumericNode<T, PoolAlloc> *node,
+            spldlt::NumericNode<T, PoolAlloc> *cnode,
             int ii, int jj,
             int *cmap, int nb,
             starpu_data_handle_t bc_hdl,
@@ -815,8 +833,8 @@ namespace spldlt { namespace starpu {
 
          ret = starpu_task_insert(&cl_assemble_block,
                                   STARPU_DATA_MODE_ARRAY, descrs, nh,
-                                  STARPU_VALUE, &node, sizeof(NumericNode<T, PoolAlloc>*),
-                                  STARPU_VALUE, &cnode, sizeof(NumericNode<T, PoolAlloc>*),
+                                  STARPU_VALUE, &node, sizeof(spldlt::NumericNode<T, PoolAlloc>*),
+                                  STARPU_VALUE, &cnode, sizeof(spldlt::NumericNode<T, PoolAlloc>*),
                                   STARPU_VALUE, &ii, sizeof(int),
                                   STARPU_VALUE, &jj, sizeof(int),
                                   STARPU_VALUE, &cmap, sizeof(int*),
@@ -836,7 +854,7 @@ namespace spldlt { namespace starpu {
          // typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> PoolAllocInt;
          // std::vector<int, PoolAllocInt> *map;
 
-         NumericNode<T, PoolAlloc> *node = nullptr, *cnode = nullptr;
+         spldlt::NumericNode<T, PoolAlloc> *node = nullptr, *cnode = nullptr;
          int ii, jj; // Block row and col indexes
          int *map;
          int blksz; // Block size
@@ -855,8 +873,8 @@ namespace spldlt { namespace starpu {
 
       template <typename T, typename PoolAlloc>
       void insert_assemble_contrib_block(
-            NumericNode<T, PoolAlloc> *node, // Destinaton node
-            NumericNode<T, PoolAlloc> *cnode,// Source node
+            spldlt::NumericNode<T, PoolAlloc> *node, // Destinaton node
+            spldlt::NumericNode<T, PoolAlloc> *cnode,// Source node
             int ii, int jj,
             int *cmap, // Mapping vector i.e. i-th column must be
                        // assembled in cmap(i) column of destination
@@ -893,8 +911,8 @@ namespace spldlt { namespace starpu {
 
          ret = starpu_task_insert(&cl_assemble_contrib_block,
                                   STARPU_DATA_MODE_ARRAY, descrs, nh,
-                                  STARPU_VALUE, &node, sizeof(NumericNode<T, PoolAlloc>*),
-                                  STARPU_VALUE, &cnode, sizeof(NumericNode<T, PoolAlloc>*),
+                                  STARPU_VALUE, &node, sizeof(spldlt::NumericNode<T, PoolAlloc>*),
+                                  STARPU_VALUE, &cnode, sizeof(spldlt::NumericNode<T, PoolAlloc>*),
                                   STARPU_VALUE, &ii, sizeof(int),
                                   STARPU_VALUE, &jj, sizeof(int),
                                   STARPU_VALUE, &cmap, sizeof(int*),
