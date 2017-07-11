@@ -151,7 +151,6 @@ namespace spldlt {
                            &a[kk*blksz*(lda+1)], lda,
                            contrib, ldcontrib,
                            kk==0);
-
 #endif
    }
 

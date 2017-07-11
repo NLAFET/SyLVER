@@ -58,11 +58,17 @@ namespace spldlt {
       }
 
 #if defined(SPLDLT_USE_STARPU)
+      // Register handle on block
       void register_handle() {
          // Register block in StarPU
          starpu_matrix_data_register(
                &hdl, STARPU_MAIN_RAM, reinterpret_cast<uintptr_t>(a),
                lda, m, n, sizeof(T));
+      }
+
+      // Unregister handle on block asynchronously
+      void unregister_handle_submit() {
+         starpu_data_unregister_submit(hdl);
       }
 #endif
 

@@ -11,8 +11,7 @@
 
 namespace spldlt { namespace starpu {
 
-      /* Register handles in StarPU */
-
+      // Register handles for a node in StarPU
       template <typename T, typename PoolAlloc>
       void register_node(
             SymbolicSNode &snode,
@@ -96,6 +95,46 @@ namespace spldlt { namespace starpu {
          //    }
 
          // }
+      }
+
+      // unregister handles for a node in StarPU
+      template <typename T, typename PoolAlloc>
+      void unregister_node_submit(
+            SymbolicSNode &snode,
+            spldlt::NumericNode<T, PoolAlloc> &node,
+            int blksz
+            ) {
+
+         // Get node info
+         int m = snode.nrow;
+         int n = snode.ncol;
+         int nr = (m-1) / blksz + 1; // number of block rows
+         int nc = (n-1) / blksz + 1; // number of block columns
+
+         // Unregister block handles in the factors
+         for(int j = 0; j < nc; ++j) {
+            for(int i = j; i < nr; ++i) {
+               starpu_data_unregister_submit(snode.handles[i + j*nr]);
+            }
+         }
+
+         // Unregister block handles in the contribution blocks
+         int ldcontrib = m-n;
+
+         if (ldcontrib>0) {
+            // Index of first block in contrib
+            int rsa = n/blksz;
+            // Number of block in contrib
+            int ncontrib = nr-rsa;
+
+            for(int j = rsa; j < nr; j++) {
+               for(int i = j; i < nr; i++) {
+                  // Register block in StarPU
+                  node.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib].unregister_handle_submit();
+               }
+            }
+
+         }
       }
 
       /* Unregister handles in StarPU*/

@@ -379,10 +379,18 @@ namespace spldlt {
                // fini_node(*child);
                fini_node_task(csnode, *child, INIT_PRIO);      
 
+#if defined(SPLDLT_USE_STARPU)
+               unregister_node_submit(csnode, *child, blksz);
+
+               // Unregister symbolic handle on child node
+               starpu_data_unregister_submit(csnode.hdl);
+#endif
+
 // #if defined(SPLDLT_USE_STARPU)
 //             starpu_task_wait_for_all();
 // #endif
-            } // loop over children nodes            
+            } // loop over children nodes
+
          } // loop over nodes
 
 // #if defined(SPLDLT_USE_STARPU)
