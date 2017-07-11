@@ -377,7 +377,7 @@ namespace spldlt {
                }
                
                // fini_node(*child);
-               // fini_node_task(csnode, *child, INIT_PRIO);      
+               fini_node_task(csnode, *child, INIT_PRIO);      
 
 // #if defined(SPLDLT_USE_STARPU)
 //             starpu_task_wait_for_all();

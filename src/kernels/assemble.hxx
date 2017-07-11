@@ -148,6 +148,8 @@ namespace spldlt {
    // Deallocate contribution block
    template <typename T, typename PoolAlloc>
    void fini_node(spldlt::NumericNode<T,PoolAlloc>& node) {
+
+      // printf("[fini_node]\n");
       
       // deallocate contribution block
       // node.free_contrib();
