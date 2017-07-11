@@ -73,9 +73,9 @@ namespace spldlt {
          }
 
          // Allocate workspace
-         spldlt::Workspace work(PAGE_SIZE);
-         spldlt::Workspace colmap(PAGE_SIZE);
-         spldlt::Workspace rowmap(PAGE_SIZE);
+         // spldlt::Workspace work(PAGE_SIZE);
+         // spldlt::Workspace colmap(PAGE_SIZE);
+         // spldlt::Workspace rowmap(PAGE_SIZE);
          
          // printf("[NumericTree] nnodes: %d\n", symb_.nnodes_);
 
@@ -86,10 +86,10 @@ namespace spldlt {
          // Init scratch memory data
          // Init workspace
          // int ldw = align_lda<T>(blksz);
-         starpu_matrix_data_register(
-               &(work.hdl), -1, 0,
-               blksz, blksz, blksz,
-               sizeof(T));
+         // starpu_matrix_data_register(
+         //       &(work.hdl), -1, 0,
+         //       blksz, blksz, blksz,
+         //       sizeof(T));
          // Init colmap workspace (int array)
          // starpu_vector_data_register(
          //       &(colmap.hdl), -1, 0, blksz, 
@@ -105,14 +105,14 @@ namespace spldlt {
          // Perform the factorization of the numeric tree
          // factor(aval, work, rowmap, colmap, options);
 
-         factor_mf(aval, work, options);
+         factor_mf(aval, options);
 
          auto end = std::chrono::high_resolution_clock::now();
          long ttotal = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count();
          printf("[NumericTree] task submission time: %e\n", 1e-9*ttotal);
 
 #if defined(SPLDLT_USE_STARPU)
-         starpu_data_unregister_submit(work.hdl);
+         // starpu_data_unregister_submit(work.hdl);
          // starpu_data_unregister_submit(colmap.hdl);
          // starpu_data_unregister_submit(rowmap.hdl);
 #endif        
@@ -265,8 +265,7 @@ namespace spldlt {
 
       // Factorization using a multifrontal mode
       //    Note: Asynchronous routine i.e. no barrier at the end 
-      void factor_mf(T *aval, Workspace &work,
-            struct cpu_factor_options const& options) {
+      void factor_mf(T *aval, struct cpu_factor_options const& options) {
 
          int blksz = options.cpu_block_size;
 
