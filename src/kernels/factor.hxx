@@ -52,6 +52,7 @@ namespace spldlt {
             // printf("[factorize_diag_block]\n");
             // printf("[factorize_diag_block] blkm: %d, blkn: %d\n", m, n);
             // printf("[factorize_diag_block] updm: %d, k: %d\n", m-n, n);
+            // printf("[factorize_diag_block] upd: %p\n", upd);
 
             host_syrk(FILL_MODE_LWR, OP_N, 
                       m-n, n, 
