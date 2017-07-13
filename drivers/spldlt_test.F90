@@ -138,7 +138,7 @@ program spldlt_test
    smafact = real(inform%num_factor)
 
    ! perform spldlt analysis 
-   call spldlt_analyse(spldlt_akeep, akeep, ssids_opt)
+   call spldlt_analyse(spldlt_akeep, akeep, ssids_opt, inform, ncpu)
 
    ! print atree
    call spldlt_print_atree(akeep)

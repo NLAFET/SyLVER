@@ -119,10 +119,8 @@ namespace spldlt {
                   int blkm = std::min((i+1)*blksz, m) - first_row;
                   contrib_blocks.emplace_back(i-rsa, j-rsa, blkm, blkn, blkm, pool_alloc_);
                }
-            }
-            
+            }  
          }
-
       }
       /**
        * \brief Destructor
