@@ -1,3 +1,7 @@
+!> \file
+!> \copyright 2016- The Science and Technology Facilities Council (STFC)
+!> \author    Jonathan Hogg
+!> \author    Florent Lopez
 module spldlt_analyse_mod
   use spral_ssids_akeep, only: ssids_akeep 
   use, intrinsic :: iso_c_binding
@@ -47,7 +51,6 @@ contains
     integer nnodes
     type(cpu_factor_options) :: coptions
     integer :: i
-    type(numa_region), allocatable :: regions(:)
     integer, dimension(:), allocatable :: contrib_dest, exec_loc
     ! Error management
     integer :: st
@@ -55,37 +58,55 @@ contains
     spldlt_akeep%akeep => akeep 
     nnodes = akeep%nnodes
 
-    ! Create simple topology with ncpu regions, one for each CPU
-    ! worker
-    allocate(regions(ncpu))
-    do i = 1, ncpu
-       regions(i)%nproc = 1
-    end do
-
     ! Sort out subtrees
-    ! print *, "Input topology"    
+    ! print *, "Input topology"
     ! do i = 1, size(akeep%topology)
     !    print *, "Region ", i, " with ", akeep%topology(i)%nproc, " cores"
     !    if(size(akeep%topology(i)%gpus).gt.0) &
     !         print *, "---> gpus ", akeep%topology(i)%gpus
     ! end do
 
+    ! Destroy topology given by SSIDS 
+    deallocate(akeep%topology)
+
+    ! Create simple topology with ncpu regions, one for each CPU
+    ! worker
+    allocate(akeep%topology(ncpu))
+    do i = 1, ncpu
+       akeep%topology(i)%nproc = 1
+    end do
+
     ! Deallocate partitions given by SSIDS
     deallocate(akeep%part)
     deallocate(akeep%contrib_ptr)
     deallocate(akeep%contrib_idx)
+
+    ! Deallocate subtrees
+    deallocate(akeep%subtree)        
 
     ! Find subtree partition
     call find_subtree_partition(akeep%nnodes, akeep%sptr, akeep%sparent,           &
          akeep%rptr, options, akeep%topology, akeep%nparts, akeep%part,            &
          exec_loc, akeep%contrib_ptr, akeep%contrib_idx, contrib_dest, inform, st)
     if (st .ne. 0) go to 100
-    print *, "contrib_ptr = ", akeep%contrib_ptr(1:akeep%nparts+1)
-    print *, "contrib_idx = ", akeep%contrib_idx(1:akeep%nparts)
-    print *, "contrib_dest = ", &
-      contrib_dest(1:akeep%contrib_ptr(akeep%nparts+1)-1)
+    print *, "nparts = ", akeep%nparts
+    ! print *, "contrib_ptr = ", akeep%contrib_ptr(1:akeep%nparts+1)
+    ! print *, "contrib_idx = ", akeep%contrib_idx(1:akeep%nparts)
+    ! print *, "contrib_dest = ", &
+    !   contrib_dest(1:akeep%contrib_ptr(akeep%nparts+1)-1)
 
-
+    do i = 1, akeep%nparts
+       ! print *, "part ", i, ", sa = ", akeep%part(i), ", en = ", akeep%part(i+1)-1, &
+       !      ", contrib_idx = ", akeep%contrib_idx(akeep%contrib_ptr(i):akeep%contrib_ptr(i+1)-1)
+       print *, "part ", i, "exec_loc = ", mod((exec_loc(i)-1), size(akeep%topology))+1, & 
+            ", sa = ", akeep%part(i), ", en = ", akeep%part(i+1)-1
+    end do
+    
+    ! Create subtrees
+    allocate(akeep%subtree(akeep%nparts))
+    do i = 1, akeep%nparts
+       akeep%subtree(i)%exec_loc = exec_loc(i)
+    end do
     ! print *, "[spldlt_analyse] nnodes: ", nnodes
     ! print *, "sptr: ", akeep%sptr(1:nnodes+1)
 
@@ -105,59 +126,6 @@ contains
     return
   end subroutine spldlt_analyse
   
-  subroutine spldlt_print_atree(akeep)
-    use spral_ssids_akeep, only: ssids_akeep
-    ! use spral_ssids
-    
-    type(ssids_akeep), intent(in) :: akeep
-
-    integer :: num_nodes
-    integer :: node
-    integer :: n, m ! node sizes
-
-    print *, "Print atree"
-
-    num_nodes = akeep%nnodes
-
-    print *, "num_nodes: ", num_nodes
-
-    open(2, file="atree.dot")
-
-    write(2, '("graph atree {")')
-    write(2, '("node [")')
-    write(2, '("style=filled")')
-    write(2, '("]")')
-    
-    do node = 1, num_nodes
-
-       n = akeep%sptr(node+1) - akeep%sptr(node) 
-       m = int(akeep%rptr(node+1) - akeep%rptr(node))
-
-       ! node id
-       write(2, '(i10)', advance="no") node
-       write(2, '(" ")', advance="no")
-       write(2, '("[")', advance="no")
-
-       ! node info
-       write(2, '("label=""")', advance="no")
-       write(2, '("node:", i5,"\n")', advance="no")node
-       write(2, '("m:", i5,"\n")', advance="no")m
-       write(2, '("n:", i5,"\n")', advance="no")n
-
-       write(2, '("""")', advance="no")
-       write(2, '("]")', advance="no")
-       write(2, '(" ")')
-
-       ! parent node
-       if(akeep%sparent(node) .ne. -1) write(2, '(i10, "--", i10)')akeep%sparent(node), node
-    end do
-
-    write(2, '("}")')
-
-    close(2)
-
-  end subroutine spldlt_print_atree
-
   !****************************************************************************
   
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -683,4 +651,154 @@ contains
     end do
   end subroutine create_size_order
   
+  subroutine spldlt_print_atree(akeep)
+    use spral_ssids_akeep, only: ssids_akeep
+    ! use spral_ssids
+
+    type(ssids_akeep), intent(in) :: akeep
+
+    integer :: num_nodes
+    integer :: node
+    integer :: n, m ! node sizes
+    integer :: exec_region ! region of execution for node
+
+    print *, "Print atree"
+
+    num_nodes = akeep%nnodes
+
+    print *, "num_nodes: ", num_nodes
+
+    open(2, file="atree.dot")
+
+    write(2, '("graph atree {")')
+    write(2, '("node [")')
+    write(2, '("style=filled")')
+    write(2, '("]")')
+
+    do node = 1, num_nodes
+
+       n = akeep%sptr(node+1) - akeep%sptr(node) 
+       m = int(akeep%rptr(node+1) - akeep%rptr(node))
+
+       ! node id
+       write(2, '(i10)', advance="no") node
+       write(2, '(" ")', advance="no")
+       write(2, '("[")', advance="no")
+
+       ! node info
+       write(2, '("label=""")', advance="no")
+       write(2, '("node:", i5,"\n")', advance="no")node
+       write(2, '("m:", i5,"\n")', advance="no")m
+       write(2, '("n:", i5,"\n")', advance="no")n
+
+       write(2, '("""")', advance="no")
+       write(2, '("]")', advance="no")
+       write(2, '(" ")')
+
+       ! parent node
+       if(akeep%sparent(node) .ne. -1) write(2, '(i10, "--", i10)')akeep%sparent(node), node
+    end do
+
+    write(2, '("}")')
+
+    close(2)
+
+  end subroutine spldlt_print_atree
+
+  subroutine spldlt_print_atree_part(akeep)
+    use spral_ssids_akeep, only: ssids_akeep
+    ! use spral_ssids
+
+    type(ssids_akeep), intent(in) :: akeep
+
+    integer :: num_nodes
+    integer :: node
+    integer :: n, m ! node sizes
+    integer :: region ! region of execution for node
+    integer :: i, j
+
+    print *, "Print atree"
+
+    num_nodes = akeep%nnodes
+
+    print *, "num_nodes: ", num_nodes
+
+    open(2, file="atree.dot")
+
+    write(2, '("graph atree {")')
+    write(2, '("node [")')
+    write(2, '("style=filled")')
+    write(2, '("]")')
+
+    do i = 1, akeep%nparts
+       
+       ! Execution region for part i
+       region = mod((akeep%subtree(i)%exec_loc-1), size(akeep%topology))+1
+       
+       if (region .eq. -1) then
+
+          do node = akeep%part(i), akeep%part(i+1)-1
+
+             n = akeep%sptr(node+1) - akeep%sptr(node) 
+             m = int(akeep%rptr(node+1) - akeep%rptr(node))
+
+             ! node id
+             write(2, '(i10)', advance="no") node
+             write(2, '(" ")', advance="no")
+             write(2, '("[")', advance="no")
+
+             ! node info
+             write(2, '("label=""")', advance="no")
+             write(2, '("node:", i5,"\n")', advance="no")node
+             write(2, '("m:", i5,"\n")', advance="no")m
+             write(2, '("n:", i5,"\n")', advance="no")n
+             write(2, '("""")', advance="no")
+             write(2, '(" fillcolor=white")', advance="no")
+             write(2, '(" style=filled")', advance="no")
+             write(2, '("]")', advance="no")
+             write(2, '(" ")')
+
+             ! Parent node
+             if(akeep%sparent(node) .ne. -1) write(2, '(i10, "--", i10)')akeep%sparent(node), node
+
+          end do
+
+          ! ! Contributing subtrees
+          ! do j = akeep%contrib_ptr(i), akeep%contrib_ptr(i+1)-1
+          !    write(2, '(i10, "--", i10)')node, akeep%part(akeep%contrib_idx(j))             
+          ! end do
+
+       else
+
+          node = akeep%part(i+1)-1
+
+          ! part id
+          write(2, '(i10)', advance="no") node 
+          write(2, '(" ")', advance="no")
+          write(2, '("[")', advance="no")
+          
+          ! part info
+          write(2, '("label=""")', advance="no")
+          write(2, '("node sa:", i5,"\n")', advance="no")akeep%part(i)
+          write(2, '("node en:", i5,"\n")', advance="no")akeep%part(i+1)-1
+          write(2, '("region:", i5,"\n")', advance="no")region
+          write(2, '("""")', advance="no")
+          write(2, '(" fillcolor=lightgrey")', advance="no")
+          write(2, '(" style=filled")', advance="no")
+          write(2, '("]")', advance="no")
+          write(2, '(" ")')
+
+          ! Parent node
+          if(akeep%sparent(node) .ne. -1) write(2, '(i10, "--", i10)')akeep%sparent(node), node
+          
+       end if
+       
+    end do
+
+    write(2, '("}")')
+
+    close(2)
+
+  end subroutine spldlt_print_atree_part
+
 end module spldlt_analyse_mod

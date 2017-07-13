@@ -141,7 +141,9 @@ program spldlt_test
    call spldlt_analyse(spldlt_akeep, akeep, ssids_opt, inform, ncpu)
 
    ! print atree
-   call spldlt_print_atree(akeep)
+   ! call spldlt_print_atree(akeep)
+   ! print atree with partitions
+   call spldlt_print_atree_part(akeep)
 
    ! Initialize SpLDLT
    call spldlt_init(ncpu)
