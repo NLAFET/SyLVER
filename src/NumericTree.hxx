@@ -51,7 +51,10 @@ namespace spldlt {
 
       // FIXME: idealy symbolic_tree should be constant but we
       // currently modify it in order to add the runtime system info
-      NumericTree(SymbolicTree& symbolic_tree, T *aval, 
+      NumericTree(SymbolicTree& symbolic_tree, 
+                  T *aval,
+                  void** child_contrib,
+                  int const* exec_loc_aux,
                   struct cpu_factor_options const& options)
          : symb_(symbolic_tree), 
            factor_alloc_(symbolic_tree.get_factor_mem_est(1.0)),
@@ -105,7 +108,7 @@ namespace spldlt {
          // Perform the factorization of the numeric tree
          // factor(aval, work, rowmap, colmap, options);
 
-         factor_mf(aval, options);
+         factor_mf(aval, child_contrib, exec_loc_aux, options);
 
          auto end = std::chrono::high_resolution_clock::now();
          long ttotal = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count();
@@ -134,6 +137,10 @@ namespace spldlt {
         
          /* Main loop */
          for(int ni=0; ni<symb_.nnodes_; ++ni) {
+
+            // Skip iteration if node is in a subtree
+            if (symb_[ni].exec_loc != -1) continue;
+
             int m = symb_[ni].nrow;
             int n = symb_[ni].ncol;
             int nelim = (posdef) ? n
@@ -193,6 +200,10 @@ namespace spldlt {
 
          /* Perform solve */
          for(int ni=symb_.nnodes_-1; ni>=0; --ni) {
+            
+            // Skip iteration if node is in a subtree
+            if (symb_[ni].exec_loc != -1) continue;
+
             int m = symb_[ni].nrow;
             int n = symb_[ni].ncol;
             int nelim = (posdef) ? n
@@ -265,7 +276,7 @@ namespace spldlt {
 
       // Factorization using a multifrontal mode
       //    Note: Asynchronous routine i.e. no barrier at the end 
-      void factor_mf(T *aval, struct cpu_factor_options const& options) {
+      void factor_mf(T *aval, void** child_contrib, int const* exec_loc_aux, struct cpu_factor_options const& options) {
 
          int blksz = options.cpu_block_size;
 
@@ -280,34 +291,89 @@ namespace spldlt {
          for(int ni = 0; ni < symb_.nnodes_; ++ni) {
             
             SymbolicSNode &snode = symb_[ni];
+            
+            // Skip iteration if node is in a subtree
+            if (snode.exec_loc != -1) continue;
+            
+
+            printf("[factor_mf] node: %d\n", ni+1);
 
             // Activate frontal matrix
             activate_front(snode, nodes_[ni], blksz, factor_alloc_, pool_alloc_);
-            
-            // Initialize frontal matrix 
+
+            // initialize frontal matrix 
             // init_node(snode, nodes_[ni], aval);
             init_node_task(snode, nodes_[ni], aval, INIT_PRIO);
+#if defined(SPLDLT_USE_STARPU)
+            starpu_task_wait_for_all();
+#endif
 
-            // Assemble front: fully-summed columns
-            // typedef typename std::allocator_traits<PoolAllocator>::template rebind_alloc<int> PoolAllocInt;
-
-            /* Build lookup vector, allowing for insertion of delayed vars */
-            /* Note that while rlist[] is 1-indexed this is fine so long as lookup
-             * is also 1-indexed (which it is as it is another node's rlist[] */
-            // #if defined(SPLDLT_USE_STARPU)
-
-// #else            
-//             std::vector<int, PoolAllocInt> map(symb_.n+1, PoolAllocInt(pool_alloc_));
-// #endif
+            // Build lookup vector, allowing for insertion of delayed vars
+            // Note that while rlist[] is 1-indexed this is fine so long as lookup
+            // is also 1-indexed (which it is as it is another node's rlist[]
             for(int i=0; i<snode.ncol; i++)
                map[ snode.rlist[i] ] = i;
             for(int i=snode.ncol; i<snode.nrow; i++)
                map[ snode.rlist[i] ] = i + nodes_[ni].ndelay_in;
-            
+
+            // Retreive contribution block from subtrees
+            for(int contrib_idx : snode.contrib) {
+                                             
+               // printf("[factor_mf] contrib_idx: %d, exec_loc: %d\n", contrib_idx+1, exec_loc_aux[contrib_idx]);
+
+               if (exec_loc_aux[contrib_idx] == -1) continue;
+
+               int cn, ldcontrib, ndelay, lddelay;
+               double const *cval, *delay_val;
+               int const *crlist, *delay_perm;
+               spral_ssids_contrib_get_data(
+                     child_contrib[contrib_idx], &cn, &cval, &ldcontrib, &crlist,
+                     &ndelay, &delay_perm, &delay_val, &lddelay
+                     );
+
+               printf("[factor_mf] contrib_idx: %d, cn: %d, ndelay: %d\n", 
+                      contrib_idx+1, cn, ndelay);
+               // continue;
+               if(!cval) continue; // child was all delays, nothing more to do
+               // int* cache = work[omp_get_thread_num()].get_ptr<int>(cn);
+               // Destination block
+               int sa = snode.ncol / blksz; // Index of first block in contrib
+               int nr = (snode.nrow-1) / blksz + 1;
+               int ncontrib = nr-sa;
+               for(int j = 0; j < cn; ++j) {
+               
+                  int c = map[ crlist[j] ]; // Destination column
+                  
+                  T const* src = &cval[j*ldcontrib];
+
+                  if (c < snode.ncol) {
+
+                     int ldd = nodes_[ni].get_ldl();
+                     T *dest = &nodes_[ni].lcol[c*ldd];
+
+                     for (int i = j ; i < cn; ++i) {
+                        // Assemble destination block
+                        dest[ map[ crlist[i] ] ] += src[i];
+                     }
+                  }
+               }
+            }
+
+            // Assemble front: fully-summed columns
+            // typedef typename std::allocator_traits<PoolAllocator>::template rebind_alloc<int> PoolAllocInt;
+
+            // #if defined(SPLDLT_USE_STARPU)
+
+// #else            
+//             std::vector<int, PoolAllocInt> map(symb_.n+1, PoolAllocInt(pool_alloc_));
+// #endif            
             for (auto* child=nodes_[ni].first_child; child!=NULL; child=child->next_child) {
                
                // SymbolicNode const& csnode = child->symb;
                SymbolicSNode &csnode = symb_[child->symb.idx];
+
+               // Skip iteration if child node is in a subtree
+               if (csnode.exec_loc != -1) continue;
 
                int ldcontrib = csnode.nrow - csnode.ncol;
                // Handle expected contributions (only if something there)
@@ -332,8 +398,8 @@ namespace spldlt {
                   // printf("[factor_mf] ncol: %d\n", csnode.ncol);
 
                   // Lopp over blocks in contribution blocks
-                  for (int jj=csa; jj<cnr; ++jj) {
-                     for (int ii=jj; ii<cnr; ++ii) {
+                  for (int jj = csa; jj < cnr; ++jj) {
+                     for (int ii = jj; ii < cnr; ++ii) {
                         // assemble_block(nodes_[ni], *child, ii, jj, csnode.map, blksz);
                         assemble_block_task(snode, nodes_[ni], csnode, *child, ii, jj, csnode.map, blksz, ASSEMBLE_PRIO);
                      }
@@ -343,12 +409,66 @@ namespace spldlt {
 
             // Compute factors and Schur complement 
             factorize_front_posdef(snode, nodes_[ni], options);
+#if defined(SPLDLT_USE_STARPU)
+            starpu_task_wait_for_all();
+#endif
+
+            for(int contrib_idx : snode.contrib) {
+                                             
+               // printf("[factor_mf] contrib_idx: %d, exec_loc: %d\n", contrib_idx+1, exec_loc_aux[contrib_idx]);
+
+               if (exec_loc_aux[contrib_idx] == -1) continue;
+
+               int cn, ldcontrib, ndelay, lddelay;
+               double const *cval, *delay_val;
+               int const *crlist, *delay_perm;
+               spral_ssids_contrib_get_data(
+                     child_contrib[contrib_idx], &cn, &cval, &ldcontrib, &crlist,
+                     &ndelay, &delay_perm, &delay_val, &lddelay
+                     );
+
+               // continue;
+               if(!cval) continue; // child was all delays, nothing more to do
+               // int* cache = work[omp_get_thread_num()].get_ptr<int>(cn);
+               // Destination block
+               int sa = snode.ncol / blksz; // Index of first block in contrib
+               int nr = (snode.nrow-1) / blksz + 1;
+               int ncontrib = nr-sa;
+               for(int j = 0; j < cn; ++j) {
+               
+                  int c = map[ crlist[j] ]; // Destination column
+                  
+                  T const* src = &cval[j*ldcontrib];
+
+                  if (c >= snode.ncol) {
+
+
+                     int cc = c / blksz; // Destination block column
+                     int dest_col_sa = (snode.ncol > cc*blksz) ? 0 : (cc*blksz-snode.ncol); // First col in block
+                     
+                     for (int i = j; i < cn; ++i) {
+                        int r = map[ crlist[i] ]; // Destination row in parent front
+                        int rr = r / blksz; // Destination block row
+                        // First row index in CB of destination block
+                        int dest_row_sa = (snode.ncol > rr*blksz) ? 0 : (rr*blksz-snode.ncol);
+                        Block<T, PoolAllocator> &dest_blk = nodes_[ni].contrib_blocks[(rr-sa)+(cc-sa)*ncontrib];
+                        int dest_blk_lda = dest_blk.lda;
+                        T *dest = &dest_blk.a[ (c - snode.ncol - dest_col_sa)*dest_blk_lda ];
+                        // Assemble destination block
+                        dest[ r - snode.ncol - dest_row_sa ] += src[i];
+                     }
+                  }
+               }
+            }
 
             // Assemble front: non fully-summed columns i.e. contribution block 
             for (auto* child=nodes_[ni].first_child; child!=NULL; child=child->next_child) {
                
                // SymbolicNode const& csnode = child->symb;
                SymbolicSNode &csnode = symb_[child->symb.idx];
+
+               // Skip iteration if child node is in a subtree
+               if (csnode.exec_loc != -1) continue;
 
                int ldcontrib = csnode.nrow - csnode.ncol;
                // Handle expected contributions (only if something there)

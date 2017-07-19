@@ -141,7 +141,7 @@ program spldlt_test
    call spldlt_analyse(spldlt_akeep, akeep, ssids_opt, inform, ncpu)
 
    ! print atree
-   ! call spldlt_print_atree(akeep)
+   call spldlt_print_atree(akeep)
    ! print atree with partitions
    call spldlt_print_atree_part(akeep)
 
@@ -172,7 +172,7 @@ program spldlt_test
 
    ! Factorize (SpLDLT)
    call system_clock(start_t, rate_t)
-   call spldlt_factorize(val, spldlt_akeep, spldlt_fkeep, ssids_opt)
+   call spldlt_factorize(pos_def, val, spldlt_akeep, spldlt_fkeep, fkeep, ssids_opt, inform)
    call system_clock(stop_t)
    write(*, "(a)") "ok"
    print *, "Factor took ", (stop_t - start_t)/real(rate_t)

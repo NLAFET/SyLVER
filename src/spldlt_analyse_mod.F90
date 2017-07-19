@@ -18,7 +18,8 @@ module spldlt_analyse_mod
 
   interface spldlt_create_symbolic_tree_c
      type(c_ptr) function spldlt_create_symbolic_tree(n, nnodes, & 
-          sptr, sparent, rptr, rlist, nptr, nlist, options) &
+          sptr, sparent, rptr, rlist, nptr, nlist, nparts, part, exec_loc, &
+          contrib_idx, options) &
           bind(C, name="spldlt_create_symbolic_tree")
        use, intrinsic :: iso_c_binding
        import :: cpu_factor_options
@@ -31,6 +32,10 @@ module spldlt_analyse_mod
        integer(c_int), dimension(*), intent(in) :: rlist
        integer(c_long), dimension(*), intent(in) :: nptr
        integer(c_long), dimension(2, *), intent(in) :: nlist
+       integer(C_INT), value :: nparts
+       integer(C_INT), dimension(*), intent(in) :: part
+       integer(C_INT), dimension(*), intent(in) :: exec_loc
+       integer(C_INT), dimension(*), intent(in) :: contrib_idx
        type(cpu_factor_options), intent(in) :: options
      end function spldlt_create_symbolic_tree
   end interface spldlt_create_symbolic_tree_c
@@ -40,6 +45,7 @@ contains
   subroutine spldlt_analyse(spldlt_akeep, akeep, options, inform, ncpu)
     use spral_ssids_akeep, only: ssids_akeep
     use spral_ssids_datatypes
+    use spral_ssids_cpu_subtree, only : construct_cpu_symbolic_subtree
     implicit none
     
     type(spldlt_akeep_type) :: spldlt_akeep ! spldlt akeep structure 
@@ -76,12 +82,12 @@ contains
        akeep%topology(i)%nproc = 1
     end do
 
-    ! Deallocate partitions given by SSIDS
+    ! Destroy partitions given by SSIDS
     deallocate(akeep%part)
     deallocate(akeep%contrib_ptr)
     deallocate(akeep%contrib_idx)
 
-    ! Deallocate subtrees
+    ! Destroy subtrees given by SSIDS 
     deallocate(akeep%subtree)        
 
     ! Find subtree partition
@@ -95,32 +101,53 @@ contains
     ! print *, "contrib_dest = ", &
     !   contrib_dest(1:akeep%contrib_ptr(akeep%nparts+1)-1)
 
+    ! print *, " contrib_dest = ", contrib_dest(:)
+    ! print *, " contrib_idx = ", akeep%contrib_idx
+    ! print *, " contrib_ptr = ", akeep%contrib_ptr
+    print *, " contrib_dest = ", contrib_dest
     do i = 1, akeep%nparts
        ! print *, "part ", i, ", sa = ", akeep%part(i), ", en = ", akeep%part(i+1)-1, &
        !      ", contrib_idx = ", akeep%contrib_idx(akeep%contrib_ptr(i):akeep%contrib_ptr(i+1)-1)
-       print *, "part ", i, "exec_loc = ", mod((exec_loc(i)-1), size(akeep%topology))+1, & 
-            ", sa = ", akeep%part(i), ", en = ", akeep%part(i+1)-1
+       ! print *, "part ", i, "exec_loc = ", exec_loc(i), ", sa = ", akeep%part(i), ", en = ", akeep%part(i+1)-1, &
+       !      ", contrib_idx = ", akeep%contrib_idx(akeep%contrib_ptr(i):akeep%contrib_ptr(i+1)-1), &
+       !      ", contrib_dest = ", contrib_dest(akeep%contrib_ptr(i):akeep%contrib_ptr(i+1)-1)
+
+       print *, "part ", i, ", sa = ", akeep%part(i), ", en = ", akeep%part(i+1)-1, &
+            ", contrib_idx = ", akeep%contrib_idx(i), &
+            ", exec_loc = ", exec_loc(i)
+            ! ", contrib_ptr(i) = ", akeep%contrib_ptr(i), ", contrib_ptr(i+1)-1 = ", akeep%contrib_ptr(i+1)-1 
+            ! ", contrib_dest = ", contrib_dest(akeep%contrib_ptr(i):akeep%contrib_ptr(i+1)-1)
+
     end do
     
     ! Create subtrees
     allocate(akeep%subtree(akeep%nparts))
     do i = 1, akeep%nparts
+       ! Set execution location for i-th subtree
        akeep%subtree(i)%exec_loc = exec_loc(i)
+       ! CPU
+       !print *, numa_region, "init cpu subtree ", i, akeep%part(i), &
+       !   akeep%part(i+1)-1
+       akeep%subtree(i)%ptr => construct_cpu_symbolic_subtree(akeep%n,   &
+            akeep%part(i), akeep%part(i+1), akeep%sptr, akeep%sparent,   &
+            akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist,            &
+            contrib_dest(akeep%contrib_ptr(i):akeep%contrib_ptr(i+1)-1), &
+            options)
     end do
     ! print *, "[spldlt_analyse] nnodes: ", nnodes
     ! print *, "sptr: ", akeep%sptr(1:nnodes+1)
-
+    
     ! call C++ analyse routine
     call cpu_copy_options_in(options, coptions)
     spldlt_akeep%symbolic_tree_c = &
          spldlt_create_symbolic_tree_c(akeep%n, nnodes, akeep%sptr, &
          akeep%sparent, akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist, &
+         akeep%nparts, akeep%part, exec_loc, contrib_dest, & 
          coptions)
 
     return
 100 continue
-    
-    
+        
     print *, "[Error][spldlt_analyse] st: ", st
 
     return
@@ -294,6 +321,7 @@ contains
          exec_loc, st)
     if (st .ne. 0) return
     !print *, "exec_loc ", exec_loc(1:nparts)
+    print *, "load_balance = ", load_balance
 
     ! Merge adjacent subtrees that are executing on the same node so long as
     ! there is no more than one contribution to a parent subtree
@@ -349,6 +377,8 @@ contains
        contrib_idx(i) = contrib_ptr(k+1)
        contrib_dest(contrib_idx(i)) = j
        contrib_ptr(k+1) = contrib_ptr(k+1) + 1
+       ! print *, "part = ", i, ", parent = ", j, ", k = ", k, ", contrib_idx = ", contrib_idx(i), &
+       !      "contrib_dest = ", contrib_dest(contrib_idx(i))
     end do
     contrib_idx(nparts) = nparts+1 ! last part must be a root
 
@@ -705,9 +735,35 @@ contains
 
   end subroutine spldlt_print_atree
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !> @brief Compute flops for processing a node
+  !> @param akeep Information generated in analysis phase by SSIDS  
+  !> @param node Node
+  function compute_flops(akeep, node)
+    use spral_ssids_akeep, only: ssids_akeep
+    implicit none
+
+    type(ssids_akeep), intent(in) :: akeep
+    integer, intent(in) :: node
+    integer(long) :: compute_flops
+    
+    integer :: n, m ! node sizes
+    integer(long) :: jj    
+
+    compute_flops = 0 
+    
+    m = int(akeep%rptr(node+1)-akeep%rptr(node))
+    n = akeep%sptr(node+1)-akeep%sptr(node)
+    do jj = m-n+1, m
+       compute_flops = compute_flops + jj**2
+    end do
+    
+  end function compute_flops
+
   subroutine spldlt_print_atree_part(akeep)
     use spral_ssids_akeep, only: ssids_akeep
     ! use spral_ssids
+    implicit none
 
     type(ssids_akeep), intent(in) :: akeep
 
@@ -717,30 +773,57 @@ contains
     integer :: region ! region of execution for node
     integer :: i, j
 
+    integer(long), dimension(:), allocatable :: flops
+    integer(long) :: jj    
+    real :: tot_weight, weight
+    character(len=5) :: part_str 
+
+    ! Count flops below each node
+    allocate(flops(akeep%nnodes+1))
+    flops(:) = 0
+    do node = 1, akeep%nnodes
+       flops(node) = flops(node) + compute_flops(akeep, node)
+       j = akeep%sparent(node)
+       flops(j) = flops(j) + flops(node)
+       !print *, "Node ", node, "parent", j, " flops ", flops(node)
+    end do
+
     print *, "Print atree"
 
     num_nodes = akeep%nnodes
+    tot_weight = real(flops(akeep%nnodes))
 
     print *, "num_nodes: ", num_nodes
 
-    open(2, file="atree.dot")
+    open(2, file="atree_part.dot")
 
     write(2, '("graph atree {")')
     write(2, '("node [")')
     write(2, '("style=filled")')
     write(2, '("]")')
 
+    ! Root node
+    write(2, '(i5," [label=", i5,"]")')akeep%nnodes+1, akeep%nnodes+1
+
     do i = 1, akeep%nparts
        
        ! Execution region for part i
        region = mod((akeep%subtree(i)%exec_loc-1), size(akeep%topology))+1
+       ! region = akeep%subtree(i)%exec_loc
        
        if (region .eq. -1) then
+
+          write(part_str, '(i5)')akeep%part(i)
+          write(2, *)"subgraph cluster"// adjustl(trim(part_str)) // " {"
+          write(2, *)"color=black"
+
+          ! write(2, '("subgraph part", i5, " {")')akeep%part(i)
 
           do node = akeep%part(i), akeep%part(i+1)-1
 
              n = akeep%sptr(node+1) - akeep%sptr(node) 
              m = int(akeep%rptr(node+1) - akeep%rptr(node))
+             weight = real(flops(node)) / tot_weight 
 
              ! node id
              write(2, '(i10)', advance="no") node
@@ -752,6 +835,7 @@ contains
              write(2, '("node:", i5,"\n")', advance="no")node
              write(2, '("m:", i5,"\n")', advance="no")m
              write(2, '("n:", i5,"\n")', advance="no")n
+             write(2, '("w:", f6.2,"\n")', advance="no")100*weight
              write(2, '("""")', advance="no")
              write(2, '(" fillcolor=white")', advance="no")
              write(2, '(" style=filled")', advance="no")
@@ -759,8 +843,14 @@ contains
              write(2, '(" ")')
 
              ! Parent node
-             if(akeep%sparent(node) .ne. -1) write(2, '(i10, "--", i10)')akeep%sparent(node), node
+             ! if(akeep%sparent(node) .ne. -1) write(2, '(i10, "--", i10)')akeep%sparent(node), node
 
+          end do
+
+          write(2, '("}")')
+
+          do node = akeep%part(i), akeep%part(i+1)-1
+             if(akeep%sparent(node) .ne. -1) write(2, '(i10, "--", i10)')akeep%sparent(node), node
           end do
 
           ! ! Contributing subtrees
@@ -771,6 +861,7 @@ contains
        else
 
           node = akeep%part(i+1)-1
+          weight = real(flops(node)) / tot_weight 
 
           ! part id
           write(2, '(i10)', advance="no") node 
@@ -779,9 +870,11 @@ contains
           
           ! part info
           write(2, '("label=""")', advance="no")
+          write(2, '("part:", i5,"\n")', advance="no")i
           write(2, '("node sa:", i5,"\n")', advance="no")akeep%part(i)
           write(2, '("node en:", i5,"\n")', advance="no")akeep%part(i+1)-1
           write(2, '("region:", i5,"\n")', advance="no")region
+          write(2, '("w:", f6.2,"\n")', advance="no")100*weight
           write(2, '("""")', advance="no")
           write(2, '(" fillcolor=lightgrey")', advance="no")
           write(2, '(" style=filled")', advance="no")

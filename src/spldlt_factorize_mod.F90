@@ -2,6 +2,7 @@ module spldlt_factorize_mod
   use, intrinsic :: iso_c_binding
   ! use spral_ssids_datatypes
   use spral_ssids_cpu_iface ! fixme only
+  use spral_ssids_fkeep, only : ssids_fkeep
   implicit none
 
   type numeric_tree_type
@@ -13,6 +14,7 @@ module spldlt_factorize_mod
   end type numeric_tree_type
   
   type spldlt_fkeep_type
+     type(ssids_fkeep), pointer :: fkeep => null()
      ! Facored elimination tree
      type(numeric_tree_type) :: numeric_tree ! structure representing the numeric tree
    contains
@@ -24,13 +26,16 @@ module spldlt_factorize_mod
   ! routine to create a numeric subtree from the symbolic one
   ! return a C ptr on the tree structure
   interface spldlt_create_numeric_tree_c
-     type(c_ptr) function spldlt_create_numeric_tree_dlb(symbolic_tree, aval, options) &
+     type(c_ptr) function spldlt_create_numeric_tree_dlb(symbolic_tree, aval, &
+          child_contrib, exec_loc_aux, options) &
           bind(C, name="spldlt_create_numeric_tree_dbl")
        use, intrinsic :: iso_c_binding
        import :: cpu_factor_options
        implicit none
        type(c_ptr), value :: symbolic_tree
        real(c_double), dimension(*), intent(in) :: aval
+       type(C_PTR), dimension(*), intent(inout) :: child_contrib
+       integer(C_INT), dimension(*), intent(in) :: exec_loc_aux
        type(cpu_factor_options), intent(in) :: options ! SSIDS options
      end function spldlt_create_numeric_tree_dlb
   end interface spldlt_create_numeric_tree_c
@@ -84,31 +89,116 @@ module spldlt_factorize_mod
   
 contains
 
-  subroutine spldlt_factorize(val, spldlt_akeep, spldlt_fkeep, options)
+  subroutine spldlt_factorize(posdef, val, spldlt_akeep, spldlt_fkeep, fkeep, options, inform)
+    use spral_ssids_datatypes
+    use spral_ssids_inform, only : ssids_inform
     use spral_ssids_akeep
+    use spral_ssids_fkeep, only : ssids_fkeep
+    use spral_ssids_contrib, only : contrib_type
+    use spral_ssids_subtree, only : numeric_subtree_base
+    use spral_ssids_cpu_subtree, only : cpu_numeric_subtree
     use spldlt_analyse_mod
     implicit none
     
+    logical, intent(in) :: posdef 
     real(wp), dimension(*), target, intent(in) :: val ! A values (lwr triangle)
     type(spldlt_akeep_type), target :: spldlt_akeep
     type(spldlt_fkeep_type) :: spldlt_fkeep
+    type(ssids_fkeep), target :: fkeep
     type(ssids_options), intent(in) :: options
+    type(ssids_inform), intent(inout) :: inform
 
     type(ssids_akeep), pointer :: akeep
     type(cpu_factor_options) :: coptions
 
+    integer :: exec_loc
+    integer, dimension(:), allocatable :: exec_loc_aux
+    integer :: i
+    type(contrib_type), dimension(:), allocatable, target :: child_contrib
+    type(C_PTR), dimension(:), allocatable :: child_contrib_c
+
+    ! Error management
+    integer :: st
+
+    spldlt_fkeep%fkeep => fkeep
+    fkeep%pos_def = posdef
+
+    print *, "posdef = ", fkeep%pos_def
+
     akeep => spldlt_akeep%akeep
+
+    ! Setup data storage
+    if (allocated(fkeep%subtree)) then
+       do i = 1, size(fkeep%subtree)
+          if (associated(fkeep%subtree(i)%ptr)) then
+             call fkeep%subtree(i)%ptr%cleanup()
+             deallocate(fkeep%subtree(i)%ptr)
+          end if
+       end do
+       deallocate(fkeep%subtree)
+    end if
+
+    ! Allocate space for subtrees
+    allocate(fkeep%subtree(akeep%nparts), stat=st)
+    if (st .ne. 0) goto 100
+
+    allocate(child_contrib(akeep%nparts), stat=inform%stat)
+    allocate(exec_loc_aux(akeep%nparts))
+    exec_loc_aux = 0
+    
+    ! Factor subtrees
+    do i = 1, akeep%nparts
+       exec_loc = akeep%subtree(i)%exec_loc
+       exec_loc_aux(akeep%contrib_idx(i)) = exec_loc
+       if (exec_loc .eq. -1) cycle
+
+       print *, "part = ", i, ", exec_loc = ", exec_loc
+
+       ! TODO Use scaling if required
+       fkeep%subtree(i)%ptr => akeep%subtree(i)%ptr%factor( &
+       ! akeep%subtree(i)%ptr%factor( &
+            fkeep%pos_def, val, &
+            child_contrib(akeep%contrib_ptr(i):akeep%contrib_ptr(i+1)-1), &
+            options, inform &
+            )
+
+       ! print *, "part = ", i, ", akeep%subtree(i)%ptr%n = ", akeep%subtree(i)%ptr%n
+       
+       if (akeep%contrib_idx(i) .gt. akeep%nparts) cycle ! part is a root
+       child_contrib(akeep%contrib_idx(i)) = &
+            fkeep%subtree(i)%ptr%get_contrib()
+       child_contrib(akeep%contrib_idx(i))%ready = .true.
+
+    end do
+
+    ! Convert child_contrib to contrib_ptr
+    allocate(child_contrib_c(size(child_contrib)), stat=st)
+    if (st .ne. 0) goto 100
+    do i = 1, size(child_contrib)
+       child_contrib_c(i) = C_LOC(child_contrib(i))
+    end do
 
     call cpu_copy_options_in(options, coptions)
     spldlt_fkeep%numeric_tree%ptr_c = spldlt_create_numeric_tree_c( &
-         spldlt_akeep%symbolic_tree_c, val, coptions)
+         spldlt_akeep%symbolic_tree_c, val, child_contrib_c, exec_loc_aux, & 
+    coptions)
 
+    deallocate(child_contrib_c)
+
+    return
+
+100 continue
+    
+    print *, "[Error][spldlt_factorize] st: ", st
+
+    return
   end subroutine spldlt_factorize
 
   ! Solve phase
   subroutine solve(spldlt_fkeep, nrhs, x, ldx, spldlt_akeep, inform)
     use spral_ssids_datatypes
     use spral_ssids_inform, only : ssids_inform
+    use spral_ssids_fkeep, only : ssids_fkeep
     use spldlt_analyse_mod
     implicit none
 
@@ -121,9 +211,12 @@ contains
 
     real(wp), dimension(:,:), allocatable :: x2
     type(ssids_akeep) :: akeep
+    type(ssids_fkeep), pointer :: fkeep
 
     integer :: r
     integer :: n
+    integer :: part
+    integer :: exec_loc
     
     akeep = spldlt_akeep%akeep
     n = akeep%n
@@ -141,16 +234,33 @@ contains
     do r = 1, nrhs
        x2(1:n, r) = x(akeep%invp(1:n), r)
     end do
-    
+
+    fkeep => spldlt_fkeep%fkeep
+
+    ! Subtree solves
+    ! Fwd solve    
+    do part = 1, akeep%nparts
+       if (akeep%subtree(part)%exec_loc .eq. -1) cycle
+       call fkeep%subtree(part)%ptr%solve_fwd(nrhs, x2, n, inform)
+       if (inform%stat .ne. 0) goto 100
+    end do
+
     ! Perform solve
     ! Fwd solve
     call spldlt_fkeep%numeric_tree%solve_fwd(nrhs, x2, ldx)
-
+    
     ! Bwd solve
     ! call spldlt_fkeep%numeric_tree%solve_bwd(nrhs, x, ldx)
 
     ! Diag and bwd solve
     call spldlt_fkeep%numeric_tree%solve_diag_bwd(nrhs, x2, ldx)
+
+    ! Bwd solve
+    do part = akeep%nparts, 1, -1
+       if (akeep%subtree(part)%exec_loc .eq. -1) cycle
+       call fkeep%subtree(part)%ptr%solve_diag_bwd(nrhs, x2, n, inform)
+       if (inform%stat .ne. 0) goto 100
+    end do
 
     ! un-permute and un-scale
     ! TODO

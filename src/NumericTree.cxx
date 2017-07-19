@@ -14,13 +14,16 @@ namespace {
 
 extern "C"
 void *spldlt_create_numeric_tree_dbl(
-      void *symbolic_tree_ptr, double *aval,
+      void *symbolic_tree_ptr, 
+      double *aval, // Values of A
+      void** child_contrib, // Contributions from child subtrees
+      int const* exec_loc_aux,
       struct cpu_factor_options const* options // Options in
       ) {
 
    auto &symbolic_tree = *static_cast<SymbolicTree*>(symbolic_tree_ptr);
 
-   auto* tree = new NumericTreeDbl(symbolic_tree, aval, *options);
+   auto* tree = new NumericTreeDbl(symbolic_tree, aval, child_contrib, exec_loc_aux, *options);
 
    return (void *) tree;
 }

@@ -14,7 +14,7 @@ namespace spldlt {
 
    class SymbolicTree {
    public:
-      SymbolicTree(int n, int nnodes, int const* sptr, int const* sparent, long const* rptr, int const* rlist, long const* nptr, long const* nlist) 
+      SymbolicTree(int n, int nnodes, int const* sptr, int const* sparent, long const* rptr, int const* rlist, long const* nptr, long const* nlist, int nparts, int const* part, int const* exec_loc, int const* contrib_idx)
          : n(n), nnodes_(nnodes), nodes_(nnodes_+1)
       {
 
@@ -61,10 +61,25 @@ namespace spldlt {
             parent->first_child = &nodes_[ni];
          }
          
-         /* Count size of factors */
+         /* Record contribution block inputs */
+         for(int ci = 0; ci < nparts; ++ci) {
+            int idx = contrib_idx[ci]-1; // contrib_idx is Fortran indexed
+            nodes_[idx].contrib.push_back(ci);
+            printf("[SymbolicTree] %d -> %d, exec_loc = %d\n", ci+1, idx+1, exec_loc[ci]);
+         }
+         // Count size of factors
          nfactor_ = 0;
          for(int ni=0; ni<nnodes_; ++ni)
             nfactor_ += static_cast<size_t>(nodes_[ni].nrow)*nodes_[ni].ncol;
+         
+         // Setup node partition and execution location information
+         for(int p = 0; p < nparts; ++p) {
+            for (int ni = part[p]-1; ni < part[p+1]-1; ++ni) {
+               nodes_[ni].part = p;
+               nodes_[ni].exec_loc = exec_loc[p];
+               // printf("[SymbolicTree] node: %d, part: %d, exec_loc: %d\n", ni+1, p+1, exec_loc[p]);
+            }
+         }
 
       }
 

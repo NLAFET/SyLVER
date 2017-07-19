@@ -101,6 +101,7 @@ namespace spldlt {
 
       /* If we have no children, we're done. */
       // if(node.first_child == nullptr && snode.contrib.size() == 0) return;
+
    }
 
    template <typename T,
