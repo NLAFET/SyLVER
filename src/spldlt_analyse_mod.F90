@@ -73,22 +73,23 @@ contains
     ! end do
 
     ! Destroy topology given by SSIDS 
-    deallocate(akeep%topology)
+    if (allocated(akeep%topology)) deallocate(akeep%topology, stat=st)
 
     ! Create simple topology with ncpu regions, one for each CPU
     ! worker
-    allocate(akeep%topology(ncpu))
+    allocate(akeep%topology(ncpu), stat=st)
     do i = 1, ncpu
        akeep%topology(i)%nproc = 1
     end do
 
     ! Destroy partitions given by SSIDS
-    deallocate(akeep%part)
-    deallocate(akeep%contrib_ptr)
-    deallocate(akeep%contrib_idx)
+    if (allocated(akeep%part)) deallocate(akeep%part, stat=st)
+    if (allocated(akeep%contrib_ptr)) deallocate(akeep%contrib_ptr, stat=st)
+    if (allocated(akeep%contrib_idx)) deallocate(akeep%contrib_idx, stat=st)
 
     ! Destroy subtrees given by SSIDS 
-    deallocate(akeep%subtree)        
+    if (allocated(akeep%subtree)) deallocate(akeep%subtree, stat=st)
+    if (st .ne. 0) go to 100
 
     ! Find subtree partition
     call find_subtree_partition(akeep%nnodes, akeep%sptr, akeep%sparent,           &
@@ -120,8 +121,10 @@ contains
 
     end do
     
-    ! Create subtrees
-    allocate(akeep%subtree(akeep%nparts))
+    ! Setup subtrees
+    allocate(akeep%subtree(akeep%nparts), stat=st)
+    if (st .ne. 0) go to 100
+
     do i = 1, akeep%nparts
        ! Set execution location for i-th subtree
        akeep%subtree(i)%exec_loc = exec_loc(i)
@@ -760,6 +763,8 @@ contains
     
   end function compute_flops
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !> @brief Print assembly tree with partitions
   subroutine spldlt_print_atree_part(akeep)
     use spral_ssids_akeep, only: ssids_akeep
     ! use spral_ssids
@@ -808,8 +813,10 @@ contains
     do i = 1, akeep%nparts
        
        ! Execution region for part i
-       region = mod((akeep%subtree(i)%exec_loc-1), size(akeep%topology))+1
-       ! region = akeep%subtree(i)%exec_loc
+       region = akeep%subtree(i)%exec_loc
+       ! region = mod((akeep%subtree(i)%exec_loc-1), size(akeep%topology))+1
+       ! print *, "[spldlt_print_atree_part] exec_loc = ", akeep%subtree(i)%exec_loc, &
+       !      ", region = ", region, "size topology = ", size(akeep%topology)
        
        if (region .eq. -1) then
 

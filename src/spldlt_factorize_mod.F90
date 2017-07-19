@@ -142,27 +142,24 @@ contains
     allocate(fkeep%subtree(akeep%nparts), stat=st)
     if (st .ne. 0) goto 100
 
-    allocate(child_contrib(akeep%nparts), stat=inform%stat)
-    allocate(exec_loc_aux(akeep%nparts))
+    allocate(child_contrib(akeep%nparts), stat=st)
+    allocate(exec_loc_aux(akeep%nparts), stat=st)
+    if (st .ne. 0) goto 100
     exec_loc_aux = 0
     
     ! Factor subtrees
     do i = 1, akeep%nparts
-       exec_loc = akeep%subtree(i)%exec_loc
-       exec_loc_aux(akeep%contrib_idx(i)) = exec_loc
-       if (exec_loc .eq. -1) cycle
 
-       print *, "part = ", i, ", exec_loc = ", exec_loc
+       exec_loc = akeep%subtree(i)%exec_loc
+       if (akeep%contrib_idx(i) .le. akeep%nparts) exec_loc_aux(akeep%contrib_idx(i)) = exec_loc
+       if (exec_loc .eq. -1) cycle
 
        ! TODO Use scaling if required
        fkeep%subtree(i)%ptr => akeep%subtree(i)%ptr%factor( &
-       ! akeep%subtree(i)%ptr%factor( &
             fkeep%pos_def, val, &
             child_contrib(akeep%contrib_ptr(i):akeep%contrib_ptr(i+1)-1), &
             options, inform &
             )
-
-       ! print *, "part = ", i, ", akeep%subtree(i)%ptr%n = ", akeep%subtree(i)%ptr%n
        
        if (akeep%contrib_idx(i) .gt. akeep%nparts) cycle ! part is a root
        child_contrib(akeep%contrib_idx(i)) = &
@@ -170,6 +167,7 @@ contains
        child_contrib(akeep%contrib_idx(i))%ready = .true.
 
     end do
+    ! return
 
     ! Convert child_contrib to contrib_ptr
     allocate(child_contrib_c(size(child_contrib)), stat=st)
@@ -181,9 +179,12 @@ contains
     call cpu_copy_options_in(options, coptions)
     spldlt_fkeep%numeric_tree%ptr_c = spldlt_create_numeric_tree_c( &
          spldlt_akeep%symbolic_tree_c, val, child_contrib_c, exec_loc_aux, & 
-    coptions)
+         coptions)
 
+    ! Free space
     deallocate(child_contrib_c)
+    deallocate(exec_loc_aux)
+    deallocate(child_contrib)
 
     return
 

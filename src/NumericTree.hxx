@@ -308,7 +308,7 @@ namespace spldlt {
             starpu_task_wait_for_all();
 #endif
 
-            // Build lookup vector, allowing for insertion of delayed vars
+            // build lookup vector, allowing for insertion of delayed vars
             // Note that while rlist[] is 1-indexed this is fine so long as lookup
             // is also 1-indexed (which it is as it is another node's rlist[]
             for(int i=0; i<snode.ncol; i++)
@@ -316,13 +316,16 @@ namespace spldlt {
             for(int i=snode.ncol; i<snode.nrow; i++)
                map[ snode.rlist[i] ] = i + nodes_[ni].ndelay_in;
 
-            // Retreive contribution block from subtrees
+            // Assemble contribution block from subtrees into
+            // fully-summed coefficients
             for(int contrib_idx : snode.contrib) {
                                              
                // printf("[factor_mf] contrib_idx: %d, exec_loc: %d\n", contrib_idx+1, exec_loc_aux[contrib_idx]);
 
+               // Make sure subtree is a leaf
                if (exec_loc_aux[contrib_idx] == -1) continue;
 
+               // Retreive contribution block from subtrees
                int cn, ldcontrib, ndelay, lddelay;
                double const *cval, *delay_val;
                int const *crlist, *delay_perm;
@@ -361,13 +364,9 @@ namespace spldlt {
 
             // Assemble front: fully-summed columns
             // typedef typename std::allocator_traits<PoolAllocator>::template rebind_alloc<int> PoolAllocInt;
-
-            // #if defined(SPLDLT_USE_STARPU)
-
-// #else            
-//             std::vector<int, PoolAllocInt> map(symb_.n+1, PoolAllocInt(pool_alloc_));
-// #endif            
-            for (auto* child=nodes_[ni].first_child; child!=NULL; child=child->next_child) {
+            // std::vector<int, PoolAllocInt> map(symb_.n+1, PoolAllocInt(pool_alloc_));
+ 
+           for (auto* child=nodes_[ni].first_child; child!=NULL; child=child->next_child) {
                
                // SymbolicNode const& csnode = child->symb;
                SymbolicSNode &csnode = symb_[child->symb.idx];
@@ -413,6 +412,8 @@ namespace spldlt {
             starpu_task_wait_for_all();
 #endif
 
+            // Assemble contribution block from subtrees into non
+            // fully-summed coefficients
             for(int contrib_idx : snode.contrib) {
                                              
                // printf("[factor_mf] contrib_idx: %d, exec_loc: %d\n", contrib_idx+1, exec_loc_aux[contrib_idx]);
@@ -505,9 +506,6 @@ namespace spldlt {
                starpu_data_unregister_submit(csnode.hdl);
 #endif
 
-// #if defined(SPLDLT_USE_STARPU)
-//             starpu_task_wait_for_all();
-// #endif
             } // loop over children nodes
 
          } // loop over nodes
@@ -517,9 +515,8 @@ namespace spldlt {
 // #endif
       }
 
-      /* Factorization using a supernodal mode. 
-         Note: Asynchronous routine i.e. no barrier at the end. 
-       */
+      // Factorization using a supernodal mode. 
+      // Note: Asynchronous routine i.e. no barrier at the end. 
       void factor(
             T *aval,
             Workspace &work,
