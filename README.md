@@ -1,5 +1,7 @@
 # SpLDLT
 
+[![Build Status](https://travis-ci.com/NLAFET/SpLDLT.svg?token=UwhpFb953M8N7PyHRDWG&branch=master)](https://travis-ci.com/NLAFET/SpLDLT)
+
 SpLDLT is a DAG-based sparse direct solver for symmetric systems which
 can solve positive-definite and indefinite problems. The parallel
 execution of the DAG which includes task scheduling, dependency
