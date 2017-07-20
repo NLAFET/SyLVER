@@ -64,7 +64,8 @@ namespace spldlt {
          /* Record contribution block inputs */
          for(int ci = 0; ci < nparts; ++ci) {
             int idx = contrib_idx[ci]-1; // contrib_idx is Fortran indexed
-            nodes_[idx].contrib.push_back(ci);
+            if (idx > 0) // idx equal to 0 means that ci is a root subtree 
+               nodes_[idx].contrib.push_back(ci);
             printf("[SymbolicTree] %d -> %d, exec_loc = %d\n", ci+1, idx+1, exec_loc[ci]);
          }
          // Count size of factors

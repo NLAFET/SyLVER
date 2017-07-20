@@ -123,7 +123,7 @@ contains
     spldlt_fkeep%fkeep => fkeep
     fkeep%pos_def = posdef
 
-    print *, "posdef = ", fkeep%pos_def
+    print *, "[spldlt_factorize] posdef = ", fkeep%pos_def
 
     akeep => spldlt_akeep%akeep
 
@@ -153,6 +153,8 @@ contains
        exec_loc = akeep%subtree(i)%exec_loc
        if (akeep%contrib_idx(i) .le. akeep%nparts) exec_loc_aux(akeep%contrib_idx(i)) = exec_loc
        if (exec_loc .eq. -1) cycle
+
+       print *, "[spldlt_factorize] part = ", i
 
        ! TODO Use scaling if required
        fkeep%subtree(i)%ptr => akeep%subtree(i)%ptr%factor( &
