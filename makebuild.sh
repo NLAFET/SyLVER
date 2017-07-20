@@ -1,7 +1,7 @@
 #!/bin/bash
 
-make builds
-make builds/starpu
+mkdir builds
+mkdir builds/starpu
 cd builds/starpu
 cmake ../.. -DRUNTIME=StarPU
 # make
