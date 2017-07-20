@@ -13,5 +13,8 @@ addons:
       - libatlas-dev
       - liblapack-dev
 
+before_install:
+  - chmod +x makebuild.sh
+
 script:
   - ./makebuild.sh
