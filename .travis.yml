@@ -1,5 +1,17 @@
 language: c++
 sudo: required
 
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      - gfortran-5
+      - gcc-5
+      - g++-5
+      - libmetis-dev
+      - libatlas-dev
+      - liblapack-dev
+
 script:
   - ./makebuild.sh
