@@ -24,8 +24,8 @@ By default the code is compiled without any runtime system and is
 therefore sequential. A parallel version of the solver can be obtained
 by specifying the runtime system using the option `-DRUNTIME` when
 running the cmake `cmake <path-to-source>` command. For now, the two
-options for setting the RUNTIME option are either `STF` which provide
-a sequential version or `StarPU` which uses the StarPU runtime system
+options for the RUNTIME option are either `STF` which provide a
+sequential version or `StarPU` which uses the StarPU runtime system
 for generating the parallel code.
 
 For example, the compilation files for installing the sequential code
