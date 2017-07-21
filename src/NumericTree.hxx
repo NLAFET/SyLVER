@@ -310,9 +310,6 @@ namespace spldlt {
             // Initialize frontal matrix 
             // init_node(snode, nodes_[ni], aval);
             init_node_task(snode, nodes_[ni], aval, INIT_PRIO);
-#if defined(SPLDLT_USE_STARPU)
-            starpu_task_wait_for_all();
-#endif
 
             // build lookup vector, allowing for insertion of delayed vars
             // Note that while rlist[] is 1-indexed this is fine so long as lookup
@@ -374,58 +371,9 @@ namespace spldlt {
 
             // Compute factors and Schur complement 
             factor_front_posdef(snode, nodes_[ni], options);
-#if defined(SPLDLT_USE_STARPU)
-            starpu_task_wait_for_all();
-#endif
-
-            // Assemble contribution block from subtrees into non
-            // fully-summed coefficients
-            for(int contrib_idx : snode.contrib) {
-                                             
-               // printf("[factor_mf] contrib_idx: %d, exec_loc: %d\n", contrib_idx+1, exec_loc_aux[contrib_idx]);
-
-               if (exec_loc_aux[contrib_idx] == -1) continue;
-
-               // int cn, ldcontrib, ndelay, lddelay;
-               // double const *cval, *delay_val;
-               // int const *crlist, *delay_perm;
-               // spral_ssids_contrib_get_data(
-               //       child_contrib[contrib_idx], &cn, &cval, &ldcontrib, &crlist,
-               //       &ndelay, &delay_perm, &delay_val, &lddelay
-               //       );
-
-               // if(!cval) continue; // child was all delays, nothing more to do
-               // // int* cache = work[omp_get_thread_num()].get_ptr<int>(cn);
-               // // Destination block
-               // int sa = snode.ncol / blksz; // Index of first block in contrib
-               // int nr = (snode.nrow-1) / blksz + 1;
-               // int ncontrib = nr-sa;
-               // for(int j = 0; j < cn; ++j) {
-               
-               //    int c = map[ crlist[j] ]; // Destination column
-                  
-               //    T const* src = &cval[j*ldcontrib];
-
-               //    if (c >= snode.ncol) {
-
-
-               //       int cc = c / blksz; // Destination block column
-               //       int dest_col_sa = (snode.ncol > cc*blksz) ? 0 : (cc*blksz-snode.ncol); // First col in block
-                     
-               //       for (int i = j; i < cn; ++i) {
-               //          int r = map[ crlist[i] ]; // Destination row in parent front
-               //          int rr = r / blksz; // Destination block row
-               //          // First row index in CB of destination block
-               //          int dest_row_sa = (snode.ncol > rr*blksz) ? 0 : (rr*blksz-snode.ncol);
-               //          Block<T, PoolAllocator> &dest_blk = nodes_[ni].contrib_blocks[(rr-sa)+(cc-sa)*ncontrib];
-               //          int dest_blk_lda = dest_blk.lda;
-               //          T *dest = &dest_blk.a[ (c - snode.ncol - dest_col_sa)*dest_blk_lda ];
-               //          // Assemble destination block
-               //          dest[ r - snode.ncol - dest_row_sa ] += src[i];
-               //       }
-               //    }
-               // }
-            }
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
 
             // Assemble front: non fully-summed columns i.e. contribution block 
             for (auto* child=nodes_[ni].first_child; child!=NULL; child=child->next_child) {
@@ -440,13 +388,11 @@ namespace spldlt {
                   // Skip iteration if child node is in a subtree
                   if (csnode.exec_loc != -1) {
 
+                     // Assemble contribution block from subtrees into non
+                     // fully-summed coefficients
                      subtree_assemble_contrib_task(
                            snode, nodes_[ni], csnode, child_contrib, csnode.contrib_idx,
                            csnode.map, blksz, ASSEMBLE_PRIO);
-
-#if defined(SPLDLT_USE_STARPU)
-                     starpu_task_wait_for_all();
-#endif
 
                   }
                   else {
@@ -470,10 +416,6 @@ namespace spldlt {
                            assemble_contrib_block_task(snode, nodes_[ni], csnode, *child, ii, jj, csnode.map, blksz, ASSEMBLE_PRIO);
                         }
                      }
-#if defined(SPLDLT_USE_STARPU)
-                     starpu_task_wait_for_all();
-#endif
-
                   }
                }
 
