@@ -12,9 +12,7 @@ addons:
       - libmetis-dev
       - libatlas-dev
       - liblapack-dev
-
-before_install:
-      - sudo apt-get install hwloc        
+      - libhwloc-dev
 
 before_script:
   - chmod +x makebuild.sh
