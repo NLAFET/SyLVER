@@ -362,6 +362,202 @@ namespace spldlt {
 #endif      
    }   
 
+   // Subtree assemble task
+   template <typename T, typename PoolAlloc>   
+   void subtree_assemble_task(
+         SymbolicSNode const& snode, // Destination node (Symbolic)
+         spldlt::NumericNode<T,PoolAlloc>& node, // Destination node (Numeric) 
+         SymbolicSNode &csnode, // Root of the subtree
+         void** child_contrib, 
+         int contrib_idx, // Index of subtree to assemble
+         int *cmap, // row/column mapping array 
+         int blksz, int prio
+         ) {
+
+#if defined(SPLDLT_USE_STARPU)
+
+      int nrow = snode.nrow;
+      int ncol = snode.ncol; // no delays!
+      int nr = (nrow-1) / blksz + 1; // Number of block rows in destination node
+      int nc = (ncol-1) / blksz + 1; // Number of block columns in destination node
+      int cc = -1; // Block column index in destination node
+      int rr = -1; // Block row index in destination node
+
+      starpu_data_handle_t *hdls = new starpu_data_handle_t[nr*nc];
+      int nh = 0;
+
+      int cn = csnode.nrow - csnode.ncol;
+      
+      for(int j = 0; j < cn; ++j) {
+
+         int c = cmap[ j ]; // Destination column
+
+         if (cc == (c/blksz)) continue;
+         if (c < ncol) {
+
+            cc = c / blksz;
+            rr = -1;
+
+            for (int i = j ; i < cn; ++i) {
+
+               int r = cmap[ i ];
+               if (rr==(r/blksz)) continue;
+               rr = r/blksz;
+               
+               hdls[nh] = snode.handles[cc*nr+rr];
+               nh++;            
+            }
+         }         
+      }
+
+      // Insert assembly tasks if there are any contributions
+      if (nh>0) {
+         insert_subtree_assemble(
+               &node, &csnode, snode.hdl, csnode.hdl, hdls, nh, child_contrib, contrib_idx);
+      }
+
+      delete[] hdls;
+
+#else      
+      // Retreive contribution block from subtrees
+      int cn, ldcontrib, ndelay, lddelay;
+      double const *cval, *delay_val;
+      int const *crlist, *delay_perm;
+      spral_ssids_contrib_get_data(
+            child_contrib[contrib_idx], &cn, &cval, &ldcontrib, &crlist,
+            &ndelay, &delay_perm, &delay_val, &lddelay
+            );
+
+      printf("[subtree_assemble_task] contrib_idx: %d, cn: %d, ndelay: %d\n", 
+             contrib_idx+1, cn, ndelay);
+      // continue;
+      if(!cval) return; // child was all delays, nothing more to do
+      // int* cache = work[omp_get_thread_num()].get_ptr<int>(cn);
+      for(int j = 0; j < cn; ++j) {
+               
+         int c = cmap[ j ]; // Destination column
+                  
+         T const* src = &cval[j*ldcontrib];
+
+         if (c < snode.ncol) {
+
+            int ldd = node.get_ldl();
+            T *dest = &node.lcol[c*ldd];
+
+            for (int i = j ; i < cn; ++i) {
+               // Assemble destination block
+               dest[ cmap[ i ]] += src[i];
+            }
+         }
+      }
+#endif
+
+   }
+
+   // Subtree assemble contrib task
+   template <typename T, typename PoolAlloc>   
+   void subtree_assemble_contrib_task(
+         SymbolicSNode const& snode, // Destination node (Symbolic)
+         spldlt::NumericNode<T,PoolAlloc>& node, // Destination node (Numeric) 
+         SymbolicSNode &csnode, // Root of the subtree
+         void** child_contrib, 
+         int contrib_idx, // Index of subtree to assemble
+         int *cmap, // row/column mapping array 
+         int blksz, int prio
+         ) {
+
+#if defined(SPLDLT_USE_STARPU)
+
+      int nrow = snode.nrow;
+      int ncol = snode.ncol; // no delays!
+      int nr = (nrow-1) / blksz + 1; // Number of block rows in destination node
+      int nc = (ncol-1) / blksz + 1; // Number of block columns in destination node
+      int rsa = ncol / blksz; // Rows/Cols index of first block in contrib 
+      int ncontrib = nr-rsa; // Number of block rows/cols in contrib
+
+      int cc = -1; // Block column index in destination node
+      int rr = -1; // Block row index in destination node
+
+      starpu_data_handle_t *hdls = new starpu_data_handle_t[ncontrib*ncontrib];
+      int nh = 0;
+
+      int cn = csnode.nrow - csnode.ncol;
+
+      for(int j = 0; j < cn; ++j) {
+
+         int c = cmap[ j ]; // Destination column
+
+         if (cc == (c/blksz)) continue;
+
+         if (c >= snode.ncol) {
+
+            cc = c / blksz; // Destination block column
+            rr = -1;
+
+            for (int i = j; i < cn; ++i) {
+
+               int r = cmap[ i ]; // Destination row in parent front
+               if (rr == (r/blksz)) continue;
+               rr = r / blksz; // Destination block row
+
+               hdls[nh] = node.contrib_blocks[(cc-rsa)*ncontrib+(rr-rsa)].hdl;
+               nh++;
+               
+            }
+         }
+      }
+
+      // Insert assembly tasks if there are any contributions
+      if (nh > 0) {
+         insert_subtree_assemble_contrib(
+               &node, &csnode, snode.hdl, csnode.hdl, hdls, nh, child_contrib, contrib_idx, blksz, prio);
+      }
+      
+#else
+
+      int cn, ldcontrib, ndelay, lddelay;
+      double const *cval, *delay_val;
+      int const *crlist, *delay_perm;
+      spral_ssids_contrib_get_data(
+            child_contrib[contrib_idx], &cn, &cval, &ldcontrib, &crlist,
+            &ndelay, &delay_perm, &delay_val, &lddelay
+            );
+
+      if(!cval) return; // child was all delays, nothing more to do
+
+      int sa = snode.ncol / blksz; // Index of first block in contrib
+      int nr = (snode.nrow-1) / blksz + 1;
+      int ncontrib = nr-sa;
+      for(int j = 0; j < cn; ++j) {
+
+         int c = cmap[ j ]; // Destination column
+
+         T const* src = &cval[j*ldcontrib];
+
+         if (c >= snode.ncol) {
+
+
+            int cc = c / blksz; // Destination block column
+            int dest_col_sa = (snode.ncol > cc*blksz) ? 0 : (cc*blksz-snode.ncol); // First col in block
+
+            for (int i = j; i < cn; ++i) {
+               int r = cmap[ i ]; // Destination row in parent front
+               int rr = r / blksz; // Destination block row
+               // First row index in CB of destination block
+               int dest_row_sa = (snode.ncol > rr*blksz) ? 0 : (rr*blksz-snode.ncol);
+               Block<T, PoolAlloc> &dest_blk = node.contrib_blocks[(rr-sa)+(cc-sa)*ncontrib];
+               int dest_blk_lda = dest_blk.lda;
+               T *dest = &dest_blk.a[ (c - snode.ncol - dest_col_sa)*dest_blk_lda ];
+               // Assemble destination block
+               dest[ r - snode.ncol - dest_row_sa ] += src[i];
+            }
+         }
+      }
+
+#endif
+
+   }
+
    // Assemble block task
    // ii: Row index in frontal matrix node
    // jj: Col index in frontal matrix node
@@ -375,8 +571,9 @@ namespace spldlt {
 
       int nrow = snode.nrow;
       int ncol = snode.ncol; // no delays!
-      int nr = (nrow-1)/blksz+1; // number of block rows
-      int nc = (ncol-1)/blksz+1; // number of block columns
+      int nr = (nrow-1) / blksz+1; // number of block rows
+      int nc = (ncol-1) / blksz+1; // number of block columns
+
       starpu_data_handle_t *hdls = new starpu_data_handle_t[nr*nc];
       int nh = 0;
       int cm = csnode.nrow - csnode.ncol;
@@ -386,8 +583,8 @@ namespace spldlt {
       // row indexes
       int r_en = std::min((ii+1)*blksz-csnode.ncol, cm); // last row in block
 
-      int cc = -1;
-      int rr = -1;
+      int cc = -1; // Block column index in destination node
+      int rr = -1; // Block row index in destination node
 
       // loop over column in block
       for (int j=c_sa; j<c_en; j++) {
@@ -409,7 +606,7 @@ namespace spldlt {
 
                // int r = map[ csnode.rlist[csnode.ncol+i] ];
                int r = cmap[ i ];
-               if (rr==(r/blksz)) continue;
+               if (rr == (r / blksz)) continue;
                rr = r/blksz;
                
                hdls[nh] = snode.handles[cc*nr+rr];
@@ -418,8 +615,8 @@ namespace spldlt {
          }
       }
       
-      // Insert assembly tasks if there are contribution
-      if (nh>0) {
+      // Insert assembly tasks if there are contributions
+      if (nh > 0) {
          
          int cnr = (csnode.nrow-1)/blksz+1;  
          int crsa = csnode.ncol/blksz;
@@ -527,7 +724,7 @@ namespace spldlt {
    /* Factorize node in a MF context
     */
    template <typename T, typename PoolAlloc>
-   void factorize_front_posdef(
+   void factor_front_posdef(
          SymbolicSNode const& snode,
          spldlt::NumericNode<T, PoolAlloc> &node,
          struct cpu_factor_options const& options

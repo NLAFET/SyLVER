@@ -293,15 +293,21 @@ namespace spldlt {
             SymbolicSNode &snode = symb_[ni];
             
             // Skip iteration if node is in a subtree
-            if (snode.exec_loc != -1) continue;
-            
+            if (snode.exec_loc != -1) {
+               // Even though we don't activate these node we
+               // associated them with a symbolic hanlde. In practice
+               // we will only need the symbolic handle for root nodes
+               // of subtrees.
+               starpu_void_data_register(&(snode.hdl));
+               continue;
+            }
 
             printf("[factor_mf] node: %d\n", ni+1);
 
             // Activate frontal matrix
             activate_front(snode, nodes_[ni], blksz, factor_alloc_, pool_alloc_);
 
-            // initialize frontal matrix 
+            // Initialize frontal matrix 
             // init_node(snode, nodes_[ni], aval);
             init_node_task(snode, nodes_[ni], aval, INIT_PRIO);
 #if defined(SPLDLT_USE_STARPU)
@@ -316,98 +322,58 @@ namespace spldlt {
             for(int i=snode.ncol; i<snode.nrow; i++)
                map[ snode.rlist[i] ] = i + nodes_[ni].ndelay_in;
 
-            // Assemble contribution block from subtrees into
-            // fully-summed coefficients
-            for(int contrib_idx : snode.contrib) {
-                                             
-               // printf("[factor_mf] contrib_idx: %d, exec_loc: %d\n", contrib_idx+1, exec_loc_aux[contrib_idx]);
-
-               // Make sure subtree is a leaf
-               if (exec_loc_aux[contrib_idx] == -1) continue;
-
-               // Retreive contribution block from subtrees
-               int cn, ldcontrib, ndelay, lddelay;
-               double const *cval, *delay_val;
-               int const *crlist, *delay_perm;
-               spral_ssids_contrib_get_data(
-                     child_contrib[contrib_idx], &cn, &cval, &ldcontrib, &crlist,
-                     &ndelay, &delay_perm, &delay_val, &lddelay
-                     );
-
-               printf("[factor_mf] contrib_idx: %d, cn: %d, ndelay: %d\n", 
-                      contrib_idx+1, cn, ndelay);
-               // continue;
-               if(!cval) continue; // child was all delays, nothing more to do
-               // int* cache = work[omp_get_thread_num()].get_ptr<int>(cn);
-               // Destination block
-               int sa = snode.ncol / blksz; // Index of first block in contrib
-               int nr = (snode.nrow-1) / blksz + 1;
-               int ncontrib = nr-sa;
-               for(int j = 0; j < cn; ++j) {
-               
-                  int c = map[ crlist[j] ]; // Destination column
-                  
-                  T const* src = &cval[j*ldcontrib];
-
-                  if (c < snode.ncol) {
-
-                     int ldd = nodes_[ni].get_ldl();
-                     T *dest = &nodes_[ni].lcol[c*ldd];
-
-                     for (int i = j ; i < cn; ++i) {
-                        // Assemble destination block
-                        dest[ map[ crlist[i] ] ] += src[i];
-                     }
-                  }
-               }
-            }
-
             // Assemble front: fully-summed columns
             // typedef typename std::allocator_traits<PoolAllocator>::template rebind_alloc<int> PoolAllocInt;
             // std::vector<int, PoolAllocInt> map(symb_.n+1, PoolAllocInt(pool_alloc_));
  
-           for (auto* child=nodes_[ni].first_child; child!=NULL; child=child->next_child) {
-               
-               // SymbolicNode const& csnode = child->symb;
-               SymbolicSNode &csnode = symb_[child->symb.idx];
-
-               // Skip iteration if child node is in a subtree
-               if (csnode.exec_loc != -1) continue;
+            for (auto* child=nodes_[ni].first_child; child!=NULL; child=child->next_child) {
+           
+               SymbolicSNode &csnode = symb_[child->symb.idx]; // Children symbolic node
 
                int ldcontrib = csnode.nrow - csnode.ncol;
+
                // Handle expected contributions (only if something there)
-               // if (child->contrib) {
                if (ldcontrib>0) {
-                  
+
                   int cm = csnode.nrow - csnode.ncol;
                   // int* cache = work.get_ptr<int>(cm); // TODO move cache array
-                  // printf("[factor_mf] cm: %d\n", cm);
-
                   // Compute column mapping from child front into parent 
                   csnode.map = new int[cm];
-                  for (int i=0; i<cm; i++) {
+                  for (int i=0; i<cm; i++)
                      csnode.map[i] = map[ csnode.rlist[csnode.ncol+i] ];
-                     // printf("map[%d] = %d\n", i, csnode.map[i]);
+
+                  // Skip iteration if child node is in a subtree
+                  if (csnode.exec_loc != -1) {
+
+                     // Assemble contribution block from subtrees into
+                     // fully-summed coefficients
+                     subtree_assemble_task(
+                           snode, nodes_[ni], csnode, child_contrib, csnode.contrib_idx, 
+                           csnode.map, blksz, ASSEMBLE_PRIO);
+
                   }
+                  else{
 
-                  int csa = csnode.ncol / blksz;
-                  int cnr = (csnode.nrow-1) / blksz + 1; // number of block rows in child node
-                  // int cnc = (csnode.ncol-1) / blksz + 1; // number of block columns in child node
-                  // printf("[factor_mf] csa: %d, cnr: %d\n", csa, cnr);
-                  // printf("[factor_mf] ncol: %d\n", csnode.ncol);
 
-                  // Lopp over blocks in contribution blocks
-                  for (int jj = csa; jj < cnr; ++jj) {
-                     for (int ii = jj; ii < cnr; ++ii) {
-                        // assemble_block(nodes_[ni], *child, ii, jj, csnode.map, blksz);
-                        assemble_block_task(snode, nodes_[ni], csnode, *child, ii, jj, csnode.map, blksz, ASSEMBLE_PRIO);
+                     int csa = csnode.ncol / blksz;
+                     int cnr = (csnode.nrow-1) / blksz + 1; // number of block rows in child node
+                     // int cnc = (csnode.ncol-1) / blksz + 1; // number of block columns in child node
+                     // printf("[factor_mf] csa: %d, cnr: %d\n", csa, cnr);
+                     // printf("[factor_mf] ncol: %d\n", csnode.ncol);
+
+                     // Lopp over blocks in contribution blocks
+                     for (int jj = csa; jj < cnr; ++jj) {
+                        for (int ii = jj; ii < cnr; ++ii) {
+                           // assemble_block(nodes_[ni], *child, ii, jj, csnode.map, blksz);
+                           assemble_block_task(snode, nodes_[ni], csnode, *child, ii, jj, csnode.map, blksz, ASSEMBLE_PRIO);
+                        }
                      }
                   }
                }
             }
 
             // Compute factors and Schur complement 
-            factorize_front_posdef(snode, nodes_[ni], options);
+            factor_front_posdef(snode, nodes_[ni], options);
 #if defined(SPLDLT_USE_STARPU)
             starpu_task_wait_for_all();
 #endif
@@ -420,46 +386,45 @@ namespace spldlt {
 
                if (exec_loc_aux[contrib_idx] == -1) continue;
 
-               int cn, ldcontrib, ndelay, lddelay;
-               double const *cval, *delay_val;
-               int const *crlist, *delay_perm;
-               spral_ssids_contrib_get_data(
-                     child_contrib[contrib_idx], &cn, &cval, &ldcontrib, &crlist,
-                     &ndelay, &delay_perm, &delay_val, &lddelay
-                     );
+               // int cn, ldcontrib, ndelay, lddelay;
+               // double const *cval, *delay_val;
+               // int const *crlist, *delay_perm;
+               // spral_ssids_contrib_get_data(
+               //       child_contrib[contrib_idx], &cn, &cval, &ldcontrib, &crlist,
+               //       &ndelay, &delay_perm, &delay_val, &lddelay
+               //       );
 
-               // continue;
-               if(!cval) continue; // child was all delays, nothing more to do
-               // int* cache = work[omp_get_thread_num()].get_ptr<int>(cn);
-               // Destination block
-               int sa = snode.ncol / blksz; // Index of first block in contrib
-               int nr = (snode.nrow-1) / blksz + 1;
-               int ncontrib = nr-sa;
-               for(int j = 0; j < cn; ++j) {
+               // if(!cval) continue; // child was all delays, nothing more to do
+               // // int* cache = work[omp_get_thread_num()].get_ptr<int>(cn);
+               // // Destination block
+               // int sa = snode.ncol / blksz; // Index of first block in contrib
+               // int nr = (snode.nrow-1) / blksz + 1;
+               // int ncontrib = nr-sa;
+               // for(int j = 0; j < cn; ++j) {
                
-                  int c = map[ crlist[j] ]; // Destination column
+               //    int c = map[ crlist[j] ]; // Destination column
                   
-                  T const* src = &cval[j*ldcontrib];
+               //    T const* src = &cval[j*ldcontrib];
 
-                  if (c >= snode.ncol) {
+               //    if (c >= snode.ncol) {
 
 
-                     int cc = c / blksz; // Destination block column
-                     int dest_col_sa = (snode.ncol > cc*blksz) ? 0 : (cc*blksz-snode.ncol); // First col in block
+               //       int cc = c / blksz; // Destination block column
+               //       int dest_col_sa = (snode.ncol > cc*blksz) ? 0 : (cc*blksz-snode.ncol); // First col in block
                      
-                     for (int i = j; i < cn; ++i) {
-                        int r = map[ crlist[i] ]; // Destination row in parent front
-                        int rr = r / blksz; // Destination block row
-                        // First row index in CB of destination block
-                        int dest_row_sa = (snode.ncol > rr*blksz) ? 0 : (rr*blksz-snode.ncol);
-                        Block<T, PoolAllocator> &dest_blk = nodes_[ni].contrib_blocks[(rr-sa)+(cc-sa)*ncontrib];
-                        int dest_blk_lda = dest_blk.lda;
-                        T *dest = &dest_blk.a[ (c - snode.ncol - dest_col_sa)*dest_blk_lda ];
-                        // Assemble destination block
-                        dest[ r - snode.ncol - dest_row_sa ] += src[i];
-                     }
-                  }
-               }
+               //       for (int i = j; i < cn; ++i) {
+               //          int r = map[ crlist[i] ]; // Destination row in parent front
+               //          int rr = r / blksz; // Destination block row
+               //          // First row index in CB of destination block
+               //          int dest_row_sa = (snode.ncol > rr*blksz) ? 0 : (rr*blksz-snode.ncol);
+               //          Block<T, PoolAllocator> &dest_blk = nodes_[ni].contrib_blocks[(rr-sa)+(cc-sa)*ncontrib];
+               //          int dest_blk_lda = dest_blk.lda;
+               //          T *dest = &dest_blk.a[ (c - snode.ncol - dest_col_sa)*dest_blk_lda ];
+               //          // Assemble destination block
+               //          dest[ r - snode.ncol - dest_row_sa ] += src[i];
+               //       }
+               //    }
+               // }
             }
 
             // Assemble front: non fully-summed columns i.e. contribution block 
@@ -468,42 +433,63 @@ namespace spldlt {
                // SymbolicNode const& csnode = child->symb;
                SymbolicSNode &csnode = symb_[child->symb.idx];
 
-               // Skip iteration if child node is in a subtree
-               if (csnode.exec_loc != -1) continue;
-
                int ldcontrib = csnode.nrow - csnode.ncol;
                // Handle expected contributions (only if something there)
                // if (child->contrib) {
                if (ldcontrib>0) {
-                  // int cm = csnode.nrow - csnode.ncol;
-                  // int* cache = work.get_ptr<int>(cm); // TODO move cache array
-                  // for (int i=0; i<cm; i++)
-                  // csnode.map[i] = map[ csnode.rlist[csnode.ncol+i] ];
+                  // Skip iteration if child node is in a subtree
+                  if (csnode.exec_loc != -1) {
 
-                  int csa = csnode.ncol / blksz;
-                  int cnr = (csnode.nrow-1) / blksz + 1; // number of block rows in child node
-                  // int cnc = (csnode.ncol-1) / blksz + 1; // number of block columns in child node
-                  // Lopp over blocks in contribution blocks
-                  for (int jj = csa; jj < cnr; ++jj) {                     
-                     // int c_sa = (csnode.ncol > jj*blksz) ? 0 : (jj*blksz-csnode.ncol); // first col in block
-                     // int c_en = std::min((jj+1)*blksz-csnode.ncol, cm); // last col in block
-                     // assemble_expected_contrib(c_sa, c_en, nodes_[ni], *child, map, cache);
-                     // int ii = 0;
-                     for (int ii = jj; ii < cnr; ++ii) {
-                        // assemble_contrib_block(nodes_[ni], *child, ii, jj, csnode.map, blksz)
-                        assemble_contrib_block_task(snode, nodes_[ni], csnode, *child, ii, jj, csnode.map, blksz, ASSEMBLE_PRIO);
-                     }
-                  }
-               }
-               
-               // fini_node(*child);
-               fini_node_task(csnode, *child, INIT_PRIO);      
+                     subtree_assemble_contrib_task(
+                           snode, nodes_[ni], csnode, child_contrib, csnode.contrib_idx,
+                           csnode.map, blksz, ASSEMBLE_PRIO);
 
 #if defined(SPLDLT_USE_STARPU)
-               unregister_node_submit(csnode, *child, blksz);
+                     starpu_task_wait_for_all();
+#endif
 
-               // Unregister symbolic handle on child node
-               starpu_data_unregister_submit(csnode.hdl);
+                  }
+                  else {
+
+                     // int cm = csnode.nrow - csnode.ncol;
+                     // int* cache = work.get_ptr<int>(cm); // TODO move cache array
+                     // for (int i=0; i<cm; i++)
+                     // csnode.map[i] = map[ csnode.rlist[csnode.ncol+i] ];
+
+                     int csa = csnode.ncol / blksz;
+                     // Number of block rows in child node
+                     int cnr = (csnode.nrow-1) / blksz + 1; 
+                     // int cnc = (csnode.ncol-1) / blksz + 1; // number of block columns in child node
+                     // Lopp over blocks in contribution blocks
+                     for (int jj = csa; jj < cnr; ++jj) {                     
+                        // int c_sa = (csnode.ncol > jj*blksz) ? 0 : (jj*blksz-csnode.ncol); // first col in block
+                        // int c_en = std::min((jj+1)*blksz-csnode.ncol, cm); // last col in block
+                        // assemble_expected_contrib(c_sa, c_en, nodes_[ni], *child, map, cache);
+                        for (int ii = jj; ii < cnr; ++ii) {
+                           // assemble_contrib_block(nodes_[ni], *child, ii, jj, csnode.map, blksz)
+                           assemble_contrib_block_task(snode, nodes_[ni], csnode, *child, ii, jj, csnode.map, blksz, ASSEMBLE_PRIO);
+                        }
+                     }
+#if defined(SPLDLT_USE_STARPU)
+                     starpu_task_wait_for_all();
+#endif
+
+                  }
+               }
+
+               if (csnode.exec_loc == -1) {
+
+                  // fini_node(*child);
+                  fini_node_task(csnode, *child, INIT_PRIO);      
+
+#if defined(SPLDLT_USE_STARPU)
+                  unregister_node_submit(csnode, *child, blksz);
+#endif
+               }
+
+#if defined(SPLDLT_USE_STARPU)
+                  // Unregister symbolic handle on child node
+                  starpu_data_unregister_submit(csnode.hdl);
 #endif
 
             } // loop over children nodes

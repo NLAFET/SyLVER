@@ -14,7 +14,9 @@ namespace spldlt {
 
    class SymbolicTree {
    public:
-      SymbolicTree(int n, int nnodes, int const* sptr, int const* sparent, long const* rptr, int const* rlist, long const* nptr, long const* nlist, int nparts, int const* part, int const* exec_loc, int const* contrib_idx)
+      SymbolicTree(
+            int n, int nnodes, int const* sptr, int const* sparent, long const* rptr, int const* rlist, long const* nptr, long const* nlist, 
+            int nparts, int const* part, int const* contrib_idx, int const* exec_loc, int const* contrib_dest)
          : n(n), nnodes_(nnodes), nodes_(nnodes_+1)
       {
 
@@ -63,7 +65,7 @@ namespace spldlt {
          
          /* Record contribution block inputs */
          for(int ci = 0; ci < nparts; ++ci) {
-            int idx = contrib_idx[ci]-1; // contrib_idx is Fortran indexed
+            int idx = contrib_dest[ci]-1; // contrib_dest is Fortran indexed
             if (idx > 0) // idx equal to 0 means that ci is a root subtree 
                nodes_[idx].contrib.push_back(ci);
             printf("[SymbolicTree] %d -> %d, exec_loc = %d\n", ci+1, idx+1, exec_loc[ci]);
@@ -78,6 +80,7 @@ namespace spldlt {
             for (int ni = part[p]-1; ni < part[p+1]-1; ++ni) {
                nodes_[ni].part = p;
                nodes_[ni].exec_loc = exec_loc[p];
+               nodes_[ni].contrib_idx = contrib_idx[p]-1; // contrib_dest is Fortran indexed
                // printf("[SymbolicTree] node: %d, part: %d, exec_loc: %d\n", ni+1, p+1, exec_loc[p]);
             }
          }

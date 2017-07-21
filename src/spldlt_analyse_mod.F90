@@ -18,8 +18,8 @@ module spldlt_analyse_mod
 
   interface spldlt_create_symbolic_tree_c
      type(c_ptr) function spldlt_create_symbolic_tree(n, nnodes, & 
-          sptr, sparent, rptr, rlist, nptr, nlist, nparts, part, exec_loc, &
-          contrib_idx, options) &
+          sptr, sparent, rptr, rlist, nptr, nlist, nparts, part, &
+          contrib_idx, exec_loc, contrib_dest, options) &
           bind(C, name="spldlt_create_symbolic_tree")
        use, intrinsic :: iso_c_binding
        import :: cpu_factor_options
@@ -34,8 +34,9 @@ module spldlt_analyse_mod
        integer(c_long), dimension(2, *), intent(in) :: nlist
        integer(C_INT), value :: nparts
        integer(C_INT), dimension(*), intent(in) :: part
-       integer(C_INT), dimension(*), intent(in) :: exec_loc
        integer(C_INT), dimension(*), intent(in) :: contrib_idx
+       integer(C_INT), dimension(*), intent(in) :: exec_loc
+       integer(C_INT), dimension(*), intent(in) :: contrib_dest
        type(cpu_factor_options), intent(in) :: options
      end function spldlt_create_symbolic_tree
   end interface spldlt_create_symbolic_tree_c
@@ -145,7 +146,7 @@ contains
     spldlt_akeep%symbolic_tree_c = &
          spldlt_create_symbolic_tree_c(akeep%n, nnodes, akeep%sptr, &
          akeep%sparent, akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist, &
-         akeep%nparts, akeep%part, exec_loc, contrib_dest, & 
+         akeep%nparts, akeep%part, akeep%contrib_idx, exec_loc, contrib_dest, & 
          coptions)
 
     return
