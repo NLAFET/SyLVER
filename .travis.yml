@@ -10,7 +10,7 @@ addons:
       - gcc-6
       - g++-6
       - libmetis-dev
-      - libatlas-dev
+      - libblas-dev
       - liblapack-dev
       - libhwloc-dev
 

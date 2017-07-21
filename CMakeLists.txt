@@ -21,6 +21,11 @@ SET(RUNTIME "STF" CACHE STRING "Runtime system")
 set_property(CACHE RUNTIME PROPERTY STRINGS STF StarPU OMP Parsec)
 MESSAGE( STATUS "Runtime:         " ${RUNTIME} )
 
+## Set BLAS and LAPACK libraries to use for linking
+SET(BLAS_LAPACK "MKL" CACHE STRING "BLAS and LAPACK libraries")
+set_property(CACHE BLAS_LAPACK PROPERTY STRINGS Ref MKL)
+MESSAGE( STATUS "BLAS/LAPACK:         " ${BLAS_LAPACK} )
+
 # Decide wheter we want to compile the kernel test driver or not
 option(KERNEL_TEST "Kernel test" OFF)
 # MESSAGE( STATUS "Kernel test:         " ${KERNEL_TEST})
@@ -115,7 +120,7 @@ elseif(${RUNTIME} MATCHES "StarPU")
   
   # HWLOC
   set(HWLOC_DIR $ENV{HWLOCDIR} CACHE PATH "Location of HWLOC Library")
-  include_directories(${HWLOC_DIR}/include)  
+  include_directories(${HWLOC_DIR}/include)
   find_library(HWLOC_LIBRARY hwloc PATHS ${HWLOC_DIR}/lib)
 
 endif()
@@ -163,22 +168,37 @@ find_library(HWLOC_LIBRARY hwloc PATHS ${HWLOC_DIR}/lib)
 target_link_libraries(spldlt_test ${HWLOC_LIBRARY})
 
 # BLAS and LAPACK
-## MKL
-set(MKL_LIBS $ENV{MKL_LIBS})
-set(MKL_ROOT "/opt/intel/mkl" CACHE PATH "Location of MKL Library")
-set(MKL_DIR $ENV{MKLROOT})
 
-find_library(MKL_IFACE_LIBRARY mkl_gf_lp64 PATHS ${MKL_LIBS} ${MKL_ROOT}/lib/intel64 ${MKL_DIR}/lib/intel64)
-# find_library(MKL_THREAD_LIBRARY mkl_gnu_thread PATHS ${MKL_ROOT}/lib/intel64)
-find_library(MKL_SEQ_LIBRARY mkl_sequential PATHS ${MKL_LIBS} ${MKL_DEFAULT_ROOT}/lib/intel64 ${MKL_DIR}/lib/intel64)
-find_library(MKL_CORE_LIBRARY mkl_core PATHS ${MKL_LIBS} ${MKL_ROOT}/lib/intel64 ${MKL_DIR}/lib/intel64) 
-# set(MKL_LIBRARIES ${MKL_IFACE_LIBRARY} ${MKL_THREAD_LIBRARY} ${MKL_CORE_LIBRARY})
-set(MKL_LIBRARIES ${MKL_IFACE_LIBRARY} ${MKL_SEQ_LIBRARY} ${MKL_CORE_LIBRARY})
+if (${BLAS_LAPACK} MATCHES "MKL")
 
-target_link_libraries(spldlt_test ${MKL_LIBRARIES})
+  # MKL libraries
+
+  set(MKL_LIBS $ENV{MKL_LIBS})
+  set(MKL_ROOT "/opt/intel/mkl" CACHE PATH "Location of MKL Library")
+  set(MKL_DIR $ENV{MKLROOT})
+
+  find_library(MKL_IFACE_LIBRARY mkl_gf_lp64 PATHS ${MKL_LIBS} ${MKL_ROOT}/lib/intel64 ${MKL_DIR}/lib/intel64)
+  # find_library(MKL_THREAD_LIBRARY mkl_gnu_thread PATHS ${MKL_ROOT}/lib/intel64)
+  find_library(MKL_SEQ_LIBRARY mkl_sequential PATHS ${MKL_LIBS} ${MKL_DEFAULT_ROOT}/lib/intel64 ${MKL_DIR}/lib/intel64)
+  find_library(MKL_CORE_LIBRARY mkl_core PATHS ${MKL_LIBS} ${MKL_ROOT}/lib/intel64 ${MKL_DIR}/lib/intel64) 
+  # set(MKL_LIBRARIES ${MKL_IFACE_LIBRARY} ${MKL_THREAD_LIBRARY} ${MKL_CORE_LIBRARY})
+
+  set(BLAS_LAPACK_LIBRARIES ${MKL_IFACE_LIBRARY} ${MKL_SEQ_LIBRARY} ${MKL_CORE_LIBRARY})
+
+else()
+
+  # Reference BLAS libraries
+
+  find_library(BLAS_LIBRARY blas)
+  find_library(LAPACK_LIBRARY lapack)
+  set(BLAS_LAPACK_LIBRARIES ${BLAS_LIBRARY} ${LAPACK_LIBRARY})
+
+endif()
+
+target_link_libraries(spldlt_test ${BLAS_LAPACK_LIBRARIES})
 
 if (${KERNEL_TEST} MATCHES "ON")
-  target_link_libraries(spldlt_kernel_test ${MKL_LIBRARIES})
+  target_link_libraries(spldlt_kernel_test ${BLAS_LAPACK_LIBRARIES})
 endif()
 
 # Ordering
