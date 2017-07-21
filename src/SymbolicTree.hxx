@@ -15,9 +15,10 @@ namespace spldlt {
    class SymbolicTree {
    public:
       SymbolicTree(
+            void* akeep,
             int n, int nnodes, int const* sptr, int const* sparent, long const* rptr, int const* rlist, long const* nptr, long const* nlist, 
             int nparts, int const* part, int const* contrib_idx, int const* exec_loc, int const* contrib_dest)
-         : n(n), nnodes_(nnodes), nodes_(nnodes_+1)
+         : akeep_(akeep), n(n), nnodes_(nnodes), nodes_(nnodes_+1), nparts_(nparts), part_(part)
       {
 
          // FIXME multifrontal mode: use template paramter?
@@ -107,11 +108,18 @@ namespace spldlt {
    public:
       int const n; //< Maximum row index
    private:
+
+      // Tree info
+      void* akeep_;
       int nnodes_;
       size_t nfactor_;
       size_t maxfront_;
       std::vector<SymbolicSNode> nodes_;
 
+      // Subtree info
+      int nparts_;
+      int const* part_;
+      
       template <typename T, size_t PAGE_SIZE, typename FactorAlloc, bool posdef>
       friend class NumericTree;
    };

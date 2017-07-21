@@ -17,13 +17,14 @@ module spldlt_analyse_mod
   end type spldlt_akeep_type
 
   interface spldlt_create_symbolic_tree_c
-     type(c_ptr) function spldlt_create_symbolic_tree(n, nnodes, & 
+     type(c_ptr) function spldlt_create_symbolic_tree(akeep, n, nnodes, & 
           sptr, sparent, rptr, rlist, nptr, nlist, nparts, part, &
           contrib_idx, exec_loc, contrib_dest, options) &
           bind(C, name="spldlt_create_symbolic_tree")
        use, intrinsic :: iso_c_binding
        import :: cpu_factor_options
        implicit none
+       type(c_ptr), value :: akeep
        integer(c_int), value :: n
        integer(c_int), value :: nnodes
        integer(c_int), dimension(*), intent(in) :: sptr
@@ -47,6 +48,7 @@ contains
     use spral_ssids_akeep, only: ssids_akeep
     use spral_ssids_datatypes
     use spral_ssids_cpu_subtree, only : construct_cpu_symbolic_subtree
+    use, intrinsic :: iso_c_binding
     implicit none
     
     type(spldlt_akeep_type) :: spldlt_akeep ! spldlt akeep structure 
@@ -144,7 +146,7 @@ contains
     ! call C++ analyse routine
     call cpu_copy_options_in(options, coptions)
     spldlt_akeep%symbolic_tree_c = &
-         spldlt_create_symbolic_tree_c(akeep%n, nnodes, akeep%sptr, &
+         spldlt_create_symbolic_tree_c(c_loc(akeep), akeep%n, nnodes, akeep%sptr, &
          akeep%sparent, akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist, &
          akeep%nparts, akeep%part, akeep%contrib_idx, exec_loc, contrib_dest, & 
          coptions)

@@ -26,12 +26,13 @@ module spldlt_factorize_mod
   ! routine to create a numeric subtree from the symbolic one
   ! return a C ptr on the tree structure
   interface spldlt_create_numeric_tree_c
-     type(c_ptr) function spldlt_create_numeric_tree_dlb(symbolic_tree, aval, &
+     type(c_ptr) function spldlt_create_numeric_tree_dlb(fkeep, symbolic_tree, aval, &
           child_contrib, exec_loc_aux, options) &
           bind(C, name="spldlt_create_numeric_tree_dbl")
        use, intrinsic :: iso_c_binding
        import :: cpu_factor_options
        implicit none
+       type(c_ptr), value :: fkeep
        type(c_ptr), value :: symbolic_tree
        real(c_double), dimension(*), intent(in) :: aval
        type(C_PTR), dimension(*), intent(inout) :: child_contrib
@@ -89,6 +90,38 @@ module spldlt_factorize_mod
   
 contains
 
+  subroutine spldlt_factor_subtree_c(val, akeep_c, fkeep_c, p, child_contrib_c) bind(C)
+    use spral_ssids_akeep, only : ssids_akeep
+    use spral_ssids_fkeep, only : ssids_fkeep
+    use spral_ssids_inform, only : ssids_inform
+    use, intrinsic :: iso_c_binding
+    implicit none
+
+    real(c_double), dimension(*), intent(in) :: val
+    type(c_ptr), intent(inout) :: akeep_c
+    type(c_ptr), intent(inout) :: fkeep_c
+    integer(c_int), intent(in) :: p ! Partition number, C-indexed
+    type(c_ptr), dimension(:), allocatable :: child_contrib_c
+
+    type(ssids_akeep), pointer :: akeep
+    type(ssids_fkeep), pointer :: fkeep
+    type(ssids_inform) :: inform
+    
+    call c_f_pointer(akeep_c, akeep)
+    call c_f_pointer(fkeep_c, fkeep)
+
+    p = p+1 ! p is C-indexed 
+
+    ! TODO Use scaling if required
+    fkeep%subtree(p)%ptr => akeep%subtree(p)%ptr%factor( &
+         fkeep%pos_def, val, &
+         child_contrib(akeep%contrib_ptr(i):akeep%contrib_ptr(i+1)-1), &
+         options, inform &
+         )
+    
+    
+  end subroutine spldlt_factor_subtree_c
+
   subroutine spldlt_factorize(posdef, val, spldlt_akeep, spldlt_fkeep, fkeep, options, inform)
     use spral_ssids_datatypes
     use spral_ssids_inform, only : ssids_inform
@@ -98,6 +131,7 @@ contains
     use spral_ssids_subtree, only : numeric_subtree_base
     use spral_ssids_cpu_subtree, only : cpu_numeric_subtree
     use spldlt_analyse_mod
+    use, intrinsic :: iso_c_binding
     implicit none
     
     logical, intent(in) :: posdef 
@@ -179,7 +213,7 @@ contains
     end do
 
     call cpu_copy_options_in(options, coptions)
-    spldlt_fkeep%numeric_tree%ptr_c = spldlt_create_numeric_tree_c( &
+    spldlt_fkeep%numeric_tree%ptr_c = spldlt_create_numeric_tree_c(c_loc(fkeep), &
          spldlt_akeep%symbolic_tree_c, val, child_contrib_c, exec_loc_aux, & 
          coptions)
 

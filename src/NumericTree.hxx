@@ -51,12 +51,12 @@ namespace spldlt {
 
       // FIXME: idealy symbolic_tree should be constant but we
       // currently modify it in order to add the runtime system info
-      NumericTree(SymbolicTree& symbolic_tree, 
+      NumericTree(void* fkeep, SymbolicTree& symbolic_tree, 
                   T *aval,
                   void** child_contrib,
                   int const* exec_loc_aux,
                   struct cpu_factor_options const& options)
-         : symb_(symbolic_tree), 
+         : fkeep_(fkeep), symb_(symbolic_tree), 
            factor_alloc_(symbolic_tree.get_factor_mem_est(1.0)),
            pool_alloc_(symbolic_tree.get_pool_size<T>())
       {
@@ -282,6 +282,17 @@ namespace spldlt {
 
          int INIT_PRIO = 4;
          int ASSEMBLE_PRIO = 4;
+
+         // Loop over subtree roots
+         for(int p = 0; p < symb_.nparts_; ++p) {
+            
+            int root = symb_.part_[p+1]-2; // Part is 1-indexed
+
+            if (symb_[root].exec_loc != -1) {
+               
+               printf("[factor_mf] node %d root of subtree %d\n", root+1, p+1);
+            }
+         }
 
          // Allocate mapping array
          // TODO use proper allocator 
@@ -532,6 +543,7 @@ namespace spldlt {
 
       }
 
+      void* fkeep_;
       SymbolicTree& symb_;
       FactorAllocator factor_alloc_;
       PoolAllocator pool_alloc_;
