@@ -362,9 +362,11 @@ namespace spldlt {
 #endif      
    }   
 
-   // Subtree assemble task
+   // Factor subtree task
+
+   // Assemble subtree task
    template <typename T, typename PoolAlloc>   
-   void subtree_assemble_task(
+   void assemble_subtree_task(
          SymbolicSNode const& snode, // Destination node (Symbolic)
          spldlt::NumericNode<T,PoolAlloc>& node, // Destination node (Numeric) 
          SymbolicSNode &csnode, // Root of the subtree
@@ -456,7 +458,7 @@ namespace spldlt {
 
    // Subtree assemble contrib task
    template <typename T, typename PoolAlloc>   
-   void subtree_assemble_contrib_task(
+   void assemble_contrib_subtree_task(
          SymbolicSNode const& snode, // Destination node (Symbolic)
          spldlt::NumericNode<T,PoolAlloc>& node, // Destination node (Numeric) 
          SymbolicSNode &csnode, // Root of the subtree

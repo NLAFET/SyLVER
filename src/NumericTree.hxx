@@ -295,6 +295,8 @@ namespace spldlt {
                // printf("[factor_mf] node %d root of subtree %d\n", root+1, p+1);
 
                spldlt_factor_subtree_c(posdef, aval, symb_.akeep_, fkeep_, p, child_contrib, &options);
+
+               
             }
          }
          // return;
@@ -359,7 +361,7 @@ namespace spldlt {
 
                      // Assemble contribution block from subtrees into
                      // fully-summed coefficients
-                     subtree_assemble_task(
+                     assemble_subtree_task(
                            snode, nodes_[ni], csnode, child_contrib, csnode.contrib_idx, 
                            csnode.map, blksz, ASSEMBLE_PRIO);
 
@@ -405,7 +407,7 @@ namespace spldlt {
 
                      // Assemble contribution block from subtrees into non
                      // fully-summed coefficients
-                     subtree_assemble_contrib_task(
+                     assemble_contrib_subtree_task(
                            snode, nodes_[ni], csnode, child_contrib, csnode.contrib_idx,
                            csnode.map, blksz, ASSEMBLE_PRIO);
 

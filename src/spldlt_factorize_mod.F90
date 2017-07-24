@@ -153,10 +153,8 @@ contains
 
     part = p+1 ! p is C-indexed 
 
+    ! Retrieve contrib structure associated with subtree
     call c_f_pointer(child_contrib_c(akeep%contrib_idx(part)), contrib)
-
-    print *, "[spldlt_factor_subtree_c] posdef = ", posdef
-    print *, "[spldlt_factor_subtree_c] part: ", part
 
     select type(subtree_ptr => akeep%subtree(part)%ptr)
     class is(cpu_symbolic_subtree) ! factorize subtree on CPU
