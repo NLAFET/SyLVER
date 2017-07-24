@@ -87,42 +87,123 @@ module spldlt_factorize_mod
        integer(c_int), value :: ldx       
      end function spldlt_tree_solve_diag_bwd_dbl
   end interface spldlt_tree_solve_diag_bwd_c
-  
+
+  ! SSIDS interfaces
+  interface
+     type(C_PTR) function c_create_numeric_subtree(posdef, symbolic_subtree, &
+          aval, scaling, child_contrib, options, stats) &
+          bind(C, name="spral_ssids_cpu_create_num_subtree_dbl")
+       use, intrinsic :: iso_c_binding
+       import :: cpu_factor_options, cpu_factor_stats
+       implicit none
+       logical(C_BOOL), value :: posdef
+       type(C_PTR), value :: symbolic_subtree
+       real(C_DOUBLE), dimension(*), intent(in) :: aval
+       type(C_PTR), value :: scaling
+       type(C_PTR), dimension(*), intent(inout) :: child_contrib
+       type(cpu_factor_options), intent(in) :: options
+       type(cpu_factor_stats), intent(out) :: stats
+     end function c_create_numeric_subtree
+     
+     subroutine c_destroy_numeric_subtree(posdef, subtree) &
+          bind(C, name="spral_ssids_cpu_destroy_num_subtree_dbl")
+       use, intrinsic :: iso_c_binding
+       implicit none
+       logical(C_BOOL), value :: posdef
+       type(C_PTR), value :: subtree
+     end subroutine c_destroy_numeric_subtree
+  end interface
+
 contains
 
-  subroutine spldlt_factor_subtree_c(val, akeep_c, fkeep_c, p, child_contrib_c) bind(C)
+  subroutine spldlt_factor_subtree_c(posdef, val, cakeep, cfkeep, p, child_contrib_c, coptions) &
+       bind(C, name="spldlt_factor_subtree_c")
+    use spral_ssids_datatypes
     use spral_ssids_akeep, only : ssids_akeep
     use spral_ssids_fkeep, only : ssids_fkeep
     use spral_ssids_inform, only : ssids_inform
+    use spral_ssids_subtree, only : symbolic_subtree_base
+    use spral_ssids_cpu_subtree, only : cpu_numeric_subtree, cpu_symbolic_subtree
+    use spral_ssids_contrib, only : contrib_type
     use, intrinsic :: iso_c_binding
     implicit none
 
+    logical(C_BOOL), value :: posdef
     real(c_double), dimension(*), intent(in) :: val
-    type(c_ptr), intent(inout) :: akeep_c
-    type(c_ptr), intent(inout) :: fkeep_c
-    integer(c_int), intent(in) :: p ! Partition number, C-indexed
-    type(c_ptr), dimension(:), allocatable :: child_contrib_c
+    type(c_ptr), value :: cakeep
+    type(c_ptr), value :: cfkeep
+    integer(c_int), value :: p ! Partition number, C-indexed
+    type(C_PTR), dimension(*), intent(inout) :: child_contrib_c
+    ! type(c_ptr), dimension(:), allocatable, intent(inout) :: child_contrib_c
+    type(cpu_factor_options), intent(in) :: coptions ! SSIDS options
 
+    integer :: st ! Error management
     type(ssids_akeep), pointer :: akeep
     type(ssids_fkeep), pointer :: fkeep
     type(ssids_inform) :: inform
+    integer :: part
+    type(cpu_numeric_subtree), pointer :: cpu_factor => null()    
+    type(cpu_factor_stats) :: cstats
+    type(C_PTR) :: cscaling
+    class(symbolic_subtree_base), pointer :: subtree_ptr => null()
+    type(contrib_type), pointer :: contrib => null()
     
-    call c_f_pointer(akeep_c, akeep)
-    call c_f_pointer(fkeep_c, fkeep)
+    call c_f_pointer(cakeep, akeep)
+    call c_f_pointer(cfkeep, fkeep)
 
-    p = p+1 ! p is C-indexed 
+    part = p+1 ! p is C-indexed 
 
-    ! TODO Use scaling if required
-    fkeep%subtree(p)%ptr => akeep%subtree(p)%ptr%factor( &
-         fkeep%pos_def, val, &
-         child_contrib(akeep%contrib_ptr(i):akeep%contrib_ptr(i+1)-1), &
-         options, inform &
-         )
+    call c_f_pointer(child_contrib_c(akeep%contrib_idx(part)), contrib)
+
+    print *, "[spldlt_factor_subtree_c] posdef = ", posdef
+    print *, "[spldlt_factor_subtree_c] part: ", part
+
+    select type(subtree_ptr => akeep%subtree(part)%ptr)
+    class is(cpu_symbolic_subtree) ! factorize subtree on CPU
+
+       ! Allocate cpu_factor for output
+       allocate(cpu_factor, stat=st)
+       if (st .ne. 0) goto 10
+
+       cpu_factor%symbolic => subtree_ptr
+
+       ! Call C++ factor routine
+       cpu_factor%posdef = posdef
+       cscaling = C_NULL_PTR ! TODO(Florent) Set scaling
+
+       cpu_factor%csubtree = &
+            c_create_numeric_subtree(cpu_factor%posdef, cpu_factor%symbolic%csubtree, &
+            val, cscaling, child_contrib_c, coptions, cstats)
+       if (cstats%flag .lt. 0) then
+          call c_destroy_numeric_subtree(cpu_factor%posdef, cpu_factor%csubtree)
+          deallocate(cpu_factor, stat=st)
+          inform%flag = cstats%flag
+          return
+       end if
+
+       ! Extract to Fortran data structures
+       call cpu_copy_stats_out(cstats, inform)
+
+       ! Success, set result and return
+       fkeep%subtree(part)%ptr => cpu_factor
+
+    end select
+
+    if (akeep%contrib_idx(part) .le. akeep%nparts) then 
+       contrib = fkeep%subtree(part)%ptr%get_contrib()
+       contrib%ready = .true.
+    end if
+
+    return
+
+10  continue
     
-    
+    print *, "[spldlt_factor_subtree_c] Error"
+    deallocate(cpu_factor, stat=st)
+    return
   end subroutine spldlt_factor_subtree_c
 
-  subroutine spldlt_factorize(posdef, val, spldlt_akeep, spldlt_fkeep, fkeep, options, inform)
+  subroutine spldlt_factor(posdef, val, spldlt_akeep, spldlt_fkeep, fkeep, options, inform)
     use spral_ssids_datatypes
     use spral_ssids_inform, only : ssids_inform
     use spral_ssids_akeep
@@ -181,29 +262,28 @@ contains
     if (st .ne. 0) goto 100
     exec_loc_aux = 0
     
-    ! Factor subtrees
-    do i = 1, akeep%nparts
+    ! ! Factor subtrees
+    ! do i = 1, akeep%nparts
 
-       exec_loc = akeep%subtree(i)%exec_loc
-       if (akeep%contrib_idx(i) .le. akeep%nparts) exec_loc_aux(akeep%contrib_idx(i)) = exec_loc
-       if (exec_loc .eq. -1) cycle
+    !    exec_loc = akeep%subtree(i)%exec_loc
+    !    if (akeep%contrib_idx(i) .le. akeep%nparts) exec_loc_aux(akeep%contrib_idx(i)) = exec_loc
+    !    if (exec_loc .eq. -1) cycle
 
-       print *, "[spldlt_factorize] part = ", i
+    !    print *, "[spldlt_factorize] part = ", i
 
-       ! TODO Use scaling if required
-       fkeep%subtree(i)%ptr => akeep%subtree(i)%ptr%factor( &
-            fkeep%pos_def, val, &
-            child_contrib(akeep%contrib_ptr(i):akeep%contrib_ptr(i+1)-1), &
-            options, inform &
-            )
+    !    ! TODO Use scaling if required
+    !    fkeep%subtree(i)%ptr => akeep%subtree(i)%ptr%factor( &
+    !         fkeep%pos_def, val, &
+    !         child_contrib(akeep%contrib_ptr(i):akeep%contrib_ptr(i+1)-1), &
+    !         options, inform &
+    !         )
        
-       if (akeep%contrib_idx(i) .gt. akeep%nparts) cycle ! part is a root
-       child_contrib(akeep%contrib_idx(i)) = &
-            fkeep%subtree(i)%ptr%get_contrib()
-       child_contrib(akeep%contrib_idx(i))%ready = .true.
+    !    if (akeep%contrib_idx(i) .gt. akeep%nparts) cycle ! part is a root
+    !    child_contrib(akeep%contrib_idx(i)) = &
+    !         fkeep%subtree(i)%ptr%get_contrib()
+    !    child_contrib(akeep%contrib_idx(i))%ready = .true.
 
-    end do
-    ! return
+    ! end do
 
     ! Convert child_contrib to contrib_ptr
     allocate(child_contrib_c(size(child_contrib)), stat=st)
@@ -229,7 +309,7 @@ contains
     print *, "[Error][spldlt_factorize] st: ", st
 
     return
-  end subroutine spldlt_factorize
+  end subroutine spldlt_factor
 
   ! Solve phase
   subroutine solve(spldlt_fkeep, nrhs, x, ldx, spldlt_akeep, inform)

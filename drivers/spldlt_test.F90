@@ -172,7 +172,7 @@ program spldlt_test
 
    ! Factorize (SpLDLT)
    call system_clock(start_t, rate_t)
-   call spldlt_factorize(pos_def, val, spldlt_akeep, spldlt_fkeep, fkeep, ssids_opt, inform)
+   call spldlt_factor(pos_def, val, spldlt_akeep, spldlt_fkeep, fkeep, ssids_opt, inform)
    call system_clock(stop_t)
    write(*, "(a)") "ok"
    print *, "Factor took ", (stop_t - start_t)/real(rate_t)

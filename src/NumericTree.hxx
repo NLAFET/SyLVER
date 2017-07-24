@@ -37,6 +37,8 @@ using namespace spldlt::starpu;
 #endif
 
 namespace spldlt {
+   
+   extern "C" void spldlt_factor_subtree_c(bool posdef, double *aval, void *akeep, void *fkeep, int p, void **child_contrib, struct cpu_factor_options const* options);
 
    template<typename T,
             size_t PAGE_SIZE,
@@ -290,10 +292,12 @@ namespace spldlt {
 
             if (symb_[root].exec_loc != -1) {
                
-               printf("[factor_mf] node %d root of subtree %d\n", root+1, p+1);
+               // printf("[factor_mf] node %d root of subtree %d\n", root+1, p+1);
+
+               spldlt_factor_subtree_c(posdef, aval, symb_.akeep_, fkeep_, p, child_contrib, &options);
             }
          }
-
+         // return;
          // Allocate mapping array
          // TODO use proper allocator 
          int *map = new int[symb_.n+1];
