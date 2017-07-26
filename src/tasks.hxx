@@ -363,6 +363,22 @@ namespace spldlt {
    }   
 
    // Factor subtree task
+   extern "C" void spldlt_factor_subtree_c(bool posdef, double *aval, void *akeep, void *fkeep, int p, void **child_contrib, struct cpu_factor_options const* options);
+
+   template <typename T>
+   void factor_subtree_task(SymbolicSNode const& root, bool posdef, T *aval, void *akeep, void *fkeep, int p, void **child_contrib, struct cpu_factor_options const* options) {
+
+#if defined(SPLDLT_USE_STARPU)
+
+      insert_factor_subtree(root.hdl, posdef, aval, akeep, fkeep, p, child_contrib, options);
+
+      // spldlt_factor_subtree_c(posdef, aval, akeep, fkeep, p, child_contrib, options);
+
+#else
+      spldlt_factor_subtree_c(posdef, aval, akeep, fkeep, p, child_contrib, options);
+#endif      
+
+   }
 
    // Assemble subtree task
    template <typename T, typename PoolAlloc>   

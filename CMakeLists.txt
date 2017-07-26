@@ -18,7 +18,7 @@ set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -g -O2" )
 
 ## Set runtime system to be used for the execution
 SET(RUNTIME "STF" CACHE STRING "Runtime system")
-set_property(CACHE RUNTIME PROPERTY STRINGS STF StarPU OMP Parsec)
+set_property(CACHE RUNTIME PROPERTY STRINGS STF StarPU)
 MESSAGE( STATUS "Runtime:         " ${RUNTIME} )
 
 ## Set BLAS and LAPACK libraries to use for linking
@@ -106,9 +106,12 @@ if (${RUNTIME} MATCHES "STF")
 
 elseif(${RUNTIME} MATCHES "StarPU")
 
-  # For some reason StarPU need OpenMP on scarf
-  # set(CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
-  # set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fopenmp")
+  # # OpenMP is needed by SSIDS
+  # find_package(OpenMP)
+  # if (OPENMP_FOUND)
+  #   set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+  #   set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+  # endif()
 
   # Use StarPU code
   add_definitions(-DSPLDLT_USE_STARPU)

@@ -147,30 +147,33 @@ contains
     type(C_PTR) :: cscaling
     class(symbolic_subtree_base), pointer :: subtree_ptr => null()
     type(contrib_type), pointer :: contrib => null()
+    ! type(C_PTR) :: csubtree
     
     call c_f_pointer(cakeep, akeep)
     call c_f_pointer(cfkeep, fkeep)
 
     part = p+1 ! p is C-indexed 
-
+    
     ! Retrieve contrib structure associated with subtree
     call c_f_pointer(child_contrib_c(akeep%contrib_idx(part)), contrib)
 
     select type(subtree_ptr => akeep%subtree(part)%ptr)
     class is(cpu_symbolic_subtree) ! factorize subtree on CPU
 
+       nullify(fkeep%subtree(part)%ptr)
+
        ! Allocate cpu_factor for output
        allocate(cpu_factor, stat=st)
        if (st .ne. 0) goto 10
-
        cpu_factor%symbolic => subtree_ptr
 
        ! Call C++ factor routine
        cpu_factor%posdef = posdef
        cscaling = C_NULL_PTR ! TODO(Florent) Set scaling
+       cpu_factor%csubtree = c_null_ptr 
 
        cpu_factor%csubtree = &
-            c_create_numeric_subtree(cpu_factor%posdef, cpu_factor%symbolic%csubtree, &
+            c_create_numeric_subtree(posdef, cpu_factor%symbolic%csubtree, &
             val, cscaling, child_contrib_c, coptions, cstats)
        if (cstats%flag .lt. 0) then
           call c_destroy_numeric_subtree(cpu_factor%posdef, cpu_factor%csubtree)
@@ -181,6 +184,12 @@ contains
 
        ! Extract to Fortran data structures
        call cpu_copy_stats_out(cstats, inform)
+
+       print *, "     flag = ", inform%flag
+       print *, " maxfront = ", inform%maxfront
+       ! cpu_factor%csubtree = csubtree
+       ! print *, "cpu_factor%posdef = ", cpu_factor%posdef
+       print *, "cpu_factor%csubtree = ", cpu_factor%csubtree
 
        ! Success, set result and return
        fkeep%subtree(part)%ptr => cpu_factor

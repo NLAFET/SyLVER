@@ -38,8 +38,6 @@ using namespace spldlt::starpu;
 
 namespace spldlt {
    
-   extern "C" void spldlt_factor_subtree_c(bool posdef, double *aval, void *akeep, void *fkeep, int p, void **child_contrib, struct cpu_factor_options const* options);
-
    template<typename T,
             size_t PAGE_SIZE,
             typename FactorAllocator,
@@ -291,15 +289,27 @@ namespace spldlt {
             int root = symb_.part_[p+1]-2; // Part is 1-indexed
 
             if (symb_[root].exec_loc != -1) {
-               
+
+               // Even though we don't activate these node we
+               // associated them with a symbolic hanlde. In practice
+               // we will only need the symbolic handle for root nodes
+               // of subtrees.
+               starpu_void_data_register( &(symb_[root].hdl) );
                // printf("[factor_mf] node %d root of subtree %d\n", root+1, p+1);
 
-               spldlt_factor_subtree_c(posdef, aval, symb_.akeep_, fkeep_, p, child_contrib, &options);
+               factor_subtree_task(symb_[root], posdef, aval, symb_.akeep_, fkeep_, p, child_contrib, &options);               
 
-               
+// #if defined(SPLDLT_USE_STARPU)
+//          starpu_task_wait_for_all();
+// #endif
             }
          }
-         // return;
+
+#if defined(SPLDLT_USE_STARPU)
+         starpu_task_wait_for_all();
+#endif         
+
+         return;
          // Allocate mapping array
          // TODO use proper allocator 
          int *map = new int[symb_.n+1];
@@ -310,14 +320,7 @@ namespace spldlt {
             SymbolicSNode &snode = symb_[ni];
             
             // Skip iteration if node is in a subtree
-            if (snode.exec_loc != -1) {
-               // Even though we don't activate these node we
-               // associated them with a symbolic hanlde. In practice
-               // we will only need the symbolic handle for root nodes
-               // of subtrees.
-               starpu_void_data_register(&(snode.hdl));
-               continue;
-            }
+            if (snode.exec_loc != -1) continue;
 
             printf("[factor_mf] node: %d\n", ni+1);
 

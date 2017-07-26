@@ -809,7 +809,71 @@ namespace spldlt { namespace starpu {
          delete[] descrs;
       }
 
-      // Subtree assemble task
+      // Factor subtree task
+
+      extern "C" void spldlt_factor_subtree_c(bool posdef, double *aval, void *akeep, void *fkeep, int p, void **child_contrib, struct cpu_factor_options const* options);
+
+      // CPU kernel
+      template <typename T>
+      void factor_subtree_cpu_func(void *buffers[], void *cl_arg) {
+
+         bool posdef;
+         T *aval;
+         void *akeep;
+         void *fkeep;
+         int p;
+         void **child_contrib;
+         struct cpu_factor_options *options;
+
+         starpu_codelet_unpack_args(
+               cl_arg,
+               &posdef, 
+               &aval,
+               &akeep, 
+               &fkeep,
+               &p,
+               &child_contrib,
+               &options);
+
+         printf("[factor_subtree_cpu_func] part: %d, child_contrib: %p\n", p+1, child_contrib);
+         
+         spldlt_factor_subtree_c(posdef, aval, akeep, fkeep, p, child_contrib, options);
+
+      }
+
+      // StarPU codelet
+      struct starpu_codelet cl_factor_subtree;
+
+      template <typename T>
+      void insert_factor_subtree(
+            starpu_data_handle_t root_hdl, // Symbolic handle on root node
+            bool posdef,
+            T *aval,
+            void *akeep, 
+            void *fkeep,
+            int p,
+            void **child_contrib,
+            struct cpu_factor_options const* options
+            ) {
+
+         int ret;
+
+         ret = starpu_task_insert(&cl_factor_subtree,
+                                  STARPU_RW, root_hdl,
+                                  STARPU_VALUE, &posdef, sizeof(bool),
+                                  STARPU_VALUE, &aval, sizeof(T*),
+                                  STARPU_VALUE, &akeep, sizeof(void*),
+                                  STARPU_VALUE, &fkeep, sizeof(void*),
+                                  STARPU_VALUE, &p, sizeof(int),
+                                  STARPU_VALUE, &child_contrib, sizeof(void**),
+                                  STARPU_VALUE, &options, sizeof(struct cpu_factor_options *),
+                                  0);
+
+         STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
+
+      }
+
+      // Assemble subtree task
 
       // CPU kernel
       template <typename T, typename PoolAlloc>
@@ -1268,6 +1332,13 @@ namespace spldlt { namespace starpu {
          cl_subtree_assemble_contrib.nbuffers = STARPU_VARIABLE_NBUFFERS;
          cl_subtree_assemble_contrib.name = "SUBTREE_ASSEMBLE_CONTRIB";
          cl_subtree_assemble_contrib.cpu_funcs[0] = subtree_assemble_contrib_cpu_func<T, PoolAlloc>;
+
+         // facto_subtree StarPU codelet
+         starpu_codelet_init(&cl_factor_subtree);
+         cl_factor_subtree.where = STARPU_CPU;
+         cl_factor_subtree.nbuffers = STARPU_VARIABLE_NBUFFERS;
+         cl_factor_subtree.name = "FACTOR_SUBTREE";
+         cl_factor_subtree.cpu_funcs[0] = factor_subtree_cpu_func<T>;
 
       }
 }} /* namespaces spldlt::starpu  */
