@@ -152,7 +152,7 @@ contains
     call c_f_pointer(cakeep, akeep)
     call c_f_pointer(cfkeep, fkeep)
 
-    part = p+1 ! p is C-indexed 
+    part = p+1 ! p is C-indexed
     
     ! Retrieve contrib structure associated with subtree
     call c_f_pointer(child_contrib_c(akeep%contrib_idx(part)), contrib)

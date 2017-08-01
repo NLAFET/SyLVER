@@ -55,7 +55,7 @@ contains
     type(ssids_akeep), target :: akeep ! ssids akeep structure
     type(ssids_options), intent(in) :: options
     type(ssids_inform), intent(inout) :: inform
-    integer :: ncpu ! number of CPU workers
+    integer, intent(inout) :: ncpu ! number of CPU workers
 
     integer nnodes
     type(cpu_factor_options) :: coptions
@@ -66,6 +66,8 @@ contains
     
     spldlt_akeep%akeep => akeep 
     nnodes = akeep%nnodes
+
+    ncpu = 2
 
     ! Sort out subtrees
     ! print *, "Input topology"
