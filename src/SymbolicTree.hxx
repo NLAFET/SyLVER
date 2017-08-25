@@ -15,12 +15,12 @@ namespace spldlt {
    class SymbolicTree {
    public:
       SymbolicTree(
-            void* akeep,
-            int n, int nnodes, int const* sptr, int const* sparent, long const* rptr, int const* rlist, long const* nptr, long const* nlist, 
+            void* akeep, int n, int nnodes, int const* sptr, int const* sparent, 
+            long const* rptr, int const* rlist, long const* nptr, long const* nlist, 
             int nparts, int const* part, int const* contrib_idx, int const* exec_loc, int const* contrib_dest)
          : akeep_(akeep), n(n), nnodes_(nnodes), nodes_(nnodes_+1), nparts_(nparts), part_(part)
       {
-
+         
          // FIXME multifrontal mode: use template paramter?
          // bool mf = true;
 
@@ -64,13 +64,16 @@ namespace spldlt {
             parent->first_child = &nodes_[ni];
          }
          
+         // printf("[SymbolicTree] nnodes_ = %d,  nparts = %d\n", nnodes_, nparts);
+         // printf("[SymbolicTree] size nodes_ = %d\n", nodes_.size());
          /* Record contribution block inputs */
          for(int ci = 0; ci < nparts; ++ci) {
             int idx = contrib_dest[ci]-1; // contrib_dest is Fortran indexed
+            printf("[SymbolicTree] %d -> %d, exec_loc = %d\n", ci+1, idx+1, exec_loc[ci]);
             if (idx > 0) // idx equal to 0 means that ci is a root subtree 
                nodes_[idx].contrib.push_back(ci);
-            printf("[SymbolicTree] %d -> %d, exec_loc = %d\n", ci+1, idx+1, exec_loc[ci]);
          }
+
          // Count size of factors
          nfactor_ = 0;
          for(int ni=0; ni<nnodes_; ++ni)
@@ -85,7 +88,6 @@ namespace spldlt {
                // printf("[SymbolicTree] node: %d, part: %d, exec_loc: %d\n", ni+1, p+1, exec_loc[p]);
             }
          }
-
       }
 
       size_t get_factor_mem_est(double multiplier) const {

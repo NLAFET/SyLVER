@@ -835,7 +835,8 @@ namespace spldlt { namespace starpu {
                &child_contrib,
                &options);
 
-         printf("[factor_subtree_cpu_func] part: %d, child_contrib: %p\n", p+1, child_contrib);
+         printf("[factor_subtree_cpu_func] akeep = %p, akeep = %p\n", akeep, fkeep);
+         // printf("[factor_subtree_cpu_func] part: %d, child_contrib: %p\n", p+1, child_contrib);
          
          spldlt_factor_subtree_c(posdef, aval, akeep, fkeep, p, child_contrib, options);
 
@@ -857,6 +858,8 @@ namespace spldlt { namespace starpu {
             ) {
 
          int ret;
+
+         // printf("[insert_factor_subtree] akeep = %p, akeep = %p\n", akeep, fkeep);
 
          ret = starpu_task_insert(&cl_factor_subtree,
                                   STARPU_RW, root_hdl,

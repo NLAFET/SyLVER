@@ -148,7 +148,7 @@ program spldlt_test
    ! Initialize SpLDLT
    call spldlt_init(ncpu)
    ! print *, "TETETET"
-
+   ! stop
    ! Factorize
    ! write(*, "(a)") "[SpLDLT Test] Factorize..."
    ! call system_clock(start_t, rate_t)
@@ -196,6 +196,8 @@ program spldlt_test
 
    ! Shutdown SpLDLT
    call spldlt_finalize()
+
+   stop
 
    ! Solve SpLDLT
    call system_clock(start_t, rate_t)

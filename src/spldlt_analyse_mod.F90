@@ -144,7 +144,7 @@ contains
     end do
     ! print *, "[spldlt_analyse] nnodes: ", nnodes
     ! print *, "sptr: ", akeep%sptr(1:nnodes+1)
-    
+
     ! call C++ analyse routine
     call cpu_copy_options_in(options, coptions)
     spldlt_akeep%symbolic_tree_c = &
@@ -329,7 +329,7 @@ contains
          exec_loc, st)
     if (st .ne. 0) return
     !print *, "exec_loc ", exec_loc(1:nparts)
-    print *, "load_balance = ", load_balance
+    print *, "[find_subtree_partition] load_balance = ", load_balance
 
     ! Merge adjacent subtrees that are executing on the same node so long as
     ! there is no more than one contribution to a parent subtree
@@ -370,7 +370,10 @@ contains
     do i = 1, nparts
        contrib_ptr(i+2) = contrib_ptr(i+1) + contrib_ptr(i+2)
     end do
-    ! Drop sources into list
+    ! print *, "[find_subtree_partition] nparts = ", nparts
+    ! print *, "[find_subtree_partition] contrib_dest = ", contrib_dest
+    contrib_dest = 0
+    ! Drop sources into list    
     do i = 1, nparts-1 ! by defn, last part has no parent
        j = sparent(part(i+1)-1) ! node index of parent
        if (j .gt. nnodes) then
@@ -383,12 +386,15 @@ contains
           k = k + 1
        end do
        contrib_idx(i) = contrib_ptr(k+1)
+       ! print *, "[find_subtree_partition] j = ", j
        contrib_dest(contrib_idx(i)) = j
        contrib_ptr(k+1) = contrib_ptr(k+1) + 1
        ! print *, "part = ", i, ", parent = ", j, ", k = ", k, ", contrib_idx = ", contrib_idx(i), &
        !      "contrib_dest = ", contrib_dest(contrib_idx(i))
     end do
     contrib_idx(nparts) = nparts+1 ! last part must be a root
+    ! contrib_dest(nparts) = 0
+    ! print *, "[find_subtree_partition] contrib_dest = ", contrib_dest
 
     ! Fill out inform
     inform%nparts = nparts

@@ -112,10 +112,63 @@ module spldlt_factorize_mod
        logical(C_BOOL), value :: posdef
        type(C_PTR), value :: subtree
      end subroutine c_destroy_numeric_subtree
-  end interface
 
+     subroutine c_get_contrib(posdef, subtree, n, val, ldval, rlist, ndelay, &
+          delay_perm, delay_val, lddelay) &
+          bind(C, name="spral_ssids_cpu_subtree_get_contrib_dbl")
+       use, intrinsic :: iso_c_binding
+       implicit none
+       logical(C_BOOL), value :: posdef
+       type(C_PTR), value :: subtree
+       integer(C_INT) :: n
+       type(C_PTR) :: val
+       integer(C_INT) :: ldval
+       type(C_PTR) :: rlist
+       integer(C_INT) :: ndelay
+       type(C_PTR) :: delay_perm
+       type(C_PTR) :: delay_val
+       integer(C_INT) :: lddelay
+     end subroutine c_get_contrib
+
+  end interface
+  
 contains
 
+  subroutine spldlt_get_contrib_c(cakeep, cfkeep, p, child_contrib_c) bind(C)
+    use spral_ssids_akeep, only : ssids_akeep
+    use spral_ssids_fkeep, only : ssids_fkeep
+    use spral_ssids_contrib, only : contrib_type
+    use, intrinsic :: iso_c_binding
+    implicit none
+
+    type(c_ptr), value :: cakeep
+    type(c_ptr), value :: cfkeep
+    integer(c_int), value :: p ! Partition number, C-indexed
+    type(C_PTR), dimension(*) :: child_contrib_c
+
+    type(ssids_akeep), pointer :: akeep => null()
+    type(ssids_fkeep), pointer :: fkeep => null()
+    integer :: part ! Partition number, Fortran-indexed
+    type(contrib_type), pointer :: contrib => null()
+    
+    call c_f_pointer(cakeep, akeep)
+    call c_f_pointer(cfkeep, fkeep)
+
+    part = p+1
+
+    print *, "[spldlt_get_contrib_c] part = ", part
+    print *, "[spldlt_get_contrib_c] contrib_idx = ", akeep%contrib_idx
+    ! print *, "contrib_idx(part) = ", akeep%contrib_idx(part)
+
+    call c_f_pointer(child_contrib_c(akeep%contrib_idx(part)), contrib)
+    ! allocate(contrib)
+
+    ! print *, "[spldlt_get_contrib_c] part = ", part
+
+    contrib = fkeep%subtree(part)%ptr%get_contrib()
+    
+  end subroutine spldlt_get_contrib_c
+  
   subroutine spldlt_factor_subtree_c(posdef, val, cakeep, cfkeep, p, child_contrib_c, coptions) &
        bind(C, name="spldlt_factor_subtree_c")
     use spral_ssids_datatypes
@@ -133,27 +186,32 @@ contains
     type(c_ptr), value :: cakeep
     type(c_ptr), value :: cfkeep
     integer(c_int), value :: p ! Partition number, C-indexed
-    type(C_PTR), dimension(*), intent(inout) :: child_contrib_c
+    type(C_PTR), dimension(*) :: child_contrib_c
     ! type(c_ptr), dimension(:), allocatable, intent(inout) :: child_contrib_c
     type(cpu_factor_options), intent(in) :: coptions ! SSIDS options
 
     integer :: st ! Error management
-    type(ssids_akeep), pointer :: akeep
-    type(ssids_fkeep), pointer :: fkeep
+    type(ssids_akeep), pointer :: akeep => null()
+    type(ssids_fkeep), pointer :: fkeep => null()
     type(ssids_inform) :: inform
     integer :: part
-    type(cpu_numeric_subtree), pointer :: cpu_factor => null()    
+    type(cpu_numeric_subtree), pointer :: cpu_factor => null()
     type(cpu_factor_stats) :: cstats
     type(C_PTR) :: cscaling
     class(symbolic_subtree_base), pointer :: subtree_ptr => null()
     type(contrib_type), pointer :: contrib => null()
+    ! type(contrib_type) :: contrib
+    type(C_PTR) :: cval, crlist, delay_perm, delay_val
     ! type(C_PTR) :: csubtree
+
+    print *, "[spldlt_factor_subtree_c] cakeep = ", cakeep, ", cfkeep = ", cfkeep
     
     call c_f_pointer(cakeep, akeep)
     call c_f_pointer(cfkeep, fkeep)
 
     part = p+1 ! p is C-indexed
-    
+    print *, "[spldlt_factor_subtree_c] npart", akeep%nparts, ", part = ", part
+    print *, "[spldlt_factor_subtree_c] contrib_idx = ", akeep%contrib_idx
     ! Retrieve contrib structure associated with subtree
     call c_f_pointer(child_contrib_c(akeep%contrib_idx(part)), contrib)
 
@@ -175,18 +233,19 @@ contains
        cpu_factor%csubtree = &
             c_create_numeric_subtree(posdef, cpu_factor%symbolic%csubtree, &
             val, cscaling, child_contrib_c, coptions, cstats)
-       if (cstats%flag .lt. 0) then
-          call c_destroy_numeric_subtree(cpu_factor%posdef, cpu_factor%csubtree)
-          deallocate(cpu_factor, stat=st)
-          inform%flag = cstats%flag
-          return
-       end if
+       print *, "     flag = ", cstats%flag       
+       ! if (cstats%flag .lt. 0) then
+       !    call c_destroy_numeric_subtree(cpu_factor%posdef, cpu_factor%csubtree)
+       !    deallocate(cpu_factor, stat=st)
+       !    inform%flag = cstats%flag
+       !    return
+       ! end if
 
        ! Extract to Fortran data structures
-       call cpu_copy_stats_out(cstats, inform)
+       ! call cpu_copy_stats_out(cstats, inform)
 
-       print *, "     flag = ", inform%flag
-       print *, " maxfront = ", inform%maxfront
+       ! print *, "     flag = ", inform%flag
+       ! print *, " maxfront = ", inform%maxfront
        ! cpu_factor%csubtree = csubtree
        ! print *, "cpu_factor%posdef = ", cpu_factor%posdef
        print *, "cpu_factor%csubtree = ", cpu_factor%csubtree
@@ -194,12 +253,29 @@ contains
        ! Success, set result and return
        fkeep%subtree(part)%ptr => cpu_factor
 
+       ! if (akeep%contrib_idx(part) .le. akeep%nparts) then
+
+       ! allocate(contrib)
+          
+          ! contrib = fkeep%subtree(part)%ptr%get_contrib()
+              
+       ! call c_get_contrib(cpu_factor%posdef, cpu_factor%csubtree, contrib%n, cval, &
+       !      contrib%ldval, crlist, contrib%ndelay, delay_perm, delay_val, &
+       !      contrib%lddelay)
+
+       ! contrib%ready = .true.
+       
+       ! deallocate(contrib)
+       ! nullify(contrib)
+
+       ! end if
+
     end select
 
-    if (akeep%contrib_idx(part) .le. akeep%nparts) then 
-       contrib = fkeep%subtree(part)%ptr%get_contrib()
-       contrib%ready = .true.
-    end if
+    ! if (akeep%contrib_idx(part) .le. akeep%nparts) then
+    !    contrib = fkeep%subtree(part)%ptr%get_contrib()
+    !    contrib%ready = .true.
+    ! end if
 
     return
 

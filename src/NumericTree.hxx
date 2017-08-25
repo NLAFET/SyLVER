@@ -37,6 +37,9 @@ using namespace spldlt::starpu;
 #endif
 
 namespace spldlt {
+
+   extern "C" void spldlt_get_contrib_c(void *akeep, void *fkeep, int p, void **child_contrib);
+   // extern "C" void spldlt_get_contrib_c(void *akeep, void *fkeep, int p);
    
    template<typename T,
             size_t PAGE_SIZE,
@@ -283,6 +286,9 @@ namespace spldlt {
          int INIT_PRIO = 4;
          int ASSEMBLE_PRIO = 4;
 
+         // printf("[factor_mf] akeep_ = %p, akeep_= %p\n", symb_.akeep_, fkeep_);
+         printf("[factor_mf] child_contrib = %p\n", child_contrib);
+
          // Loop over subtree roots
          for(int p = 0; p < symb_.nparts_; ++p) {
             
@@ -309,7 +315,23 @@ namespace spldlt {
          starpu_task_wait_for_all();
 #endif         
 
-         return;
+         // printf("[factor_mf] akeep_ = %p, fkeep_= %p\n", symb_.akeep_, fkeep_);
+         printf("[factor_mf] child_contrib = %p\n", child_contrib);
+
+         // Loop over subtree roots
+         for(int p = 0; p < symb_.nparts_; ++p) {
+            
+            int root = symb_.part_[p+1]-2; // Part is 1-indexed
+
+            if (symb_[root].exec_loc != -1) {
+               
+               spldlt_get_contrib_c(symb_.akeep_, fkeep_, p, child_contrib);
+               // spldlt_get_contrib_c(symb_.akeep_, fkeep_, p);
+            }
+         }
+
+         return; // TODO remove
+
          // Allocate mapping array
          // TODO use proper allocator 
          int *map = new int[symb_.n+1];
