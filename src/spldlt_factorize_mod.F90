@@ -257,7 +257,7 @@ contains
 
        ! allocate(contrib)
           
-          ! contrib = fkeep%subtree(part)%ptr%get_contrib()
+       ! contrib = fkeep%subtree(part)%ptr%get_contrib()
               
        ! call c_get_contrib(cpu_factor%posdef, cpu_factor%csubtree, contrib%n, cval, &
        !      contrib%ldval, crlist, contrib%ndelay, delay_perm, delay_val, &
