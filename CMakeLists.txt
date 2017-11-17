@@ -1,20 +1,64 @@
 cmake_minimum_required (VERSION 2.6)
-project (SpLDLT C CXX Fortran)
+project (SpLDLT)
+enable_language(Fortran)
+enable_language(C)
+enable_language(CXX)
 
 # Include our own cmake modules
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/" )
 
+################################################################################
+# Compiler options
+
 # Set C flags
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O2" )
+# set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O2" )
 # set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O2 -ffpe-trap=underflow,denormal" )
 
 # Set CXX flags
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -g -O2" )
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -g -O2" )
 # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O2 -ffpe-trap=underflow,denormal" )
 
 # Set Fortran flags
-set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -g -O2" )
+# set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -g -O2" )
 # set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -g -O2 -ffpe-trap=underflow,denormal")
+
+
+# Set default build type
+set(default_build_type "RelWithDebInfo")
+
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  message(STATUS "Using default build type '${default_build_type}' because none was specified")
+  set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE
+    STRING "Choose the type of build (Debug, Release, MinSizeRel, RelWithDebInfo)" FORCE)
+  # Set the possible values of build type for cmake-gui
+  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
+    "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
+endif()
+
+set(CMAKE_Fortran_FLAGS_ALL ${CMAKE_Fortran_FLAGS})
+set(CMAKE_C_FLAGS_ALL ${CMAKE_C_FLAGS})
+set(CMAKE_CXX_FLAGS_ALL ${CMAKE_CXX_FLAGS})
+
+if(CMAKE_BUILD_TYPE MATCHES "Debug")
+  list(APPEND CMAKE_Fortran_FLAGS_ALL ${CMAKE_Fortran_FLAGS_DEBUG})
+  list(APPEND CMAKE_C_FLAGS_ALL ${CMAKE_C_FLAGS_DEBUG})
+  list(APPEND CMAKE_CXX_FLAGS_ALL ${CMAKE_CXX_FLAGS_DEBUG})
+elseif(CMAKE_BUILD_TYPE MATCHES "Release")
+  list(APPEND CMAKE_Fortran_FLAGS_ALL ${CMAKE_Fortran_FLAGS_RELEASE})
+  list(APPEND CMAKE_C_FLAGS_ALL ${CMAKE_C_FLAGS_RELEASE})
+  list(APPEND CMAKE_CXX_FLAGS_ALL ${CMAKE_CXX_FLAGS_RELEASE})
+elseif(CMAKE_BUILD_TYPE MATCHES "MinSizeRel")
+  list(APPEND CMAKE_Fortran_FLAGS_ALL ${CMAKE_Fortran_FLAGS_MINSIZEREL})
+  list(APPEND CMAKE_C_FLAGS_ALL ${CMAKE_C_FLAGS_MINSIZEREL})
+  list(APPEND CMAKE_CXX_FLAGS_ALL ${CMAKE_CXX_FLAGS_MINSIZEREL})
+elseif(CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")  
+  list(APPEND CMAKE_Fortran_FLAGS_ALL ${CMAKE_Fortran_FLAGS_RELWITHDEBINFO})
+  list(APPEND CMAKE_C_FLAGS_ALL ${CMAKE_C_FLAGS_RELWITHDEBINFO})
+  list(APPEND CMAKE_CXX_FLAGS_ALL ${CMAKE_CXX_FLAGS_RELWITHDEBINFO})
+endif()
+
+################################################################################
+# Options
 
 ## Set runtime system to be used for the execution
 SET(RUNTIME "STF" CACHE STRING "Runtime system")
@@ -57,8 +101,8 @@ MESSAGE( STATUS "Use GPU:         " ${USE_GPU} )
 option(USE_MPI "Use MPI" OFF)
 MESSAGE( STATUS "Use MPI:         " ${USE_MPI} )   
 
-# # Use tile layout
-# option(USE_TILE_LAYOUT "Use tile layout" OFF)
+################################################################################
+# Third-party libraries
 
 # GPU
 if(${USE_GPU} MATCHES ON)
@@ -98,6 +142,9 @@ endif()
 
 # Include source directory
 include_directories(${SpLDLT_SOURCE_DIR}/src)
+
+########################################
+# Runtime system
 
 if (${RUNTIME} MATCHES "STF")
 
@@ -232,3 +279,19 @@ if(${RUNTIME} MATCHES "StarPU")
     target_link_libraries(spldlt_kernel_test ${HWLOC_LIBRARY})
   endif()
 endif()
+
+################################################################################
+# Print summary
+
+message("-----------------------------------------")
+message("Configuration of SpLDLT done.")
+message(" ")
+message(
+  "Build type: ${CMAKE_BUILD_TYPE}\n"
+  "Fortran compiler: ${CMAKE_Fortran_COMPILER} (${CMAKE_Fortran_COMPILER_ID})\n"
+  "Fortran compiler flags: ${CMAKE_Fortran_FLAGS_ALL}\n"
+  "C compiler:  ${CMAKE_C_COMPILER} (${CMAKE_C_COMPILER_ID})\n"
+  "C compiler flags: ${CMAKE_Fortran_FLAGS_ALL}\n"
+  "CXX compiler:  ${CMAKE_CXX_COMPILER} (${CMAKE_CXX_COMPILER_ID})\n"
+  "CXX compiler flags: ${CMAKE_CXX_FLAGS_ALL}\n")
+message("-----------------------------------------")
