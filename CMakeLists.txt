@@ -10,15 +10,15 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/" 
 ################################################################################
 # Compiler options
 
-# Set C flags
+# C flags
 # set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O2" )
 # set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O2 -ffpe-trap=underflow,denormal" )
 
-# Set CXX flags
-# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -g -O2" )
+# CXX flags
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11" )
 # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O2 -ffpe-trap=underflow,denormal" )
 
-# Set Fortran flags
+# Fortran flags
 # set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -g -O2" )
 # set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -g -O2 -ffpe-trap=underflow,denormal")
 
@@ -65,10 +65,10 @@ SET(RUNTIME "STF" CACHE STRING "Runtime system")
 set_property(CACHE RUNTIME PROPERTY STRINGS STF StarPU)
 MESSAGE( STATUS "Runtime:         " ${RUNTIME} )
 
-## Set BLAS and LAPACK libraries to use for linking
-SET(BLAS_LAPACK "MKL" CACHE STRING "BLAS and LAPACK libraries")
-set_property(CACHE BLAS_LAPACK PROPERTY STRINGS Ref MKL)
-MESSAGE( STATUS "BLAS/LAPACK:         " ${BLAS_LAPACK} )
+# # Set BLAS and LAPACK libraries to use for linking
+# SET(BLAS_LAPACK "MKL" CACHE STRING "BLAS and LAPACK libraries")
+# set_property(CACHE BLAS_LAPACK PROPERTY STRINGS Ref MKL)
+# MESSAGE( STATUS "BLAS/LAPACK:         " ${BLAS_LAPACK} )
 
 # Decide wheter we want to compile the kernel test driver or not
 option(KERNEL_TEST "Kernel test" OFF)
@@ -103,6 +103,71 @@ MESSAGE( STATUS "Use MPI:         " ${USE_MPI} )
 
 ################################################################################
 # Third-party libraries
+
+########################################
+# Metis
+set(METIS_DIR $ENV{METISDIR} CACHE PATH "Location of Metis Library")
+find_library(METIS_LIBRARIES metis PATHS ${METIS_DIR})
+set(LIBS ${LIBS} ${METIS_LIBRARIES})
+
+########################################
+# std C++ (needed for linking with ssids)
+set(LIBS ${LIBS} stdc++)
+
+########################################
+# BLAS
+set(LBLAS "" CACHE STRING "BLAS library")
+
+# If LBLAS not set, use environement variable
+if(LBLAS)
+  set(BLAS_LIBRARIES ${LBLAS})
+elseif(DEFINED ENV{BLAS_LIB})
+  set(BLAS_LIBRARIES $ENV{BLAS_LIB})
+endif()
+
+if(DEFINED BLAS_LIBRARIES)
+  set(CMAKE_REQUIRED_LIBRARIES ${BLAS_LIBRARIES})
+  CHECK_FORTRAN_FUNCTION_EXISTS("dgemm" BLAS_FOUND)
+  unset(CMAKE_REQUIRED_LIBRARIES)
+  if(NOT BLAS_FOUND)
+    message(ERROR "User supplied BLAS is NOT working")
+  endif()
+else()
+  find_package(BLAS)
+endif()
+
+if(BLAS_FOUND)
+  set(LIBS ${LIBS} ${BLAS_LIBRARIES})
+else()
+  message(FATAL_ERROR "BLAS NOT found")
+endif (BLAS_FOUND)
+
+########################################
+# LAPACK
+set(LLAPACK "" CACHE STRING "LAPACK library")
+# If LBLAS not set, use environement variable 
+if(LLAPACK)
+  set(LAPACK_LIBRARIES ${LLAPACK})
+elseif(DEFINED ENV{LAPACK_LIB})
+  set(LAPACK_LIBRARIES $ENV{LAPACK_LIB})
+endif()
+if(DEFINED LAPACK_LIBRARIES)
+  set(CMAKE_REQUIRED_LIBRARIES ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES})
+  CHECK_FORTRAN_FUNCTION_EXISTS("dpotrf" LAPACK_FOUND)
+  unset(CMAKE_REQUIRED_LIBRARIES)
+  if(NOT LAPACK_FOUND)
+    message(ERROR "User supplied LAPACK is NOT working")
+  endif()
+
+else()
+  find_package(LAPACK)
+endif()
+
+if (LAPACK_FOUND)
+  set(LIBS ${LIBS} ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES})
+else()
+  message(FATAL_ERROR "LAPACK library NOT found")
+endif (LAPACK_FOUND)
 
 # GPU
 if(${USE_GPU} MATCHES ON)
@@ -153,20 +218,31 @@ if (${RUNTIME} MATCHES "STF")
 
 elseif(${RUNTIME} MATCHES "StarPU")
 
-  # # OpenMP is needed by SSIDS
-  # find_package(OpenMP)
-  # if (OPENMP_FOUND)
-  #   set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-  #   set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-  # endif()
+  ########################################
+  # StarPU
 
-  # Use StarPU code
   add_definitions(-DSPLDLT_USE_STARPU)
 
   # StarPU lib
-  set(STARPU_DIR $ENV{STARPUDIR} CACHE PATH "Location of StarPU Library")
-  include_directories(${STARPU_DIR}/include/starpu/1.3)
-  find_library(STARPU_LIBRARY starpu-1.3 PATHS ${STARPU_DIR}/lib)
+  # set(STARPU_DIR $ENV{STARPUDIR} CACHE PATH "Location of StarPU Library")
+  # include_directories(${STARPU_DIR}/include/starpu/1.3)
+  # find_library(STARPU_LIBRARY starpu-1.3 PATHS ${STARPU_DIR}/lib)
+
+  find_package(STARPU)
+  if (STARPU_FOUND)
+    include_directories( ${STARPU_INCLUDE_DIRS} )
+    link_directories( ${STARPU_LIBRARY_DIRS} )
+    link_libraries( ${STARPU_LIBRARIES} )
+    set(LIBS ${LIBS} ${STARPU_LIBRARIES})
+    find_path(STARPU_F_MOD_FOUND fstarpu_mod.f90
+      HINTS ${STARPU_INCLUDE_DIRS}
+      )
+    set(STARPU_F_MOD "${STARPU_F_MOD_FOUND}/fstarpu_mod.f90")
+    include_directories(${STARPU_INCLUDE_DIRS}) 
+  else()
+    message(FATAL_ERROR "StarPU not found!")
+  endif(STARPU_FOUND)
+
   
   # HWLOC
   set(HWLOC_DIR $ENV{HWLOCDIR} CACHE PATH "Location of HWLOC Library")
@@ -217,68 +293,30 @@ include_directories(${HWLOC_DIR}/include)
 find_library(HWLOC_LIBRARY hwloc PATHS ${HWLOC_DIR}/lib)
 target_link_libraries(spldlt_test ${HWLOC_LIBRARY})
 
-# BLAS and LAPACK
+################################################################################
+# Test drivers
 
-if (${BLAS_LAPACK} MATCHES "MKL")
+########################################
+# Setup list of test drivers
+set(test_drivers)
 
-  # MKL libraries
-
-  set(MKL_LIBS $ENV{MKL_LIBS})
-  set(MKL_ROOT "/opt/intel/mkl" CACHE PATH "Location of MKL Library")
-  set(MKL_DIR $ENV{MKLROOT})
-
-  find_library(MKL_IFACE_LIBRARY mkl_gf_lp64 PATHS ${MKL_LIBS} ${MKL_ROOT}/lib/intel64 ${MKL_DIR}/lib/intel64)
-  # find_library(MKL_THREAD_LIBRARY mkl_gnu_thread PATHS ${MKL_ROOT}/lib/intel64)
-  find_library(MKL_SEQ_LIBRARY mkl_sequential PATHS ${MKL_LIBS} ${MKL_DEFAULT_ROOT}/lib/intel64 ${MKL_DIR}/lib/intel64)
-  find_library(MKL_CORE_LIBRARY mkl_core PATHS ${MKL_LIBS} ${MKL_ROOT}/lib/intel64 ${MKL_DIR}/lib/intel64) 
-  # set(MKL_LIBRARIES ${MKL_IFACE_LIBRARY} ${MKL_THREAD_LIBRARY} ${MKL_CORE_LIBRARY})
-
-  set(BLAS_LAPACK_LIBRARIES ${MKL_IFACE_LIBRARY} ${MKL_SEQ_LIBRARY} ${MKL_CORE_LIBRARY})
-
-else()
-
-  # Reference BLAS libraries
-
-  find_library(BLAS_LIBRARY blas)
-  find_library(LAPACK_LIBRARY lapack)
-  set(BLAS_LAPACK_LIBRARIES ${BLAS_LIBRARY} ${LAPACK_LIBRARY})
-
-endif()
-
-target_link_libraries(spldlt_test ${BLAS_LAPACK_LIBRARIES})
+list(APPEND test_drivers "drivers/spldlt_test.F90")
 
 if (${KERNEL_TEST} MATCHES "ON")
-  target_link_libraries(spldlt_kernel_test ${BLAS_LAPACK_LIBRARIES})
+
+  list(APPEND test_drivers "drivers/spldlt_kernel_test.F90")
+
 endif()
 
-# Ordering
-## Metis
-set(METIS_DIR $ENV{METISDIR} CACHE PATH "Location of Metis Library")
-find_library(METIS_LIBRARY metis PATHS ${METIS_DIR})
-target_link_libraries(spldlt_test ${METIS_LIBRARY})
+foreach(test_driver ${test_drivers})
+  
+  get_filename_component(test_driver_name ${test_driver} NAME_WE)
 
-## pthread
-target_link_libraries(spldlt_test pthread)
+  ########################################
+  # Link test drivers with external libraries
+  target_link_libraries(${test_driver_name} ${LIBS})
 
-## std C++
-target_link_libraries(spldlt_test stdc++)
-
-# runtime system
-## StarPU
-if(${RUNTIME} MATCHES "StarPU")
-  # StarPU
-  target_link_libraries(spldlt_test ${STARPU_LIBRARY})
-  # HWLOC
-  target_link_libraries(spldlt_test ${HWLOC_LIBRARY})
-
-  # Kernel tests
-  if (${KERNEL_TEST} MATCHES "ON")
-    # StarPU
-    target_link_libraries(spldlt_kernel_test ${STARPU_LIBRARY})
-    # HWLOC
-    target_link_libraries(spldlt_kernel_test ${HWLOC_LIBRARY})
-  endif()
-endif()
+endforeach()
 
 ################################################################################
 # Print summary
@@ -293,5 +331,13 @@ message(
   "C compiler:  ${CMAKE_C_COMPILER} (${CMAKE_C_COMPILER_ID})\n"
   "C compiler flags: ${CMAKE_Fortran_FLAGS_ALL}\n"
   "CXX compiler:  ${CMAKE_CXX_COMPILER} (${CMAKE_CXX_COMPILER_ID})\n"
-  "CXX compiler flags: ${CMAKE_CXX_FLAGS_ALL}\n")
+  "CXX compiler flags: ${CMAKE_CXX_FLAGS_ALL}")
+message(" ")
+message("BLAS libraries: ${BLAS_LIBRARIES}")
+message("LAPACK libraries: ${LAPACK_LIBRARIES}")
+message(" ")
+if(${RUNTIME} MATCHES "StarPU")
+  message("Runtime system: StarPU")
+  message("StarPU libraries: ${STARPU_LIBRARIES}")
+endif()
 message("-----------------------------------------")
