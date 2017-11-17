@@ -22,7 +22,6 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11" )
 # set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -g -O2" )
 # set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -g -O2 -ffpe-trap=underflow,denormal")
 
-
 # Set default build type
 set(default_build_type "RelWithDebInfo")
 
@@ -103,6 +102,13 @@ MESSAGE( STATUS "Use MPI:         " ${USE_MPI} )
 
 ################################################################################
 # Third-party libraries
+
+########################################
+# HWLOC
+set(HWLOC_DIR $ENV{HWLOCDIR} CACHE PATH "Location of HWLOC Library")
+include_directories(${HWLOC_DIR}/include)  
+find_library(HWLOC_LIBRARIES hwloc PATHS ${HWLOC_DIR}/lib)
+set(LIBS ${LIBS} ${HWLOC_LIBRARIES})
 
 ########################################
 # Metis
@@ -213,7 +219,6 @@ include_directories(${SpLDLT_SOURCE_DIR}/src)
 
 if (${RUNTIME} MATCHES "STF")
 
-  # Use STF code
   add_definitions(-DSPLDLT_USE_STF)
 
 elseif(${RUNTIME} MATCHES "StarPU")
@@ -222,11 +227,6 @@ elseif(${RUNTIME} MATCHES "StarPU")
   # StarPU
 
   add_definitions(-DSPLDLT_USE_STARPU)
-
-  # StarPU lib
-  # set(STARPU_DIR $ENV{STARPUDIR} CACHE PATH "Location of StarPU Library")
-  # include_directories(${STARPU_DIR}/include/starpu/1.3)
-  # find_library(STARPU_LIBRARY starpu-1.3 PATHS ${STARPU_DIR}/lib)
 
   find_package(STARPU)
   if (STARPU_FOUND)
@@ -242,12 +242,6 @@ elseif(${RUNTIME} MATCHES "StarPU")
   else()
     message(FATAL_ERROR "StarPU not found!")
   endif(STARPU_FOUND)
-
-  
-  # HWLOC
-  set(HWLOC_DIR $ENV{HWLOCDIR} CACHE PATH "Location of HWLOC Library")
-  include_directories(${HWLOC_DIR}/include)
-  find_library(HWLOC_LIBRARY hwloc PATHS ${HWLOC_DIR}/lib)
 
 endif()
 
@@ -286,12 +280,6 @@ if (${KERNEL_TEST} MATCHES "ON")
   target_include_directories(spldlt_kernel_test PUBLIC ${SPRAL_DIR})
   target_link_libraries(spldlt_kernel_test ${SPRAL_LIBRARY})
 endif()
-
-# HWLOC
-set(HWLOC_DIR $ENV{HWLOCDIR} CACHE PATH "Location of HWLOC Library")
-include_directories(${HWLOC_DIR}/include)  
-find_library(HWLOC_LIBRARY hwloc PATHS ${HWLOC_DIR}/lib)
-target_link_libraries(spldlt_test ${HWLOC_LIBRARY})
 
 ################################################################################
 # Test drivers
