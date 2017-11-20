@@ -209,6 +209,7 @@ if(${USE_GPU} MATCHES ON)
   include_directories(${MAGMA_DIR}/include)
   include_directories(${MAGMA_SRCDIR}/control)     
   find_library(MAGMA_LIBRARY magma PATHS ${MAGMA_DIR}/lib)
+
 endif()
 
 # Include source directory
