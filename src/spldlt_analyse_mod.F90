@@ -17,37 +17,53 @@ module spldlt_analyse_mod
   end type spldlt_akeep_type
 
   interface spldlt_create_symbolic_tree_c
-     type(c_ptr) function spldlt_create_symbolic_tree(akeep, n, nnodes, & 
-          sptr, sparent, rptr, rlist, nptr, nlist, nparts, part, &
-          contrib_idx, exec_loc, contrib_dest, options) &
+     ! type(c_ptr) function spldlt_create_symbolic_tree(akeep, n, nnodes, & 
+     !      sptr, sparent, rptr, rlist, nptr, nlist, nparts, part, &
+     !      contrib_idx, exec_loc, contrib_dest, options) &
+     !      bind(C, name="spldlt_create_symbolic_tree")
+     !   use, intrinsic :: iso_c_binding
+     !   import :: cpu_factor_options
+     !   implicit none
+     !   type(c_ptr), value :: akeep
+     !   integer(c_int), value :: n
+     !   integer(c_int), value :: nnodes
+     !   integer(c_int), dimension(*), intent(in) :: sptr
+     !   integer(c_int), dimension(*), intent(in) :: sparent
+     !   integer(c_long), dimension(*), intent(in) :: rptr
+     !   integer(c_int), dimension(*), intent(in) :: rlist
+     !   integer(c_long), dimension(*), intent(in) :: nptr
+     !   integer(c_long), dimension(2, *), intent(in) :: nlist
+     !   integer(C_INT), value :: nparts
+     !   integer(C_INT), dimension(*), intent(in) :: part
+     !   integer(C_INT), dimension(*), intent(in) :: contrib_idx
+     !   integer(C_INT), dimension(*), intent(in) :: exec_loc
+     !   integer(C_INT), dimension(*), intent(in) :: contrib_dest
+     !   type(cpu_factor_options), intent(in) :: options
+     ! end function spldlt_create_symbolic_tree
+     ! Debug
+     type(c_ptr) function spldlt_create_symbolic_tree(akeep, nnodes, nparts) & 
           bind(C, name="spldlt_create_symbolic_tree")
        use, intrinsic :: iso_c_binding
-       import :: cpu_factor_options
        implicit none
        type(c_ptr), value :: akeep
-       integer(c_int), value :: n
        integer(c_int), value :: nnodes
-       integer(c_int), dimension(*), intent(in) :: sptr
-       integer(c_int), dimension(*), intent(in) :: sparent
-       integer(c_long), dimension(*), intent(in) :: rptr
-       integer(c_int), dimension(*), intent(in) :: rlist
-       integer(c_long), dimension(*), intent(in) :: nptr
-       integer(c_long), dimension(2, *), intent(in) :: nlist
-       integer(C_INT), value :: nparts
-       integer(C_INT), dimension(*), intent(in) :: part
-       integer(C_INT), dimension(*), intent(in) :: contrib_idx
-       integer(C_INT), dimension(*), intent(in) :: exec_loc
-       integer(C_INT), dimension(*), intent(in) :: contrib_dest
-       type(cpu_factor_options), intent(in) :: options
+       integer(c_int), value :: nparts
      end function spldlt_create_symbolic_tree
+
   end interface spldlt_create_symbolic_tree_c
 
 contains
 
+  ! Debug
+  ! subroutine allocate_cpu_symbolic_subtree()
+  !   implicit none
+  !   class(cpu_symbolic_subtree), pointer :: this
+  ! end subroutine allocate_cpu_symbolic_subtree
+
   subroutine spldlt_analyse(spldlt_akeep, akeep, options, inform, ncpu)
     use spral_ssids_akeep, only: ssids_akeep
     use spral_ssids_datatypes
-    use spral_ssids_cpu_subtree, only : construct_cpu_symbolic_subtree
+    use spral_ssids_cpu_subtree, only : construct_cpu_symbolic_subtree, cpu_symbolic_subtree
     use, intrinsic :: iso_c_binding
     implicit none
     
@@ -63,6 +79,9 @@ contains
     integer, dimension(:), allocatable :: contrib_dest, exec_loc
     ! Error management
     integer :: st
+
+    ! Debug
+    class(cpu_symbolic_subtree), pointer :: subtree_ptr => null()
     
     spldlt_akeep%akeep => akeep 
     nnodes = akeep%nnodes
@@ -97,20 +116,30 @@ contains
     if (st .ne. 0) go to 100
 
     ! Find subtree partition
-    call find_subtree_partition(akeep%nnodes, akeep%sptr, akeep%sparent,           &
-         akeep%rptr, options, akeep%topology, akeep%nparts, akeep%part,            &
-         exec_loc, akeep%contrib_ptr, akeep%contrib_idx, contrib_dest, inform, st)
-    if (st .ne. 0) go to 100
-    print *, "nparts = ", akeep%nparts
-    ! print *, "contrib_ptr = ", akeep%contrib_ptr(1:akeep%nparts+1)
-    ! print *, "contrib_idx = ", akeep%contrib_idx(1:akeep%nparts)
-    ! print *, "contrib_dest = ", &
-    !   contrib_dest(1:akeep%contrib_ptr(akeep%nparts+1)-1)
+    ! call find_subtree_partition(akeep%nnodes, akeep%sptr, akeep%sparent,           &
+    !      akeep%rptr, options, akeep%topology, akeep%nparts, akeep%part,            &
+    !      exec_loc, akeep%contrib_ptr, akeep%contrib_idx, contrib_dest, inform, st)
+    ! if (st .ne. 0) go to 100
 
-    ! print *, " contrib_dest = ", contrib_dest(:)
-    ! print *, " contrib_idx = ", akeep%contrib_idx
-    ! print *, " contrib_ptr = ", akeep%contrib_ptr
+    print *, " nparts = ", akeep%nparts
+    print *, " part = ", akeep%part
+    print *, " exec_loc = ", exec_loc
+    print *, " contrib_idx = ", akeep%contrib_idx
+    print *, " contrib_ptr = ", akeep%contrib_ptr
     print *, " contrib_dest = ", contrib_dest
+
+    akeep%nparts = 10
+    allocate(akeep%part(akeep%nnodes+1), exec_loc(akeep%nnodes))
+    akeep%part = (/1,  2,  7,  8,  9, 12, 13, 18, 19, 20, 25, 12, 13, 14, &
+         15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25/)
+    allocate(akeep%contrib_ptr(akeep%nparts+3), akeep%contrib_idx(akeep%nparts), &  
+         contrib_dest(akeep%nparts))
+    exec_loc = (/2, -1,  1,  2, -1,  1, -1,  2,  1, -1, -1,  1, -1, -1, & 
+         -1, -1, -1,  2,  1, -1, -1, -1, -1, -1 /)
+    akeep%contrib_idx = (/1,  5,  2,  3,  6,  4,  7,  8,  9, 11/)
+    akeep%contrib_ptr = (/1,  1,  2,  2,  2,  4,  4, 5, 5, 5, 10, 10, 0/)
+    contrib_dest = (/2,  9,  9, 13, 24, 24, 23, 20, 20,  0/)
+
     do i = 1, akeep%nparts
        ! print *, "part ", i, ", sa = ", akeep%part(i), ", en = ", akeep%part(i+1)-1, &
        !      ", contrib_idx = ", akeep%contrib_idx(akeep%contrib_ptr(i):akeep%contrib_ptr(i+1)-1)
@@ -136,22 +165,31 @@ contains
        ! CPU
        !print *, numa_region, "init cpu subtree ", i, akeep%part(i), &
        !   akeep%part(i+1)-1
-       akeep%subtree(i)%ptr => construct_cpu_symbolic_subtree(akeep%n,   &
-            akeep%part(i), akeep%part(i+1), akeep%sptr, akeep%sparent,   &
-            akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist,            &
-            contrib_dest(akeep%contrib_ptr(i):akeep%contrib_ptr(i+1)-1), &
-            options)
+       ! allocate(akeep%subtree(i)%ptr)
+
+       ! akeep%subtree(i)%ptr => construct_cpu_symbolic_subtree(akeep%n,   &
+       !      akeep%part(i), akeep%part(i+1), akeep%sptr, akeep%sparent,   &
+       !      akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist,            &
+       !      contrib_dest(akeep%contrib_ptr(i):akeep%contrib_ptr(i+1)-1), &
+       !      options)
+
+       ! debug
+       allocate(subtree_ptr)
+       akeep%subtree(i)%ptr => subtree_ptr
+       nullify(subtree_ptr) 
+
     end do
-    ! print *, "[spldlt_analyse] nnodes: ", nnodes
-    ! print *, "sptr: ", akeep%sptr(1:nnodes+1)
+    print *, "[spldlt_analyse] nnodes: ", nnodes
+    print *, "sptr: ", akeep%sptr(1:nnodes+1)
 
     ! call C++ analyse routine
     call cpu_copy_options_in(options, coptions)
-    spldlt_akeep%symbolic_tree_c = &
-         spldlt_create_symbolic_tree_c(c_loc(akeep), akeep%n, nnodes, akeep%sptr, &
-         akeep%sparent, akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist, &
-         akeep%nparts, akeep%part, akeep%contrib_idx, exec_loc, contrib_dest, & 
-         coptions)
+    ! debug
+    ! spldlt_akeep%symbolic_tree_c = &
+    !      spldlt_create_symbolic_tree_c(c_loc(akeep), akeep%n, nnodes, akeep%sptr, &
+    !      akeep%sparent, akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist, &
+    !      akeep%nparts, akeep%part, akeep%contrib_idx, exec_loc, contrib_dest, & 
+    !      coptions)
 
     return
 100 continue

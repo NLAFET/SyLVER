@@ -37,6 +37,6 @@ if(${RUNTIME} MATCHES "StarPU")
 
 endif()
 
-# message(STATUS "Sources: ${sources}")
+message(STATUS "Sources: ${sources}")
 
 add_library(spldlt ${sources})

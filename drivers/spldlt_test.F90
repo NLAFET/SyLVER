@@ -103,13 +103,13 @@ program spldlt_test
       end do
    end do
 
-   ! check matrix format is correct
-   call cscl_verify(6, SPRAL_MATRIX_REAL_SYM_INDEF, n, n, &
-        ptr, row, flag, more)
-   if(flag.ne.0) then
-      print *, "CSCL_VERIFY failed: ", flag, more
-      stop
-   endif
+   ! ! check matrix format is correct
+   ! call cscl_verify(6, SPRAL_MATRIX_REAL_SYM_INDEF, n, n, &
+   !      ptr, row, flag, more)
+   ! if(flag.ne.0) then
+   !    print *, "CSCL_VERIFY failed: ", flag, more
+   !    stop
+   ! endif
 
    ssids_opt%ordering = 1 ! use Metis ordering
    ssids_opt%scaling = 0 ! no scaling
@@ -143,7 +143,7 @@ program spldlt_test
    ! print atree
    ! call spldlt_print_atree(akeep)
    ! print atree with partitions
-   call spldlt_print_atree_part(akeep)
+   ! call spldlt_print_atree_part(akeep)
 
    ! Initialize SpLDLT
    call spldlt_init(ncpu)

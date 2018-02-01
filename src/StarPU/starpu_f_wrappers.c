@@ -12,7 +12,7 @@ int starpu_f_init_c(int ncpus) {
 
   if(ncpus > 0)
     conf->ncpus = ncpus;  
-
+  printf("starpu_f_init_c, ncpu: %d\n", conf->ncpus);
 #if defined(SPLLT_USE_GPU)
   conf->ncuda = 1;
 #endif

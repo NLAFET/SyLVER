@@ -249,10 +249,15 @@ endif()
 add_subdirectory(src)
 
 add_executable(spldlt_test drivers/spldlt_test.F90)
+add_executable(spldlt_test_debug drivers/spldlt_test_debug.F90)
 
-## spldlt
+## spldlt_test
 target_include_directories(spldlt_test PUBLIC ${CMAKE_BINARY_DIR}/src)
 target_link_libraries(spldlt_test spldlt)
+
+## spldlt_test_debug
+target_include_directories(spldlt_test_debug PUBLIC ${CMAKE_BINARY_DIR}/src)
+target_link_libraries(spldlt_test_debug spldlt)
 
 # Kernel test driver
 if (${KERNEL_TEST} MATCHES "ON")
@@ -272,8 +277,10 @@ endif()
 
 ## spral
 target_include_directories(spldlt_test PUBLIC ${SPRAL_DIR})
+target_include_directories(spldlt_test_debug PUBLIC ${SPRAL_DIR})
 find_library(SPRAL_LIBRARY spral PATHS ${SPRAL_DIR} ${SPRAL_DIR})
 target_link_libraries(spldlt_test ${SPRAL_LIBRARY})
+target_link_libraries(spldlt_test_debug ${SPRAL_LIBRARY})
 
 if (${KERNEL_TEST} MATCHES "ON")
   # MESSAGE( STATUS "spral directory:         " ${SPRAL_DIR})
@@ -290,6 +297,7 @@ endif()
 set(test_drivers)
 
 list(APPEND test_drivers "drivers/spldlt_test.F90")
+list(APPEND test_drivers "drivers/spldlt_test_debug.F90")
 
 if (${KERNEL_TEST} MATCHES "ON")
 

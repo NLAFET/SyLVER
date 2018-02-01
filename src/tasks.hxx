@@ -370,14 +370,32 @@ namespace spldlt {
 
 #if defined(SPLDLT_USE_STARPU)
 
-      insert_factor_subtree(root.hdl, posdef, aval, akeep, fkeep, p, child_contrib, options);
+      // insert_factor_subtree(root.hdl, posdef, aval, akeep, fkeep, p, child_contrib, options);
+
+      // Debug
+      insert_factor_subtree(root.hdl, akeep, fkeep, p);
 
       // spldlt_factor_subtree_c(posdef, aval, akeep, fkeep, p, child_contrib, options);
 
 #else
       spldlt_factor_subtree_c(posdef, aval, akeep, fkeep, p, child_contrib, options);
-#endif      
+#endif
+   }
 
+   // Get contrib task
+
+   // Kernel
+   extern "C" void spldlt_get_contrib_c(void *akeep, void *fkeep, int p, void **child_contrib);
+
+   void get_contrib_task(void *akeep, void *fkeep, SymbolicSNode const& root, int p, void **child_contrib) {
+
+#if defined(SPLDLT_USE_STARPU)
+
+      insert_get_contrib(root.hdl, akeep, fkeep, p, child_contrib);
+
+#else
+      spldlt_get_contrib_c(akeep, fkeep, p, child_contrib)
+#endif      
    }
 
    // Assemble subtree task
