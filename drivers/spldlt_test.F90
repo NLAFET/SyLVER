@@ -21,7 +21,8 @@ program spldlt_test
    ! Matrix description
    character(len=200) :: matfile = ''
    integer :: m, n
-   integer, dimension(:), allocatable :: ptr, row
+   integer(long), dimension(:), allocatable :: ptr
+   integer, dimension(:), allocatable :: row
    real(wp), dimension(:), allocatable :: val
 
    ! Block-size
@@ -46,7 +47,7 @@ program spldlt_test
 
    ! ssids structures
    type(ssids_inform) :: inform ! stats
-   type(ssids_akeep) :: akeep   ! analysis data
+   ! type(ssids_akeep) :: akeep   ! analysis data
    type(ssids_fkeep) :: fkeep   ! factorization data
    ! spldlt strucutres
    type(spldlt_akeep_type) :: spldlt_akeep
@@ -115,38 +116,40 @@ program spldlt_test
    ssids_opt%scaling = 0 ! no scaling
 
    ! Analyse
-   write(*, "(a)") "[SpLDLT Test] Analyse..."
-   call system_clock(start_t, rate_t)
-   call ssids_analyse(.false., n, ptr, row, akeep, &
-        ssids_opt, inform, val=val)
-   call system_clock(stop_t)
-   print *, "Used order ", ssids_opt%ordering
-   if (inform%flag < 0) then
-      print *, "oops on analyse ", inform%flag
-      stop
-   endif
-   write(*, "(a)") "ok"
-   print *, "Analyse took ", (stop_t - start_t)/real(rate_t)
-   !print *, "Used maximum memory of ", inform%maxmem
-   smanal = (stop_t - start_t)/real(rate_t)
-   print "(a,es10.2)", "Predict nfact = ", real(inform%num_factor)
-   print "(a,es10.2)", "Predict nflop = ", real(inform%num_flops)
-   print "(a6, i10)", "nparts", inform%nparts
-   print "(a6, es10.2)", "cpu_flops", real(inform%cpu_flops)
-   ! print "(a6, es10.2)", "gpu_flops", real(inform%gpu_flops)
-   smaflop = real(inform%num_flops)
-   smafact = real(inform%num_factor)
+   ! write(*, "(a)") "[SpLDLT Test] Analyse..."
+   ! call system_clock(start_t, rate_t)
+   ! call ssids_analyse(.false., n, ptr, row, akeep, &
+   !      ssids_opt, inform, val=val)
+   ! call system_clock(stop_t)
+   ! print *, "Used order ", ssids_opt%ordering
+   ! if (inform%flag < 0) then
+   !    print *, "oops on analyse ", inform%flag
+   !    stop
+   ! endif
+   ! write(*, "(a)") "ok"
+   ! print *, "Analyse took ", (stop_t - start_t)/real(rate_t)
+   ! !print *, "Used maximum memory of ", inform%maxmem
+   ! smanal = (stop_t - start_t)/real(rate_t)
+   ! print "(a,es10.2)", "Predict nfact = ", real(inform%num_factor)
+   ! print "(a,es10.2)", "Predict nflop = ", real(inform%num_flops)
+   ! print "(a6, i10)", "nparts", inform%nparts
+   ! print "(a6, es10.2)", "cpu_flops", real(inform%cpu_flops)
+   ! ! print "(a6, es10.2)", "gpu_flops", real(inform%gpu_flops)
+   ! smaflop = real(inform%num_flops)
+   ! smafact = real(inform%num_factor)
 
-   ! perform spldlt analysis 
-   call spldlt_analyse(spldlt_akeep, akeep, ssids_opt, inform, ncpu)
+   ! perform spldlt analysis
+   call spldlt_analyse(spldlt_akeep, n, ptr, row, ssids_opt, inform, ncpu, val=val)
 
    ! print atree
    ! call spldlt_print_atree(akeep)
    ! print atree with partitions
-   ! call spldlt_print_atree_part(akeep)
+   call spldlt_print_atree_part(spldlt_akeep%akeep)
+   return
 
    ! Initialize SpLDLT
    call spldlt_init(ncpu)
+
    ! print *, "TETETET"
    ! stop
    ! Factorize
@@ -216,7 +219,7 @@ program spldlt_test
    call internal_calc_norm(n, ptr, row, val, soln, rhs, nrhs, res)
    print *, "bwd error scaled = ", res
 
-   call ssids_free(akeep, fkeep, cuda_error)
+   call ssids_free(spldlt_akeep%akeep, fkeep, cuda_error)
    
  contains
 
@@ -284,7 +287,7 @@ program spldlt_test
 
    subroutine internal_calc_norm(n, ptr, row, val, x_vec, b_vec, nrhs, res)
      integer, intent(in) :: n
-     integer, dimension(n+1), intent(in) :: ptr
+     integer(long), dimension(n+1), intent(in) :: ptr
      integer, dimension(ptr(n+1)-1), intent(in) :: row
      real(wp), dimension(ptr(n+1)-1), intent(in) :: val
      integer, intent(in) :: nrhs
@@ -346,7 +349,7 @@ program spldlt_test
 
    subroutine matrix_inf_norm(n, ptr, row, val, norm)
      integer, intent(in) :: n
-     integer, dimension(n+1), intent(in) :: ptr
+     integer(long), dimension(n+1), intent(in) :: ptr
      integer, dimension(ptr(n+1)-1), intent(in) :: row
      real(wp), dimension(ptr(n+1)-1), intent(in) :: val
      real(wp), intent(out) :: norm

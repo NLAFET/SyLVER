@@ -15,11 +15,20 @@ namespace spldlt {
    class SymbolicTree {
    public:
       SymbolicTree(void* akeep, int nnodes, int nparts)
-         : akeep_(akeep), nnodes_(nnodes), nparts_(nparts)
+         : akeep_(akeep), nnodes_(nnodes), nodes_(nnodes_+1), nparts_(nparts)
       {
          printf("[SymbolicTree]\n");
-
+         
       }
+
+      SymbolicSNode& operator[](int idx) {
+         return nodes_[idx];
+      }
+      
+      SymbolicSNode const& operator[](int idx) const {
+         return nodes_[idx];
+      }
+
    private:
       void* akeep_;
       int nnodes_;

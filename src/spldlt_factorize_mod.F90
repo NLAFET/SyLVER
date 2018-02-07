@@ -174,10 +174,12 @@ contains
 
     part = p+1
 
+    ! print *, "[spldlt_print_debuginfo_c] part = ",  part
+
     select type(subtree_ptr => fkeep%subtree(part)%ptr)
     class is(cpu_numeric_subtree) ! factorize subtree on CPU
 
- 
+       ! print *, "[spldlt_print_debuginfo_c] size(fkeep%subtree) = ", size(fkeep%subtree) 
        ! write(*, '("[spldlt_print_debuginfo_c] c_loc(csubtree) = ", z16)') c_loc(subtree_ptr%csubtree)
        write(*, '("[spldlt_print_debuginfo_c] part = ", i5, " csubtree = ", z16)') part, subtree_ptr%csubtree
 
@@ -240,6 +242,33 @@ contains
     
   end subroutine spldlt_get_contrib_c
 
+  function spldlt_factor_subtree_cpu(p)
+    use, intrinsic :: iso_c_binding
+    use spral_ssids_subtree, only: numeric_subtree_base
+    use spral_ssids_cpu_subtree, only : cpu_numeric_subtree
+    implicit none
+    class(numeric_subtree_base), pointer :: spldlt_factor_subtree_cpu
+    integer :: p
+
+    type(cpu_numeric_subtree), pointer :: cpu_factor
+    type(c_ptr) :: ptr
+
+    ! Leave output as null until successful exit
+    nullify(spldlt_factor_subtree_cpu)
+
+    ! Allocate cpu_factor for output
+    ! allocate(cpu_factor, stat=st)
+    allocate(cpu_factor)
+
+    ptr = c_null_ptr
+    cpu_factor%csubtree = test_malloc(p, ptr)
+
+    ! Success, set result and return
+    spldlt_factor_subtree_cpu => cpu_factor
+    return
+
+  end function spldlt_factor_subtree_cpu
+  
   ! Debug
   subroutine spldlt_factor_subtree_c(cakeep, cfkeep, p) &
        bind(C, name="spldlt_factor_subtree_c")
@@ -264,23 +293,39 @@ contains
 
     part = p+1 ! p is C-indexed
 
-    select type(subtree_ptr => akeep%subtree(part)%ptr)
-    class is(cpu_symbolic_subtree) ! factorize subtree on CPU
+    fkeep%subtree(part)%ptr => spldlt_factor_subtree_cpu(p)
 
-       nullify(fkeep%subtree(part)%ptr)
+    ! select type(subtree_ptr => fkeep%subtree(part)%ptr)
+    ! class is(cpu_numeric_subtree)
+    !    ptr = c_null_ptr
+    !    subtree_ptr%csubtree = test_malloc(p, ptr)
 
-       allocate(cpu_factor)
+    !    ! allocate(cpu_factor)
+    !    ! ptr = c_null_ptr
+    !    ! cpu_factor%csubtree = test_malloc(p, ptr)
+    !    ! subtree_ptr => cpu_factor
+
+    ! end select
+
+    ! select type(subtree_ptr => akeep%subtree(part)%ptr)
+    ! class is(cpu_symbolic_subtree) ! factorize subtree on CPU
+
+       ! nullify(fkeep%subtree(part)%ptr)
+
+       ! allocate(cpu_factor)
 
        ! ptr = test_malloc(p)
-       ptr = c_loc(cpu_factor)
+       ! ptr = c_loc(cpu_factor)
        ! call test_malloc(c_loc(cpu_factor%csubtree))
-       cpu_factor%csubtree = test_malloc(p, ptr)
-       ! cpu_factor%csubtree = c_loc(cpu_factor)
+       ! cpu_factor%csubtree = test_malloc(p, ptr)
        ! cpu_factor%csubtree = ptr
 
-       fkeep%subtree(part)%ptr => cpu_factor
+       ! fkeep%subtree(part)%ptr => cpu_factor
 
-    end select
+       ! ptr = c_loc(fkeep%subtree(part)%ptr)
+       ! fkeep%subtree(part)%ptr%csubtree = test_malloc(p, ptr)
+
+    ! end select
 
   end subroutine spldlt_factor_subtree_c
   

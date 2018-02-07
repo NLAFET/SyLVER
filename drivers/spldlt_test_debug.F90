@@ -2,12 +2,12 @@ program spldlt_test_debug
   use, intrinsic :: iso_c_binding
   use spral_ssids
   use spral_ssids_subtree, only: symbolic_subtree_base
-  use spral_ssids_cpu_subtree, only : cpu_symbolic_subtree
+  use spral_ssids_cpu_subtree, only : cpu_symbolic_subtree, cpu_numeric_subtree
   use starpu_f_mod
   use spldlt_factorize_mod
   use spldlt_analyse_mod
   implicit none
-   
+
   type(ssids_options) :: options
   type(ssids_akeep), target :: akeep   ! analysis data
   type(ssids_fkeep), target :: fkeep   ! factorization data
@@ -16,6 +16,7 @@ program spldlt_test_debug
   integer(c_int) :: ret ! starpu_init return value
   type(c_ptr) :: symbolic_tree, numeric_tree 
   type(c_ptr) :: cakeep, cfkeep 
+  type(cpu_numeric_subtree), pointer :: cpu_factor => null()
 
   if (allocated(akeep%subtree)) deallocate(akeep%subtree)
 
@@ -26,11 +27,12 @@ program spldlt_test_debug
   akeep%nparts = 4 
   akeep%nnodes = 4 
 
-  allocate(akeep%subtree(akeep%nparts))
+  allocate(akeep%subtree(1:akeep%nparts))
 
   nullify(subtree_ptr)
   do i = 1, akeep%nparts
 
+     nullify(akeep%subtree(i)%ptr)
      nullify(subtree_ptr)
      allocate(subtree_ptr) ! Allocate a new cpu_subtree object
 
@@ -45,7 +47,15 @@ program spldlt_test_debug
 
   symbolic_tree = spldlt_create_symbolic_tree_c(cakeep, akeep%nnodes, akeep%nparts)
   
-  allocate(fkeep%subtree(akeep%nparts))
+  allocate(fkeep%subtree(1:akeep%nparts))
+
+  ! do i = 1, akeep%nparts
+  !    nullify(fkeep%subtree(i)%ptr)
+  !    nullify(cpu_factor)
+  !    allocate(cpu_factor)
+  !    cpu_factor%csubtree = c_null_ptr
+  !    fkeep%subtree(i)%ptr => cpu_factor 
+  ! end do
 
   cfkeep = c_loc(fkeep)
 

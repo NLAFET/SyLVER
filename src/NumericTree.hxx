@@ -64,12 +64,30 @@ namespace spldlt {
       void factor_mf() {
 
          printf("[factor_mf] nparts = %d\n", symb_.nparts_);         
+
+         // for(int ni = 0; ni < symb_.nnodes_; ++ni) {
+         //    starpu_void_data_register(&(symb_[ni].hdl));
+         // }
          
          for(int p = 0; p < symb_.nparts_; ++p) {
+#if defined(SPLDLT_USE_STARPU)
 
-            printf("[factor_mf] p = %d\n", p);
-            
-            
+            starpu_data_handle_t hdl;
+
+            starpu_void_data_register(&hdl);
+
+            spldlt::starpu::insert_factor_subtree(hdl, symb_.akeep_, fkeep_, p);
+
+            // starpu_task_wait_for_all();
+#endif
+         }
+
+#if defined(SPLDLT_USE_STARPU)
+         starpu_task_wait_for_all();
+#endif         
+                        
+         for(int p = 0; p < symb_.nparts_; ++p) {
+            spldlt_print_debuginfo_c(symb_.akeep_, fkeep_, p);
          }
       }
 
