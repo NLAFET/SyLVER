@@ -48,7 +48,7 @@ program spldlt_test
    ! ssids structures
    type(ssids_inform) :: inform ! stats
    ! type(ssids_akeep) :: akeep   ! analysis data
-   type(ssids_fkeep) :: fkeep   ! factorization data
+   ! type(ssids_fkeep) :: fkeep   ! factorization data
    ! spldlt strucutres
    type(spldlt_akeep_type) :: spldlt_akeep
    type(spldlt_fkeep_type) :: spldlt_fkeep
@@ -145,7 +145,6 @@ program spldlt_test
    ! call spldlt_print_atree(akeep)
    ! print atree with partitions
    call spldlt_print_atree_part(spldlt_akeep%akeep)
-   return
 
    ! Initialize SpLDLT
    call spldlt_init(ncpu)
@@ -175,12 +174,17 @@ program spldlt_test
 
    ! Factorize (SpLDLT)
    call system_clock(start_t, rate_t)
-   call spldlt_factor(pos_def, val, spldlt_akeep, spldlt_fkeep, fkeep, ssids_opt, inform)
+   call spldlt_factor(spldlt_akeep, spldlt_fkeep, pos_def, val, ssids_opt, inform)
    call system_clock(stop_t)
    write(*, "(a)") "ok"
    print *, "Factor took ", (stop_t - start_t)/real(rate_t)
    smfact = (stop_t - start_t)/real(rate_t)
    ! stop
+
+   ! Shutdown SpLDLT
+   call spldlt_finalize()
+
+   return
 
    ! Solve
    write(*, "(a)") "[SpLDLT Test] Solve..."
@@ -197,15 +201,13 @@ program spldlt_test
    ! write(*, "(a)") "ok"
    ! print *, "Solve took ", (stop_t - start_t)/real(rate_t)
 
-   ! Shutdown SpLDLT
-   call spldlt_finalize()
 
    stop
 
    ! Solve SpLDLT
    call system_clock(start_t, rate_t)
    soln = rhs ! init solution with RHS
-   call spldlt_fkeep%solve(nrhs, soln, n, spldlt_akeep, inform)
+   call spldlt_fkeep%solve(spldlt_akeep, nrhs, soln, n, inform)
    call system_clock(stop_t)
    write(*, "(a)") "ok"
    print *, "Solve took ", (stop_t - start_t)/real(rate_t)
@@ -219,7 +221,7 @@ program spldlt_test
    call internal_calc_norm(n, ptr, row, val, soln, rhs, nrhs, res)
    print *, "bwd error scaled = ", res
 
-   call ssids_free(spldlt_akeep%akeep, fkeep, cuda_error)
+   call ssids_free(spldlt_akeep%akeep, spldlt_fkeep%fkeep, cuda_error)
    
  contains
 

@@ -42,7 +42,7 @@ namespace spldlt {
    // extern "C" void spldlt_get_contrib_c(void *akeep, void *fkeep, int p, void **child_contrib);
    // extern "C" void spldlt_get_contrib_c(void *akeep, void *fkeep, int p);
 
-   // template<typename T>
+   template<typename T>
    class NumericTree {
 
    public:
@@ -50,36 +50,53 @@ namespace spldlt {
       NumericTree(const NumericTree&) =delete;
       NumericTree& operator=(const NumericTree&) =delete;
       
-      NumericTree(void* fkeep, SymbolicTree& symbolic_tree)
+      NumericTree(
+            void* fkeep, 
+            SymbolicTree& symbolic_tree, 
+            T *aval,
+            void** child_contrib)
          : fkeep_(fkeep), symb_(symbolic_tree)
       {
          printf("[NumericTree]\n");
 
-         spldlt::starpu::codelet_init();
+         spldlt::starpu::codelet_init<T>();
 
-         factor_mf();
+         factor_mf(aval, child_contrib);
+
+// #if defined(SPLDLT_USE_STARPU)
+//          starpu_task_wait_for_all();
+// #endif         
          
       }
 
-      void factor_mf() {
+      void factor_mf(T *aval, void** child_contrib) {
 
-         printf("[factor_mf] nparts = %d\n", symb_.nparts_);         
+         printf("[factor_mf] nparts = %d\n", symb_.nparts_);
 
-         // for(int ni = 0; ni < symb_.nnodes_; ++ni) {
-         //    starpu_void_data_register(&(symb_[ni].hdl));
-         // }
+         // Register symbolic handles on nodes
+         for(int ni = 0; ni < symb_.nnodes_; ++ni) {
+            starpu_void_data_register(&(symb_[ni].hdl));
+         }
          
          for(int p = 0; p < symb_.nparts_; ++p) {
+
+            int root = symb_.part_[p+1]-2; // Part is 1-indexed
+            // printf("[factor_mf] part = %d, root = %d\n", p, root);
+
+            // Check if current partition is a subtree
+            if (symb_[root].exec_loc != -1) {
+
 #if defined(SPLDLT_USE_STARPU)
 
-            starpu_data_handle_t hdl;
+               // starpu_data_handle_t hdl;
 
-            starpu_void_data_register(&hdl);
+               // starpu_void_data_register(&hdl);
 
-            spldlt::starpu::insert_factor_subtree(hdl, symb_.akeep_, fkeep_, p);
+               spldlt::starpu::insert_factor_subtree(symb_[root].hdl, symb_.akeep_, fkeep_, p, aval);
 
-            // starpu_task_wait_for_all();
+               // starpu_task_wait_for_all();
 #endif
+            }
          }
 
 #if defined(SPLDLT_USE_STARPU)

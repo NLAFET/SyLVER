@@ -21,8 +21,8 @@ namespace spldlt {
       // std::vector<starpu_data_handle_t> contrib_handles; // array containing the block handles in the contribution block
       // int *map;
 #endif 
-      // int part; // Partition
-      // int exec_loc; // Execution location
+      int part; // Partition info
+      int exec_loc; // Execution location info
       // int contrib_idx; // Index of contribution
    };
 

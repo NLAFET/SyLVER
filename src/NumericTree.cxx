@@ -16,13 +16,17 @@ using namespace spldlt;
 // Double precision wrapper around templated routines
 
 extern "C"
-void *spldlt_create_numeric_tree_dbl(void *fkeep,
-      void *symbolic_tree_ptr) {
+void *spldlt_create_numeric_tree_dbl(
+      void *fkeep,
+      void *symbolic_tree_ptr,
+      double *aval, // Values of A
+      void** child_contrib // Contributions from child subtrees
+      ) {
 
    // Retreive SymbolicTree object from pointer
    auto &symbolic_tree = *static_cast<SymbolicTree*>(symbolic_tree_ptr);
 
-   auto* tree = new NumericTree(fkeep, symbolic_tree);
+   auto* tree = new NumericTree<double>(fkeep, symbolic_tree, aval, child_contrib);
 
    return (void *) tree;
 }

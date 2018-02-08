@@ -814,17 +814,17 @@ namespace spldlt { namespace starpu {
       // extern "C" void spldlt_factor_subtree_c(bool posdef, double *aval, void *akeep, void *fkeep, int p, void **child_contrib, struct cpu_factor_options const* options);
 
       // Debug
-      extern "C" void spldlt_factor_subtree_c(void *akeep, void *fkeep, int p);
+      extern "C" void spldlt_factor_subtree_c(void *akeep, void *fkeep, int p, double *aval);
 
       // CPU kernel
-      // template <typename T>
+      template <typename T>
       void factor_subtree_cpu_func(void *buffers[], void *cl_arg) {
 
          // bool posdef;
-         // T *aval;
          void *akeep;
          void *fkeep;
          int p;
+         T *aval;
          // void **child_contrib;
          // struct cpu_factor_options *options;
 
@@ -843,14 +843,16 @@ namespace spldlt { namespace starpu {
                &akeep, 
                &fkeep,
                &p,
+               &aval,
                0);
 
+         printf("[factor_subtree_cpu_func]\n");
          // printf("[factor_subtree_cpu_func] akeep = %p, fkeep = %p\n", akeep, fkeep);
          // printf("[factor_subtree_cpu_func] part: %d, child_contrib: %p\n", p+1, child_contrib);
          
          // spldlt_factor_subtree_c(posdef, aval, akeep, fkeep, p, child_contrib, options);
          // Debug
-         spldlt_factor_subtree_c(akeep, fkeep, p);
+         spldlt_factor_subtree_c(akeep, fkeep, p, aval);
 
       }
 
@@ -858,11 +860,13 @@ namespace spldlt { namespace starpu {
       struct starpu_codelet cl_factor_subtree;
 
       // Debug
+      template <typename T>
       void insert_factor_subtree(
             starpu_data_handle_t root_hdl, // Symbolic handle on root node
             void *akeep, 
             void *fkeep,
-            int p) {
+            int p,
+            T *aval) {
 
          int ret;
 
@@ -874,6 +878,7 @@ namespace spldlt { namespace starpu {
                                   STARPU_VALUE, &akeep, sizeof(void*),
                                   STARPU_VALUE, &fkeep, sizeof(void*),
                                   STARPU_VALUE, &p, sizeof(int),
+                                  STARPU_VALUE, &aval, sizeof(T*),
                                   0);
 
          STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
@@ -1308,7 +1313,7 @@ namespace spldlt { namespace starpu {
       /* As it is not possible to statically intialize codelet in C++,
          we do it via this function */
       // template <typename T, typename PoolAlloc>
-      // template <typename T>
+      template <typename T>
       void codelet_init() {
 
          // // init_node StarPU codelet
@@ -1421,8 +1426,7 @@ namespace spldlt { namespace starpu {
          cl_factor_subtree.where = STARPU_CPU;
          cl_factor_subtree.nbuffers = STARPU_VARIABLE_NBUFFERS;
          cl_factor_subtree.name = "FACTOR_SUBTREE";
-         // cl_factor_subtree.cpu_funcs[0] = factor_subtree_cpu_func<T>;
-         cl_factor_subtree.cpu_funcs[0] = factor_subtree_cpu_func;
+         cl_factor_subtree.cpu_funcs[0] = factor_subtree_cpu_func<T>;
 
          // // get_contrib StarPU codelet
          // starpu_codelet_init(&cl_get_contrib);

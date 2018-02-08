@@ -43,14 +43,18 @@ module spldlt_analyse_mod
      !   integer(C_INT), dimension(*), intent(in) :: contrib_dest
      !   type(cpu_factor_options), intent(in) :: options
      ! end function spldlt_create_symbolic_tree
+
      ! Debug
-     type(c_ptr) function spldlt_create_symbolic_tree(akeep, nnodes, nparts) & 
+     type(c_ptr) function spldlt_create_symbolic_tree(akeep, nnodes, nparts, &
+          part, exec_loc) &
           bind(C, name="spldlt_create_symbolic_tree")
        use, intrinsic :: iso_c_binding
        implicit none
        type(c_ptr), value :: akeep
        integer(c_int), value :: nnodes
        integer(c_int), value :: nparts
+       integer(c_int), dimension(*), intent(in) :: part
+       integer(c_int), dimension(*), intent(in) :: exec_loc
      end function spldlt_create_symbolic_tree
 
   end interface spldlt_create_symbolic_tree_c
@@ -188,6 +192,7 @@ contains
   subroutine analyse_core(spldlt_akeep, n, ptr, row, ptr2, row2, order, invp, &
        options, inform)
     use spral_core_analyse, only : basic_analyse
+    use spral_ssids_cpu_subtree, only : construct_cpu_symbolic_subtree
     implicit none
 
     type(spldlt_akeep_type), target, intent(inout) :: spldlt_akeep ! spldlt akeep structure 
@@ -213,6 +218,8 @@ contains
     integer(long) :: nz ! ptr(n+1)-1
     integer, dimension(:), allocatable :: contrib_dest, exec_loc
     integer :: st
+
+    type(c_ptr) :: cakeep
 
     context = 'ssids_analyse'
     akeep => spldlt_akeep%akeep
@@ -264,15 +271,33 @@ contains
          exec_loc, akeep%contrib_ptr, akeep%contrib_idx, contrib_dest, inform, st)
     if (st .ne. 0) go to 100
 
+    print *, " nparts = ", akeep%nparts
+    print *, " part = ", akeep%part(1:akeep%nparts+1)
+    print *, " exec_loc = ", exec_loc(1:akeep%nparts)
+
     ! Construct symbolic subtrees
     allocate(akeep%subtree(akeep%nparts))
 
     do i = 1, akeep%nparts
        
        akeep%subtree(i)%exec_loc = exec_loc(i)
+       ! if (akeep%subtree(i)%exec_loc .eq. -1) cycle
        ! CPU
-
+       akeep%subtree(i)%ptr => construct_cpu_symbolic_subtree(akeep%n,   &
+            akeep%part(i), akeep%part(i+1), akeep%sptr, akeep%sparent,   &
+            akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist,            &
+            contrib_dest(akeep%contrib_ptr(i):akeep%contrib_ptr(i+1)-1), &
+            options)
     end do
+
+    ! call C++ analyse routine
+    ! call cpu_copy_options_in(options, coptions)
+
+    cakeep = c_loc(akeep)
+
+    spldlt_akeep%symbolic_tree_c = &
+         spldlt_create_symbolic_tree_c(cakeep, akeep%nnodes, akeep%nparts, &
+         akeep%part, exec_loc)
 
 100 continue
     inform%stat = st

@@ -14,10 +14,18 @@ namespace spldlt {
 
    class SymbolicTree {
    public:
-      SymbolicTree(void* akeep, int nnodes, int nparts)
-         : akeep_(akeep), nnodes_(nnodes), nodes_(nnodes_+1), nparts_(nparts)
+      SymbolicTree(
+            void* akeep, int nnodes, int nparts, int const* part, int const* exec_loc)
+         : akeep_(akeep), nnodes_(nnodes), nodes_(nnodes_+1), nparts_(nparts), part_(part)
       {
          printf("[SymbolicTree]\n");
+         
+         for(int p = 0; p < nparts; ++p) {
+            for (int ni = part[p]-1; ni < part[p+1]-1; ++ni) {
+               nodes_[ni].part = p;
+               nodes_[ni].exec_loc = exec_loc[p];
+            }
+         }
          
       }
 
@@ -33,7 +41,10 @@ namespace spldlt {
       void* akeep_;
       int nnodes_;
       int nparts_;
+      int const* part_;
       std::vector<SymbolicSNode> nodes_;
+
+      template <typename T>
       friend class NumericTree;
    };
 
