@@ -1,4 +1,5 @@
 #include "ssids/cpu/ThreadStats.hxx"
+#include "ssids/cpu/cpu_iface.hxx"
 
 #include "NumericTree.hxx"
 
@@ -20,13 +21,14 @@ void *spldlt_create_numeric_tree_dbl(
       void *fkeep,
       void *symbolic_tree_ptr,
       double *aval, // Values of A
-      void** child_contrib // Contributions from child subtrees
+      void** child_contrib, // Contributions from child subtrees
+      struct spral::ssids::cpu::cpu_factor_options const* options // Options in
       ) {
 
    // Retreive SymbolicTree object from pointer
    auto &symbolic_tree = *static_cast<SymbolicTree*>(symbolic_tree_ptr);
 
-   auto* tree = new NumericTree<double>(fkeep, symbolic_tree, aval, child_contrib);
+   auto* tree = new NumericTree<double>(fkeep, symbolic_tree, aval, child_contrib, *options);
 
    return (void *) tree;
 }

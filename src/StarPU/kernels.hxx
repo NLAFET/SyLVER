@@ -1,6 +1,7 @@
 #pragma once
 
 // #include <vector>
+#include "ssids/cpu/cpu_iface.hxx"
 // SpLDLT
 // #include "SymbolicSNode.hxx"
 // #include "NumericNode.hxx"
@@ -809,12 +810,13 @@ namespace spldlt { namespace starpu {
       //    delete[] descrs;
       // }
 
+      ////////////////////////////////////////////////////////////////////////////////
       // Factor subtree task
 
-      // extern "C" void spldlt_factor_subtree_c(bool posdef, double *aval, void *akeep, void *fkeep, int p, void **child_contrib, struct cpu_factor_options const* options);
-
       // Debug
-      extern "C" void spldlt_factor_subtree_c(void *akeep, void *fkeep, int p, double *aval);
+      extern "C" void spldlt_factor_subtree_c(
+            void *akeep, void *fkeep, int p, double *aval, 
+            void **child_contrib, struct spral::ssids::cpu::cpu_factor_options const* options);
 
       // CPU kernel
       template <typename T>
@@ -825,18 +827,8 @@ namespace spldlt { namespace starpu {
          void *fkeep;
          int p;
          T *aval;
-         // void **child_contrib;
-         // struct cpu_factor_options *options;
-
-         // starpu_codelet_unpack_args(
-         //       cl_arg,
-         //       &posdef, 
-         //       &aval,
-         //       &akeep, 
-         //       &fkeep,
-         //       &p,
-         //       &child_contrib,
-         //       &options);
+         void **child_contrib;
+         struct spral::ssids::cpu::cpu_factor_options *options;
 
          starpu_codelet_unpack_args(
                cl_arg,
@@ -844,15 +836,13 @@ namespace spldlt { namespace starpu {
                &fkeep,
                &p,
                &aval,
-               0);
+               &child_contrib,
+               &options);
 
          printf("[factor_subtree_cpu_func]\n");
          // printf("[factor_subtree_cpu_func] akeep = %p, fkeep = %p\n", akeep, fkeep);
          // printf("[factor_subtree_cpu_func] part: %d, child_contrib: %p\n", p+1, child_contrib);
-         
-         // spldlt_factor_subtree_c(posdef, aval, akeep, fkeep, p, child_contrib, options);
-         // Debug
-         spldlt_factor_subtree_c(akeep, fkeep, p, aval);
+         spldlt_factor_subtree_c(akeep, fkeep, p, aval, child_contrib, options);
 
       }
 
@@ -866,7 +856,9 @@ namespace spldlt { namespace starpu {
             void *akeep, 
             void *fkeep,
             int p,
-            T *aval) {
+            T *aval,
+            void **child_contrib,
+            struct spral::ssids::cpu::cpu_factor_options const* options) {
 
          int ret;
 
@@ -879,39 +871,12 @@ namespace spldlt { namespace starpu {
                                   STARPU_VALUE, &fkeep, sizeof(void*),
                                   STARPU_VALUE, &p, sizeof(int),
                                   STARPU_VALUE, &aval, sizeof(T*),
+                                  STARPU_VALUE, &child_contrib, sizeof(void**),
+                                  STARPU_VALUE, &options, sizeof(struct spral::ssids::cpu::cpu_factor_options *),
                                   0);
 
          STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
       }
-
-      // template <typename T>
-      // void insert_factor_subtree(
-      //       starpu_data_handle_t root_hdl, // Symbolic handle on root node
-      //       bool posdef,
-      //       T *aval,
-      //       void *akeep, 
-      //       void *fkeep,
-      //       int p,
-      //       void **child_contrib,
-      //       struct cpu_factor_options const* options) {
-
-      //    int ret;
-
-      //    // printf("[insert_factor_subtree] akeep = %p, akeep = %p\n", akeep, fkeep);
-
-      //    ret = starpu_task_insert(&cl_factor_subtree,
-      //                             STARPU_RW, root_hdl,
-      //                             STARPU_VALUE, &posdef, sizeof(bool),
-      //                             STARPU_VALUE, &aval, sizeof(T*),
-      //                             STARPU_VALUE, &akeep, sizeof(void*),
-      //                             STARPU_VALUE, &fkeep, sizeof(void*),
-      //                             STARPU_VALUE, &p, sizeof(int),
-      //                             STARPU_VALUE, &child_contrib, sizeof(void**),
-      //                             STARPU_VALUE, &options, sizeof(struct cpu_factor_options *),
-      //                             0);
-
-      //    STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
-      // }
 
       // Get contrib task
 
@@ -960,6 +925,7 @@ namespace spldlt { namespace starpu {
       //    STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
       // }
 
+      ////////////////////////////////////////////////////////////////////////////////
       // Assemble subtree task
 
       // CPU kernel

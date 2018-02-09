@@ -42,14 +42,16 @@ module spldlt_factorize_mod
 
      ! debug
      type(c_ptr) function spldlt_create_numeric_tree_dlb( &
-          fkeep, symbolic_tree, aval, child_contrib) &
+          fkeep, symbolic_tree, aval, child_contrib, options) &
           bind(C, name="spldlt_create_numeric_tree_dbl")
        use, intrinsic :: iso_c_binding
+       use spral_ssids_cpu_iface, only : cpu_factor_options
        implicit none
        type(c_ptr), value :: fkeep
        type(c_ptr), value :: symbolic_tree
        real(c_double), dimension(*), intent(in) :: aval
        type(c_ptr), dimension(*), intent(inout) :: child_contrib
+       type(cpu_factor_options), intent(in) :: options ! SSIDS options
      end function spldlt_create_numeric_tree_dlb
      ! end debug
   end interface spldlt_create_numeric_tree_c
@@ -245,16 +247,27 @@ contains
     
   end subroutine spldlt_get_contrib_c
 
-  function spldlt_factor_subtree_cpu(p)
+  function spldlt_factor_subtree_cpu(cpu_symb, p, val, child_contrib_c, coptions)
     use, intrinsic :: iso_c_binding
     use spral_ssids_subtree, only: numeric_subtree_base
-    use spral_ssids_cpu_subtree, only : cpu_numeric_subtree
+    use spral_ssids_cpu_subtree, only : cpu_numeric_subtree, cpu_symbolic_subtree
     implicit none
     class(numeric_subtree_base), pointer :: spldlt_factor_subtree_cpu
     integer :: p
+    class(cpu_symbolic_subtree), target, intent(inout) :: cpu_symb
+    real(c_double), dimension(*), intent(in) :: val
+    type(c_ptr), dimension(*), intent(inout) :: child_contrib_c
+    type(cpu_factor_options), intent(in) :: coptions ! SSIDS options
 
+
+    integer :: part
+    logical(C_BOOL) :: posdef
     type(cpu_numeric_subtree), pointer :: cpu_factor
-    type(c_ptr) :: ptr
+    type(C_PTR) :: cscaling
+    ! type(c_ptr) :: ptr
+    type(cpu_factor_stats) :: cstats
+
+    part = p+1 ! p is C-indexed
 
     ! Leave output as null until successful exit
     nullify(spldlt_factor_subtree_cpu)
@@ -263,77 +276,75 @@ contains
     ! allocate(cpu_factor, stat=st)
     allocate(cpu_factor)
 
-    ptr = c_null_ptr
-    cpu_factor%csubtree = test_malloc(p, ptr)
+    posdef = .true.
+    cscaling = c_null_ptr
+    ! if (present(scaling)) cscaling = C_LOC(scaling) ! TODO(Florent) Set scaling if needed
 
-    ! cpu_factor%csubtree = &
-    !      c_create_numeric_subtree(posdef, cpu_factor%symbolic%csubtree, &
-    !      val, cscaling, child_contrib_c, coptions, cstats)
+    cpu_factor%symbolic => cpu_symb
+
+    ! ptr = c_null_ptr
+    ! cpu_factor%csubtree = test_malloc(p, ptr)
+
+    cpu_factor%csubtree = &
+         c_create_numeric_subtree(posdef, cpu_factor%symbolic%csubtree, &
+         val, cscaling, child_contrib_c, coptions, cstats)
 
     ! Success, set result and return
     spldlt_factor_subtree_cpu => cpu_factor
+
+    ! TODO
+    ! Extract to Fortran data structures
+    ! call cpu_copy_stats_out(cstats, inform)
+
     return
 
   end function spldlt_factor_subtree_cpu
   
   ! Debug
-  subroutine spldlt_factor_subtree_c(cakeep, cfkeep, p, val) &
+  subroutine spldlt_factor_subtree_c( &
+       cakeep, cfkeep, p, val, child_contrib_c, coptions) &
        bind(C, name="spldlt_factor_subtree_c")
     use spral_ssids_akeep, only : ssids_akeep
     use spral_ssids_fkeep, only : ssids_fkeep
     use spral_ssids_cpu_subtree, only : cpu_numeric_subtree, cpu_symbolic_subtree
-    use starpu_f_mod ! Debug
+    use spral_ssids_cpu_iface, only : cpu_factor_options
+    ! use starpu_f_mod ! debug
+    use spral_ssids_contrib, only : contrib_type
     implicit none
 
     type(c_ptr), value :: cakeep
     type(c_ptr), value :: cfkeep
     integer(c_int), value :: p ! Partition number, C-indexed
     real(c_double), dimension(*), intent(in) :: val
+    type(c_ptr), dimension(*), intent(inout) :: child_contrib_c
+    type(cpu_factor_options), intent(in) :: coptions ! SSIDS options
 
     type(ssids_akeep), pointer :: akeep => null()
     type(ssids_fkeep), pointer :: fkeep => null()
     integer :: part
     type(cpu_numeric_subtree), pointer :: cpu_factor => null()
     type(c_ptr) :: ptr
+    type(contrib_type), pointer :: contrib
 
     call c_f_pointer(cakeep, akeep)
     call c_f_pointer(cfkeep, fkeep)
 
     part = p+1 ! p is C-indexed
 
-    fkeep%subtree(part)%ptr => spldlt_factor_subtree_cpu(p)
+    call c_f_pointer(child_contrib_c(akeep%contrib_idx(part)), contrib)
 
-    ! select type(subtree_ptr => fkeep%subtree(part)%ptr)
-    ! class is(cpu_numeric_subtree)
-    !    ptr = c_null_ptr
-    !    subtree_ptr%csubtree = test_malloc(p, ptr)
+    select type(subtree_ptr => akeep%subtree(part)%ptr)
+    type is (cpu_symbolic_subtree)
+       fkeep%subtree(part)%ptr => spldlt_factor_subtree_cpu( &
+            subtree_ptr, p, val, child_contrib_c, coptions)
+    end select
 
-    !    ! allocate(cpu_factor)
-    !    ! ptr = c_null_ptr
-    !    ! cpu_factor%csubtree = test_malloc(p, ptr)
-    !    ! subtree_ptr => cpu_factor
-
-    ! end select
-
-    ! select type(subtree_ptr => akeep%subtree(part)%ptr)
-    ! class is(cpu_symbolic_subtree) ! factorize subtree on CPU
-
-       ! nullify(fkeep%subtree(part)%ptr)
-
-       ! allocate(cpu_factor)
-
-       ! ptr = test_malloc(p)
-       ! ptr = c_loc(cpu_factor)
-       ! call test_malloc(c_loc(cpu_factor%csubtree))
-       ! cpu_factor%csubtree = test_malloc(p, ptr)
-       ! cpu_factor%csubtree = ptr
-
-       ! fkeep%subtree(part)%ptr => cpu_factor
-
-       ! ptr = c_loc(fkeep%subtree(part)%ptr)
-       ! fkeep%subtree(part)%ptr%csubtree = test_malloc(p, ptr)
-
-    ! end select
+    if (akeep%contrib_idx(part) .le. akeep%nparts) then
+       ! There is a parent subtree to contribute to
+       ! print *, "[spldlt_factor_subtree_c] part = ", part, ", contrib to = ",  akeep%contrib_idx(part)
+       contrib = fkeep%subtree(part)%ptr%get_contrib()
+       contrib%ready = .true.
+    end if
 
   end subroutine spldlt_factor_subtree_c
   
@@ -457,17 +468,19 @@ contains
 !     return
 !   end subroutine spldlt_factor_subtree_c
 
-  subroutine factor_core(spldlt_akeep, spldlt_fkeep, val)
+  subroutine factor_core(spldlt_akeep, spldlt_fkeep, val, options)
+    use spral_ssids_datatypes
+    use spral_ssids_cpu_iface 
     use spral_ssids_akeep, only : ssids_akeep
     use spral_ssids_fkeep, only : ssids_fkeep
     use spral_ssids_contrib, only : contrib_type
     use spldlt_analyse_mod, only : spldlt_akeep_type
-    use spral_ssids_datatypes
     implicit none
 
     type(spldlt_akeep_type), target, intent(in) :: spldlt_akeep
     type(spldlt_fkeep_type), target, intent(inout) :: spldlt_fkeep
     real(wp), dimension(*), target, intent(in) :: val ! A values (lwr triangle)
+    type(ssids_options), intent(in) :: options
 
     type(ssids_akeep), pointer :: akeep => null()
     type(ssids_fkeep), pointer :: fkeep => null()
@@ -476,6 +489,7 @@ contains
     type(C_PTR), dimension(:), allocatable :: child_contrib_c
     integer :: i
     type(c_ptr) :: cfkeep
+    type(cpu_factor_options) :: coptions
     ! Error management    
     character(50)  :: context      ! Procedure name (used when printing).
     integer :: st
@@ -526,14 +540,15 @@ contains
 
     cfkeep = c_loc(fkeep)
  
-    ! call cpu_copy_options_in(options, coptions)
+    call cpu_copy_options_in(options, coptions)
 
     ! spldlt_fkeep%numeric_tree%ptr_c = spldlt_create_numeric_tree_c(c_loc(fkeep), &
     !      spldlt_akeep%symbolic_tree_c, val, child_contrib_c, exec_loc_aux, & 
     !      coptions)
 
     spldlt_fkeep%numeric_tree%ptr_c = spldlt_create_numeric_tree_c( &
-         cfkeep, spldlt_akeep%symbolic_tree_c, val, child_contrib_c)
+         cfkeep, spldlt_akeep%symbolic_tree_c, val, child_contrib_c, &
+         coptions)
 
     ! Free space
     deallocate(child_contrib_c)
@@ -568,7 +583,6 @@ contains
 
     ! type(ssids_akeep), pointer :: akeep
     type(ssids_fkeep), pointer :: fkeep => null()
-    type(cpu_factor_options) :: coptions
     integer :: i
 
     ! Error management
@@ -612,7 +626,7 @@ contains
     end if
 
     ! Call main factorization routine
-    call factor_core(spldlt_akeep, spldlt_fkeep, val)
+    call factor_core(spldlt_akeep, spldlt_fkeep, val, options)
 
     return
 100 continue

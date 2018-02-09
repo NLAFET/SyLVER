@@ -274,6 +274,8 @@ contains
     print *, " nparts = ", akeep%nparts
     print *, " part = ", akeep%part(1:akeep%nparts+1)
     print *, " exec_loc = ", exec_loc(1:akeep%nparts)
+    print *, " contrib_ptr = ", akeep%contrib_ptr(1:akeep%nparts+1)
+    print *, " contrib_idx = ", akeep%contrib_idx(1:akeep%nparts)
 
     ! Construct symbolic subtrees
     allocate(akeep%subtree(akeep%nparts))

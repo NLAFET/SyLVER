@@ -4,7 +4,7 @@
 
 #pragma once
 
-// #include "ssids/cpu/cpu_iface.hxx"
+#include "ssids/cpu/cpu_iface.hxx"
 // #include "ssids/cpu/factor.hxx"
 // #include "ssids/cpu/BuddyAllocator.hxx"
 // #include "ssids/cpu/NumericNode.hxx"
@@ -54,14 +54,15 @@ namespace spldlt {
             void* fkeep, 
             SymbolicTree& symbolic_tree, 
             T *aval,
-            void** child_contrib)
+            void** child_contrib,
+            struct spral::ssids::cpu::cpu_factor_options const& options)
          : fkeep_(fkeep), symb_(symbolic_tree)
       {
          printf("[NumericTree]\n");
 
          spldlt::starpu::codelet_init<T>();
 
-         factor_mf(aval, child_contrib);
+         factor_mf(aval, child_contrib, options);
 
 // #if defined(SPLDLT_USE_STARPU)
 //          starpu_task_wait_for_all();
@@ -69,7 +70,9 @@ namespace spldlt {
          
       }
 
-      void factor_mf(T *aval, void** child_contrib) {
+      void factor_mf(
+            T *aval, void** child_contrib, 
+            struct spral::ssids::cpu::cpu_factor_options const& options) {
 
          printf("[factor_mf] nparts = %d\n", symb_.nparts_);
 
@@ -92,7 +95,9 @@ namespace spldlt {
 
                // starpu_void_data_register(&hdl);
 
-               spldlt::starpu::insert_factor_subtree(symb_[root].hdl, symb_.akeep_, fkeep_, p, aval);
+               spldlt::starpu::insert_factor_subtree(
+                     symb_[root].hdl, symb_.akeep_, fkeep_, p, aval,
+                        child_contrib, &options);
 
                // starpu_task_wait_for_all();
 #endif
