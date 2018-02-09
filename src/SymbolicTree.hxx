@@ -6,7 +6,7 @@
 // #include "ssids/cpu/cpu_iface.hxx"
 // #include "ssids/cpu/SymbolicNode.hxx"
 
-#include "SymbolicSNode.hxx"
+#include "SymbolicFront.hxx"
 
 // using namespace spral::ssids::cpu;
 
@@ -15,36 +15,39 @@ namespace spldlt {
    class SymbolicTree {
    public:
       SymbolicTree(
-            void* akeep, int nnodes, int nparts, int const* part, int const* exec_loc)
-         : akeep_(akeep), nnodes_(nnodes), nodes_(nnodes_+1), nparts_(nparts), part_(part)
+            void* akeep, int n, int nnodes, int nparts, int const* part, int const* exec_loc)
+         : akeep_(akeep), n(n), nnodes_(nnodes), fronts_(nnodes_+1), nparts_(nparts), 
+           part_(part)
       {
          printf("[SymbolicTree]\n");
          
          for(int p = 0; p < nparts; ++p) {
             for (int ni = part[p]-1; ni < part[p+1]-1; ++ni) {
-               nodes_[ni].part = p;
-               nodes_[ni].exec_loc = exec_loc[p];
+               fronts_[ni].part = p;
+               fronts_[ni].exec_loc = exec_loc[p];
             }
          }
          
       }
 
-      SymbolicSNode& operator[](int idx) {
-         return nodes_[idx];
+      SymbolicFront& operator[](int idx) {
+         return fronts_[idx];
       }
       
-      SymbolicSNode const& operator[](int idx) const {
-         return nodes_[idx];
+      SymbolicFront const& operator[](int idx) const {
+         return fronts_[idx];
       }
 
+   public:
+      int const n; //< Maximum row index
    private:
       void* akeep_;
       int nnodes_;
       int nparts_;
       int const* part_;
-      std::vector<SymbolicSNode> nodes_;
+      std::vector<SymbolicFront> fronts_;
 
-      template <typename T>
+      template<typename T, size_t PAGE_SIZE, typename FactorAllocator, bool posdef>
       friend class NumericTree;
    };
 

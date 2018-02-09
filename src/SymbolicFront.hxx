@@ -1,6 +1,6 @@
 #pragma once
 
-// #include "ssids/cpu/SymbolicNode.hxx"
+#include "ssids/cpu/SymbolicNode.hxx"
 
 #if defined(SPLDLT_USE_STARPU)
 #include <starpu.h>
@@ -10,8 +10,7 @@
 
 namespace spldlt {
 
-   // struct SymbolicSNode : SymbolicNode {
-   struct SymbolicSNode {
+   struct SymbolicFront : spral::ssids::cpu::SymbolicNode {
       // int sa; // index of first column in node (pivotal order)
       // int en; // index of last column in node (pivotal order)
       // int least_desc; // least descendants, to allow easy walk of subtrees
@@ -25,5 +24,4 @@ namespace spldlt {
       int exec_loc; // Execution location info
       // int contrib_idx; // Index of contribution
    };
-
 }

@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <vector>
+
 #include "ssids/cpu/cpu_iface.hxx"
 // #include "ssids/cpu/factor.hxx"
 // #include "ssids/cpu/BuddyAllocator.hxx"
@@ -12,14 +14,14 @@
 // #include "ssids/cpu/kernels/cholesky.hxx"
 
 
-// #include "BuddyAllocator.hxx"
+#include "BuddyAllocator.hxx"
 // #include "Workspace.hxx"
 // #include "SymbolicSNode.hxx"
 #include "SymbolicTree.hxx"
-// #include "NumericNode.hxx"
+#include "NumericFront.hxx"
 // #include "kernels/assemble.hxx"
 // #include "kernels/common.hxx"
-// #include "tasks.hxx"
+#include "tasks.hxx"
 
 #if defined(SPLDLT_USE_STARPU)
 #include <starpu.h>
@@ -42,8 +44,13 @@ namespace spldlt {
    // extern "C" void spldlt_get_contrib_c(void *akeep, void *fkeep, int p, void **child_contrib);
    // extern "C" void spldlt_get_contrib_c(void *akeep, void *fkeep, int p);
 
-   template<typename T>
+   template<typename T,
+            size_t PAGE_SIZE,
+            typename FactorAllocator,
+            bool posdef>
    class NumericTree {
+      typedef spldlt::BuddyAllocator<T,std::allocator<T>> PoolAllocator;
+   public:
 
    public:
       // Delete copy constructors for safety re allocated memory
@@ -59,6 +66,19 @@ namespace spldlt {
          : fkeep_(fkeep), symb_(symbolic_tree)
       {
          printf("[NumericTree]\n");
+
+         // Blocking size
+         int blksz = options.cpu_block_size;
+
+         // Associate symbolic fronts to numeric ones; copy tree structure
+         // fronts_.reserve(symbolic_tree.nnodes_+1);
+         // for(int ni=0; ni<symb_.nnodes_+1; ++ni) {
+         //    fronts_.emplace_back(symbolic_tree[ni], pool_alloc_, blksz);
+         //    auto* fc = symbolic_tree[ni].first_child;
+         //    fronts_[ni].first_child = fc ? &fronts_[fc->idx] : nullptr;
+         //    auto* nc = symbolic_tree[ni].next_child;
+         //    fronts_[ni].next_child = nc ? &fronts_[nc->idx] :  nullptr;
+         // }
 
          spldlt::starpu::codelet_init<T>();
 
@@ -76,6 +96,9 @@ namespace spldlt {
 
          printf("[factor_mf] nparts = %d\n", symb_.nparts_);
 
+         // Blocking size
+         int blksz = options.cpu_block_size;
+
          // Register symbolic handles on nodes
          for(int ni = 0; ni < symb_.nnodes_; ++ni) {
             starpu_void_data_register(&(symb_[ni].hdl));
@@ -89,18 +112,9 @@ namespace spldlt {
             // Check if current partition is a subtree
             if (symb_[root].exec_loc != -1) {
 
-#if defined(SPLDLT_USE_STARPU)
+               factor_subtree_task(
+                     symb_.akeep_, fkeep_, symb_[root], aval, p, child_contrib, &options);
 
-               // starpu_data_handle_t hdl;
-
-               // starpu_void_data_register(&hdl);
-
-               spldlt::starpu::insert_factor_subtree(
-                     symb_[root].hdl, symb_.akeep_, fkeep_, p, aval,
-                        child_contrib, &options);
-
-               // starpu_task_wait_for_all();
-#endif
             }
          }
 
@@ -111,11 +125,35 @@ namespace spldlt {
          for(int p = 0; p < symb_.nparts_; ++p) {
             spldlt_print_debuginfo_c(symb_.akeep_, fkeep_, p);
          }
+
+         // Allocate mapping array
+         int *map = new int[symb_.n+1];
+
+         // Loop over node in the assemnly tree
+         for(int ni = 0; ni < symb_.nnodes_; ++ni) {
+            
+            SymbolicFront &snode = symb_[ni];
+            
+            // Skip iteration if node is in a subtree
+            if (snode.exec_loc != -1) continue;
+            
+            // Activate frontal matrix
+            // activate_front(snode, fronts_[ni], blksz, factor_alloc_, pool_alloc_);
+
+         }
+
+#if defined(SPLDLT_USE_STARPU)
+         starpu_task_wait_for_all();
+#endif
+
       }
 
    private:
       void* fkeep_;
       SymbolicTree& symb_;
+      std::vector<spldlt::NumericFront<T,PoolAllocator>> fronts_;
+      // FactorAllocator factor_alloc_;
+      // PoolAllocator pool_alloc_;
    };
    
 //    template<typename T,

@@ -3,16 +3,15 @@
 
 #include "NumericTree.hxx"
 
-// #include "ssids/cpu/AppendAlloc.hxx"
+#include "ssids/cpu/AppendAlloc.hxx"
 
 using namespace spldlt;
 
-// namespace {
-//    typedef double T;
-//    // const int PAGE_SIZE = 8*1024*1024; // 8MB
-//    // typedef NumericTree<T, PAGE_SIZE, spral::ssids::cpu::AppendAlloc<T>, true> NumericTreeDbl; // posdef = true
-//    typedef NumericTree<T> NumericTreeDbl;
-// }
+namespace {
+   typedef double T;
+   const int PAGE_SIZE = 8*1024*1024; // 8MB
+   typedef NumericTree<T, PAGE_SIZE, spral::ssids::cpu::AppendAlloc<T>, true> NumericTreeDbl; // posdef = true
+}
 
 // Double precision wrapper around templated routines
 
@@ -28,7 +27,7 @@ void *spldlt_create_numeric_tree_dbl(
    // Retreive SymbolicTree object from pointer
    auto &symbolic_tree = *static_cast<SymbolicTree*>(symbolic_tree_ptr);
 
-   auto* tree = new NumericTree<double>(fkeep, symbolic_tree, aval, child_contrib, *options);
+   auto* tree = new NumericTreeDbl(fkeep, symbolic_tree, aval, child_contrib, *options);
 
    return (void *) tree;
 }

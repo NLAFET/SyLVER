@@ -300,7 +300,7 @@ contains
 
   end function spldlt_factor_subtree_cpu
   
-  ! Debug
+  ! TODO Get posdef as input
   subroutine spldlt_factor_subtree_c( &
        cakeep, cfkeep, p, val, child_contrib_c, coptions) &
        bind(C, name="spldlt_factor_subtree_c")

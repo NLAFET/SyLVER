@@ -5,6 +5,9 @@
 
 #pragma once
 
+#include "ssids/cpu/cpu_iface.hxx"
+#include "ssids/cpu/SymbolicNode.hxx"
+
 namespace spldlt {
 
    template<typename T, typename PoolAllocator>
@@ -85,10 +88,10 @@ namespace spldlt {
       PoolAllocator pool_alloc_; // Our own version of pool allocator for freeing
    };
 
-   class spral::ssids::cpu::SymbolicNode;
+   // class spral::ssids::cpu::SymbolicNode;
 
    template <typename T, typename PoolAllocator>
-   class NumericNode {
+   class NumericFront {
       typedef std::allocator_traits<PoolAllocator> PATraits;
    public:
       /**
@@ -96,7 +99,7 @@ namespace spldlt {
        * \param symb Associated symbolic node.
        * \param pool_alloc Pool Allocator to use for contrib allocation.
        */
-      NumericNode(SymbolicNode const& symb, PoolAllocator const& pool_alloc, int blksz)
+      NumericFront(spral::ssids::cpu::SymbolicNode const& symb, PoolAllocator const& pool_alloc, int blksz)
          : symb(symb), contrib(nullptr), pool_alloc_(pool_alloc), blksz(blksz)
       {
          int m = symb.nrow;
@@ -125,7 +128,7 @@ namespace spldlt {
       /**
        * \brief Destructor
        */
-      ~NumericNode() {
+      ~NumericFront() {
          free_contrib();
       }
 
@@ -188,16 +191,16 @@ namespace spldlt {
 
       /** \brief Return leading dimension of node's lcol member. */
       size_t get_ldl() {
-         return align_lda<T>(symb.nrow + ndelay_in);
+         return spral::ssids::cpu::align_lda<T>(symb.nrow + ndelay_in);
       }
 
    public:
       /* Symbolic node associate with this one */
-      SymbolicNode const& symb;
+      spral::ssids::cpu::SymbolicNode const& symb;
 
       /* Fixed data from analyse */
-      NumericNode<T, PoolAllocator>* first_child; // Pointer to our first child
-      NumericNode<T, PoolAllocator>* next_child; // Pointer to parent's next child
+      NumericFront<T, PoolAllocator>* first_child; // Pointer to our first child
+      NumericFront<T, PoolAllocator>* next_child; // Pointer to parent's next child
 
       /* Data that changes during factorize */
       int ndelay_in; // Number of delays arising from children
