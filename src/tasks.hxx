@@ -5,6 +5,7 @@
 
 // #include "Workspace.hxx"
 #include "SymbolicFront.hxx"
+#include "kernels/assemble.hxx"
 // #include "NumericNode.hxx"
 // #include "kernels/factor.hxx"
 // #include "SymbolicTree.hxx"
@@ -42,230 +43,234 @@ namespace spldlt {
 //    }
 
 
-//    // Activate frontal matrix: allocate data structures
-//    template <typename T, typename FactorAlloc, typename PoolAlloc>
-//    void activate_front(
-//          SymbolicSNode &snode,
-//          spldlt::NumericNode<T, PoolAlloc> &node,
-//          int blksz,
-//          FactorAlloc& factor_alloc,
-//          PoolAlloc& pool_alloc) {
+   // Activate frontal matrix: allocate data structures
+   template <typename T, typename FactorAlloc, typename PoolAlloc>
+   void activate_front(
+         SymbolicFront &sfront,
+         NumericFront<T, PoolAlloc> &front,
+         int blksz,
+         FactorAlloc& factor_alloc,
+         PoolAlloc& pool_alloc) {
 
-//       // Allocate frontal matrix
-//       alloc_front(node, factor_alloc, pool_alloc);
+      // Allocate frontal matrix
+      alloc_front(front, factor_alloc, pool_alloc);
 
-// #if defined(SPLDLT_USE_STARPU)
-//       // Register symbolic handle for current node in StarPU
-//       starpu_void_data_register(&(snode.hdl));
-//       // Register block handles
-//       register_node(snode, node, blksz);
-// #endif
-//    }
+#if defined(SPLDLT_USE_STARPU)
+      // Register symbolic handle for current node in StarPU
+      // starpu_void_data_register(&(sfront.hdl));
+      // Register block handles
+      register_node(sfront, front, blksz);
+#endif
+   }
 
-//    // Initialize node 
-//    template <typename T, typename PoolAlloc>
-//    void init_node_task(
-//          SymbolicSNode &snode, spldlt::NumericNode<T, PoolAlloc> &node,
-//          T *aval, int prio) {
+   // Initialize node
+   template <typename T, typename PoolAlloc>
+   void init_node_task(
+         SymbolicFront &sfront, 
+         NumericFront<T, PoolAlloc> &front,
+         T *aval, int prio) {
 
-// #if defined(SPLDLT_USE_STARPU)
+#if defined(SPLDLT_USE_STARPU)
       
-//       // init_node(snode, node, aval);
-//       insert_init_node(
-//             &snode, &node,
-//             snode.hdl,
-//             aval, prio);
-// #else
+      insert_init_node(
+            &sfront, &front,
+            sfront.hdl,
+            aval, prio);
+#else
 
-//       init_node(snode, node, aval);
+      init_node(sfront, front, aval);
 
-// #endif
+#endif
 
-//    }
+   }
 
-//    // Terminate node
-//    template <typename T, typename PoolAlloc>
-//    void fini_node_task(SymbolicSNode &snode, spldlt::NumericNode<T, PoolAlloc> &node, 
-//                        int prio) {
+   // Terminate node
+   template <typename T, typename PoolAlloc>
+   void fini_node_task(SymbolicFront &snode, 
+                       NumericFront<T, PoolAlloc> &node, 
+                       int prio) {
 
-// #if defined(SPLDLT_USE_STARPU)
-//       insert_fini_node(&node, snode.hdl, prio);
-// #else
-//       fini_node(node);
-// #endif
+#if defined(SPLDLT_USE_STARPU)
+      insert_fini_node(&node, snode.hdl, prio);
+#else
+      fini_node(node);
+#endif
 
-//    }
+   }
 
-   /* Factorize block on daig task */
+////////////////////////////////////////////////////////////////////////////////
+   // Factorize block on the diagonal
 
-//    // TODO create and use BLK structure
-//    template <typename T, typename PoolAlloc>
-//    void factorize_diag_block_task(
-//          SymbolicSNode const& snode,
-//          spldlt::NumericNode<T, PoolAlloc> &node,
-//          int kk, // block  column (and row) index
-//          int blksz, int prio) {
+   // TODO create and use BLK structure
+   template <typename T, typename PoolAlloc>
+   void factorize_diag_block_task(
+         SymbolicFront const& snode,
+         NumericFront<T, PoolAlloc> &node,
+         int kk, // block  column (and row) index
+         int blksz, int prio) {
 
-//       int m = snode.nrow;
-//       int n = snode.ncol;
+      int m = snode.nrow;
+      int n = snode.ncol;
 
-//       int nr = (m-1) / blksz + 1; // number of block rows
-//       int nc = (n-1) / blksz + 1; // number of block columns
+      int nr = (m-1) / blksz + 1; // number of block rows
+      int nc = (n-1) / blksz + 1; // number of block columns
       
-//       // printf("[factorize_diag_block_task] nr: %d, nc: %d, kk: %d\n", 
-//       //        nr, nc, kk);
+      // printf("[factorize_diag_block_task] nr: %d, nc: %d, kk: %d\n", 
+      //        nr, nc, kk);
 
-//       // printf("[factorize_diag_block_task] \n");
+      // printf("[factorize_diag_block_task] \n");
 
-//       int blkm = std::min(blksz, m - kk*blksz);
-//       int blkn = std::min(blksz, n - kk*blksz);
+      int blkm = std::min(blksz, m - kk*blksz);
+      int blkn = std::min(blksz, n - kk*blksz);
 
-//       int lda = align_lda<T>(m);
-//       T *a = node.lcol;
-//       T *contrib = node.contrib;
-//       int ldcontrib = m-n;
+      int lda = align_lda<T>(m);
+      T *a = node.lcol;
+      T *contrib = node.contrib;
+      int ldcontrib = m-n;
 
-// #if defined(SPLDLT_USE_STARPU)
+#if defined(SPLDLT_USE_STARPU)
 
-//       // starpu_data_handle_t node_hdl = NULL;
-//       // if (kk==0) node_hdl = snode.hdl;
-//       starpu_data_handle_t node_hdl = snode.hdl;
+      // starpu_data_handle_t node_hdl = NULL;
+      // if (kk==0) node_hdl = snode.hdl;
+      starpu_data_handle_t node_hdl = snode.hdl;
 
-//       if ((blkm > blkn) && (ldcontrib > 0)) {
-//          // factorize_diag_block(blkm, blkn,
-//          //                      &a[kk*blksz*(lda+1)], lda,
-//          //                      contrib, ldcontrib,
-//          //                      kk==0);
+      if ((blkm > blkn) && (ldcontrib > 0)) {
+         // factorize_diag_block(blkm, blkn,
+         //                      &a[kk*blksz*(lda+1)], lda,
+         //                      contrib, ldcontrib,
+         //                      kk==0);
 
-//          insert_factorize_block(kk, snode.handles[kk*nr + kk], node.contrib_blocks[0].hdl, 
-//                                 snode.hdl, prio);
-//       }
-//       else {
-//          // printf("blkm: %d, blkn: %d, ldcontrib:%d\n", blkm, blkn, ldcontrib);
-//          insert_factorize_block(snode.handles[kk*nr + kk], snode.hdl, prio);
-//       }
+         insert_factorize_block(kk, snode.handles[kk*nr + kk], node.contrib_blocks[0].hdl, 
+                                snode.hdl, prio);
+      }
+      else {
+         // printf("blkm: %d, blkn: %d, ldcontrib:%d\n", blkm, blkn, ldcontrib);
+         insert_factorize_block(snode.handles[kk*nr + kk], snode.hdl, prio);
+      }
 
-// #else
+#else
 
-//       factorize_diag_block(blkm, blkn,
-//                            &a[kk*blksz*(lda+1)], lda,
-//                            contrib, ldcontrib,
-//                            kk==0);
-// #endif
-//    }
+      factorize_diag_block(blkm, blkn,
+                           &a[kk*blksz*(lda+1)], lda,
+                           contrib, ldcontrib,
+                           kk==0);
+#endif
+   }
 
-   /* Solve block (on subdaig) task */
+   ////////////////////////////////////////////////////////////////////////////////
+   // Solve block (on subdaig) task
 
-//    template <typename T, typename PoolAlloc>
-//    void solve_block_task(
-//          SymbolicSNode const& snode,
-//          spldlt::NumericNode<T, PoolAlloc> &node,
-//          int k, // Column index
-//          int i, // Row index
-//          T *a, int lda, 
-//          T *a_ik, int lda_ik,         
-//          int blksz, int prio) {
+   template <typename T, typename PoolAlloc>
+   void solve_block_task(
+         SymbolicFront const& snode,
+         NumericFront<T, PoolAlloc> &node,
+         int k, // Column index
+         int i, // Row index
+         T *a, int lda, 
+         T *a_ik, int lda_ik,         
+         int blksz, int prio) {
       
-//       int m = snode.nrow;
-//       int n = snode.ncol;
-//       int ldcontrib = m-n;
+      int m = snode.nrow;
+      int n = snode.ncol;
+      int ldcontrib = m-n;
 
-//       int nr = (m-1) / blksz + 1; // number of block rows
-//       int nc = (n-1) / blksz + 1; // number of block columns
+      int nr = (m-1) / blksz + 1; // number of block rows
+      int nc = (n-1) / blksz + 1; // number of block columns
 
-//       int rsa = n / blksz; // Row/Col index of first block in contrib 
+      int rsa = n / blksz; // Row/Col index of first block in contrib 
 
-//       int blkn = std::min(blksz, n - k*blksz);
-//       int blkm = std::min(blksz, m - i*blksz);
+      int blkn = std::min(blksz, n - k*blksz);
+      int blkm = std::min(blksz, m - i*blksz);
 
-// #if defined(SPLDLT_USE_STARPU)
+#if defined(SPLDLT_USE_STARPU)
       
-//       if((blkn<blksz) && (ldcontrib>0)) {
+      if((blkn<blksz) && (ldcontrib>0)) {
 
-//          insert_solve_block(
-//                k, blksz,
-//                snode.handles[k*nr + k], // diag block handle 
-//                snode.handles[k*nr + i], // subdiag block handle
-//                // snode.contrib_handles[i-rsa], // subdiag block handle
-//                node.contrib_blocks[i-rsa].hdl, // subdiag block handle
-//                snode.hdl,
-//                prio);
-//       }
-//       else {
+         insert_solve_block(
+               k, blksz,
+               snode.handles[k*nr + k], // diag block handle 
+               snode.handles[k*nr + i], // subdiag block handle
+               // snode.contrib_handles[i-rsa], // subdiag block handle
+               node.contrib_blocks[i-rsa].hdl, // subdiag block handle
+               snode.hdl,
+               prio);
+      }
+      else {
 
-//          insert_solve_block(
-//                snode.handles[k*nr + k], // diag block handle 
-//                snode.handles[k*nr + i], // subdiag block handle
-//                snode.hdl,
-//                prio);
-//       }
-// #else
+         insert_solve_block(
+               snode.handles[k*nr + k], // diag block handle 
+               snode.handles[k*nr + i], // subdiag block handle
+               snode.hdl,
+               prio);
+      }
+#else
       
-//       solve_block(blkm, blkn, a, lda, a_ik, lda_ik);
+      solve_block(blkm, blkn, a, lda, a_ik, lda_ik);
 
-// #endif   
-//    }
+#endif   
+   }
 
-   /* Update block on subdaig task */
+   ////////////////////////////////////////////////////////////////////////////////
+   // Update block on subdaig task
    
-//    template <typename T, typename PoolAlloc>
-//    void update_block_task(
-//          SymbolicSNode const& snode,
-//          spldlt::NumericNode<T, PoolAlloc> &node,
-//          int k, /* block column index of A_ik and A_jk blocks */
-//          int i, /* block row index of A_ik and A_ij blocks  */
-//          int j, /* block row index of A_jk and block column index of
-//                     A_ij blocks */
-//          T *a_ij, int lda_ij,
-//          T *a_ik, int lda_ik,
-//          T *a_jk, int lda_jk,
-//          int blksz, int prio) {
+   template <typename T, typename PoolAlloc>
+   void update_block_task(
+         SymbolicFront const& snode,
+         NumericFront<T, PoolAlloc> &node,
+         int k, /* block column index of A_ik and A_jk blocks */
+         int i, /* block row index of A_ik and A_ij blocks  */
+         int j, /* block row index of A_jk and block column index of
+                   A_ij blocks */
+         T *a_ij, int lda_ij,
+         T *a_ik, int lda_ik,
+         T *a_jk, int lda_jk,
+         int blksz, int prio) {
 
-//       int m = snode.nrow;
-//       int n = snode.ncol;
-//       int ldcontrib = m-n;
+      int m = snode.nrow;
+      int n = snode.ncol;
+      int ldcontrib = m-n;
 
-//       int blkm = std::min(blksz, m - i*blksz);
-//       int blkn = std::min(blksz, n - j*blksz);
-//       int blkk = std::min(blksz, n - k*blksz);
+      int blkm = std::min(blksz, m - i*blksz);
+      int blkn = std::min(blksz, n - j*blksz);
+      int blkk = std::min(blksz, n - k*blksz);
 
-// #if defined(SPLDLT_USE_STARPU)
+#if defined(SPLDLT_USE_STARPU)
 
-//       int nr = (m-1)/blksz + 1; // number of block rows
-//       int nc = (n-1)/blksz + 1; // number of block columns
+      int nr = (m-1)/blksz + 1; // number of block rows
+      int nc = (n-1)/blksz + 1; // number of block columns
 
-//       // TODO doen't work in supernodal mode
-//       if ((ldcontrib>0) && (blkn<blksz)) {
+      // TODO doen't work in supernodal mode
+      if ((ldcontrib>0) && (blkn<blksz)) {
 
-//          int rsa = n/blksz; // Row/Col index of first block in contrib 
+         int rsa = n/blksz; // Row/Col index of first block in contrib 
 
-//          insert_update_block(
-//                k, blksz,
-//                snode.handles[j*nr + i], // A_ij block handle 
-//                snode.handles[k*nr + i], // A_ik block handle
-//                snode.handles[k*nr + j],  // A_jk block handle
-//                // snode.contrib_handles[i-rsa],
-//                node.contrib_blocks[i-rsa].hdl,
-//                snode.hdl,
-//                prio);
-//       }
-//       else {
-//          insert_update_block(
-//                snode.handles[j*nr + i], // A_ij block handle 
-//                snode.handles[k*nr + i], // A_ik block handle
-//                snode.handles[k*nr + j],  // A_jk block handle
-//                snode.hdl,
-//                prio);
-//       }
-// #else
+         insert_update_block(
+               k, blksz,
+               snode.handles[j*nr + i], // A_ij block handle 
+               snode.handles[k*nr + i], // A_ik block handle
+               snode.handles[k*nr + j],  // A_jk block handle
+               // snode.contrib_handles[i-rsa],
+               node.contrib_blocks[i-rsa].hdl,
+               snode.hdl,
+               prio);
+      }
+      else {
+         insert_update_block(
+               snode.handles[j*nr + i], // A_ij block handle 
+               snode.handles[k*nr + i], // A_ik block handle
+               snode.handles[k*nr + j],  // A_jk block handle
+               snode.hdl,
+               prio);
+      }
+#else
 
-//       update_block(blkm, blkn, a_ij, lda_ij,
-//                    blkk,
-//                    a_ik, lda_ik,
-//                    a_jk, lda_jk);
+      update_block(blkm, blkn, a_ij, lda_ij,
+                   blkk,
+                   a_ik, lda_ik,
+                   a_jk, lda_jk);
 
-// #endif
-//    }
+#endif
+   }
 
 //    template <typename T>
 //    void update_diag_block_task(
@@ -307,63 +312,67 @@ namespace spldlt {
 // #endif
 //    }
 
-//    // Update contrib block task
-//    template <typename T, typename PoolAlloc>
-//    void update_contrib_task(
-//          SymbolicSNode const& snode,
-//          spldlt::NumericNode<T, PoolAlloc> &node,
-//          int k, int i, int j,
-//          int blksz, int prio) {
 
-//       int m = snode.nrow;
-//       int n = snode.ncol;
+   ////////////////////////////////////////////////////////////////////////////////
+   // Update contrib block task
 
-//       int blkm = std::min(blksz, m - i*blksz);
-//       int blkn = std::min(blksz, m - j*blksz);
-//       int blkk = std::min(blksz, n - k*blksz);
+   template <typename T, typename PoolAlloc>
+   void update_contrib_task(
+         SymbolicFront const& snode,
+         NumericFront<T, PoolAlloc> &node,
+         int k, int i, int j,
+         int blksz, int prio) {
 
-//       int lda = align_lda<T>(m);
-//       T *a = node.lcol;
-//       int ldcontrib = m-n;
-//       T *contrib = node.contrib;
+      int m = snode.nrow;
+      int n = snode.ncol;
 
-//       int nr = (m-1)/blksz + 1; // number of block rows
-//       int nc = (n-1)/blksz + 1; // number of block columns
+      int blkm = std::min(blksz, m - i*blksz);
+      int blkn = std::min(blksz, m - j*blksz);
+      int blkk = std::min(blksz, n - k*blksz);
 
-// #if defined(SPLDLT_USE_STARPU)
+      int lda = align_lda<T>(m);
+      T *a = node.lcol;
+      int ldcontrib = m-n;
+      T *contrib = node.contrib;
 
-//       int rsa = n/blksz;
-//       int ncontrib = nr-rsa;
+      int nr = (m-1)/blksz + 1; // number of block rows
+      int nc = (n-1)/blksz + 1; // number of block columns
 
-//       insert_update_contrib(k,
-//                             // snode.contrib_handles[(i-rsa)+(j-rsa)*ncontrib],
-//                             node.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib].hdl,
-//                             snode.handles[k*nr + i],
-//                             snode.handles[k*nr + j],
-//                             snode.hdl,
-//                             prio);
+#if defined(SPLDLT_USE_STARPU)
 
-//       // update_block(blkm, blkn,
-//       //              &contrib[((j*blksz-n)*ldcontrib) + (i*blksz)-n], ldcontrib,
-//       //              blkk,
-//       //              &a[(k*blksz*lda) + (i*blksz)], lda, 
-//       //              &a[(k*blksz*lda) + (j*blksz)], lda,
-//       //              k==0);
+      int rsa = n/blksz;
+      int ncontrib = nr-rsa;
 
-// #else
+      insert_update_contrib(k,
+                            // snode.contrib_handles[(i-rsa)+(j-rsa)*ncontrib],
+                            node.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib].hdl,
+                            snode.handles[k*nr + i],
+                            snode.handles[k*nr + j],
+                            snode.hdl,
+                            prio);
 
-//       update_block(blkm, blkn,
-//                    &contrib[((j*blksz-n)*ldcontrib) + (i*blksz)-n], ldcontrib,
-//                    blkk,
-//                    &a[(k*blksz*lda) + (i*blksz)], lda, 
-//                    &a[(k*blksz*lda) + (j*blksz)], lda,
-//                    k==0);
+      // update_block(blkm, blkn,
+      //              &contrib[((j*blksz-n)*ldcontrib) + (i*blksz)-n], ldcontrib,
+      //              blkk,
+      //              &a[(k*blksz*lda) + (i*blksz)], lda, 
+      //              &a[(k*blksz*lda) + (j*blksz)], lda,
+      //              k==0);
 
-// #endif      
-//    }   
+#else
+
+      update_block(blkm, blkn,
+                   &contrib[((j*blksz-n)*ldcontrib) + (i*blksz)-n], ldcontrib,
+                   blkk,
+                   &a[(k*blksz*lda) + (i*blksz)], lda, 
+                   &a[(k*blksz*lda) + (j*blksz)], lda,
+                   k==0);
+
+#endif      
+   }   
    
    ////////////////////////////////////////////////////////////////////////////////
    // Factor subtree task
+
    extern "C" void spldlt_factor_subtree_c(
          void *akeep, void *fkeep, int p, double *aval, 
          void **child_contrib, struct spral::ssids::cpu::cpu_factor_options const* options);
@@ -406,281 +415,284 @@ namespace spldlt {
 // #endif      
 //    }
 
-//    // Assemble subtree task
-//    template <typename T, typename PoolAlloc>   
-//    void assemble_subtree_task(
-//          SymbolicSNode const& snode, // Destination node (Symbolic)
-//          spldlt::NumericNode<T,PoolAlloc>& node, // Destination node (Numeric) 
-//          SymbolicSNode &csnode, // Root of the subtree
-//          void** child_contrib, 
-//          int contrib_idx, // Index of subtree to assemble
-//          int *cmap, // row/column mapping array 
-//          int blksz, int prio
-//          ) {
 
-// #if defined(SPLDLT_USE_STARPU)
+   ////////////////////////////////////////////////////////////////////////////////
+   // Assemble subtree task
+   template <typename T, typename PoolAlloc>   
+   void assemble_subtree_task(
+         SymbolicFront const& sfront, // Destination node (Symbolic)
+         NumericFront<T,PoolAlloc>& front, // Destination node (Numeric) 
+         SymbolicFront &csfront, // Root of the subtree
+         void** child_contrib, 
+         int contrib_idx, // Index of subtree to assemble
+         int *cmap, // row/column mapping array 
+         int blksz, int prio) {
 
-//       int nrow = snode.nrow;
-//       int ncol = snode.ncol; // no delays!
-//       int nr = (nrow-1) / blksz + 1; // Number of block rows in destination node
-//       int nc = (ncol-1) / blksz + 1; // Number of block columns in destination node
-//       int cc = -1; // Block column index in destination node
-//       int rr = -1; // Block row index in destination node
+#if defined(SPLDLT_USE_STARPU)
 
-//       starpu_data_handle_t *hdls = new starpu_data_handle_t[nr*nc];
-//       int nh = 0;
+      int nrow = sfront.nrow;
+      int ncol = sfront.ncol; // no delays!
+      int nr = (nrow-1) / blksz + 1; // Number of block rows in destination node
+      int nc = (ncol-1) / blksz + 1; // Number of block columns in destination node
+      int cc = -1; // Block column index in destination node
+      int rr = -1; // Block row index in destination node
 
-//       int cn = csnode.nrow - csnode.ncol;
+      starpu_data_handle_t *hdls = new starpu_data_handle_t[nr*nc];
+      int nh = 0;
+
+      int cn = csfront.nrow - csfront.ncol;
       
-//       for(int j = 0; j < cn; ++j) {
+      for(int j = 0; j < cn; ++j) {
 
-//          int c = cmap[ j ]; // Destination column
+         int c = cmap[ j ]; // Destination column
 
-//          if (cc == (c/blksz)) continue;
-//          if (c < ncol) {
+         if (cc == (c/blksz)) continue;
+         if (c < ncol) {
 
-//             cc = c / blksz;
-//             rr = -1;
+            cc = c / blksz;
+            rr = -1;
 
-//             for (int i = j ; i < cn; ++i) {
+            for (int i = j ; i < cn; ++i) {
 
-//                int r = cmap[ i ];
-//                if (rr==(r/blksz)) continue;
-//                rr = r/blksz;
+               int r = cmap[ i ];
+               if (rr==(r/blksz)) continue;
+               rr = r/blksz;
                
-//                hdls[nh] = snode.handles[cc*nr+rr];
-//                nh++;            
-//             }
-//          }         
-//       }
+               hdls[nh] = sfront.handles[cc*nr+rr];
+               nh++;            
+            }
+         }         
+      }
 
-//       // Insert assembly tasks if there are any contributions
-//       if (nh>0) {
-//          insert_subtree_assemble(
-//                &node, &csnode, snode.hdl, csnode.hdl, hdls, nh, child_contrib, contrib_idx);
-//       }
+      // Insert assembly tasks if there are any contributions
+      if (nh>0) {
+         insert_subtree_assemble(
+               &front, &csfront, sfront.hdl, csfront.hdl, hdls, nh, 
+               child_contrib, contrib_idx);
+      }
 
-//       delete[] hdls;
+      delete[] hdls;
 
-// #else      
-//       // Retreive contribution block from subtrees
-//       int cn, ldcontrib, ndelay, lddelay;
-//       double const *cval, *delay_val;
-//       int const *crlist, *delay_perm;
-//       spral_ssids_contrib_get_data(
-//             child_contrib[contrib_idx], &cn, &cval, &ldcontrib, &crlist,
-//             &ndelay, &delay_perm, &delay_val, &lddelay
-//             );
+#else      
+      // Retreive contribution block from subtrees
+      int cn, ldcontrib, ndelay, lddelay;
+      double const *cval, *delay_val;
+      int const *crlist, *delay_perm;
+      spral_ssids_contrib_get_data(
+            child_contrib[contrib_idx], &cn, &cval, &ldcontrib, &crlist,
+            &ndelay, &delay_perm, &delay_val, &lddelay
+            );
 
-//       printf("[subtree_assemble_task] contrib_idx: %d, cn: %d, ndelay: %d\n", 
-//              contrib_idx+1, cn, ndelay);
-//       // continue;
-//       if(!cval) return; // child was all delays, nothing more to do
-//       // int* cache = work[omp_get_thread_num()].get_ptr<int>(cn);
-//       for(int j = 0; j < cn; ++j) {
+      printf("[subtree_assemble_task] contrib_idx: %d, cn: %d, ndelay: %d\n", 
+             contrib_idx+1, cn, ndelay);
+      // continue;
+      if(!cval) return; // child was all delays, nothing more to do
+      // int* cache = work[omp_get_thread_num()].get_ptr<int>(cn);
+      for(int j = 0; j < cn; ++j) {
                
-//          int c = cmap[ j ]; // Destination column
+         int c = cmap[ j ]; // Destination column
                   
-//          T const* src = &cval[j*ldcontrib];
+         T const* src = &cval[j*ldcontrib];
 
-//          if (c < snode.ncol) {
+         if (c < sfront.ncol) {
 
-//             int ldd = node.get_ldl();
-//             T *dest = &node.lcol[c*ldd];
+            int ldd = front.get_ldl();
+            T *dest = &front.lcol[c*ldd];
 
-//             for (int i = j ; i < cn; ++i) {
-//                // Assemble destination block
-//                dest[ cmap[ i ]] += src[i];
-//             }
-//          }
-//       }
-// #endif
+            for (int i = j ; i < cn; ++i) {
+               // Assemble destination block
+               dest[ cmap[ i ]] += src[i];
+            }
+         }
+      }
+#endif
+   }
+   
+   ////////////////////////////////////////////////////////////////////////////////
+   // Subtree assemble contrib task
+   template <typename T, typename PoolAlloc>   
+   void assemble_contrib_subtree_task(
+         SymbolicFront const& snode, // Destination node (Symbolic)
+         NumericFront<T,PoolAlloc>& node, // Destination node (Numeric) 
+         SymbolicFront &csnode, // Root of the subtree
+         void** child_contrib, 
+         int contrib_idx, // Index of subtree to assemble
+         int *cmap, // row/column mapping array 
+         int blksz, int prio) {
 
-//    }
+#if defined(SPLDLT_USE_STARPU)
 
-//    // Subtree assemble contrib task
-//    template <typename T, typename PoolAlloc>   
-//    void assemble_contrib_subtree_task(
-//          SymbolicSNode const& snode, // Destination node (Symbolic)
-//          spldlt::NumericNode<T,PoolAlloc>& node, // Destination node (Numeric) 
-//          SymbolicSNode &csnode, // Root of the subtree
-//          void** child_contrib, 
-//          int contrib_idx, // Index of subtree to assemble
-//          int *cmap, // row/column mapping array 
-//          int blksz, int prio
-//          ) {
+      int nrow = snode.nrow;
+      int ncol = snode.ncol; // no delays!
+      int nr = (nrow-1) / blksz + 1; // Number of block rows in destination node
+      int nc = (ncol-1) / blksz + 1; // Number of block columns in destination node
+      int rsa = ncol / blksz; // Rows/Cols index of first block in contrib 
+      int ncontrib = nr-rsa; // Number of block rows/cols in contrib
 
-// #if defined(SPLDLT_USE_STARPU)
+      int cc = -1; // Block column index in destination node
+      int rr = -1; // Block row index in destination node
 
-//       int nrow = snode.nrow;
-//       int ncol = snode.ncol; // no delays!
-//       int nr = (nrow-1) / blksz + 1; // Number of block rows in destination node
-//       int nc = (ncol-1) / blksz + 1; // Number of block columns in destination node
-//       int rsa = ncol / blksz; // Rows/Cols index of first block in contrib 
-//       int ncontrib = nr-rsa; // Number of block rows/cols in contrib
+      starpu_data_handle_t *hdls = new starpu_data_handle_t[ncontrib*ncontrib];
+      int nh = 0;
 
-//       int cc = -1; // Block column index in destination node
-//       int rr = -1; // Block row index in destination node
+      int cn = csnode.nrow - csnode.ncol;
 
-//       starpu_data_handle_t *hdls = new starpu_data_handle_t[ncontrib*ncontrib];
-//       int nh = 0;
+      for(int j = 0; j < cn; ++j) {
 
-//       int cn = csnode.nrow - csnode.ncol;
+         int c = cmap[ j ]; // Destination column
 
-//       for(int j = 0; j < cn; ++j) {
+         if (cc == (c/blksz)) continue;
 
-//          int c = cmap[ j ]; // Destination column
+         if (c >= snode.ncol) {
 
-//          if (cc == (c/blksz)) continue;
+            cc = c / blksz; // Destination block column
+            rr = -1;
 
-//          if (c >= snode.ncol) {
+            for (int i = j; i < cn; ++i) {
 
-//             cc = c / blksz; // Destination block column
-//             rr = -1;
+               int r = cmap[ i ]; // Destination row in parent front
+               if (rr == (r/blksz)) continue;
+               rr = r / blksz; // Destination block row
 
-//             for (int i = j; i < cn; ++i) {
-
-//                int r = cmap[ i ]; // Destination row in parent front
-//                if (rr == (r/blksz)) continue;
-//                rr = r / blksz; // Destination block row
-
-//                hdls[nh] = node.contrib_blocks[(cc-rsa)*ncontrib+(rr-rsa)].hdl;
-//                nh++;
+               hdls[nh] = node.contrib_blocks[(cc-rsa)*ncontrib+(rr-rsa)].hdl;
+               nh++;
                
-//             }
-//          }
-//       }
+            }
+         }
+      }
 
-//       // Insert assembly tasks if there are any contributions
-//       if (nh > 0) {
-//          insert_subtree_assemble_contrib(
-//                &node, &csnode, snode.hdl, csnode.hdl, hdls, nh, child_contrib, contrib_idx, blksz, prio);
-//       }
+      printf("[assemble_contrib_subtree_task] nh = %d\n", nh);
+      // Insert assembly tasks if there are any contributions
+      if (nh > 0) {
+         insert_subtree_assemble_contrib(
+               &node, &csnode, snode.hdl, csnode.hdl, hdls, nh, child_contrib,
+               contrib_idx, blksz, prio);
+      }
       
-// #else
+#else
 
-//       int cn, ldcontrib, ndelay, lddelay;
-//       double const *cval, *delay_val;
-//       int const *crlist, *delay_perm;
-//       spral_ssids_contrib_get_data(
-//             child_contrib[contrib_idx], &cn, &cval, &ldcontrib, &crlist,
-//             &ndelay, &delay_perm, &delay_val, &lddelay
-//             );
+      int cn, ldcontrib, ndelay, lddelay;
+      double const *cval, *delay_val;
+      int const *crlist, *delay_perm;
+      spral_ssids_contrib_get_data(
+            child_contrib[contrib_idx], &cn, &cval, &ldcontrib, &crlist,
+            &ndelay, &delay_perm, &delay_val, &lddelay
+            );
 
-//       if(!cval) return; // child was all delays, nothing more to do
+      if(!cval) return; // child was all delays, nothing more to do
 
-//       int sa = snode.ncol / blksz; // Index of first block in contrib
-//       int nr = (snode.nrow-1) / blksz + 1;
-//       int ncontrib = nr-sa;
-//       for(int j = 0; j < cn; ++j) {
+      int sa = snode.ncol / blksz; // Index of first block in contrib
+      int nr = (snode.nrow-1) / blksz + 1;
+      int ncontrib = nr-sa;
+      for(int j = 0; j < cn; ++j) {
 
-//          int c = cmap[ j ]; // Destination column
+         int c = cmap[ j ]; // Destination column
 
-//          T const* src = &cval[j*ldcontrib];
+         T const* src = &cval[j*ldcontrib];
 
-//          if (c >= snode.ncol) {
+         if (c >= snode.ncol) {
 
 
-//             int cc = c / blksz; // Destination block column
-//             int dest_col_sa = (snode.ncol > cc*blksz) ? 0 : (cc*blksz-snode.ncol); // First col in block
+            int cc = c / blksz; // Destination block column
+            int dest_col_sa = (snode.ncol > cc*blksz) ? 0 : (cc*blksz-snode.ncol); // First col in block
 
-//             for (int i = j; i < cn; ++i) {
-//                int r = cmap[ i ]; // Destination row in parent front
-//                int rr = r / blksz; // Destination block row
-//                // First row index in CB of destination block
-//                int dest_row_sa = (snode.ncol > rr*blksz) ? 0 : (rr*blksz-snode.ncol);
-//                Block<T, PoolAlloc> &dest_blk = node.contrib_blocks[(rr-sa)+(cc-sa)*ncontrib];
-//                int dest_blk_lda = dest_blk.lda;
-//                T *dest = &dest_blk.a[ (c - snode.ncol - dest_col_sa)*dest_blk_lda ];
-//                // Assemble destination block
-//                dest[ r - snode.ncol - dest_row_sa ] += src[i];
-//             }
-//          }
-//       }
+            for (int i = j; i < cn; ++i) {
+               int r = cmap[ i ]; // Destination row in parent front
+               int rr = r / blksz; // Destination block row
+               // First row index in CB of destination block
+               int dest_row_sa = (snode.ncol > rr*blksz) ? 0 : (rr*blksz-snode.ncol);
+               Block<T, PoolAlloc> &dest_blk = node.contrib_blocks[(rr-sa)+(cc-sa)*ncontrib];
+               int dest_blk_lda = dest_blk.lda;
+               T *dest = &dest_blk.a[ (c - snode.ncol - dest_col_sa)*dest_blk_lda ];
+               // Assemble destination block
+               dest[ r - snode.ncol - dest_row_sa ] += src[i];
+            }
+         }
+      }
 
-// #endif
+#endif
+   }
 
-//    }
+   ////////////////////////////////////////////////////////////////////////////////
+   // Assemble block task
+   // ii: Row index in frontal matrix node
+   // jj: Col index in frontal matrix node
+   template <typename T, typename PoolAlloc>   
+   void assemble_block_task(
+         SymbolicFront const& snode, NumericFront<T,PoolAlloc>& node, 
+         SymbolicFront const& csnode, NumericFront<T,PoolAlloc>& cnode, 
+         int ii, int jj, int *cmap, int blksz, int prio) {
 
-//    // Assemble block task
-//    // ii: Row index in frontal matrix node
-//    // jj: Col index in frontal matrix node
-//    template <typename T, typename PoolAlloc>   
-//    void assemble_block_task(
-//          SymbolicSNode const& snode, spldlt::NumericNode<T,PoolAlloc>& node, 
-//          SymbolicSNode const& csnode, spldlt::NumericNode<T,PoolAlloc>& cnode, 
-//          int ii, int jj, int *cmap, int blksz, int prio) {
+#if defined(SPLDLT_USE_STARPU)
 
-// #if defined(SPLDLT_USE_STARPU)
+      int nrow = snode.nrow;
+      int ncol = snode.ncol; // no delays!
+      int nr = (nrow-1) / blksz+1; // number of block rows
+      int nc = (ncol-1) / blksz+1; // number of block columns
 
-//       int nrow = snode.nrow;
-//       int ncol = snode.ncol; // no delays!
-//       int nr = (nrow-1) / blksz+1; // number of block rows
-//       int nc = (ncol-1) / blksz+1; // number of block columns
+      starpu_data_handle_t *hdls = new starpu_data_handle_t[nr*nc];
+      int nh = 0;
+      int cm = csnode.nrow - csnode.ncol;
+      // colum indexes
+      int c_sa = (csnode.ncol > jj*blksz) ? 0 : (jj*blksz-csnode.ncol); // first col in block
+      int c_en = std::min((jj+1)*blksz-csnode.ncol, cm); // last col in block
+      // row indexes
+      int r_en = std::min((ii+1)*blksz-csnode.ncol, cm); // last row in block
 
-//       starpu_data_handle_t *hdls = new starpu_data_handle_t[nr*nc];
-//       int nh = 0;
-//       int cm = csnode.nrow - csnode.ncol;
-//       // colum indexes
-//       int c_sa = (csnode.ncol > jj*blksz) ? 0 : (jj*blksz-csnode.ncol); // first col in block
-//       int c_en = std::min((jj+1)*blksz-csnode.ncol, cm); // last col in block
-//       // row indexes
-//       int r_en = std::min((ii+1)*blksz-csnode.ncol, cm); // last row in block
+      int cc = -1; // Block column index in destination node
+      int rr = -1; // Block row index in destination node
 
-//       int cc = -1; // Block column index in destination node
-//       int rr = -1; // Block row index in destination node
-
-//       // loop over column in block
-//       for (int j=c_sa; j<c_en; j++) {
+      // loop over column in block
+      for (int j=c_sa; j<c_en; j++) {
          
-//          // Column index in parent node.
-//          // int c = map[ csnode.rlist[csnode.ncol+j] ];
-//          int c = cmap[ j ];
+         // Column index in parent node.
+         // int c = map[ csnode.rlist[csnode.ncol+j] ];
+         int c = cmap[ j ];
 
-//          if (cc == (c/blksz)) continue;
+         if (cc == (c/blksz)) continue;
 
-//          if (c < ncol) {
+         if (c < ncol) {
 
-//             cc = c/blksz;
-//             rr = -1;
+            cc = c/blksz;
+            rr = -1;
 
-//             int r_sa = (ii == jj) ? j : (ii*blksz-csnode.ncol); // first row in block
+            int r_sa = (ii == jj) ? j : (ii*blksz-csnode.ncol); // first row in block
 
-//             for (int i=r_sa; i<r_en; i++) {
+            for (int i=r_sa; i<r_en; i++) {
 
-//                // int r = map[ csnode.rlist[csnode.ncol+i] ];
-//                int r = cmap[ i ];
-//                if (rr == (r / blksz)) continue;
-//                rr = r/blksz;
+               // int r = map[ csnode.rlist[csnode.ncol+i] ];
+               int r = cmap[ i ];
+               if (rr == (r / blksz)) continue;
+               rr = r/blksz;
                
-//                hdls[nh] = snode.handles[cc*nr+rr];
-//                nh++;
-//             }
-//          }
-//       }
+               hdls[nh] = snode.handles[cc*nr+rr];
+               nh++;
+            }
+         }
+      }
       
-//       // Insert assembly tasks if there are contributions
-//       if (nh > 0) {
+      // Insert assembly tasks if there are contributions
+      if (nh > 0) {
          
-//          int cnr = (csnode.nrow-1)/blksz+1;  
-//          int crsa = csnode.ncol/blksz;
-//          int cncontrib = cnr-crsa;
+         int cnr = (csnode.nrow-1)/blksz+1;  
+         int crsa = csnode.ncol/blksz;
+         int cncontrib = cnr-crsa;
       
-//          insert_assemble_block(&node, &cnode, ii, jj, cmap, blksz, 
-//                                // csnode.contrib_handles[(jj-crsa)*cncontrib+(ii-crsa)],
-//                                cnode.contrib_blocks[(jj-crsa)*cncontrib+(ii-crsa)].hdl,
-//                                hdls, nh, snode.hdl, csnode.hdl,
-//                                prio);
-//       }
+         insert_assemble_block(&node, &cnode, ii, jj, cmap, blksz, 
+                               // csnode.contrib_handles[(jj-crsa)*cncontrib+(ii-crsa)],
+                               cnode.contrib_blocks[(jj-crsa)*cncontrib+(ii-crsa)].hdl,
+                               hdls, nh, snode.hdl, csnode.hdl,
+                               prio);
+      }
 
-//       delete[] hdls;
+      delete[] hdls;
 
-//       // assemble_block(node, cnode, ii, jj, cmap, blksz);
-// #else
+      // assemble_block(node, cnode, ii, jj, cmap, blksz);
+#else
 
-//       assemble_block(node, cnode, ii, jj, cmap, blksz);
-// #endif
-//    }
+      assemble_block(node, cnode, ii, jj, cmap, blksz);
+#endif
+   }
 
 //    // Assemble contrib block task.   
 //    // ii: Row index in frontal matrix.
@@ -765,173 +777,173 @@ namespace spldlt {
 // #endif
 //    }   
 
-//    /* Factorize node in a MF context
-//     */
-//    template <typename T, typename PoolAlloc>
-//    void factor_front_posdef(
-//          SymbolicSNode const& snode,
-//          spldlt::NumericNode<T, PoolAlloc> &node,
-//          struct cpu_factor_options const& options
-//          ) {
+   ////////////////////////////////////////////////////////////////////////////////
+   // Factorize a supernode using a multifrontal mode
+   template <typename T, typename PoolAlloc>
+   void factor_front_posdef(
+         SymbolicFront const& snode,
+         NumericFront<T, PoolAlloc> &node,
+         struct cpu_factor_options const& options
+         ) {
 
-//       /* Extract useful information about node */
-//       int m = snode.nrow;
-//       int n = snode.ncol;
-//       int lda = align_lda<T>(m);
-//       T *lcol = node.lcol;
-//       T *contrib = node.contrib;
-//       int ldcontrib = m-n;
+      /* Extract useful information about node */
+      int m = snode.nrow;
+      int n = snode.ncol;
+      int lda = align_lda<T>(m);
+      T *lcol = node.lcol;
+      T *contrib = node.contrib;
+      int ldcontrib = m-n;
 
-//       int blksz = options.cpu_block_size;
-//       int nr = (m-1) / blksz + 1; // number of block rows
-//       int nc = (n-1) / blksz + 1; // number of block columns
+      int blksz = options.cpu_block_size;
+      int nr = (m-1) / blksz + 1; // number of block rows
+      int nc = (n-1) / blksz + 1; // number of block columns
    
-//       // printf("[factorize_node_posdef_mf] contrib: %p\n", contrib);
+      // printf("[factorize_node_posdef_mf] contrib: %p\n", contrib);
 
-//       int FACTOR_PRIO = 3;
-//       int SOLVE_PRIO = 2;
-//       int UPDATE_PRIO = 1;
+      int FACTOR_PRIO = 3;
+      int SOLVE_PRIO = 2;
+      int UPDATE_PRIO = 1;
 
-//       for(int j = 0; j < nc; ++j) {
+      for(int j = 0; j < nc; ++j) {
 
-//          int blkn = std::min(blksz, n - j*blksz);
+         int blkn = std::min(blksz, n - j*blksz);
          
-//          /* Diagonal Block Factorization Task */
+         /* Diagonal Block Factorization Task */
 
-//          int blkm = std::min(blksz, m - j*blksz);
+         int blkm = std::min(blksz, m - j*blksz);
          
-//          // factorize_diag_block(
-//          //       blkm, blkn, 
-//          //       &lcol[j*blksz*(lda+1)], lda,
-//          //       contrib, ldcontrib,
-//          //       j==0);
+         // factorize_diag_block(
+         //       blkm, blkn, 
+         //       &lcol[j*blksz*(lda+1)], lda,
+         //       contrib, ldcontrib,
+         //       j==0);
 
-//          factorize_diag_block_task(
-//                snode, node, j, // block  column (and row) index
-//                blksz, FACTOR_PRIO);
+         factorize_diag_block_task(
+               snode, node, j, // block  column (and row) index
+               blksz, FACTOR_PRIO);
 
-// // #if defined(SPLDLT_USE_STARPU)
-// //             starpu_task_wait_for_all();
-// // #endif
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
 
-//          /* Column Solve Tasks */
-//          for(int i = j+1; i < nr; ++i) {
+         /* Column Solve Tasks */
+         for(int i = j+1; i < nr; ++i) {
 
-//             int blkm = std::min(blksz, m - i*blksz);
+            int blkm = std::min(blksz, m - i*blksz);
 
-//             // printf("[factorize_node_posdef_mf] contrib start: %d\n", (i*blksz)-n);
-//             // TODO fix STF version
-//             solve_block_task(
-//                   snode, node, j, i,
-//                   &lcol[j*blksz*(lda+1)], lda,
-//                   &lcol[(j*blksz*lda) + (i*blksz)], lda,
-//                   blksz, SOLVE_PRIO);
+            // printf("[factorize_node_posdef_mf] contrib start: %d\n", (i*blksz)-n);
+            // TODO fix STF version
+            solve_block_task(
+                  snode, node, j, i,
+                  &lcol[j*blksz*(lda+1)], lda,
+                  &lcol[(j*blksz*lda) + (i*blksz)], lda,
+                  blksz, SOLVE_PRIO);
 
-//             // solve_block(blkm, blkn, 
-//             //             &lcol[j*blksz*(lda+1)], lda, 
-//             //             &lcol[(j*blksz*lda) + (i*blksz)], lda,
-//             //             (contrib) ? &contrib[(i*blksz)-n] : nullptr, ldcontrib,
-//             //             j==0, 
-//             //             blksz);
+            // solve_block(blkm, blkn, 
+            //             &lcol[j*blksz*(lda+1)], lda, 
+            //             &lcol[(j*blksz*lda) + (i*blksz)], lda,
+            //             (contrib) ? &contrib[(i*blksz)-n] : nullptr, ldcontrib,
+            //             j==0, 
+            //             blksz);
 
-// // #if defined(SPLDLT_USE_STARPU)
-// //             starpu_task_wait_for_all();
-// // #endif
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
 
-//          }
+         }
 
-// // #if defined(SPLDLT_USE_STARPU)
-// //             starpu_task_wait_for_all();
-// // #endif
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
 
-//          /* Schur Update Tasks: mostly internal */
-//          for(int k = j+1; k < nc; ++k) {
+         /* Schur Update Tasks: mostly internal */
+         for(int k = j+1; k < nc; ++k) {
 
-//             int blkk = std::min(blksz, n - k*blksz);
+            int blkk = std::min(blksz, n - k*blksz);
 
-//             for(int i = k;  i < nr; ++i) {
+            for(int i = k;  i < nr; ++i) {
                
-//                int blkm = std::min(blksz, m - i*blksz);
+               int blkm = std::min(blksz, m - i*blksz);
                
-//                // int cbm = (i*blksz < n) ? std::min((i+1)*blksz,m)-n : blkm;
-//                int cbm = (i*blksz < n) ? blkm+(i*blksz)-n : blkm;
-//                int cbn = std::min(blksz, m-k*blksz)-blkk;
-//                T *upd = nullptr;
+               // int cbm = (i*blksz < n) ? std::min((i+1)*blksz,m)-n : blkm;
+               int cbm = (i*blksz < n) ? blkm+(i*blksz)-n : blkm;
+               int cbn = std::min(blksz, m-k*blksz)-blkk;
+               T *upd = nullptr;
                   
-//                if (contrib)
-//                   upd = (i*blksz < n) ? contrib : &contrib[(i*blksz)-n];
+               if (contrib)
+                  upd = (i*blksz < n) ? contrib : &contrib[(i*blksz)-n];
 
-//                // int cbm = std::min(blksz, m-std::max(n,i*blksz));
-//                // int cbn = std::min(blksz, m-k*blksz)-blkk;
+               // int cbm = std::min(blksz, m-std::max(n,i*blksz));
+               // int cbn = std::min(blksz, m-k*blksz)-blkk;
                
-//                // printf("[factorize_node_posdef_mf] m: %d, k: %d\n", m, k);
-//                // printf("[factorize_node_posdef_mf] cbm: %d, cbn: %d\n", cbm, cbn);
-//                // TODO fix STF version
-//                update_block_task(snode, node, j, i, k,
-//                                  &lcol[ (k*blksz*lda) + (i*blksz)], lda,
-//                                  &lcol[(j*blksz*lda) + (i*blksz)], lda, 
-//                                  &lcol[(j*blksz*lda) + (k*blksz)], lda,
-//                                  blksz, UPDATE_PRIO);
+               // printf("[factorize_node_posdef_mf] m: %d, k: %d\n", m, k);
+               // printf("[factorize_node_posdef_mf] cbm: %d, cbn: %d\n", cbm, cbn);
+               // TODO fix STF version
+               update_block_task(snode, node, j, i, k,
+                                 &lcol[ (k*blksz*lda) + (i*blksz)], lda,
+                                 &lcol[(j*blksz*lda) + (i*blksz)], lda, 
+                                 &lcol[(j*blksz*lda) + (k*blksz)], lda,
+                                 blksz, UPDATE_PRIO);
 
-// // #if defined(SPLDLT_USE_STARPU)
-// //                starpu_task_wait_for_all();
-// // #endif
+// #if defined(SPLDLT_USE_STARPU)
+//                starpu_task_wait_for_all();
+// #endif
                
-//                // update_block(blkm, blkk, &lcol[ (k*blksz*lda) + (i*blksz)], lda,
-//                //              blkn,
-//                //              &lcol[(j*blksz*lda) + (i*blksz)], lda, 
-//                //              &lcol[(j*blksz*lda) + (k*blksz)], lda,
-//                //              upd, ldcontrib,
-//                //              cbm, cbn,
-//                //              j==0,
-//                //              blksz);
+               // update_block(blkm, blkk, &lcol[ (k*blksz*lda) + (i*blksz)], lda,
+               //              blkn,
+               //              &lcol[(j*blksz*lda) + (i*blksz)], lda, 
+               //              &lcol[(j*blksz*lda) + (k*blksz)], lda,
+               //              upd, ldcontrib,
+               //              cbm, cbn,
+               //              j==0,
+               //              blksz);
 
-//             }
-//          }
+            }
+         }
 
-// // #if defined(SPLDLT_USE_STARPU)
-// //          starpu_task_wait_for_all();
-// // #endif
+// #if defined(SPLDLT_USE_STARPU)
+//          starpu_task_wait_for_all();
+// #endif
 
-//          /* Contrib Schur complement update: external */
-//          // if (contrib) {
-//          if (ldcontrib>0) {
-//             // printf("[factorize_node_posdef_mf] node: %d\n", snode.idx);
-//             // printf("[factorize_node_posdef_mf] nc: %d, nr: %d\n", nc, nr);
-//             for (int k = nc; k < nr; ++k) {
+         /* Contrib Schur complement update: external */
+         // if (contrib) {
+         if (ldcontrib>0) {
+            // printf("[factorize_node_posdef_mf] node: %d\n", snode.idx);
+            // printf("[factorize_node_posdef_mf] nc: %d, nr: %d\n", nc, nr);
+            for (int k = nc; k < nr; ++k) {
                
-//                int blkk = std::min(blksz, m - k*blksz);
+               int blkk = std::min(blksz, m - k*blksz);
 
-//                for (int i = k;  i < nr; ++i) {
+               for (int i = k;  i < nr; ++i) {
                
-//                   int blkm = std::min(blksz, m - i*blksz);
+                  int blkm = std::min(blksz, m - i*blksz);
 
-//                   update_contrib_task(snode, node,
-//                                       j, i, k, blksz, 
-//                                       UPDATE_PRIO);
+                  update_contrib_task(snode, node,
+                                      j, i, k, blksz, 
+                                      UPDATE_PRIO);
 
-//                   // update_block(
-//                   //       blkm, blkk,
-//                   //       &contrib[((k*blksz-n)*ldcontrib) + (i*blksz)-n], ldcontrib,
-//                   //       blkn,
-//                   //       &lcol[(j*blksz*lda) + (i*blksz)], lda, 
-//                   //       &lcol[(j*blksz*lda) + (k*blksz)], lda,
-//                   //       j==0);
+                  // update_block(
+                  //       blkm, blkk,
+                  //       &contrib[((k*blksz-n)*ldcontrib) + (i*blksz)-n], ldcontrib,
+                  //       blkn,
+                  //       &lcol[(j*blksz*lda) + (i*blksz)], lda, 
+                  //       &lcol[(j*blksz*lda) + (k*blksz)], lda,
+                  //       j==0);
                   
-//                   // update_block(blkm, blkk, &contrib[ (k*blksz*lda) + (i*blksz)], lda,
-//                   //              blkn,
-//                   //              &lcol[(j*blksz*lda) + (i*blksz)], lda,
-//                   //              &lcol[(j*blksz*lda) + (k*blksz)], lda,
-//                   //              contrib, ldcontrib,
-//                   //              cbm, cbn,
-//                   //              j==0,
-//                   //              blksz);
+                  // update_block(blkm, blkk, &contrib[ (k*blksz*lda) + (i*blksz)], lda,
+                  //              blkn,
+                  //              &lcol[(j*blksz*lda) + (i*blksz)], lda,
+                  //              &lcol[(j*blksz*lda) + (k*blksz)], lda,
+                  //              contrib, ldcontrib,
+                  //              cbm, cbn,
+                  //              j==0,
+                  //              blksz);
 
-//                }
-//             }
-//          }
-//       }
-//    }
+               }
+            }
+         }
+      }
+   }
 
    // // TODO: error managment
    // template <typename T, typename PoolAlloc>

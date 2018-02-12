@@ -16,12 +16,12 @@ namespace spldlt {
       // int least_desc; // least descendants, to allow easy walk of subtrees
 #if defined(SPLDLT_USE_STARPU)
       starpu_data_handle_t hdl; // symbolic handle representing the node
-      // std::vector<starpu_data_handle_t> handles; // array containing the block handles
+      std::vector<starpu_data_handle_t> handles; // array containing the block handles
       // std::vector<starpu_data_handle_t> contrib_handles; // array containing the block handles in the contribution block
-      // int *map;
+      int *map;
 #endif 
       int part; // Partition info
       int exec_loc; // Execution location info
-      // int contrib_idx; // Index of contribution
+      int contrib_idx; // Index of contribution
    };
 }

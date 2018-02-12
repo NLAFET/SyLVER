@@ -64,15 +64,15 @@ spldlt_tree_solve_fwd_dbl(void const* tree_ptr, // pointer to relevant type of N
                           double* x,        // ldx x nrhs array of right-hand sides
                           int ldx           // leading dimension of x
       ) {
-//    // Call method
-//    try {
+   // Call method
+   try {
       
-//       auto &tree = *static_cast<NumericTreeDbl const*>(tree_ptr); // positive definite!
-//       tree.solve_fwd(nrhs, x, ldx);
+      auto &tree = *static_cast<NumericTreeDbl const*>(tree_ptr); // positive definite!
+      tree.solve_fwd(nrhs, x, ldx);
 
-//    } catch(std::bad_alloc const&) {
-//       return Flag::ERROR_ALLOCATION;
-//    }
+   } catch(std::bad_alloc const&) {
+      return Flag::ERROR_ALLOCATION;
+   }
    return spral::ssids::cpu::Flag::SUCCESS;
 }
 
@@ -84,14 +84,14 @@ spldlt_tree_solve_bwd_dbl(void const* tree_ptr, // pointer to relevant type of N
                           int ldx           // leading dimension of x
       ) {
 
-//    // Call method
-//    try {
-//       auto &tree = *static_cast<NumericTreeDbl const*>(tree_ptr); // positive definite!
-//       tree.solve_bwd(nrhs, x, ldx);
+   // Call method
+   try {
+      auto &tree = *static_cast<NumericTreeDbl const*>(tree_ptr); // positive definite!
+      tree.solve_bwd(nrhs, x, ldx);
       
-//    } catch(std::bad_alloc const&) {
-//       return Flag::ERROR_ALLOCATION;
-//    }
+   } catch(std::bad_alloc const&) {
+      return Flag::ERROR_ALLOCATION;
+   }
    return spral::ssids::cpu::Flag::SUCCESS;
 }
 
@@ -104,13 +104,12 @@ spldlt_tree_solve_diag_bwd_dbl(
       int ldx           // leading dimension of x
       ) {
 
-//    // Call method
-//    try {
-//       auto &tree = *static_cast<NumericTreeDbl const*>(tree_ptr);
-//       tree.solve_diag_bwd(nrhs, x, ldx);
-//    } catch(std::bad_alloc const&) {
-//       return Flag::ERROR_ALLOCATION;
-//    }
-
+   // Call method
+   try {
+      auto &tree = *static_cast<NumericTreeDbl const*>(tree_ptr);
+      tree.solve_diag_bwd(nrhs, x, ldx);
+   } catch(std::bad_alloc const&) {
+      return Flag::ERROR_ALLOCATION;
+   }
    return spral::ssids::cpu::Flag::SUCCESS;
 }

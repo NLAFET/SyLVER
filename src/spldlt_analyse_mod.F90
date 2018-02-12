@@ -45,16 +45,24 @@ module spldlt_analyse_mod
      ! end function spldlt_create_symbolic_tree
 
      ! Debug
-     type(c_ptr) function spldlt_create_symbolic_tree(akeep, n, nnodes, nparts, &
-          part, exec_loc) &
+     type(c_ptr) function spldlt_create_symbolic_tree( &
+          akeep, n, nnodes, sptr, sparent, rptr, rlist, nptr, nlist, nparts, &
+          part, contrib_idx, exec_loc) &
           bind(C, name="spldlt_create_symbolic_tree")
        use, intrinsic :: iso_c_binding
        implicit none
        type(c_ptr), value :: akeep
        integer(c_int), value :: n
        integer(c_int), value :: nnodes
+       integer(c_int), dimension(*), intent(in) :: sptr
+       integer(c_int), dimension(*), intent(in) :: sparent
+       integer(c_long), dimension(*), intent(in) :: rptr
+       integer(c_int), dimension(*), intent(in) :: rlist
+       integer(c_long), dimension(*), intent(in) :: nptr
+       integer(c_long), dimension(2, *), intent(in) :: nlist
        integer(c_int), value :: nparts
        integer(c_int), dimension(*), intent(in) :: part
+       integer(c_int), dimension(*), intent(in) :: contrib_idx
        integer(c_int), dimension(*), intent(in) :: exec_loc
      end function spldlt_create_symbolic_tree
 
@@ -300,7 +308,8 @@ contains
 
     spldlt_akeep%symbolic_tree_c = &
          spldlt_create_symbolic_tree_c(cakeep, akeep%n, akeep%nnodes, & 
-         akeep%nparts, akeep%part, exec_loc)
+         akeep%sptr, akeep%sparent, akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist, & 
+         akeep%nparts, akeep%part, akeep%contrib_idx, exec_loc)
 
 100 continue
     inform%stat = st

@@ -7,7 +7,9 @@ using namespace spldlt;
 
 extern "C"
 void *spldlt_create_symbolic_tree(
-      void* akeep, int n, int nnodes, int nparts, int const* part, int const* exec_loc)
+      void* akeep, int n, int nnodes, int const* sptr, int const* sparent, 
+      long const* rptr, int const* rlist, long const* nptr, long const* nlist, 
+      int nparts, int const* part, int const* contrib_idx, int const* exec_loc)
    //    void* akeep,
    //    int n, int nnodes, int const* sptr, int const* sparent,
    //    long const* rptr, int const* rlist, long const* nptr,
@@ -24,5 +26,7 @@ void *spldlt_create_symbolic_tree(
    //       NULL, *options
    //       );
 
-   return (void *) new SymbolicTree(akeep, n, nnodes, nparts, part, exec_loc);
+   return (void *) new SymbolicTree(
+         akeep, n, nnodes, sptr, sparent, rptr, rlist, nptr, nlist, nparts, part, 
+         contrib_idx, exec_loc);
 }

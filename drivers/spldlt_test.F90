@@ -181,11 +181,6 @@ program spldlt_test
    smfact = (stop_t - start_t)/real(rate_t)
    ! stop
 
-   ! Shutdown SpLDLT
-   call spldlt_finalize()
-
-   return
-
    ! Solve
    write(*, "(a)") "[SpLDLT Test] Solve..."
    ! call system_clock(start_t, rate_t)
@@ -200,9 +195,6 @@ program spldlt_test
    ! endif
    ! write(*, "(a)") "ok"
    ! print *, "Solve took ", (stop_t - start_t)/real(rate_t)
-
-
-   stop
 
    ! Solve SpLDLT
    call system_clock(start_t, rate_t)
@@ -222,6 +214,11 @@ program spldlt_test
    print *, "bwd error scaled = ", res
 
    call ssids_free(spldlt_akeep%akeep, spldlt_fkeep%fkeep, cuda_error)
+
+   ! Shutdown SpLDLT
+   call spldlt_finalize()
+
+   stop
    
  contains
 
