@@ -117,13 +117,6 @@ namespace spldlt {
       bool posdef = true;
       T *scaling = NULL;
 
-      // /* Rebind allocators */
-      // typedef typename std::allocator_traits<FactorAlloc>::template rebind_traits<double> FADoubleTraits;
-      // typename FADoubleTraits::allocator_type factor_alloc_double(factor_alloc);
-      // typedef typename std::allocator_traits<FactorAlloc>::template rebind_traits<int> FAIntTraits;
-      // typename FAIntTraits::allocator_type factor_alloc_int(factor_alloc);
-      // typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> PoolAllocInt;
-
       // /* Count incoming delays and determine size of node */
       // node.ndelay_in = 0;
       
