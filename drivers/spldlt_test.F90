@@ -65,10 +65,10 @@ program spldlt_test
    !integer, parameter :: nslv = 100
 
    integer :: cuda_error ! DEBUG not useful for now 
+
+   pos_def = .true. ! Matrix assumed posdef by default
    
    call proc_args(ssids_opt, nrhs, pos_def, ncpu, matfile)
-
-   pos_def = .true. ! DEBUG assume matrix is posdef
 
    ! ssids_opt%print_level = 1 ! enable printing
    ssids_opt%print_level = 0 ! disable printing
@@ -253,6 +253,9 @@ program spldlt_test
            argnum = argnum + 1
            read( argval, * ) nrhs
            print *, 'solving for', nrhs, 'right-hand sides'         
+        case("--indef")
+           pos_def = .false.
+           print *, 'Matrix assumed indefinite'
         case("--posdef")
            pos_def = .true.
            print *, 'Matrix assumed positive definite'

@@ -41,20 +41,28 @@ void *spldlt_create_numeric_tree_dbl(
    }
 }
 
-// // delete tree structure in memory
-// extern "C"
-// void spldlt_destroy_numeric_tree_dbl(void* target) {
+// delete tree structure in memory
+extern "C"
+void spldlt_destroy_numeric_tree_dbl(bool posdef, void* target) {
 
-//    auto *tree = static_cast<NumericTreeDbl*>(target);
-//    delete tree;
-// }
+   if (posdef) {
+      auto *tree = static_cast<NumericTreePosdefDbl*>(target);
+      delete tree;
+   }
+   else {
+      auto *tree = static_cast<NumericTreeIndefDbl*>(target);
+      delete tree;
+   }
+}
 
 extern "C"
 spral::ssids::cpu::Flag 
-spldlt_tree_solve_fwd_dbl(void const* tree_ptr, // pointer to relevant type of NumericTree
-                          int nrhs,         // number of right-hand sides
-                          double* x,        // ldx x nrhs array of right-hand sides
-                          int ldx           // leading dimension of x
+spldlt_tree_solve_fwd_dbl(
+      bool posdef,      // If true, performs A=LL^T, if false do pivoted A=LDL^T
+      void const* tree_ptr, // pointer to relevant type of NumericTree
+      int nrhs,         // number of right-hand sides
+      double* x,        // ldx x nrhs array of right-hand sides
+      int ldx           // leading dimension of x
       ) {
    // Call method
    try {
@@ -70,10 +78,12 @@ spldlt_tree_solve_fwd_dbl(void const* tree_ptr, // pointer to relevant type of N
 
 extern "C"
 spral::ssids::cpu::Flag
-spldlt_tree_solve_bwd_dbl(void const* tree_ptr, // pointer to relevant type of NumericTree
-                          int nrhs,         // number of right-hand sides
-                          double* x,        // ldx x nrhs array of right-hand sides
-                          int ldx           // leading dimension of x
+spldlt_tree_solve_bwd_dbl(
+      bool posdef,      // If true, performs A=LL^T, if false do pivoted A=LDL^T
+      void const* tree_ptr, // pointer to relevant type of NumericTree
+      int nrhs,         // number of right-hand sides
+      double* x,        // ldx x nrhs array of right-hand sides
+      int ldx           // leading dimension of x
       ) {
 
    // Call method
@@ -90,6 +100,7 @@ spldlt_tree_solve_bwd_dbl(void const* tree_ptr, // pointer to relevant type of N
 extern "C"
 spral::ssids::cpu::Flag
 spldlt_tree_solve_diag_bwd_dbl(
+      bool posdef,      // If true, performs A=LL^T, if false do pivoted A=LDL^T
       void const* tree_ptr, // pointer to relevant type of NumericTree
       int nrhs,         // number of right-hand sides
       double* x,        // ldx x nrhs array of right-hand sides

@@ -123,13 +123,14 @@ namespace spldlt {
             if (symb_[root].exec_loc != -1) {
 
                factor_subtree_task(
-                     symb_.akeep_, fkeep_, symb_[root], aval, p, child_contrib, &options);
+                     symb_.akeep_, fkeep_, symb_[root], aval, p, child_contrib, 
+                     &options);
             }
          }
 
-// #if defined(SPLDLT_USE_STARPU)
-//          starpu_task_wait_for_all();
-// #endif         
+#if defined(SPLDLT_USE_STARPU)
+         starpu_task_wait_for_all();
+#endif         
 
          // for(int p = 0; p < symb_.nparts_; ++p) {
          //    spldlt_print_debuginfo_c(symb_.akeep_, fkeep_, p);
@@ -147,14 +148,16 @@ namespace spldlt {
             if (sfront.exec_loc != -1) continue;
             
             // Activate frontal matrix
-            activate_front(sfront, fronts_[ni], blksz, factor_alloc_, pool_alloc_);
+            activate_front(
+                  posdef, sfront, fronts_[ni], blksz, factor_alloc_, 
+                  pool_alloc_);
 
             // Initialize frontal matrix 
             // init_node(sfront, fronts_[ni], aval); // debug
             init_node_task(sfront, fronts_[ni], aval, INIT_PRIO);
-// #if defined(SPLDLT_USE_STARPU)
-//             starpu_task_wait_for_all();
-// #endif
+#if defined(SPLDLT_USE_STARPU)
+            starpu_task_wait_for_all();
+#endif
 
             // build lookup vector, allowing for insertion of delayed vars
             // Note that while rlist[] is 1-indexed this is fine so long as lookup
@@ -189,9 +192,9 @@ namespace spldlt {
                            sfront, fronts_[ni], child_sfront, child_contrib, 
                            child_sfront.contrib_idx, child_sfront.map, blksz, 
                            ASSEMBLE_PRIO);
-// #if defined(SPLDLT_USE_STARPU)
-//                            starpu_task_wait_for_all();
-// #endif
+#if defined(SPLDLT_USE_STARPU)
+                     starpu_task_wait_for_all();
+#endif
 
                   }
                   else {
@@ -205,9 +208,9 @@ namespace spldlt {
                            assemble_block_task(
                                  sfront, fronts_[ni], child_sfront, *child, ii, jj, 
                                  child_sfront.map, blksz, ASSEMBLE_PRIO);
-// #if defined(SPLDLT_USE_STARPU)
-//                            starpu_task_wait_for_all();
-// #endif
+#if defined(SPLDLT_USE_STARPU)
+                           starpu_task_wait_for_all();
+#endif
                         }
                      }
                   }
@@ -219,9 +222,9 @@ namespace spldlt {
 
             // Compute factors and Schur complement 
             factor_front_posdef(sfront, fronts_[ni], options);
-// #if defined(SPLDLT_USE_STARPU)
-//             starpu_task_wait_for_all();
-// #endif
+#if defined(SPLDLT_USE_STARPU)
+            starpu_task_wait_for_all();
+#endif
 
             // Assemble front: non fully-summed columns i.e. contribution block 
             for (auto* child=fronts_[ni].first_child; child!=NULL; child=child->next_child) {
@@ -242,9 +245,9 @@ namespace spldlt {
                            sfront, fronts_[ni], child_sfront, child_contrib, 
                            child_sfront.contrib_idx, child_sfront.map, blksz, 
                            ASSEMBLE_PRIO);
-// #if defined(SPLDLT_USE_STARPU)
-//                      starpu_task_wait_for_all();
-// #endif
+#if defined(SPLDLT_USE_STARPU)
+                     starpu_task_wait_for_all();
+#endif
 
                   }
                   else {
@@ -268,9 +271,9 @@ namespace spldlt {
                            assemble_contrib_block_task(
                                  sfront, fronts_[ni], child_sfront, *child, ii, jj, 
                                  child_sfront.map, blksz, ASSEMBLE_PRIO);
-// #if defined(SPLDLT_USE_STARPU)
-//                            starpu_task_wait_for_all();
-// #endif
+#if defined(SPLDLT_USE_STARPU)
+                           starpu_task_wait_for_all();
+#endif
 
                         }
                      }

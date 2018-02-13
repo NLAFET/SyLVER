@@ -54,16 +54,14 @@ namespace spldlt {
 
    ////////////////////////////////////////////////////////////////////////////////   
    // Allocate memory assocaited with the frontal matrix front
-   // FIXME bool mf as input parameter?
    template<typename T, 
             typename FactorAlloc, 
-            typename PoolAlloc,
-            bool posdef = true>
+            typename PoolAlloc>
    void alloc_front(
+         bool posdef,
          NumericFront<T,PoolAlloc>& front,
          FactorAlloc& factor_alloc,
-         PoolAlloc& pool_alloc
-         ) {
+         PoolAlloc& pool_alloc) {
 
       T *scaling = NULL;
 
@@ -73,6 +71,7 @@ namespace spldlt {
       typedef typename std::allocator_traits<FactorAlloc>::template rebind_traits<int> FAIntTraits;
       typename FAIntTraits::allocator_type factor_alloc_int(factor_alloc);
       typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> PoolAllocInt;
+      // printf("[alloc_front] posdef = %d\n", posdef);
 
       /* Count incoming delays and determine size of node */
       front.ndelay_in = 0;
@@ -92,17 +91,14 @@ namespace spldlt {
       // node.alloc_contrib();
       front.alloc_contrib_blocks();
 
-      // TODO pivoting
+      if (!posdef) {
+         /* Alloc + set perm for expected eliminations at this node (delays are set
+          * when they are imported from children) */
+         front.perm = FAIntTraits::allocate(factor_alloc_int, ncol); // ncol fully summed variables
+         for(int i=0; i<sfront.ncol; i++)
+            front.perm[i] = sfront.rlist[i];
 
-      /* Alloc + set perm for expected eliminations at this node (delays are set
-       * when they are imported from children) */
-      // node.perm = FAIntTraits::allocate(factor_alloc_int, ncol); // ncol fully summed variables
-      // for(int i=0; i<snode.ncol; i++)
-      //    node.perm[i] = snode.rlist[i];
-
-      /* If we have no children, we're done. */
-      // if(node.first_child == nullptr && snode.contrib.size() == 0) return;
-
+      }
    }
 
    ////////////////////////////////////////////////////////////////////////////////

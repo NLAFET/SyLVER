@@ -46,6 +46,7 @@ namespace spldlt {
    // Activate frontal matrix: allocate data structures
    template <typename T, typename FactorAlloc, typename PoolAlloc>
    void activate_front(
+         bool posdef,
          SymbolicFront &sfront,
          NumericFront<T, PoolAlloc> &front,
          int blksz,
@@ -53,7 +54,7 @@ namespace spldlt {
          PoolAlloc& pool_alloc) {
 
       // Allocate frontal matrix
-      alloc_front(front, factor_alloc, pool_alloc);
+      alloc_front(posdef, front, factor_alloc, pool_alloc);
 
 #if defined(SPLDLT_USE_STARPU)
       // Register symbolic handle for current node in StarPU

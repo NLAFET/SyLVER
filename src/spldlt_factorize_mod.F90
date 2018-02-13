@@ -6,7 +6,8 @@ module spldlt_factorize_mod
   implicit none
 
   type numeric_tree_type
-     type(c_ptr) :: ptr_c ! pointer to the C structure
+     logical(C_BOOL) :: posdef
+     type(c_ptr) :: ctree ! pointer to the C structure
    contains
      procedure :: solve_fwd
      procedure :: solve_bwd
@@ -54,9 +55,11 @@ module spldlt_factorize_mod
 
   ! forward solve
   interface spldlt_tree_solve_fwd_c
-     integer(c_int) function spldlt_tree_solve_fwd_dbl(numeric_tree, nrhs, x, ldx) &
+     integer(c_int) function spldlt_tree_solve_fwd_dbl( &
+          posdef, numeric_tree, nrhs, x, ldx) &
           bind(C, name="spldlt_tree_solve_fwd_dbl")
        use, intrinsic :: iso_c_binding
+       logical(c_bool), value :: posdef
        type(c_ptr), value :: numeric_tree
        integer(c_int), value :: nrhs
        real(c_double), dimension(*), intent(inout) :: x
@@ -66,9 +69,11 @@ module spldlt_factorize_mod
 
   ! backward solve
   interface spldlt_tree_solve_bwd_c
-     integer(c_int) function spldlt_tree_solve_bwd_dbl(numeric_tree, nrhs, x, ldx) &
+     integer(c_int) function spldlt_tree_solve_bwd_dbl( &
+          posdef, numeric_tree, nrhs, x, ldx) &
           bind(C, name="spldlt_tree_solve_bwd_dbl")
        use, intrinsic :: iso_c_binding
+       logical(c_bool), value :: posdef
        type(c_ptr), value :: numeric_tree
        integer(c_int), value :: nrhs
        real(c_double), dimension(*), intent(inout) :: x
@@ -78,9 +83,11 @@ module spldlt_factorize_mod
 
   ! backward solve with diagonal solve (indefinite case) 
   interface spldlt_tree_solve_diag_bwd_c
-     integer(c_int) function spldlt_tree_solve_diag_bwd_dbl(numeric_tree, nrhs, x, ldx) &
+     integer(c_int) function spldlt_tree_solve_diag_bwd_dbl( &
+          posdef, numeric_tree, nrhs, x, ldx) &
           bind(C, name="spldlt_tree_solve_diag_bwd_dbl")
        use, intrinsic :: iso_c_binding
+       logical(c_bool), value :: posdef
        type(c_ptr), value :: numeric_tree
        integer(c_int), value :: nrhs
        real(c_double), dimension(*), intent(inout) :: x
@@ -528,8 +535,9 @@ contains
 
     cfkeep = c_loc(fkeep)
  
+    spldlt_fkeep%numeric_tree%posdef = posdef
     call cpu_copy_options_in(options, coptions)
-    spldlt_fkeep%numeric_tree%ptr_c = spldlt_create_numeric_tree_c( &
+    spldlt_fkeep%numeric_tree%ctree = spldlt_create_numeric_tree_c( &
          posdef, cfkeep, spldlt_akeep%symbolic_tree_c, val, &
          child_contrib_c, coptions)
 
@@ -643,8 +651,12 @@ contains
     integer :: part
     integer :: exec_loc
     
+    logical(c_bool) :: posdef
+    
     akeep = spldlt_akeep%akeep
     n = akeep%n
+
+    posdef = spldlt_fkeep%fkeep%pos_def
 
     allocate(x2(n, nrhs), stat=inform%stat)
     if(inform%stat.ne.0) goto 100
@@ -672,13 +684,13 @@ contains
 
     ! Perform solve
     ! Fwd solve
-    call spldlt_fkeep%numeric_tree%solve_fwd(nrhs, x2, ldx)
+    call spldlt_fkeep%numeric_tree%solve_fwd(posdef, nrhs, x2, ldx)
     
     ! Bwd solve
     ! call spldlt_fkeep%numeric_tree%solve_bwd(nrhs, x, ldx)
 
     ! Diag and bwd solve
-    call spldlt_fkeep%numeric_tree%solve_diag_bwd(nrhs, x2, ldx)
+    call spldlt_fkeep%numeric_tree%solve_diag_bwd(posdef, nrhs, x2, ldx)
 
     ! Bwd solve
     do part = akeep%nparts, 1, -1
@@ -700,12 +712,13 @@ contains
   end subroutine solve
 
   ! Fwd solve on numeric tree
-  subroutine solve_fwd(numeric_tree, nrhs, x, ldx)
+  subroutine solve_fwd(numeric_tree, posdef, nrhs, x, ldx)
     use, intrinsic :: iso_c_binding
     use spral_ssids_datatypes
     implicit none
     
-    class(numeric_tree_type), intent(in) :: numeric_tree 
+    class(numeric_tree_type), intent(in) :: numeric_tree
+    logical(c_bool), intent(in) :: posdef
     integer, intent(in) :: nrhs
     integer, intent(in) :: ldx
     real(wp), dimension(*), intent(inout) :: x
@@ -714,7 +727,7 @@ contains
 
     ! print *, "solve fwd, x: ", x(1:ldx, 1)
 
-    flag = spldlt_tree_solve_fwd_c(numeric_tree%ptr_c, nrhs, x, ldx)
+    flag = spldlt_tree_solve_fwd_c(posdef, numeric_tree%ctree, nrhs, x, ldx)
     ! TODO error managment
     ! if(flag.ne.SSIDS_SUCCESS) inform%flag = flag
 
@@ -723,37 +736,39 @@ contains
   end subroutine solve_fwd
 
   ! Bwd solve on numeric tree
-  subroutine solve_bwd(numeric_tree, nrhs, x, ldx)
+  subroutine solve_bwd(numeric_tree, posdef, nrhs, x, ldx)
     use, intrinsic :: iso_c_binding
     use spral_ssids_datatypes
     implicit none
 
     class(numeric_tree_type), intent(in) :: numeric_tree
+    logical(c_bool), intent(in) :: posdef
     integer, intent(in) :: nrhs
     integer, intent(in) :: ldx
     real(wp), dimension(*), intent(inout) :: x
 
     integer(c_int) :: flag ! return value
 
-    flag = spldlt_tree_solve_bwd_c(numeric_tree%ptr_c, nrhs, x, ldx)
+    flag = spldlt_tree_solve_bwd_c(posdef, numeric_tree%ctree, nrhs, x, ldx)
     ! TODO error managment
     ! if(flag.ne.SSIDS_SUCCESS) inform%flag = flag
   end subroutine solve_bwd
   
   ! Bwd and diag solve on numeric tree
-  subroutine solve_diag_bwd(numeric_tree, nrhs, x, ldx)
+  subroutine solve_diag_bwd(numeric_tree, posdef, nrhs, x, ldx)
     use, intrinsic :: iso_c_binding
     use spral_ssids_datatypes
     implicit none
 
     class(numeric_tree_type), intent(in) :: numeric_tree 
+    logical(c_bool), intent(in) :: posdef
     integer, intent(in) :: nrhs
     integer, intent(in) :: ldx
     real(wp), dimension(*), intent(inout) :: x
 
     integer(c_int) :: flag ! return value
 
-    flag = spldlt_tree_solve_diag_bwd_c(numeric_tree%ptr_c, nrhs, x, ldx)
+    flag = spldlt_tree_solve_diag_bwd_c(posdef, numeric_tree%ctree, nrhs, x, ldx)
     ! TODO error managment
     ! if(flag.ne.SSIDS_SUCCESS) inform%flag = flag
   end subroutine solve_diag_bwd
