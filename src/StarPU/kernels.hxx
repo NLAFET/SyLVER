@@ -943,7 +943,7 @@ namespace spldlt { namespace starpu {
          void **child_contrib;
          int contrib_idx;
 
-         printf("[subtree_assemble_cpu_func]\n");
+         // printf("[subtree_assemble_cpu_func]\n");
 
          starpu_codelet_unpack_args(cl_arg,
                                     &node, &csnode,
@@ -959,6 +959,7 @@ namespace spldlt { namespace starpu {
                child_contrib[contrib_idx], &cn, &cval, &ldcontrib, &crlist,
                &ndelay, &delay_perm, &delay_val, &lddelay
                );
+         printf("[subtree_assemble_cpu_func] ndelay = %d, cval = %p\n", ndelay, cval);
          if(!cval) return; // child was all delays, nothing more to do
 
          for(int j = 0; j < cn; ++j) {
@@ -1036,7 +1037,7 @@ namespace spldlt { namespace starpu {
          int contrib_idx;
          int blksz;
 
-         printf("[subtree_assemble_contrib_cpu_func]\n");
+         // printf("[subtree_assemble_contrib_cpu_func]\n");
 
          starpu_codelet_unpack_args(cl_arg,
                                     &node, &csnode,
@@ -1053,6 +1054,7 @@ namespace spldlt { namespace starpu {
                child_contrib[contrib_idx], &cn, &cval, &ldcontrib, &crlist,
                &ndelay, &delay_perm, &delay_val, &lddelay
                );
+         printf("[subtree_assemble_contrib_cpu_func] ndelay = %d, cval = %p\n", ndelay, cval);
          if(!cval) return; // child was all delays, nothing more to do
 
          int sa = snode.ncol / blksz; // Index of first block in contrib
@@ -1084,6 +1086,9 @@ namespace spldlt { namespace starpu {
             }
          }
 
+         /* Free memory from child contribution block */
+         // TODO
+         // spral_ssids_contrib_free_dbl(child_contrib[contrib_idx]);
       }
 
       // StarPU codelet
