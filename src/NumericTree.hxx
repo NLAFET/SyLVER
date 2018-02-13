@@ -124,17 +124,16 @@ namespace spldlt {
 
                factor_subtree_task(
                      symb_.akeep_, fkeep_, symb_[root], aval, p, child_contrib, &options);
-
             }
          }
 
-#if defined(SPLDLT_USE_STARPU)
-         starpu_task_wait_for_all();
-#endif         
-                        
-         for(int p = 0; p < symb_.nparts_; ++p) {
-            spldlt_print_debuginfo_c(symb_.akeep_, fkeep_, p);
-         }
+// #if defined(SPLDLT_USE_STARPU)
+//          starpu_task_wait_for_all();
+// #endif         
+
+         // for(int p = 0; p < symb_.nparts_; ++p) {
+         //    spldlt_print_debuginfo_c(symb_.akeep_, fkeep_, p);
+         // }
 
          // Allocate mapping array
          int *map = new int[symb_.n+1];
@@ -153,6 +152,9 @@ namespace spldlt {
             // Initialize frontal matrix 
             // init_node(sfront, fronts_[ni], aval); // debug
             init_node_task(sfront, fronts_[ni], aval, INIT_PRIO);
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
 
             // build lookup vector, allowing for insertion of delayed vars
             // Note that while rlist[] is 1-indexed this is fine so long as lookup
@@ -187,9 +189,12 @@ namespace spldlt {
                            sfront, fronts_[ni], child_sfront, child_contrib, 
                            child_sfront.contrib_idx, child_sfront.map, blksz, 
                            ASSEMBLE_PRIO);
+// #if defined(SPLDLT_USE_STARPU)
+//                            starpu_task_wait_for_all();
+// #endif
 
                   }
-                  else{
+                  else {
 
                      int csa = child_sfront.ncol / blksz;
                      int cnr = (child_sfront.nrow-1) / blksz + 1; // number of block rows
@@ -200,22 +205,23 @@ namespace spldlt {
                            assemble_block_task(
                                  sfront, fronts_[ni], child_sfront, *child, ii, jj, 
                                  child_sfront.map, blksz, ASSEMBLE_PRIO);
-                     }
+// #if defined(SPLDLT_USE_STARPU)
+//                            starpu_task_wait_for_all();
+// #endif
+                        }
                      }
                   }
-
                }
-            }
-#if defined(SPLDLT_USE_STARPU)
-            starpu_task_wait_for_all();
-#endif
-
+            } // Loop over child nodes
+// #if defined(SPLDLT_USE_STARPU)
+//                            starpu_task_wait_for_all();
+// #endif
 
             // Compute factors and Schur complement 
             factor_front_posdef(sfront, fronts_[ni], options);
-#if defined(SPLDLT_USE_STARPU)
-            starpu_task_wait_for_all();
-#endif
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
 
             // Assemble front: non fully-summed columns i.e. contribution block 
             for (auto* child=fronts_[ni].first_child; child!=NULL; child=child->next_child) {
@@ -236,38 +242,51 @@ namespace spldlt {
                            sfront, fronts_[ni], child_sfront, child_contrib, 
                            child_sfront.contrib_idx, child_sfront.map, blksz, 
                            ASSEMBLE_PRIO);
+// #if defined(SPLDLT_USE_STARPU)
+//                      starpu_task_wait_for_all();
+// #endif
 
                   }
                   else {
+                     
+                     // int cm = csnode.nrow - csnode.ncol;
+                     // int* cache = work.get_ptr<int>(cm); // TODO move cache array
+                     // for (int i=0; i<cm; i++)
+                     // csnode.map[i] = map[ csnode.rlist[csnode.ncol+i] ];
 
-                     // // int cm = csnode.nrow - csnode.ncol;
-                     // // int* cache = work.get_ptr<int>(cm); // TODO move cache array
-                     // // for (int i=0; i<cm; i++)
-                     // // csnode.map[i] = map[ csnode.rlist[csnode.ncol+i] ];
+                     int csa = child_sfront.ncol / blksz;
+                     // Number of block rows in child node
+                     int cnr = (child_sfront.nrow-1) / blksz + 1; 
+                     // int cnc = (csnode.ncol-1) / blksz + 1; // number of block columns in child node
+                     // Lopp over blocks in contribution blocks
+                     for (int jj = csa; jj < cnr; ++jj) {                     
+                        // int c_sa = (csnode.ncol > jj*blksz) ? 0 : (jj*blksz-csnode.ncol); // first col in block
+                        // int c_en = std::min((jj+1)*blksz-csnode.ncol, cm); // last col in block
+                        // assemble_expected_contrib(c_sa, c_en, nodes_[ni], *child, map, cache);
+                        for (int ii = jj; ii < cnr; ++ii) {
+                           // assemble_contrib_block(nodes_[ni], *child, ii, jj, csnode.map, blksz)
+                           assemble_contrib_block_task(
+                                 sfront, fronts_[ni], child_sfront, *child, ii, jj, 
+                                 child_sfront.map, blksz, ASSEMBLE_PRIO);
+// #if defined(SPLDLT_USE_STARPU)
+//                            starpu_task_wait_for_all();
+// #endif
 
-                     // int csa = csnode.ncol / blksz;
-                     // // Number of block rows in child node
-                     // int cnr = (csnode.nrow-1) / blksz + 1; 
-                     // // int cnc = (csnode.ncol-1) / blksz + 1; // number of block columns in child node
-                     // // Lopp over blocks in contribution blocks
-                     // for (int jj = csa; jj < cnr; ++jj) {                     
-                     //    // int c_sa = (csnode.ncol > jj*blksz) ? 0 : (jj*blksz-csnode.ncol); // first col in block
-                     //    // int c_en = std::min((jj+1)*blksz-csnode.ncol, cm); // last col in block
-                     //    // assemble_expected_contrib(c_sa, c_en, nodes_[ni], *child, map, cache);
-                     //    for (int ii = jj; ii < cnr; ++ii) {
-                     //       // assemble_contrib_block(nodes_[ni], *child, ii, jj, csnode.map, blksz)
-                     //       assemble_contrib_block_task(
-                     //             snode, nodes_[ni], csnode, *child, ii, jj, 
-                     //             csnode.map, blksz, 
-                     //             ASSEMBLE_PRIO);
-                     //    }
-                     // }
+                        }
+                     }
                   }
                }
+// #if defined(SPLDLT_USE_STARPU)
+//                      starpu_task_wait_for_all();
+// #endif
 
                if (child_sfront.exec_loc == -1) {
                   // fini_node(*child);
                   fini_node_task(child_sfront, *child, INIT_PRIO);
+#if defined(SPLDLT_USE_STARPU)
+                  starpu_task_wait_for_all();
+#endif
+
 #if defined(SPLDLT_USE_STARPU)
                   unregister_node_submit(child_sfront, *child, blksz);
 #endif
@@ -280,16 +299,10 @@ namespace spldlt {
 
             } // Loop over child nodes
 
-#if defined(SPLDLT_USE_STARPU)
-            starpu_task_wait_for_all();
-#endif
-
-         } // Loop over nodes in the assemnly tree
-
-#if defined(SPLDLT_USE_STARPU)
-         starpu_task_wait_for_all();
-#endif
-            
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
+         } // Loop over nodes in the assemnly tree  
       }
 
       void solve_fwd(int nrhs, double* x, int ldx) const {

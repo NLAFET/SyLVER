@@ -694,88 +694,89 @@ namespace spldlt {
 #endif
    }
 
-//    // Assemble contrib block task.   
-//    // ii: Row index in frontal matrix.
-//    // jj: Col index in frontal matrix.
-//    template <typename T, typename PoolAlloc>   
-//    void assemble_contrib_block_task(
-//          SymbolicSNode const& snode, spldlt::NumericNode<T,PoolAlloc>& node, 
-//          SymbolicSNode const& csnode, spldlt::NumericNode<T,PoolAlloc>& cnode, 
-//          int ii, int jj, int *cmap, int blksz, int prio) {
+   ////////////////////////////////////////////////////////////////////////////////
+   // Assemble contrib block task.   
+   // ii: Row index in frontal matrix.
+   // jj: Col index in frontal matrix.
+   template <typename T, typename PoolAlloc>   
+   void assemble_contrib_block_task(
+         SymbolicFront const& snode, NumericFront<T,PoolAlloc>& node, 
+         SymbolicFront const& csnode, NumericFront<T,PoolAlloc>& cnode, 
+         int ii, int jj, int *cmap, int blksz, int prio) {
 
-// #if defined(SPLDLT_USE_STARPU)
+#if defined(SPLDLT_USE_STARPU)
 
-//       int nrow = snode.nrow;
-//       int ncol = snode.ncol; // no delays!
-//       int nr = (nrow-1)/blksz+1; // number of block rows
-//       int nc = (ncol-1)/blksz+1; // number of block columns
-//       int rsa = ncol/blksz; // rows/cols index of first block in contrib 
-//       int ncontrib = nr-rsa; // number of block rows/cols in contrib
+      int nrow = snode.nrow;
+      int ncol = snode.ncol; // no delays!
+      int nr = (nrow-1)/blksz+1; // number of block rows
+      int nc = (ncol-1)/blksz+1; // number of block columns
+      int rsa = ncol/blksz; // rows/cols index of first block in contrib 
+      int ncontrib = nr-rsa; // number of block rows/cols in contrib
 
-//       // Array of block handles in parent front
-//       starpu_data_handle_t *hdls = new starpu_data_handle_t[ncontrib*ncontrib];
-//       int nh = 0;
+      // Array of block handles in parent front
+      starpu_data_handle_t *hdls = new starpu_data_handle_t[ncontrib*ncontrib];
+      int nh = 0;
 
-//       int cm = csnode.nrow - csnode.ncol;
+      int cm = csnode.nrow - csnode.ncol;
 
-//       // colum indexes
-//       int c_sa = (csnode.ncol > jj*blksz) ? 0 : (jj*blksz-csnode.ncol); // first col in block
-//       int c_en = std::min((jj+1)*blksz-csnode.ncol, cm); // last col in block
-//       // row indexes
-//       int r_en = std::min((ii+1)*blksz-csnode.ncol, cm); // last row in block
+      // colum indexes
+      int c_sa = (csnode.ncol > jj*blksz) ? 0 : (jj*blksz-csnode.ncol); // first col in block
+      int c_en = std::min((jj+1)*blksz-csnode.ncol, cm); // last col in block
+      // row indexes
+      int r_en = std::min((ii+1)*blksz-csnode.ncol, cm); // last row in block
 
-//       int cc = -1;
-//       int rr = -1;
+      int cc = -1;
+      int rr = -1;
 
-//       // loop over column in block
-//       for (int j = c_sa; j < c_en; j++) {
+      // loop over column in block
+      for (int j = c_sa; j < c_en; j++) {
 
-//          // Column index in parent node
-//          int c = cmap[ j ];
+         // Column index in parent node
+         int c = cmap[ j ];
 
-//          if (cc == (c/blksz)) continue;
+         if (cc == (c/blksz)) continue;
 
-//          if (c >= ncol) {
+         if (c >= ncol) {
 
-//             cc = c/blksz;
-//             rr = -1;
+            cc = c/blksz;
+            rr = -1;
 
-//             int r_sa = (ii == jj) ? j : (ii*blksz-csnode.ncol); // first row in block
+            int r_sa = (ii == jj) ? j : (ii*blksz-csnode.ncol); // first row in block
 
-//             for (int i = r_sa; i < r_en; i++) {
+            for (int i = r_sa; i < r_en; i++) {
 
-//                int r = cmap[ i ];
-//                if (rr == (r/blksz)) continue;
-//                rr = r/blksz;
+               int r = cmap[ i ];
+               if (rr == (r/blksz)) continue;
+               rr = r/blksz;
                
-//                // hdls[nh] = snode.contrib_handles[(cc-rsa)*ncontrib+(rr-rsa)];
-//                hdls[nh] = node.contrib_blocks[(cc-rsa)*ncontrib+(rr-rsa)].hdl;
-//                nh++;
-//             }
-//          }
-//       }
+               // hdls[nh] = snode.contrib_handles[(cc-rsa)*ncontrib+(rr-rsa)];
+               hdls[nh] = node.contrib_blocks[(cc-rsa)*ncontrib+(rr-rsa)].hdl;
+               nh++;
+            }
+         }
+      }
 
-//       // Insert assembly tasks if there are contribution
-//       if (nh>0) {
+      // Insert assembly tasks if there are contribution
+      if (nh>0) {
          
-//          int cnr = (csnode.nrow-1)/blksz+1;  
-//          int crsa = csnode.ncol/blksz;
-//          int cncontrib = cnr-crsa;
+         int cnr = (csnode.nrow-1)/blksz+1;  
+         int crsa = csnode.ncol/blksz;
+         int cncontrib = cnr-crsa;
 
-//          insert_assemble_contrib_block(&node, &cnode, ii, jj, cmap, blksz, 
-//                                        // csnode.contrib_handles[(jj-crsa)*cncontrib+(ii-crsa)], 
-//                                        cnode.contrib_blocks[(jj-crsa)*cncontrib+(ii-crsa)].hdl,
-//                                        hdls, nh, snode.hdl, csnode.hdl,
-//                                        prio);
-//       }
-//       delete[] hdls;
+         insert_assemble_contrib_block(&node, &cnode, ii, jj, cmap, blksz, 
+                                       // csnode.contrib_handles[(jj-crsa)*cncontrib+(ii-crsa)], 
+                                       cnode.contrib_blocks[(jj-crsa)*cncontrib+(ii-crsa)].hdl,
+                                       hdls, nh, snode.hdl, csnode.hdl,
+                                       prio);
+      }
+      delete[] hdls;
 
-//       // assemble_contrib_block(node, cnode, ii, jj, cmap, blksz);
-// #else
+      // assemble_contrib_block(node, cnode, ii, jj, cmap, blksz);
+#else
 
-//       assemble_contrib_block(node, cnode, ii, jj, cmap, blksz);
-// #endif
-//    }   
+      assemble_contrib_block(node, cnode, ii, jj, cmap, blksz);
+#endif
+   }   
 
    ////////////////////////////////////////////////////////////////////////////////
    // Factorize a supernode using a multifrontal mode

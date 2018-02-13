@@ -416,7 +416,7 @@ contains
 
 
     nnodes = akeep%nnodes
-    ncpu = 2
+    ! ncpu = 2
 
     ! Sort out subtrees
     ! print *, "Input topology"

@@ -26,34 +26,19 @@ module spldlt_factorize_mod
   ! routine to create a numeric subtree from the symbolic one
   ! return a C ptr on the tree structure
   interface spldlt_create_numeric_tree_c
-     ! type(c_ptr) function spldlt_create_numeric_tree_dlb(fkeep, symbolic_tree, aval, &
-     !      child_contrib, exec_loc_aux, options) &
-     !      bind(C, name="spldlt_create_numeric_tree_dbl")
-     !   use, intrinsic :: iso_c_binding
-     !   import :: cpu_factor_options
-     !   implicit none
-     !   type(c_ptr), value :: fkeep
-     !   type(c_ptr), value :: symbolic_tree
-     !   real(c_double), dimension(*), intent(in) :: aval
-     !   type(C_PTR), dimension(*), intent(inout) :: child_contrib
-     !   integer(C_INT), dimension(*), intent(in) :: exec_loc_aux
-     !   type(cpu_factor_options), intent(in) :: options ! SSIDS options
-     ! end function spldlt_create_numeric_tree_dlb
-
-     ! debug
      type(c_ptr) function spldlt_create_numeric_tree_dlb( &
-          fkeep, symbolic_tree, aval, child_contrib, options) &
+          posdef, fkeep, symbolic_tree, aval, child_contrib, options) &
           bind(C, name="spldlt_create_numeric_tree_dbl")
        use, intrinsic :: iso_c_binding
        use spral_ssids_cpu_iface, only : cpu_factor_options
        implicit none
+       logical(c_bool), value :: posdef
        type(c_ptr), value :: fkeep
        type(c_ptr), value :: symbolic_tree
        real(c_double), dimension(*), intent(in) :: aval
        type(c_ptr), dimension(*), intent(inout) :: child_contrib
        type(cpu_factor_options), intent(in) :: options ! SSIDS options
      end function spldlt_create_numeric_tree_dlb
-     ! end debug
   end interface spldlt_create_numeric_tree_c
 
   ! destroy the C ptr on numeric tree strucutre
@@ -280,8 +265,8 @@ contains
     cscaling = c_null_ptr
     ! if (present(scaling)) cscaling = C_LOC(scaling) ! TODO(Florent) Set scaling if needed
 
+    cpu_factor%posdef = posdef 
     cpu_factor%symbolic => cpu_symb
-
     ! ptr = c_null_ptr
     ! cpu_factor%csubtree = test_malloc(p, ptr)
 
@@ -490,6 +475,7 @@ contains
     integer :: i
     type(c_ptr) :: cfkeep
     type(cpu_factor_options) :: coptions
+    logical(c_bool) :: posdef
     ! Error management    
     character(50)  :: context      ! Procedure name (used when printing).
     integer :: st
@@ -507,6 +493,8 @@ contains
     ! allocate(exec_loc_aux(akeep%nparts), stat=st)
     if (st .ne. 0) goto 100
     ! exec_loc_aux = 0
+
+    posdef = fkeep%pos_def
 
     ! ! Factor subtrees
     ! do i = 1, akeep%nparts
@@ -541,14 +529,9 @@ contains
     cfkeep = c_loc(fkeep)
  
     call cpu_copy_options_in(options, coptions)
-
-    ! spldlt_fkeep%numeric_tree%ptr_c = spldlt_create_numeric_tree_c(c_loc(fkeep), &
-    !      spldlt_akeep%symbolic_tree_c, val, child_contrib_c, exec_loc_aux, & 
-    !      coptions)
-
     spldlt_fkeep%numeric_tree%ptr_c = spldlt_create_numeric_tree_c( &
-         cfkeep, spldlt_akeep%symbolic_tree_c, val, child_contrib_c, &
-         coptions)
+         posdef, cfkeep, spldlt_akeep%symbolic_tree_c, val, &
+         child_contrib_c, coptions)
 
     ! Free space
     deallocate(child_contrib_c)

@@ -1208,84 +1208,83 @@ namespace spldlt { namespace starpu {
       }
 
       ////////////////////////////////////////////////////////////////////////////////
+      // Assemble contrib block task
 
-      // // Assemble contrib block task
+      // CPU kernel
+      template <typename T, typename PoolAlloc>
+      void assemble_contrib_block_cpu_func(void *buffers[], void *cl_arg) {
 
-      // // CPU kernel
-      // template <typename T, typename PoolAlloc>
-      // void assemble_contrib_block_cpu_func(void *buffers[], void *cl_arg) {
+         // typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> PoolAllocInt;
+         // std::vector<int, PoolAllocInt> *map;
 
-      //    // typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> PoolAllocInt;
-      //    // std::vector<int, PoolAllocInt> *map;
+         NumericFront<T, PoolAlloc> *node = nullptr, *cnode = nullptr;
+         int ii, jj; // Block row and col indexes
+         int *map;
+         int blksz; // Block size
 
-      //    spldlt::NumericNode<T, PoolAlloc> *node = nullptr, *cnode = nullptr;
-      //    int ii, jj; // Block row and col indexes
-      //    int *map;
-      //    int blksz; // Block size
+         starpu_codelet_unpack_args(
+               cl_arg, &node, &cnode,
+               &ii, &jj, &map, &blksz);
 
-      //    starpu_codelet_unpack_args(
-      //          cl_arg, &node, &cnode,
-      //          &ii, &jj, &map, &blksz);
+         // printf("[assemble_contrib_block_cpu_func]\n");
 
-      //    // printf("[assemble_contrib_block_cpu_func]\n");
-
-      //    assemble_contrib_block(*node, *cnode, ii, jj, map, blksz);         
-      // }
+         assemble_contrib_block(*node, *cnode, ii, jj, map, blksz);
+      }
 
       // // StarPU codelet
-      // struct starpu_codelet cl_assemble_contrib_block;
+      struct starpu_codelet cl_assemble_contrib_block;
 
-      // template <typename T, typename PoolAlloc>
-      // void insert_assemble_contrib_block(
-      //       spldlt::NumericNode<T, PoolAlloc> *node, // Destinaton node
-      //       spldlt::NumericNode<T, PoolAlloc> *cnode,// Source node
-      //       int ii, int jj,
-      //       int *cmap, // Mapping vector i.e. i-th column must be
-      //                  // assembled in cmap(i) column of destination
-      //                  // node
-      //       int blksz,
-      //       starpu_data_handle_t bc_hdl,
-      //       starpu_data_handle_t *dest_hdls, int ndest,
-      //       starpu_data_handle_t node_hdl, // Symbolic handle of destination node
-      //       starpu_data_handle_t cnode_hdl, // Symbolic handle of source node
-      //       int prio) {
+      template <typename T, typename PoolAlloc>
+      void insert_assemble_contrib_block(
+            NumericFront<T, PoolAlloc> *node, // Destinaton node
+            NumericFront<T, PoolAlloc> *cnode,// Source node
+            int ii, int jj,
+            int *cmap, // Mapping vector i.e. i-th column must be
+                       // assembled in cmap(i) column of destination
+                       // node
+            int blksz,
+            starpu_data_handle_t bc_hdl,
+            starpu_data_handle_t *dest_hdls, int ndest,
+            starpu_data_handle_t node_hdl, // Symbolic handle of destination node
+            starpu_data_handle_t cnode_hdl, // Symbolic handle of source node
+            int prio) {
 
-      //    int ret;
-      //    int nh = 0;
+         int ret;
+         int nh = 0;
          
-      //    struct starpu_data_descr *descrs = new starpu_data_descr[ndest+3];
+         struct starpu_data_descr *descrs = new starpu_data_descr[ndest+3];
 
-      //    descrs[nh].handle = bc_hdl; descrs[nh].mode = STARPU_R;
-      //    nh++;
+         descrs[nh].handle = bc_hdl; descrs[nh].mode = STARPU_R;
+         nh++;
          
-      //    for (int i=0; i<ndest; i++) {
-      //       descrs[nh].handle = dest_hdls[i]; descrs[nh].mode = STARPU_RW;
-      //       nh++;
-      //    }
+         for (int i=0; i<ndest; i++) {
+            descrs[nh].handle = dest_hdls[i]; descrs[nh].mode = STARPU_RW;
+            nh++;
+         }
 
-      //    // Access symbolic handle of node in read mode to ensure that
-      //    // it has been initialized
-      //    descrs[nh].handle = node_hdl; descrs[nh].mode = STARPU_R;
-      //    nh++;
+         // Access symbolic handle of node in read mode to ensure that
+         // it has been initialized
+         descrs[nh].handle = node_hdl; descrs[nh].mode = STARPU_R;
+         nh++;
 
-      //    // Access symbolic handle of child node in read mode to
-      //    // ensure that assemblies are done before cleaning it
-      //    descrs[nh].handle = cnode_hdl; descrs[nh].mode = STARPU_R;
-      //    nh++;
+         // Access symbolic handle of child node in read mode to
+         // ensure that assemblies are done before cleaning it
+         descrs[nh].handle = cnode_hdl; descrs[nh].mode = STARPU_R;
+         nh++;
 
-      //    ret = starpu_task_insert(&cl_assemble_contrib_block,
-      //                             STARPU_DATA_MODE_ARRAY, descrs, nh,
-      //                             STARPU_VALUE, &node, sizeof(spldlt::NumericNode<T, PoolAlloc>*),
-      //                             STARPU_VALUE, &cnode, sizeof(spldlt::NumericNode<T, PoolAlloc>*),
-      //                             STARPU_VALUE, &ii, sizeof(int),
-      //                             STARPU_VALUE, &jj, sizeof(int),
-      //                             STARPU_VALUE, &cmap, sizeof(int*),
-      //                             STARPU_VALUE, &blksz, sizeof(int),
-      //                             STARPU_PRIORITY, prio,
-      //                             0);
-      //    delete[] descrs;
+         ret = starpu_task_insert(&cl_assemble_contrib_block,
+                                  STARPU_DATA_MODE_ARRAY, descrs, nh,
+                                  STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
+                                  STARPU_VALUE, &cnode, sizeof(NumericFront<T, PoolAlloc>*),
+                                  STARPU_VALUE, &ii, sizeof(int),
+                                  STARPU_VALUE, &jj, sizeof(int),
+                                  STARPU_VALUE, &cmap, sizeof(int*),
+                                  STARPU_VALUE, &blksz, sizeof(int),
+                                  STARPU_PRIORITY, prio,
+                                  0);
+         delete[] descrs;
 
-      // }
+      }
 
       // As it is not possible to statically intialize codelet in C++,
       // we do it via this function
@@ -1376,12 +1375,12 @@ namespace spldlt { namespace starpu {
          cl_assemble_block.name = "ASSEMBLE_BLK";
          cl_assemble_block.cpu_funcs[0] = assemble_block_cpu_func<T, PoolAlloc>;
 
-         // // assemble_contrib_block StarPU codelet
-         // starpu_codelet_init(&cl_assemble_contrib_block);
-         // cl_assemble_contrib_block.where = STARPU_CPU;
-         // cl_assemble_contrib_block.nbuffers = STARPU_VARIABLE_NBUFFERS;
-         // cl_assemble_contrib_block.name = "ASSEMBLE_CONTRIB_BLK";
-         // cl_assemble_contrib_block.cpu_funcs[0] = assemble_contrib_block_cpu_func<T, PoolAlloc>;
+         // assemble_contrib_block StarPU codelet
+         starpu_codelet_init(&cl_assemble_contrib_block);
+         cl_assemble_contrib_block.where = STARPU_CPU;
+         cl_assemble_contrib_block.nbuffers = STARPU_VARIABLE_NBUFFERS;
+         cl_assemble_contrib_block.name = "ASSEMBLE_CONTRIB_BLK";
+         cl_assemble_contrib_block.cpu_funcs[0] = assemble_contrib_block_cpu_func<T, PoolAlloc>;
 
          // subtree_assemble StarPU codelet
          starpu_codelet_init(&cl_subtree_assemble);
