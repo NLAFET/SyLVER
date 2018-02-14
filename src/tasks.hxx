@@ -49,12 +49,14 @@ namespace spldlt {
          bool posdef,
          SymbolicFront &sfront,
          NumericFront<T, PoolAlloc> &front,
+         void** child_contrib,
          int blksz,
          FactorAlloc& factor_alloc,
          PoolAlloc& pool_alloc) {
 
       // Allocate frontal matrix
-      alloc_front(posdef, front, factor_alloc, pool_alloc);
+      if (posdef) alloc_front_posdef(front, factor_alloc, pool_alloc);
+      else        alloc_front_indef(front, child_contrib, factor_alloc, pool_alloc);
 
 #if defined(SPLDLT_USE_STARPU)
       // Register symbolic handle for current node in StarPU

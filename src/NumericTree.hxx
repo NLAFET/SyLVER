@@ -86,7 +86,8 @@ namespace spldlt {
          spldlt::starpu::codelet_init<T, PoolAllocator>();
 
          auto start = std::chrono::high_resolution_clock::now();
-         factor_mf(aval, child_contrib, options);
+         if (posdef) factor_mf_posdef(aval, child_contrib, options);
+         else        factor_mf_indef(aval, child_contrib, options);
          auto end = std::chrono::high_resolution_clock::now();
          long ttotal = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count();
          printf("[NumericTree] Task submission: %e\n", 1e-9*ttotal);
@@ -96,12 +97,190 @@ namespace spldlt {
 #endif         
          
       }
+      ////////////////////////////////////////////////////////////////////////////////   
+      // factor_mf_indef
+      void factor_mf_indef(
+            T *aval, void** child_contrib, 
+            struct spral::ssids::cpu::cpu_factor_options const& options) {         
 
-      void factor_mf(
+         printf("[factor_mf_indef] nparts = %d\n", symb_.nparts_);
+         int INIT_PRIO = 4;
+         int ASSEMBLE_PRIO = 4;
+
+         // Blocking size
+         int blksz = options.cpu_block_size;
+
+         // Register symbolic handles on nodes
+         for(int ni = 0; ni < symb_.nnodes_; ++ni) {
+            // TODO move hdl registration to activate task
+            starpu_void_data_register(&(symb_[ni].hdl));
+         }
+
+         for(int p = 0; p < symb_.nparts_; ++p) {
+
+            int root = symb_.part_[p+1]-2; // Part is 1-indexed
+            // printf("[factor_mf] part = %d, root = %d\n", p, root);
+
+            // Check if current partition is a subtree
+            if (symb_[root].exec_loc != -1) {
+
+               factor_subtree_task(
+                     symb_.akeep_, fkeep_, symb_[root], aval, p, child_contrib, 
+                     &options);
+            }
+         }
+#if defined(SPLDLT_USE_STARPU)
+         starpu_task_wait_for_all();
+#endif         
+
+         // Allocate mapping array
+         int *map = new int[symb_.n+1];
+
+         for(int ni = 0; ni < symb_.nnodes_; ++ni) {
+            
+            SymbolicFront &sfront = symb_[ni];
+            // Skip iteration if node is in a subtree
+            if (sfront.exec_loc != -1) continue;
+
+            printf("[factor_mf_indef] ni = %d\n", ni);
+            
+            // Activate frontal matrix
+            activate_front(
+                  posdef, sfront, fronts_[ni], child_contrib, blksz, 
+                  factor_alloc_, pool_alloc_);
+            
+            // Initialize frontal matrix 
+            init_node(sfront, fronts_[ni], aval);
+
+            // build lookup vector, allowing for insertion of delayed vars
+            // Note that while rlist[] is 1-indexed this is fine so long as lookup
+            // is also 1-indexed (which it is as it is another node's rlist[]
+            for(int i=0; i<sfront.ncol; i++)
+               map[ sfront.rlist[i] ] = i;
+            for(int i=sfront.ncol; i<sfront.nrow; i++)
+               map[ sfront.rlist[i] ] = i + fronts_[ni].ndelay_in;
+            
+
+            // Assemble front: fully-summed columns 
+            for (auto* child=fronts_[ni].first_child; child!=NULL; child=child->next_child) {
+           
+               SymbolicFront &child_sfront = symb_[child->symb.idx]; // Children symbolic node
+
+               int ldcontrib = child_sfront.nrow - child_sfront.ncol;
+               // Handle expected contributions (only if something there)
+               if (ldcontrib>0) {
+
+                  int cm = child_sfront.nrow - child_sfront.ncol;
+                  // int* cache = work.get_ptr<int>(cm); // TODO move cache array
+                  // Compute column mapping from child front into parent 
+                  child_sfront.map = new int[cm];
+                  for (int i=0; i<cm; i++)
+                     child_sfront.map[i] = map[ child_sfront.rlist[child_sfront.ncol+i] ];
+
+                  // Skip iteration if child node is in a subtree
+                  if (child_sfront.exec_loc != -1) {
+
+                     // Assemble contribution block from subtrees into
+                     // fully-summed coefficients
+                     // assemble_subtree (
+                     //       fronts_[ni], child_sfront, child_contrib, 
+                     //       child_sfront.contrib_idx);
+                     // #if defined(SPLDLT_USE_STARPU)
+                     //                      starpu_task_wait_for_all();
+                     // #endif
+
+                  }
+                  else {
+
+                     int csa = child_sfront.ncol / blksz;
+                     int cnr = (child_sfront.nrow-1) / blksz + 1; // number of block rows
+                     // Loop over blocks in contribution blocks
+                     for (int jj = csa; jj < cnr; ++jj) {
+                        for (int ii = jj; ii < cnr; ++ii) {
+                           // assemble_block(fronts_[ni], *child, ii, jj, child_sfront.map, blksz);
+                        }
+                     }
+                  }
+               }
+            } // Loop over child nodes
+
+            // Compute factors and Schur complement 
+            // factor_front_posdef(sfront, fronts_[ni], options);
+#if defined(SPLDLT_USE_STARPU)
+            starpu_task_wait_for_all();
+#endif
+
+            // Assemble front: non fully-summed columns i.e. contribution block 
+            for (auto* child=fronts_[ni].first_child; child!=NULL; child=child->next_child) {
+               
+               // SymbolicNode const& csnode = child->symb;
+               SymbolicFront &child_sfront = symb_[child->symb.idx];
+               
+               int ldcontrib = child_sfront.nrow - child_sfront.ncol;
+               // Handle expected contributions (only if something there)
+               // if (child->contrib) {
+               if (ldcontrib>0) {
+                  // Skip iteration if child node is in a subtree
+                  if (child_sfront.exec_loc != -1) {                     
+                     // Assemble contribution block from subtrees into non
+                     // fully-summed coefficients
+                     assemble_contrib_subtree(
+                           fronts_[ni], child_sfront, child_contrib, 
+                           child_sfront.contrib_idx, blksz);
+
+                  }
+                  else {                     
+
+                     // int cm = csnode.nrow - csnode.ncol;
+                     // int* cache = work.get_ptr<int>(cm); // TODO move cache array
+                     // for (int i=0; i<cm; i++)
+                     // csnode.map[i] = map[ csnode.rlist[csnode.ncol+i] ];
+                     int csa = child_sfront.ncol / blksz;
+                     // Number of block rows in child node
+                     int cnr = (child_sfront.nrow-1) / blksz + 1; 
+                     // int cnc = (csnode.ncol-1) / blksz + 1; // number of block columns in child node
+                     // Lopp over blocks in contribution blocks
+                     for (int jj = csa; jj < cnr; ++jj) {                     
+                        // int c_sa = (csnode.ncol > jj*blksz) ? 0 : (jj*blksz-csnode.ncol); // first col in block
+                        // int c_en = std::min((jj+1)*blksz-csnode.ncol, cm); // last col in block
+                        // assemble_expected_contrib(c_sa, c_en, nodes_[ni], *child, map, cache);
+                        for (int ii = jj; ii < cnr; ++ii) {
+                           // assemble_contrib_block(
+                           //       fronts_[ni], *child, ii, jj, child_sfront.map, blksz);
+
+                        }
+                     }
+                  }
+               }
+               // #if defined(SPLDLT_USE_STARPU)
+               //                      starpu_task_wait_for_all();
+               // #endif
+
+               if (child_sfront.exec_loc == -1) {
+                  fini_node(*child);
+
+#if defined(SPLDLT_USE_STARPU)
+                  // TODO put in fini_node kernel
+                  unregister_node_submit(child_sfront, *child, blksz);
+#endif
+               }
+#if defined(SPLDLT_USE_STARPU)
+               // Unregister symbolic handle on child node
+               starpu_data_unregister_submit(child_sfront.hdl);
+#endif
+            } // Loop over child nodes
+            
+
+         }
+      }
+
+      ////////////////////////////////////////////////////////////////////////////////   
+      // factor_mf_posdef
+      void factor_mf_posdef(
             T *aval, void** child_contrib, 
             struct spral::ssids::cpu::cpu_factor_options const& options) {
 
-         printf("[factor_mf] nparts = %d\n", symb_.nparts_);
+         printf("[factor_mf_posdef] nparts = %d\n", symb_.nparts_);
          int INIT_PRIO = 4;
          int ASSEMBLE_PRIO = 4;
 
@@ -128,9 +307,9 @@ namespace spldlt {
             }
          }
 
-#if defined(SPLDLT_USE_STARPU)
-         starpu_task_wait_for_all();
-#endif         
+// #if defined(SPLDLT_USE_STARPU)
+//          starpu_task_wait_for_all();
+// #endif         
 
          // for(int p = 0; p < symb_.nparts_; ++p) {
          //    spldlt_print_debuginfo_c(symb_.akeep_, fkeep_, p);
@@ -149,15 +328,15 @@ namespace spldlt {
             
             // Activate frontal matrix
             activate_front(
-                  posdef, sfront, fronts_[ni], blksz, factor_alloc_, 
-                  pool_alloc_);
+                  posdef, sfront, fronts_[ni], child_contrib, blksz, 
+                  factor_alloc_, pool_alloc_);
 
             // Initialize frontal matrix 
             // init_node(sfront, fronts_[ni], aval); // debug
             init_node_task(sfront, fronts_[ni], aval, INIT_PRIO);
-#if defined(SPLDLT_USE_STARPU)
-            starpu_task_wait_for_all();
-#endif
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
 
             // build lookup vector, allowing for insertion of delayed vars
             // Note that while rlist[] is 1-indexed this is fine so long as lookup
@@ -192,9 +371,9 @@ namespace spldlt {
                            sfront, fronts_[ni], child_sfront, child_contrib, 
                            child_sfront.contrib_idx, child_sfront.map, blksz, 
                            ASSEMBLE_PRIO);
-#if defined(SPLDLT_USE_STARPU)
-                     starpu_task_wait_for_all();
-#endif
+// #if defined(SPLDLT_USE_STARPU)
+//                      starpu_task_wait_for_all();
+// #endif
 
                   }
                   else {
@@ -208,9 +387,9 @@ namespace spldlt {
                            assemble_block_task(
                                  sfront, fronts_[ni], child_sfront, *child, ii, jj, 
                                  child_sfront.map, blksz, ASSEMBLE_PRIO);
-#if defined(SPLDLT_USE_STARPU)
-                           starpu_task_wait_for_all();
-#endif
+// #if defined(SPLDLT_USE_STARPU)
+//                            starpu_task_wait_for_all();
+// #endif
                         }
                      }
                   }
@@ -222,9 +401,9 @@ namespace spldlt {
 
             // Compute factors and Schur complement 
             factor_front_posdef(sfront, fronts_[ni], options);
-#if defined(SPLDLT_USE_STARPU)
-            starpu_task_wait_for_all();
-#endif
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
 
             // Assemble front: non fully-summed columns i.e. contribution block 
             for (auto* child=fronts_[ni].first_child; child!=NULL; child=child->next_child) {
@@ -245,9 +424,9 @@ namespace spldlt {
                            sfront, fronts_[ni], child_sfront, child_contrib, 
                            child_sfront.contrib_idx, child_sfront.map, blksz, 
                            ASSEMBLE_PRIO);
-#if defined(SPLDLT_USE_STARPU)
-                     starpu_task_wait_for_all();
-#endif
+// #if defined(SPLDLT_USE_STARPU)
+//                      starpu_task_wait_for_all();
+// #endif
 
                   }
                   else {
@@ -271,9 +450,9 @@ namespace spldlt {
                            assemble_contrib_block_task(
                                  sfront, fronts_[ni], child_sfront, *child, ii, jj, 
                                  child_sfront.map, blksz, ASSEMBLE_PRIO);
-#if defined(SPLDLT_USE_STARPU)
-                           starpu_task_wait_for_all();
-#endif
+// #if defined(SPLDLT_USE_STARPU)
+//                            starpu_task_wait_for_all();
+// #endif
 
                         }
                      }
@@ -286,9 +465,9 @@ namespace spldlt {
                if (child_sfront.exec_loc == -1) {
                   // fini_node(*child);
                   fini_node_task(child_sfront, *child, INIT_PRIO);
-#if defined(SPLDLT_USE_STARPU)
-                  starpu_task_wait_for_all();
-#endif
+// #if defined(SPLDLT_USE_STARPU)
+//                   starpu_task_wait_for_all();
+// #endif
 
 #if defined(SPLDLT_USE_STARPU)
                   unregister_node_submit(child_sfront, *child, blksz);

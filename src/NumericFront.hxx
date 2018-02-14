@@ -105,13 +105,53 @@ namespace spldlt {
             PoolAllocator const& pool_alloc, int blksz)
          : symb(symb), contrib(nullptr), pool_alloc_(pool_alloc), blksz(blksz)
       {
-         int m = symb.nrow;
-         int n = symb.ncol;            
-         size_t contrib_dimn = m-n;
+
+         // Note: it is safer to initialize the contrib_blocks array
+         // in alloc_contrib as we don't know the number of input
+         // delays when instanciating the front
+
+         // int m = symb.nrow;
+         // int n = symb.ncol;            
+         // size_t contrib_dimn = m-n;
+         // if (contrib_dimn>0) {
+         //    int nr = (m-1) / blksz + 1; // number of block rows in front amtrix
+         //    int rsa = n / blksz; // index of first block in contribution blocks  
+         //    int ncontrib = nr-rsa;
+         //    contrib_blocks.reserve(ncontrib*ncontrib);
+         //    for(int j = rsa; j < nr; j++) {
+         //       // First col in contrib block
+         //       int first_col = std::max(j*blksz, n);
+         //       // Block width
+         //       int blkn = std::min((j+1)*blksz, m) - first_col;
+         //       for(int i = rsa; i < nr; i++) {
+         //          // First col in contrib block
+         //          int first_row = std::max(i*blksz, n);
+         //          // Block height
+         //          int blkm = std::min((i+1)*blksz, m) - first_row;
+         //          contrib_blocks.emplace_back(i-rsa, j-rsa, blkm, blkn, blkm, pool_alloc_);
+         //       }
+         //    }  
+         // }
+      }
+      /**
+       * \brief Destructor
+       */
+      ~NumericFront() {
+         free_contrib();
+      }
+
+      /// \brief Allocate block structures and memory space for
+      /// contrib (below diagonal)
+      void alloc_contrib_blocks() {
+
+         int m = symb.nrow + ndelay_in;
+         int n = symb.ncol + ndelay_in;          
+         size_t contrib_dimn = m-n; // Dimension of contribution block
          if (contrib_dimn>0) {
             int nr = (m-1) / blksz + 1; // number of block rows in front amtrix
             int rsa = n / blksz; // index of first block in contribution blocks  
             int ncontrib = nr-rsa;
+
             contrib_blocks.reserve(ncontrib*ncontrib);
             for(int j = rsa; j < nr; j++) {
                // First col in contrib block
@@ -125,26 +165,8 @@ namespace spldlt {
                   int blkm = std::min((i+1)*blksz, m) - first_row;
                   contrib_blocks.emplace_back(i-rsa, j-rsa, blkm, blkn, blkm, pool_alloc_);
                }
-            }  
-         }
-      }
-      /**
-       * \brief Destructor
-       */
-      ~NumericFront() {
-         free_contrib();
-      }
-
-      /// \brief Allocate block structures and memory space for
-      /// contrib (below diagonal)
-      void alloc_contrib_blocks() {
-         int m = symb.nrow;
-         int n = symb.ncol;            
-         size_t contrib_dimn = m-n; // Dimension of contribution block
-         if (contrib_dimn>0) {
-            int nr = (m-1) / blksz + 1; // number of block rows in front amtrix
-            int rsa = n / blksz; // index of first block in contribution blocks  
-            int ncontrib = nr-rsa;
+            }
+   
             for(int j = 0; j < ncontrib; j++) {
                for(int i = j; i < ncontrib; i++) {
                   // printf("[alloc_contrib_blocks] i: %d, j: %d\n", i, j);

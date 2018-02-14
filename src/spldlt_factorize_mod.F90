@@ -239,27 +239,22 @@ contains
     
   end subroutine spldlt_get_contrib_c
 
-  function spldlt_factor_subtree_cpu(cpu_symb, p, val, child_contrib_c, coptions)
+  function spldlt_factor_subtree_cpu(cpu_symb, posdef, val, child_contrib_c, coptions)
     use, intrinsic :: iso_c_binding
     use spral_ssids_subtree, only: numeric_subtree_base
     use spral_ssids_cpu_subtree, only : cpu_numeric_subtree, cpu_symbolic_subtree
     implicit none
     class(numeric_subtree_base), pointer :: spldlt_factor_subtree_cpu
-    integer :: p
     class(cpu_symbolic_subtree), target, intent(inout) :: cpu_symb
+    logical(C_BOOL), intent(in) :: posdef
     real(c_double), dimension(*), intent(in) :: val
     type(c_ptr), dimension(*), intent(inout) :: child_contrib_c
     type(cpu_factor_options), intent(in) :: coptions ! SSIDS options
 
-
-    integer :: part
-    logical(C_BOOL) :: posdef
     type(cpu_numeric_subtree), pointer :: cpu_factor
     type(C_PTR) :: cscaling
     ! type(c_ptr) :: ptr
     type(cpu_factor_stats) :: cstats
-
-    part = p+1 ! p is C-indexed
 
     ! Leave output as null until successful exit
     nullify(spldlt_factor_subtree_cpu)
@@ -268,7 +263,6 @@ contains
     ! allocate(cpu_factor, stat=st)
     allocate(cpu_factor)
 
-    posdef = .true.
     cscaling = c_null_ptr
     ! if (present(scaling)) cscaling = C_LOC(scaling) ! TODO(Florent) Set scaling if needed
 
@@ -317,18 +311,21 @@ contains
     type(cpu_numeric_subtree), pointer :: cpu_factor => null()
     type(c_ptr) :: ptr
     type(contrib_type), pointer :: contrib
+    logical(C_BOOL) :: posdef
 
     call c_f_pointer(cakeep, akeep)
     call c_f_pointer(cfkeep, fkeep)
 
     part = p+1 ! p is C-indexed
+    posdef = fkeep%pos_def
+    ! posdef = .true.
 
     call c_f_pointer(child_contrib_c(akeep%contrib_idx(part)), contrib)
 
     select type(subtree_ptr => akeep%subtree(part)%ptr)
     type is (cpu_symbolic_subtree)
        fkeep%subtree(part)%ptr => spldlt_factor_subtree_cpu( &
-            subtree_ptr, p, val, child_contrib_c, coptions)
+            subtree_ptr, posdef, val, child_contrib_c, coptions)
     end select
 
     if (akeep%contrib_idx(part) .le. akeep%nparts) then

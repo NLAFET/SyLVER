@@ -17,11 +17,10 @@ namespace spldlt { namespace starpu {
       void register_node(
             SymbolicFront &sfront,
             NumericFront<T, PoolAlloc> &front,
-            int blksz
-            ) {
+            int blksz) {
 
-         int m = sfront.nrow;
-         int n = sfront.ncol;
+         int m = sfront.nrow + front.ndelay_in;
+         int n = sfront.ncol + front.ndelay_in;
          T *a = front.lcol;
          int lda = spral::ssids::cpu::align_lda<T>(m);
          int nr = (m-1) / blksz + 1; // number of block rows
@@ -103,12 +102,11 @@ namespace spldlt { namespace starpu {
       void unregister_node_submit(
             SymbolicFront &snode,
             NumericFront<T, PoolAlloc> &node,
-            int blksz
-            ) {
+            int blksz) {
 
          // Get node info
-         int m = snode.nrow;
-         int n = snode.ncol;
+         int m = snode.nrow + node.ndelay_in;
+         int n = snode.ncol + node.ndelay_in;
          int nr = (m-1) / blksz + 1; // number of block rows
          int nc = (n-1) / blksz + 1; // number of block columns
 
@@ -960,7 +958,7 @@ namespace spldlt { namespace starpu {
                &ndelay, &delay_perm, &delay_val, &lddelay
                );
          printf("[subtree_assemble_cpu_func] ndelay = %d, cval = %p\n", ndelay, cval);
-         if(!cval) return; // child was all delays, nothing more to do
+         // if(!cval) return; // child was all delays, nothing more to do
 
          for(int j = 0; j < cn; ++j) {
                
