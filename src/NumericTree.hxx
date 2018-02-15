@@ -162,6 +162,15 @@ namespace spldlt {
             starpu_task_wait_for_all();
 #endif
 
+            size_t ldl = spral::ssids::cpu::align_lda<double>(sfront.nrow);
+            for (int i = 0; i < sfront.ncol; ++i) {
+               fronts_[ni].lcol[sfront.ncol*ldl +2*i]   = 0.0;
+               fronts_[ni].lcol[sfront.ncol*ldl +2*i+1] = 0.0; //std::numeric_limits<T>::infinity();
+               // fronts_[ni].lcol[sfront.ncol*ldl + 2*i] = 
+               //    fronts_[ni].lcol[i*(ldl + 1)];
+               // fronts_[ni].lcol[i*(ldl + 1)] = 1.0;
+            }
+
             // Assemble front: non fully-summed columns i.e. contribution block 
             for (auto* child=fronts_[ni].first_child; child!=NULL; child=child->next_child) {
 
