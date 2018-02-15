@@ -88,6 +88,8 @@ namespace spldlt {
          auto start = std::chrono::high_resolution_clock::now();
          if (posdef) factor_mf_posdef(aval, child_contrib, options);
          else        factor_mf_indef(aval, child_contrib, options);
+         // factor_mf_posdef(aval, child_contrib, options);
+         // factor_mf_indef(aval, child_contrib, options);
          auto end = std::chrono::high_resolution_clock::now();
          long ttotal = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count();
          printf("[NumericTree] Task submission: %e\n", 1e-9*ttotal);
@@ -103,7 +105,8 @@ namespace spldlt {
             T *aval, void** child_contrib, 
             struct spral::ssids::cpu::cpu_factor_options const& options) {         
 
-         printf("[factor_mf_indef] nparts = %d\n", symb_.nparts_);
+         printf("[factor_mf_indef] posdef = %d\n", posdef);
+         // printf("[factor_mf_indef] nparts = %d\n", symb_.nparts_);
          int INIT_PRIO = 4;
          int ASSEMBLE_PRIO = 4;
 
@@ -132,9 +135,8 @@ namespace spldlt {
 #if defined(SPLDLT_USE_STARPU)
          starpu_task_wait_for_all();
 #endif         
-
          // Allocate mapping array
-         int *map = new int[symb_.n+1];
+         // int *map = new int[symb_.n+1];
 
          for(int ni = 0; ni < symb_.nnodes_; ++ni) {
             
@@ -145,77 +147,27 @@ namespace spldlt {
             printf("[factor_mf_indef] ni = %d\n", ni);
             
             // Activate frontal matrix
-            activate_front(
-                  posdef, sfront, fronts_[ni], child_contrib, blksz, 
-                  factor_alloc_, pool_alloc_);
-            
+            activate_front(false, sfront, fronts_[ni], child_contrib, blksz, 
+                           factor_alloc_, pool_alloc_);
+            // continue;
             // Initialize frontal matrix 
             init_node(sfront, fronts_[ni], aval);
 
-            // build lookup vector, allowing for insertion of delayed vars
-            // Note that while rlist[] is 1-indexed this is fine so long as lookup
-            // is also 1-indexed (which it is as it is another node's rlist[]
-            for(int i=0; i<sfront.ncol; i++)
-               map[ sfront.rlist[i] ] = i;
-            for(int i=sfront.ncol; i<sfront.nrow; i++)
-               map[ sfront.rlist[i] ] = i + fronts_[ni].ndelay_in;
-            
-
-            // Assemble front: fully-summed columns 
-            for (auto* child=fronts_[ni].first_child; child!=NULL; child=child->next_child) {
-           
-               SymbolicFront &child_sfront = symb_[child->symb.idx]; // Children symbolic node
-
-               int ldcontrib = child_sfront.nrow - child_sfront.ncol;
-               // Handle expected contributions (only if something there)
-               if (ldcontrib>0) {
-
-                  int cm = child_sfront.nrow - child_sfront.ncol;
-                  // int* cache = work.get_ptr<int>(cm); // TODO move cache array
-                  // Compute column mapping from child front into parent 
-                  child_sfront.map = new int[cm];
-                  for (int i=0; i<cm; i++)
-                     child_sfront.map[i] = map[ child_sfront.rlist[child_sfront.ncol+i] ];
-
-                  // Skip iteration if child node is in a subtree
-                  if (child_sfront.exec_loc != -1) {
-
-                     // Assemble contribution block from subtrees into
-                     // fully-summed coefficients
-                     // assemble_subtree (
-                     //       fronts_[ni], child_sfront, child_contrib, 
-                     //       child_sfront.contrib_idx);
-                     // #if defined(SPLDLT_USE_STARPU)
-                     //                      starpu_task_wait_for_all();
-                     // #endif
-
-                  }
-                  else {
-
-                     int csa = child_sfront.ncol / blksz;
-                     int cnr = (child_sfront.nrow-1) / blksz + 1; // number of block rows
-                     // Loop over blocks in contribution blocks
-                     for (int jj = csa; jj < cnr; ++jj) {
-                        for (int ii = jj; ii < cnr; ++ii) {
-                           // assemble_block(fronts_[ni], *child, ii, jj, child_sfront.map, blksz);
-                        }
-                     }
-                  }
-               }
-            } // Loop over child nodes
+            // Assemble contributions from children fronts and subtreess
+            assemble(symb_.n, fronts_[ni], child_contrib, pool_alloc_, blksz);
 
             // Compute factors and Schur complement 
-            // factor_front_posdef(sfront, fronts_[ni], options);
+            factor_front_posdef(sfront, fronts_[ni], options);
 #if defined(SPLDLT_USE_STARPU)
             starpu_task_wait_for_all();
 #endif
 
             // Assemble front: non fully-summed columns i.e. contribution block 
             for (auto* child=fronts_[ni].first_child; child!=NULL; child=child->next_child) {
-               
+
                // SymbolicNode const& csnode = child->symb;
                SymbolicFront &child_sfront = symb_[child->symb.idx];
-               
+
                int ldcontrib = child_sfront.nrow - child_sfront.ncol;
                // Handle expected contributions (only if something there)
                // if (child->contrib) {
@@ -235,9 +187,13 @@ namespace spldlt {
                      // int* cache = work.get_ptr<int>(cm); // TODO move cache array
                      // for (int i=0; i<cm; i++)
                      // csnode.map[i] = map[ csnode.rlist[csnode.ncol+i] ];
-                     int csa = child_sfront.ncol / blksz;
+                     int cncol = child_sfront.ncol + child->ndelay_in;
+                     int cnrow = child_sfront.nrow + child->ndelay_in;
+
+
+                     int csa = cncol / blksz;
                      // Number of block rows in child node
-                     int cnr = (child_sfront.nrow-1) / blksz + 1; 
+                     int cnr = (cnrow-1) / blksz + 1; 
                      // int cnc = (csnode.ncol-1) / blksz + 1; // number of block columns in child node
                      // Lopp over blocks in contribution blocks
                      for (int jj = csa; jj < cnr; ++jj) {                     
@@ -245,9 +201,9 @@ namespace spldlt {
                         // int c_en = std::min((jj+1)*blksz-csnode.ncol, cm); // last col in block
                         // assemble_expected_contrib(c_sa, c_en, nodes_[ni], *child, map, cache);
                         for (int ii = jj; ii < cnr; ++ii) {
-                           // assemble_contrib_block(
-                           //       fronts_[ni], *child, ii, jj, child_sfront.map, blksz);
-
+                           assemble_contrib_block(
+                                 fronts_[ni], *child, ii, jj, child_sfront.map, 
+                                 blksz);
                         }
                      }
                   }

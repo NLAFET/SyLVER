@@ -66,9 +66,14 @@ spldlt_tree_solve_fwd_dbl(
       ) {
    // Call method
    try {
-      
-      auto &tree = *static_cast<NumericTreePosdefDbl const*>(tree_ptr); // positive definite!
-      tree.solve_fwd(nrhs, x, ldx);
+
+      if (posdef) {
+         auto &tree = *static_cast<NumericTreePosdefDbl const*>(tree_ptr); // positive definite!
+         tree.solve_fwd(nrhs, x, ldx);
+      } else {
+         auto &tree = *static_cast<NumericTreeIndefDbl const*>(tree_ptr); // positive definite!
+         tree.solve_fwd(nrhs, x, ldx);
+      }
 
    } catch(std::bad_alloc const&) {
       return Flag::ERROR_ALLOCATION;
@@ -88,8 +93,14 @@ spldlt_tree_solve_bwd_dbl(
 
    // Call method
    try {
-      auto &tree = *static_cast<NumericTreePosdefDbl const*>(tree_ptr); // positive definite!
-      tree.solve_bwd(nrhs, x, ldx);
+
+      if (posdef) {
+         auto &tree = *static_cast<NumericTreePosdefDbl const*>(tree_ptr); // positive definite!
+         tree.solve_bwd(nrhs, x, ldx);
+      } else {
+         auto &tree = *static_cast<NumericTreeIndefDbl const*>(tree_ptr); // positive definite!
+         tree.solve_bwd(nrhs, x, ldx);
+      }
       
    } catch(std::bad_alloc const&) {
       return Flag::ERROR_ALLOCATION;
@@ -109,8 +120,13 @@ spldlt_tree_solve_diag_bwd_dbl(
 
    // Call method
    try {
-      auto &tree = *static_cast<NumericTreePosdefDbl const*>(tree_ptr);
-      tree.solve_diag_bwd(nrhs, x, ldx);
+      if (posdef) {
+         auto &tree = *static_cast<NumericTreePosdefDbl const*>(tree_ptr);
+         tree.solve_diag_bwd(nrhs, x, ldx);
+      } else {
+         auto &tree = *static_cast<NumericTreeIndefDbl const*>(tree_ptr);
+         tree.solve_diag_bwd(nrhs, x, ldx);
+      }
    } catch(std::bad_alloc const&) {
       return Flag::ERROR_ALLOCATION;
    }

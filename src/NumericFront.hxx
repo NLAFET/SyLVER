@@ -101,7 +101,7 @@ namespace spldlt {
        */
       NumericFront(
             // spral::ssids::cpu::SymbolicNode const& symb, 
-            SymbolicFront const& symb, 
+            SymbolicFront &symb,
             PoolAllocator const& pool_alloc, int blksz)
          : symb(symb), contrib(nullptr), pool_alloc_(pool_alloc), blksz(blksz)
       {
@@ -222,7 +222,7 @@ namespace spldlt {
    public:
       /* Symbolic node associate with this one */
       // spral::ssids::cpu::SymbolicNode const& symb;
-      SymbolicFront const& symb;
+      SymbolicFront &symb;
 
       /* Fixed data from analyse */
       NumericFront<T, PoolAllocator>* first_child; // Pointer to our first child

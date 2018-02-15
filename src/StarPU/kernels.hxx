@@ -27,13 +27,12 @@ namespace spldlt { namespace starpu {
          int nc = (n-1) / blksz + 1; // number of block columns
          // sfront.handles.reserve(nr*nc);
          sfront.handles.resize(nr*nc); // allocate handles
-         // printf("[register_front] nr: %d\n", nr);
+         // printf("[register_front] sfront.handles size = %d\n", sfront.handles.size());
          for(int j = 0; j < nc; ++j) {
-               
-            int blkn = std::min(blksz, n - j*blksz);
-               
-            for(int i = j; i < nr; ++i) {
 
+            int blkn = std::min(blksz, n - j*blksz);
+
+            for(int i = j; i < nr; ++i) {
                int blkm = std::min(blksz, m - i*blksz);
 
                starpu_matrix_data_register(
@@ -42,6 +41,8 @@ namespace spldlt { namespace starpu {
                      reinterpret_cast<uintptr_t>(&a[(j*blksz)*lda+(i*blksz)]),
                      lda, blkm, blkn,
                      sizeof(T));
+               // printf("[register_front] blk idx = %d, hdl = %p\n", i + j*nr, &(sfront.handles[i + j*nr]));
+
             }
          }
 
@@ -957,8 +958,8 @@ namespace spldlt { namespace starpu {
                child_contrib[contrib_idx], &cn, &cval, &ldcontrib, &crlist,
                &ndelay, &delay_perm, &delay_val, &lddelay
                );
-         printf("[subtree_assemble_cpu_func] ndelay = %d, cval = %p\n", ndelay, cval);
-         // if(!cval) return; // child was all delays, nothing more to do
+         // printf("[subtree_assemble_cpu_func] ndelay = %d, cval = %p\n", ndelay, cval);
+         if(!cval) return; // child was all delays, nothing more to do
 
          for(int j = 0; j < cn; ++j) {
                

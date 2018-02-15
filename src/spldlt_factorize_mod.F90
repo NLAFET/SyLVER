@@ -654,6 +654,7 @@ contains
     n = akeep%n
 
     posdef = spldlt_fkeep%fkeep%pos_def
+    ! posdef = .true.
 
     allocate(x2(n, nrhs), stat=inform%stat)
     if(inform%stat.ne.0) goto 100

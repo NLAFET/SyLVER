@@ -54,6 +54,8 @@ namespace spldlt {
          FactorAlloc& factor_alloc,
          PoolAlloc& pool_alloc) {
 
+      // printf("[activate_front] posdef = %d\n", posdef);
+
       // Allocate frontal matrix
       if (posdef) alloc_front_posdef(front, factor_alloc, pool_alloc);
       else        alloc_front_indef(front, child_contrib, factor_alloc, pool_alloc);
@@ -112,8 +114,8 @@ namespace spldlt {
          int kk, // block  column (and row) index
          int blksz, int prio) {
 
-      int m = snode.nrow;
-      int n = snode.ncol;
+      int m = snode.nrow + node.ndelay_in;
+      int n = snode.ncol + node.ndelay_in;
 
       int nr = (m-1) / blksz + 1; // number of block rows
       int nc = (n-1) / blksz + 1; // number of block columns
@@ -173,8 +175,8 @@ namespace spldlt {
          T *a_ik, int lda_ik,         
          int blksz, int prio) {
       
-      int m = snode.nrow;
-      int n = snode.ncol;
+      int m = snode.nrow + node.ndelay_in;
+      int n = snode.ncol + node.ndelay_in;
       int ldcontrib = m-n;
 
       int nr = (m-1) / blksz + 1; // number of block rows
@@ -229,8 +231,8 @@ namespace spldlt {
          T *a_jk, int lda_jk,
          int blksz, int prio) {
 
-      int m = snode.nrow;
-      int n = snode.ncol;
+      int m = snode.nrow + node.ndelay_in;
+      int n = snode.ncol + node.ndelay_in;
       int ldcontrib = m-n;
 
       int blkm = std::min(blksz, m - i*blksz);
@@ -326,8 +328,8 @@ namespace spldlt {
          int k, int i, int j,
          int blksz, int prio) {
 
-      int m = snode.nrow;
-      int n = snode.ncol;
+      int m = snode.nrow + node.ndelay_in;
+      int n = snode.ncol + node.ndelay_in;
 
       int blkm = std::min(blksz, m - i*blksz);
       int blkn = std::min(blksz, m - j*blksz);
@@ -791,8 +793,10 @@ namespace spldlt {
          ) {
 
       /* Extract useful information about node */
-      int m = snode.nrow;
-      int n = snode.ncol;
+      int m = snode.nrow + node.ndelay_in;
+      int n = snode.ncol + node.ndelay_in;
+      // int m = snode.nrow;
+      // int n = snode.ncol;
       int lda = align_lda<T>(m);
       T *lcol = node.lcol;
       T *contrib = node.contrib;
@@ -947,6 +951,11 @@ namespace spldlt {
             }
          }
       }
+
+      node.nelim = n;
+
+      /* Record information */
+      node.ndelay_out = 0;
    }
 
    // // TODO: error managment
