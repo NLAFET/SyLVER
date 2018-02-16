@@ -132,3 +132,29 @@ spldlt_tree_solve_diag_bwd_dbl(
    }
    return spral::ssids::cpu::Flag::SUCCESS;
 }
+
+
+extern "C"
+spral::ssids::cpu::Flag
+spldlt_tree_solve_diag_dbl(
+      bool posdef,      // If true, performs A=LL^T, if false do pivoted A=LDL^T
+      void const* tree_ptr, // pointer to relevant type of NumericTree
+      int nrhs,         // number of right-hand sides
+      double* x,        // ldx x nrhs array of right-hand sides
+      int ldx           // leading dimension of x
+      ) {
+
+   // Call method
+   try {
+      if (posdef) {
+         auto &tree = *static_cast<NumericTreePosdefDbl const*>(tree_ptr);
+         tree.solve_diag(nrhs, x, ldx);
+      } else {
+         auto &tree = *static_cast<NumericTreeIndefDbl const*>(tree_ptr);
+         tree.solve_diag(nrhs, x, ldx);
+      }
+   } catch(std::bad_alloc const&) {
+      return Flag::ERROR_ALLOCATION;
+   }
+   return spral::ssids::cpu::Flag::SUCCESS;
+}

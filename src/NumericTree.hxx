@@ -15,6 +15,7 @@
 #include "ssids/cpu/kernels/ldlt_app.hxx"
 
 
+#include "kernels/ldlt_app.hxx"
 #include "BuddyAllocator.hxx"
 // #include "Workspace.hxx"
 // #include "SymbolicSNode.hxx"
@@ -23,6 +24,7 @@
 // #include "kernels/assemble.hxx"
 // #include "kernels/common.hxx"
 #include "tasks.hxx"
+
 
 #if defined(SPLDLT_USE_STARPU)
 #include <starpu.h>
@@ -162,14 +164,8 @@ namespace spldlt {
             starpu_task_wait_for_all();
 #endif
 
-            size_t ldl = spral::ssids::cpu::align_lda<double>(sfront.nrow);
-            for (int i = 0; i < sfront.ncol; ++i) {
-               fronts_[ni].lcol[sfront.ncol*ldl +2*i]   = 0.0;
-               fronts_[ni].lcol[sfront.ncol*ldl +2*i+1] = 0.0; //std::numeric_limits<T>::infinity();
-               // fronts_[ni].lcol[sfront.ncol*ldl + 2*i] = 
-               //    fronts_[ni].lcol[i*(ldl + 1)];
-               // fronts_[ni].lcol[i*(ldl + 1)] = 1.0;
-            }
+            printf("[factor_mf_indef] nelim = %d\n", fronts_[ni].nelim);
+            printf("[factor_mf_indef] ndelay_in = %d\n", fronts_[ni].ndelay_in);
 
             // Assemble front: non fully-summed columns i.e. contribution block 
             for (auto* child=fronts_[ni].first_child; child!=NULL; child=child->next_child) {
@@ -498,13 +494,18 @@ namespace spldlt {
                   xlocal[r*symb_.n+i] = x[r*ldx + map[i]-1]; // Fortran indexed
 
             /* Perform dense solve */
-            if(posdef) {
-               spral::ssids::cpu::cholesky_solve_fwd(
-                     m, n, fronts_[ni].lcol, ldl, nrhs, xlocal, symb_.n);
-            } else { /* indef */
-               spral::ssids::cpu::ldlt_app_solve_fwd(
-                     m+ndin, nelim, fronts_[ni].lcol, ldl, nrhs, xlocal, symb_.n);
-            }
+            // if(posdef) {
+            //    spral::ssids::cpu::cholesky_solve_fwd(
+            //          m, n, fronts_[ni].lcol, ldl, nrhs, xlocal, symb_.n);
+            // } else { /* indef */
+            // spral::ssids::cpu::ldlt_app_solve_fwd(
+            //       m+ndin, nelim, fronts_[ni].lcol, ldl, nrhs, xlocal, symb_.n);
+            // }
+
+            // debug
+            spral::ssids::cpu::cholesky_solve_fwd(
+                  m+ndin, nelim, fronts_[ni].lcol, ldl, nrhs, xlocal, symb_.n);
+
 
             /* Scatter result */
             for(int r=0; r<nrhs; ++r)
@@ -520,6 +521,8 @@ namespace spldlt {
       template <bool do_diag, bool do_bwd>
       void solve_diag_bwd_inner(int nrhs, double* x, int ldx) const {
          if(posdef && !do_bwd) return; // diagonal solve is a no-op for posdef
+
+         // printf("[solve_diag_bwd_inner] do_diag = %d, do_bwd = %d\n", do_diag, do_bwd);
 
          /* Allocate memory - map only needed for indef bwd/diag_bwd solve */
          double* xlocal = new double[nrhs*symb_.n];
@@ -566,17 +569,21 @@ namespace spldlt {
                   xlocal[r*symb_.n+i] = x[r*ldx + map[i]-1];
 
             /* Perform dense solve */
-            if(posdef) {
-               spral::ssids::cpu::cholesky_solve_bwd(
-                     m, n, fronts_[ni].lcol, ldl, nrhs, xlocal, symb_.n);
-            } else {
-               if(do_diag) spral::ssids::cpu::ldlt_app_solve_diag(
-                     nelim, &fronts_[ni].lcol[(n+ndin)*ldl], nrhs, xlocal, symb_.n
-                     );
-               if(do_bwd) spral::ssids::cpu::ldlt_app_solve_bwd(
-                     m+ndin, nelim, fronts_[ni].lcol, ldl, nrhs, xlocal, symb_.n
-                     );
-            }
+            // if(posdef) {
+            //    spral::ssids::cpu::cholesky_solve_bwd(
+            //          m, n, fronts_[ni].lcol, ldl, nrhs, xlocal, symb_.n);
+            // } else {
+            //    // if(do_diag) spral::ssids::cpu::ldlt_app_solve_diag(
+            //    //       nelim, &fronts_[ni].lcol[(n+ndin)*ldl], nrhs, xlocal, symb_.n
+            //    //       );
+            // if(do_bwd) spral::ssids::cpu::ldlt_app_solve_bwd(
+            //       m+ndin, nelim, fronts_[ni].lcol, ldl, nrhs, xlocal, symb_.n
+            //       );
+            // }
+
+            // debug
+            spral::ssids::cpu::cholesky_solve_bwd(
+                  m+ndin, nelim, fronts_[ni].lcol, ldl, nrhs, xlocal, symb_.n);
 
             /* Scatter result (only first nelim entries have changed) */
             for(int r=0; r<nrhs; ++r)

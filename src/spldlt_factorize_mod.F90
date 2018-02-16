@@ -12,6 +12,7 @@ module spldlt_factorize_mod
      procedure :: solve_fwd
      procedure :: solve_bwd
      procedure :: solve_diag_bwd
+     procedure :: solve_diag
   end type numeric_tree_type
   
   type spldlt_fkeep_type
@@ -94,6 +95,20 @@ module spldlt_factorize_mod
        integer(c_int), value :: ldx       
      end function spldlt_tree_solve_diag_bwd_dbl
   end interface spldlt_tree_solve_diag_bwd_c
+
+  ! Diagonal solve (indefinite case) 
+  interface spldlt_tree_solve_diag_c
+     integer(c_int) function spldlt_tree_solve_diag_dbl( &
+          posdef, numeric_tree, nrhs, x, ldx) &
+          bind(C, name="spldlt_tree_solve_diag_dbl")
+       use, intrinsic :: iso_c_binding
+       logical(c_bool), value :: posdef
+       type(c_ptr), value :: numeric_tree
+       integer(c_int), value :: nrhs
+       real(c_double), dimension(*), intent(inout) :: x
+       integer(c_int), value :: ldx       
+     end function spldlt_tree_solve_diag_dbl
+  end interface spldlt_tree_solve_diag_c
 
   ! SSIDS interfaces
   interface
@@ -687,10 +702,30 @@ contains
     ! Bwd solve
     ! call spldlt_fkeep%numeric_tree%solve_bwd(nrhs, x, ldx)
 
+    ! ! Diag solve
+    ! do part = akeep%nparts, 1, -1
+    !    if (akeep%subtree(part)%exec_loc .eq. -1) cycle
+    !    call fkeep%subtree(part)%ptr%solve_diag(nrhs, x2, n, inform)
+    !    if (inform%stat .ne. 0) goto 100
+    ! end do
+
+    ! ! Diag solve
+    ! call spldlt_fkeep%numeric_tree%solve_diag(posdef, nrhs, x2, ldx)
+
+    ! ! Bwd solve
+    ! call spldlt_fkeep%numeric_tree%solve_bwd(posdef, nrhs, x2, ldx)
+
+    ! ! Bwd solve
+    ! do part = akeep%nparts, 1, -1
+    !    if (akeep%subtree(part)%exec_loc .eq. -1) cycle
+    !    call fkeep%subtree(part)%ptr%solve_bwd(nrhs, x2, n, inform)
+    !    if (inform%stat .ne. 0) goto 100
+    ! end do
+
     ! Diag and bwd solve
     call spldlt_fkeep%numeric_tree%solve_diag_bwd(posdef, nrhs, x2, ldx)
 
-    ! Bwd solve
+    ! Diag bwd solve
     do part = akeep%nparts, 1, -1
        if (akeep%subtree(part)%exec_loc .eq. -1) cycle
        call fkeep%subtree(part)%ptr%solve_diag_bwd(nrhs, x2, n, inform)
@@ -770,5 +805,23 @@ contains
     ! TODO error managment
     ! if(flag.ne.SSIDS_SUCCESS) inform%flag = flag
   end subroutine solve_diag_bwd
+
+  ! Diag solve on numeric tree
+  subroutine solve_diag(numeric_tree, posdef, nrhs, x, ldx)
+    use, intrinsic :: iso_c_binding
+    use spral_ssids_datatypes
+    implicit none
+
+    class(numeric_tree_type), intent(in) :: numeric_tree 
+    logical(c_bool), intent(in) :: posdef
+    integer, intent(in) :: nrhs
+    integer, intent(in) :: ldx
+    real(wp), dimension(*), intent(inout) :: x
+
+    integer(c_int) :: flag ! return value
+
+    flag = spldlt_tree_solve_diag_c(posdef, numeric_tree%ctree, nrhs, x, ldx)
+
+  end subroutine solve_diag
 
 end module spldlt_factorize_mod
