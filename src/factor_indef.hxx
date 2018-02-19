@@ -9,6 +9,90 @@ using namespace spldlt::starpu;
 
 namespace spldlt {
 
+   ////////////////////////////////////////////////////////////////////////////////
+   // factor_front_indef_nocontrib
+   //
+   // Perform the LDLT factorization of front without forming the
+   // contribution block
+   template <typename T, typename PoolAlloc>
+   void factor_front_indef_nocontrib(
+         SymbolicFront const& snode,
+         NumericFront<T, PoolAlloc> &node,
+         struct cpu_factor_options const& options) {
+
+      /* Extract useful information about node */
+      int m = snode.nrow + node.ndelay_in;
+      int n = snode.ncol + node.ndelay_in;
+      size_t ldl = align_lda<T>(m);
+      T *lcol = node.lcol;
+      T *d = &node.lcol[ n*ldl ];
+      int *perm = node.perm;
+
+      int ldld = m;
+      T *ld = new T[2*m]; // FIXME: workspace
+
+      int nelim = 0;
+
+      node.nelim = nelim;
+
+      node.nelim = ldlt_tpp_factor(
+            m, n, &perm[nelim], &lcol[nelim*(ldl+1)], ldl, &d[2*nelim], ld, m, 
+            options.action, options.u, options.small, nelim, &lcol[nelim], 
+            ldl);
+
+      delete[] ld;
+
+      node.ndelay_out = n - node.nelim;
+   }
+
+   ////////////////////////////////////////////////////////////////////////////////
+   // form_contrib_front
+   //
+   // Update contribution blocks
+   template <typename T, typename PoolAlloc>
+   void form_contrib_front(
+         SymbolicFront const& snode,
+         NumericFront<T, PoolAlloc> &node,
+         int blksz) {
+
+      int iblksz = blksz;
+      
+      int m = snode.nrow + node.ndelay_in;
+      // int n = snode.ncol + node.ndelay_in;
+      int n = node.nelim;
+      size_t contrib_dimn = m-n;
+
+      if (contrib_dimn == 0) return; // Nothing to do
+
+      int lda = align_lda<T>(m);
+      T *lcol = node.lcol;
+      int nr = (m-1) / blksz + 1; // number of block rows
+      int nc = (n-1) / blksz + 1; // number of block columns
+      int rsa = n / blksz; // index of first block in contribution blocks  
+      int ncontrib = nr-rsa;
+      
+      int nelim = 0;
+
+      for(int blk = 0; blk < nc; ++blk) {
+         for (int jblk = rsa; jblk < nr; ++jblk) {
+           
+            for (int iblk = jblk;  iblk < nr; ++iblk) {
+
+               spldlt::Block<T, PoolAlloc>& upd =
+                  node.contrib_blocks[(jblk-rsa)*ncontrib+(iblk-rsa)];
+
+               // contrib_blocks[j*ncontrib+i]
+               int ldld = align_lda<T>(blksz);
+               T *ld = new T[blksz*ldld];
+               
+               
+
+               delete[] ld;
+            }
+         }
+      }
+   }
+
    template <typename T, int iblksz, typename Backup, typename PoolAlloc>
    void factor_indef_init() {
 #if defined(SPLDLT_USE_STARPU)
@@ -30,7 +114,7 @@ namespace spldlt {
       typedef typename std::allocator_traits<Allocator>::template rebind_alloc<int> IntAlloc;
       typedef typename std::allocator_traits<Allocator>::template rebind_alloc<T> TAlloc;
       // Block type
-      typedef Block<T, iblksz, IntAlloc> BlockSpec;
+      typedef spldlt::ldlt_app_internal::Block<T, iblksz, IntAlloc> BlockSpec;
       /// \}
    protected:
       /** \brief return number of columns in given block column */
@@ -353,10 +437,10 @@ namespace spldlt {
 
       }
 
-      /*
-        Sequential factorization routine for indefinite matrices implementing an
-        APTP strategy. Failed entires are left in place.
-      */
+      ////////////////////////////////////////////////////////////////////////////////   
+      // factorize_indef_app_notask
+      // Sequential factorization routine for indefinite matrices implementing an
+      // APTP strategy. Failed entires are left in place.
       static
       int factorize_indef_app_notask (
             int const m, int const n, int* perm, T* a,
@@ -365,7 +449,7 @@ namespace spldlt {
             T const beta, T* upd, int const ldupd, spral::ssids::cpu::Workspace& work,
             Allocator const& alloc, int const from_blk=0) {
 
-         typedef Block<T, iblksz, IntAlloc> BlockSpec;
+         typedef spldlt::ldlt_app_internal::Block<T, iblksz, IntAlloc> BlockSpec;
          // typedef ColumnData<T,IntAlloc> ColumnDataSpec;
 
          int const nblk = calc_nblk(n, block_size);
@@ -630,10 +714,10 @@ namespace spldlt {
          return next_elim;
       }
 
-      /*
-        Factorization routine for indefinite matrices implementing an
-        APTP strategy. Failed entires are left in place.
-      */
+      ////////////////////////////////////////////////////////////////////////////////   
+      // factorize_indef_app
+      // Factorization routine for indefinite matrices implementing an
+      // APTP strategy. Failed entires are left in place.
       static
       int factorize_indef_app (
             int const m, int const n, int* perm, T* a,
@@ -641,7 +725,7 @@ namespace spldlt {
             struct cpu_factor_options& options, int const block_size,
             T const beta, T* upd, int const ldupd, std::vector<spral::ssids::cpu::Workspace>& work,
             Allocator const& alloc, int const from_blk=0) {
-         typedef Block<T, iblksz, IntAlloc> BlockSpec;
+         typedef spldlt::ldlt_app_internal::Block<T, iblksz, IntAlloc> BlockSpec;
          // typedef ColumnData<T,IntAlloc> ColumnDataSpec;
 
          int const nblk = calc_nblk(n, block_size);
@@ -1038,11 +1122,13 @@ namespace spldlt {
       }
 
    public:
-      /*
-        Sequential factorization routine for indefinite matrices implementing an
-        APTP strategy. After the factorization, fail entries are permuted
-        to the back of the matrix.
-      */
+
+      ////////////////////////////////////////////////////////////////////////////////   
+      // ldlt_app_notask
+      //
+      // Sequential factorization routine for indefinite matrices implementing an
+      // APTP strategy. After the factorization, fail entries are permuted
+      // to the back of the matrix.
       static
       int ldlt_app_notask(int m, int n, int *perm, 
                           T *a, int lda, T *d, 

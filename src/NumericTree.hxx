@@ -13,6 +13,7 @@
 // #include "ssids/cpu/ThreadStats.hxx"
 #include "ssids/cpu/kernels/cholesky.hxx"
 #include "ssids/cpu/kernels/ldlt_app.hxx"
+// #include "ssids/cpu/kernels/assemble.hxx"
 
 
 #include "kernels/ldlt_app.hxx"
@@ -24,6 +25,7 @@
 // #include "kernels/assemble.hxx"
 // #include "kernels/common.hxx"
 #include "tasks.hxx"
+#include "factor_indef.hxx"
 
 
 #if defined(SPLDLT_USE_STARPU)
@@ -158,14 +160,18 @@ namespace spldlt {
             // Assemble contributions from children fronts and subtreess
             assemble(symb_.n, fronts_[ni], child_contrib, pool_alloc_, blksz);
 
-            // Compute factors and Schur complement 
-            factor_front_posdef(sfront, fronts_[ni], options);
+            // Compute factors and Schur complement
+            // factor_front_posdef(sfront, fronts_[ni], options);
+
+            // Compute factors
+            factor_front_indef_nocontrib(sfront, fronts_[ni], options);
 #if defined(SPLDLT_USE_STARPU)
             starpu_task_wait_for_all();
 #endif
 
             printf("[factor_mf_indef] nelim = %d\n", fronts_[ni].nelim);
             printf("[factor_mf_indef] ndelay_in = %d\n", fronts_[ni].ndelay_in);
+            printf("[factor_mf_indef] ndelay_out = %d\n", fronts_[ni].ndelay_out);
 
             // Assemble front: non fully-summed columns i.e. contribution block 
             for (auto* child=fronts_[ni].first_child; child!=NULL; child=child->next_child) {
@@ -494,17 +500,17 @@ namespace spldlt {
                   xlocal[r*symb_.n+i] = x[r*ldx + map[i]-1]; // Fortran indexed
 
             /* Perform dense solve */
-            // if(posdef) {
-            //    spral::ssids::cpu::cholesky_solve_fwd(
-            //          m, n, fronts_[ni].lcol, ldl, nrhs, xlocal, symb_.n);
-            // } else { /* indef */
-            // spral::ssids::cpu::ldlt_app_solve_fwd(
-            //       m+ndin, nelim, fronts_[ni].lcol, ldl, nrhs, xlocal, symb_.n);
-            // }
-
-            // debug
-            spral::ssids::cpu::cholesky_solve_fwd(
+            if(posdef) {
+               spral::ssids::cpu::cholesky_solve_fwd(
+                     m, n, fronts_[ni].lcol, ldl, nrhs, xlocal, symb_.n);
+            } else { /* indef */
+            spral::ssids::cpu::ldlt_app_solve_fwd(
                   m+ndin, nelim, fronts_[ni].lcol, ldl, nrhs, xlocal, symb_.n);
+            }
+
+            // tests/debug
+            // spral::ssids::cpu::cholesky_solve_fwd(
+            //       m+ndin, nelim, fronts_[ni].lcol, ldl, nrhs, xlocal, symb_.n);
 
 
             /* Scatter result */
@@ -569,21 +575,21 @@ namespace spldlt {
                   xlocal[r*symb_.n+i] = x[r*ldx + map[i]-1];
 
             /* Perform dense solve */
-            // if(posdef) {
-            //    spral::ssids::cpu::cholesky_solve_bwd(
-            //          m, n, fronts_[ni].lcol, ldl, nrhs, xlocal, symb_.n);
-            // } else {
-            //    // if(do_diag) spral::ssids::cpu::ldlt_app_solve_diag(
-            //    //       nelim, &fronts_[ni].lcol[(n+ndin)*ldl], nrhs, xlocal, symb_.n
-            //    //       );
-            // if(do_bwd) spral::ssids::cpu::ldlt_app_solve_bwd(
-            //       m+ndin, nelim, fronts_[ni].lcol, ldl, nrhs, xlocal, symb_.n
-            //       );
-            // }
+            if(posdef) {
+               spral::ssids::cpu::cholesky_solve_bwd(
+                     m, n, fronts_[ni].lcol, ldl, nrhs, xlocal, symb_.n);
+            } else {
+               if(do_diag) spral::ssids::cpu::ldlt_app_solve_diag(
+                     nelim, &fronts_[ni].lcol[(n+ndin)*ldl], nrhs, xlocal, symb_.n
+                     );
+               if(do_bwd) spral::ssids::cpu::ldlt_app_solve_bwd(
+                     m+ndin, nelim, fronts_[ni].lcol, ldl, nrhs, xlocal, symb_.n
+                     );
+            }
 
-            // debug
-            spral::ssids::cpu::cholesky_solve_bwd(
-                  m+ndin, nelim, fronts_[ni].lcol, ldl, nrhs, xlocal, symb_.n);
+            // tests/debug
+            // spral::ssids::cpu::cholesky_solve_bwd(
+            //       m+ndin, nelim, fronts_[ni].lcol, ldl, nrhs, xlocal, symb_.n);
 
             /* Scatter result (only first nelim entries have changed) */
             for(int r=0; r<nrhs; ++r)

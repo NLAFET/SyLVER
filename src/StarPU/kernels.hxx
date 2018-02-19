@@ -621,7 +621,7 @@ namespace spldlt { namespace starpu {
                       kk==0);
       }
 
-      // // update_contrib codelet
+      // update_contrib codelet
       struct starpu_codelet cl_update_contrib;      
 
       void insert_update_contrib(
@@ -868,7 +868,7 @@ namespace spldlt { namespace starpu {
          int ret;
 
          // printf("[insert_factor_subtree] akeep = %p, akeep = %p\n", akeep, fkeep);
-         printf("[insert_factor_subtree] root_hdl = %p, p = %d\n", root_hdl, p);
+         // printf("[insert_factor_subtree] root_hdl = %p, p = %d\n", root_hdl, p);
 
          ret = starpu_task_insert(&cl_factor_subtree,
                                   STARPU_RW, root_hdl,

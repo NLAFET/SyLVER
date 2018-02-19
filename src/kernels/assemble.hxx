@@ -132,8 +132,8 @@ namespace spldlt {
             front.ndelay_in += ndelay;
          }
       }
-      for(int contrib_idx : sfront.contrib) {
-      }
+      // for(int contrib_idx : sfront.contrib) {
+      // }
 
       printf("[alloc_front] ndelay_in = %d\n", front.ndelay_in);
       // front.ndelay_in = 0; // debug
@@ -159,8 +159,6 @@ namespace spldlt {
       front.perm = FAIntTraits::allocate(factor_alloc_int, ncol); // ncol fully summed variables
       for(int i=0; i<sfront.ncol; i++)
          front.perm[i] = sfront.rlist[i];
-
-      printf("[alloc_front] perm = %p\n", front.perm);      
    }
 
    ////////////////////////////////////////////////////////////////////////////////
@@ -686,12 +684,12 @@ namespace spldlt {
                src = &child->lcol[child->nelim*lds + child->ndelay_in +i*lds];
                for(int j=csnode.ncol; j<csnode.nrow; j++) {
                   int r = map[ csnode.rlist[j] ];
+                  // int r = csnode.map[j];
                   if(r < ncol) dest[r*ldl+delay_col] = src[j];
                   else         dest[delay_col*ldl+r] = src[j];
                }
                delay_col++;
             }
-
 
             // Handle expected contributions (only if something there)
             if (ldcontrib>0) {

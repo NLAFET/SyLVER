@@ -784,6 +784,8 @@ namespace spldlt {
    }   
 
    ////////////////////////////////////////////////////////////////////////////////
+   // factor_front_posdef
+   //
    // Factorize a supernode using a multifrontal mode
    template <typename T, typename PoolAlloc>
    void factor_front_posdef(
@@ -952,10 +954,11 @@ namespace spldlt {
          }
       }
 
+      // We've eliminated all columns 
       node.nelim = n;
 
       /* Record information */
-      node.ndelay_out = 0;
+      node.ndelay_out = 0; // no delays
    }
 
    // // TODO: error managment
