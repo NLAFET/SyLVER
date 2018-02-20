@@ -177,8 +177,8 @@ namespace spldlt {
       }
 
       void free_contrib_blocks() {
-         int m = symb.nrow;
-         int n = symb.ncol;            
+         int m = symb.nrow + ndelay_in;
+         int n = symb.ncol + ndelay_in;            
          size_t contrib_dimn = m-n; // Dimension of contribution block
          if (contrib_dimn>0) {
             int nr = (m-1) / blksz + 1; // number of block rows in front amtrix

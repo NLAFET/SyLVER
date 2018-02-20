@@ -551,6 +551,31 @@ namespace spldlt { namespace starpu {
          STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
       }
 
+      ////////////////////////////////////////////////////////////////////////////////      
+      // Update contribution blocks
+
+      void udpate_contrib_block_indef_cpu_func(void *buffers[], void *cl_arg) {
+
+         T *upd = (T *)STARPU_MATRIX_GET_PTR(buffers[0]); 
+         unsigned ldupd = STARPU_MATRIX_GET_LD(buffers[0]); // Get leading dimensions
+         unsigned updm = STARPU_MATRIX_GET_NX(buffers[0]);
+         unsigned updn = STARPU_MATRIX_GET_NY(buffers[0]);
+         
+         
+
+         udpate_contrib_block(
+               updm, updn, upd, ldupd,  
+               nelim, lik, ldl, ljk, ldl,
+               (blk == 0), dk, ld, ldld);
+      }
+
+      extern struct starpu_codelet cl_udpate_contrib_block_indef;
+
+      // insert_udpate_contrib_block_indef
+      void insert_udpate_contrib_block_indef() {
+         
+      }
+
       /* As it is not possible to statically intialize codelet in C++,
          we do it via this function */
       template <typename T, int iblksz, 
@@ -608,5 +633,8 @@ namespace spldlt { namespace starpu {
          cl_adjust.nbuffers = STARPU_VARIABLE_NBUFFERS;
          cl_adjust.name = "ADJUST";
          cl_adjust.cpu_funcs[0] = adjust_cpu_func<T, IntAlloc>;
+
+         // Initialize udpate_contrib_block_indef StarPU codelet
+         
       }
 }} /* namespaces spldlt::starpu  */

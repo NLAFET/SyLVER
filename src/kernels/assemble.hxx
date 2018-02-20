@@ -376,7 +376,7 @@ namespace spldlt {
                                NumericFront<T,PoolAlloc>& cnode, 
                                int ii, int jj, int *cmap, int blksz) {
 
-      // printf("[assemble_contrib_block]\n");
+      printf("[assemble_contrib_block]\n");
 
       SymbolicFront const& csnode = cnode.symb;
       
@@ -455,7 +455,7 @@ namespace spldlt {
             }
          }
       }
-
+      
    }
 
    // template <typename T, typename PoolAlloc>

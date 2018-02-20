@@ -3,6 +3,8 @@
 #include "ssids/cpu/kernels/ldlt_nopiv.hxx"
 
 #include "kernels/ldlt_app.hxx"
+#include "kernels/factor_indef.hxx"
+#include "tasks_indef.hxx"
 
 #if defined(SPLDLT_USE_STARPU)
 #include "StarPU/kernels_indef.hxx"
@@ -35,6 +37,8 @@ namespace spldlt {
 
       int nelim = 0;
 
+      printf("[factor_front_indef_nocontrib]\n");
+
       node.nelim = nelim;
 
       node.nelim = ldlt_tpp_factor(
@@ -57,6 +61,8 @@ namespace spldlt {
          NumericFront<T, PoolAlloc> &node,
          int blksz) {
 
+      int UPDATE_PRIO = 4;
+
       int iblksz = blksz;
       
       int nrow = snode.nrow + node.ndelay_in;
@@ -76,60 +82,43 @@ namespace spldlt {
       
       int nelim = 0;
 
-      spldlt::Block<T, PoolAlloc>& upd = node.contrib_blocks[0];
-      nelim = node.nelim;
-      int ldld = spral::ssids::cpu::align_lda<T>(contrib_dimn);
-      T *ld = new T[nelim*ldld];
-      // calcLD<OP_N>(
-      //       contrib_dimn, nelim, &lcol[ncol], ldl, d, ld, ldld);
-      // T rbeta = 0.0;
-      // host_gemm<T>(
-      //       OP_N, OP_T, contrib_dimn, contrib_dimn, nelim,
-      //       -1.0, &lcol[ncol], ldl, ld, ldld,
-      //       rbeta, upd.a, contrib_dimn);
+      // // tests/debug
+      // spldlt::Block<T, PoolAlloc>& upd = node.contrib_blocks[0];
+      // nelim = node.nelim;
+      // int ldld = spral::ssids::cpu::align_lda<T>(contrib_dimn);
+      // T *ld = new T[nelim*ldld];
+      // // calcLD<OP_N>(
+      // //       contrib_dimn, nelim, &lcol[ncol], ldl, d, ld, ldld);
+      // // T rbeta = 0.0;
+      // // host_gemm<T>(
+      // //       OP_N, OP_T, contrib_dimn, contrib_dimn, nelim,
+      // //       -1.0, &lcol[ncol], ldl, ld, ldld,
+      // //       rbeta, upd.a, contrib_dimn);
       
-      delete[] ld;
+      // udpate_contrib_block(
+      //       contrib_dimn, contrib_dimn, upd.a, upd.lda,  
+      //       nelim, &lcol[ncol], ldl, &lcol[ncol], ldl,
+      //       true, d, ld, ldld);
 
-      // for(int blk = 0; blk < nc; ++blk) {
+      // delete[] ld;
 
-      //    nelim = std::min(blksz, n - blk*blksz);
-      //    T rbeta = (blk==0) ? 0.0 : 1.0;
-      //    T *dk = &d[2*blk*blksz];
 
-      //    for (int jblk = rsa; jblk < nr; ++jblk) {
+      // int ldld = spral::ssids::cpu::align_lda<T>(blksz);
+      // T *ld = new T[blksz*ldld];
 
-      //       // Ljk block
-      //       T *ljk = &lcol[(blk*blksz)*ldl+(jblk*blksz)];
+      for(int blk = 0; blk < nc; ++blk) {
+         
+         for (int jblk = rsa; jblk < nr; ++jblk) {
 
-      //       for (int iblk = jblk;  iblk < nr; ++iblk) {
+            for (int iblk = jblk;  iblk < nr; ++iblk) {
                
-      //          // Lik block
-      //          T *lik = &lcol[(blk*blksz)*ldl+(iblk*blksz)];
+               update_contrib_indef_task(
+                     snode, node, blk, iblk, jblk, blksz, UPDATE_PRIO);
+            }            
+         }
+      }
 
-      //          spldlt::Block<T, PoolAlloc>& upd =
-      //             node.contrib_blocks[(jblk-rsa)*ncontrib+(iblk-rsa)];
-
-      //          printf("[form_contrib_front] update block (%d,%d), melim = %d, blkm = %d, blkn = %d\n", 
-      //                 iblk, jblk, nelim, upd.m, upd.n);
-
-      //          int ldld = spral::ssids::cpu::align_lda<T>(blksz);
-      //          T *ld = new T[blksz*ldld];
-               
-      //          spral::ssids::cpu::calcLD<OP_N>(
-      //                upd.m, nelim, lik, ldl, dk, ld, ldld);
-               
-      //          host_gemm(
-      //                OP_N, OP_T, upd.m, upd.n, nelim,
-      //                // -1.0, ljk, ldl, ld, ldld,
-      //                -1.0, ld, ldld, ljk, ldl,
-      //                rbeta, upd.a, upd.lda
-      //                );
-            
-      //          delete[] ld;
-
-      //       }            
-      //    }
-      // }
+      // delete[] ld;
    }
    
 

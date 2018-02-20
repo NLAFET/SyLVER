@@ -8,7 +8,7 @@ namespace spldlt {
          T *upd, int ldupd,
          int k,
          T *lik, int ld_lik, 
-         T *lkj, int ld_lkj,
+         T *ljk, int ld_ljk,
          bool zero_upd,
          T *dk, // Diagonal
          T *ld, int ldld // Workspace
@@ -16,14 +16,15 @@ namespace spldlt {
 
       T rbeta = zero_upd ? 0.0 : 1.0;
       
-      // Compute Lik Dk in workspace
+      // Compute Lik Dk in workspace W
       spral::ssids::cpu::calcLD<OP_N>(
             m, k, lik, ld_lik, dk, ld, ldld);
       
+      // Compute U = U - W L^{T}
       host_gemm(
             OP_N, OP_T, m, n, k,
             // -1.0, ljk, ldl, ld, ldld,
-            -1.0, ld, ldld, ljk, ldl,
+            -1.0, ld, ldld, ljk, ld_ljk,
             rbeta, upd, ldupd
             );
 
