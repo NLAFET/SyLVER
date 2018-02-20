@@ -133,7 +133,7 @@ namespace spldlt {
    }
 
    /*
-     A_ij <- A_ij - Aik A_jk^T
+     A_ij <- A_ij - Lik L_jk^T
      m: number of row in A_ij block
      n: number of column in A_ij block
      k: number of column in A_ik and A_jk blocks
@@ -188,7 +188,7 @@ namespace spldlt {
 
    /*
      Performs update of a block in Schur complement 
-     A_ij <- A_ij - Aik A_jk^T
+     A_ij <- A_ij - Lik A_Lk^T
      m: number of row in A_ij block
      n: number of column in A_ij block
      k: number of column in A_ik and A_jk blocks

@@ -173,6 +173,9 @@ namespace spldlt {
             printf("[factor_mf_indef] ndelay_in = %d\n", fronts_[ni].ndelay_in);
             printf("[factor_mf_indef] ndelay_out = %d\n", fronts_[ni].ndelay_out);
 
+            // form contrib
+            form_contrib_front(sfront, fronts_[ni], blksz);
+
             // Assemble front: non fully-summed columns i.e. contribution block 
             for (auto* child=fronts_[ni].first_child; child!=NULL; child=child->next_child) {
 
@@ -504,8 +507,8 @@ namespace spldlt {
                spral::ssids::cpu::cholesky_solve_fwd(
                      m, n, fronts_[ni].lcol, ldl, nrhs, xlocal, symb_.n);
             } else { /* indef */
-            spral::ssids::cpu::ldlt_app_solve_fwd(
-                  m+ndin, nelim, fronts_[ni].lcol, ldl, nrhs, xlocal, symb_.n);
+               spral::ssids::cpu::ldlt_app_solve_fwd(
+                     m+ndin, nelim, fronts_[ni].lcol, ldl, nrhs, xlocal, symb_.n);
             }
 
             // tests/debug
