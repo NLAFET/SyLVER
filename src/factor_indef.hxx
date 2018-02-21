@@ -49,19 +49,22 @@ namespace spldlt {
       bool const debug = false;
       T *upd = nullptr;
 
-      node.nelim = FactorSymIndef
-         <T, INNER_BLOCK_SIZE, CopyBackup<T, PoolAlloc>, debug, PoolAlloc>
-         ::ldlt_app(m, n, perm, lcol, ldl, d, backup, options, blksz, 0.0, upd, 0, 
-                    workspaces, pool_alloc);
-
-      printf("[factor_front_indef_nocontrib] first pass = %d out of %d\n", node.nelim, n);
+      if (options.pivot_method==PivotMethod::app_block) {
+         node.nelim = FactorSymIndef
+            <T, INNER_BLOCK_SIZE, CopyBackup<T, PoolAlloc>, debug, PoolAlloc>
+            ::ldlt_app(m, n, perm, lcol, ldl, d, backup, options, blksz, 0.0, upd, 0, 
+                       workspaces, pool_alloc);
+         
+         printf("[factor_front_indef_nocontrib] first pass = %d out of %d\n", node.nelim, n);
+      }
 
       if (node.nelim < n) {
          // Use TPP factor to eliminate the remaining columns in the following cases:
          // 1) options.pivot_method is set to tpp;
          // 2) We are at a root node;
          // 3) options.failed_pivot_method is set to tpp.
-         if (m==n || options.pivot_method==PivotMethod::tpp) {
+         if (m==n || options.pivot_method==PivotMethod::tpp ||
+               options.failed_pivot_method==FailedPivotMethod::tpp) {
             nelim = node.nelim;
             T *ld = new T[2*(m-nelim)]; // TODO: workspace
             node.nelim += ldlt_tpp_factor(
@@ -69,6 +72,8 @@ namespace spldlt {
                   &d[2*nelim], ld, m-nelim, options.action, options.u, options.small, 
                   nelim, &lcol[nelim], ldl);
             delete[] ld;
+            printf("[factor_front_indef_nocontrib] second pass = %d\n", node.nelim-nelim);
+
          }
       }
 
