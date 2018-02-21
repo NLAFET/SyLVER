@@ -22,5 +22,8 @@ namespace spldlt { namespace starpu {
 
       /* restore StarPU codelet */
       struct starpu_codelet cl_restore_block_app;
+
+      // udpate_contrib_block_indef StarPU codelet
+      struct starpu_codelet cl_udpate_contrib_block_indef;
       
 }} /* namespaces spldlt::starpu  */

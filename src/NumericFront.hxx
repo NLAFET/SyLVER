@@ -214,6 +214,14 @@ namespace spldlt {
          contrib = nullptr;
       }
 
+      int get_nrow() {
+         return symb.nrow + ndelay_in;
+      }
+
+      int get_ncol() {
+         return symb.ncol + ndelay_in;
+      }
+
       /** \brief Return leading dimension of node's lcol member. */
       size_t get_ldl() {
          return spral::ssids::cpu::align_lda<T>(symb.nrow + ndelay_in);

@@ -13,6 +13,8 @@ using namespace spldlt::starpu;
 
 namespace spldlt {
 
+   static const int INNER_BLOCK_SIZE = 32;
+
    ////////////////////////////////////////////////////////////////////////////////
    // factor_front_indef_nocontrib
    //
@@ -22,7 +24,9 @@ namespace spldlt {
    void factor_front_indef_nocontrib(
          SymbolicFront const& snode,
          NumericFront<T, PoolAlloc> &node,
-         struct cpu_factor_options const& options) {
+         std::vector<spral::ssids::cpu::Workspace> &workspaces,
+         PoolAlloc& pool_alloc,
+         struct cpu_factor_options& options) {
 
       /* Extract useful information about node */
       int m = snode.nrow + node.ndelay_in;
@@ -33,20 +37,40 @@ namespace spldlt {
       int *perm = node.perm;
 
       int ldld = m;
-      T *ld = new T[2*m]; // FIXME: workspace
 
       int nelim = 0;
 
       printf("[factor_front_indef_nocontrib]\n");
 
-      node.nelim = nelim;
+      int blksz = options.cpu_block_size;
+      // node.nelim = nelim;      
+      // CopyBackup<T> backup(m, n, blksz);
+      CopyBackup<T, PoolAlloc> backup(m, n, blksz, pool_alloc);
+      bool const debug = false;
+      T *upd = nullptr;
 
-      node.nelim = ldlt_tpp_factor(
-            m, n, &perm[nelim], &lcol[nelim*(ldl+1)], ldl, &d[2*nelim], ld, m, 
-            options.action, options.u, options.small, nelim, &lcol[nelim], 
-            ldl);
+      node.nelim = FactorSymIndef
+         <T, INNER_BLOCK_SIZE, CopyBackup<T, PoolAlloc>, debug, PoolAlloc>
+         ::ldlt_app(m, n, perm, lcol, ldl, d, backup, options, blksz, 0.0, upd, 0, 
+                    workspaces, pool_alloc);
 
-      delete[] ld;
+      printf("[factor_front_indef_nocontrib] first pass = %d out of %d\n", node.nelim, n);
+
+      if (node.nelim < n) {
+         // Use TPP factor to eliminate the remaining columns in the following cases:
+         // 1) options.pivot_method is set to tpp;
+         // 2) We are at a root node;
+         // 3) options.failed_pivot_method is set to tpp.
+         if (m==n || options.pivot_method==PivotMethod::tpp) {
+            nelim = node.nelim;
+            T *ld = new T[2*(m-nelim)]; // TODO: workspace
+            node.nelim += ldlt_tpp_factor(
+                  m-nelim, n-nelim, &perm[nelim], &lcol[nelim*(ldl+1)], ldl, 
+                  &d[2*nelim], ld, m-nelim, options.action, options.u, options.small, 
+                  nelim, &lcol[nelim], ldl);
+            delete[] ld;
+         }
+      }
 
       node.ndelay_out = n - node.nelim;
    }

@@ -23,7 +23,7 @@ void *spldlt_create_numeric_tree_dbl(
       void *symbolic_tree_ptr,
       double *aval, // Values of A
       void** child_contrib, // Contributions from child subtrees
-      struct spral::ssids::cpu::cpu_factor_options const* options // Options in
+      struct spral::ssids::cpu::cpu_factor_options *options // Options in
       ) {
 
    // Retreive SymbolicTree object from pointer

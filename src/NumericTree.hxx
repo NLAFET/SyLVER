@@ -14,7 +14,7 @@
 #include "ssids/cpu/kernels/cholesky.hxx"
 #include "ssids/cpu/kernels/ldlt_app.hxx"
 // #include "ssids/cpu/kernels/assemble.hxx"
-
+#include "ssids/cpu/Workspace.hxx"
 
 #include "kernels/ldlt_app.hxx"
 #include "BuddyAllocator.hxx"
@@ -67,15 +67,13 @@ namespace spldlt {
             SymbolicTree& symbolic_tree, 
             T *aval,
             void** child_contrib,
-            struct spral::ssids::cpu::cpu_factor_options const& options)
-         : fkeep_(fkeep), symb_(symbolic_tree), 
+            struct spral::ssids::cpu::cpu_factor_options& options)
+         : fkeep_(fkeep), symb_(symbolic_tree),
            factor_alloc_(symbolic_tree.get_factor_mem_est(1.0)),
            pool_alloc_(symbolic_tree.get_pool_size<T>())
       {
          // Blocking size
          int blksz = options.cpu_block_size;
-
-         printf("[NumericTree] blksz = %d\n", blksz);
 
          // Associate symbolic fronts to numeric ones; copy tree structure
          fronts_.reserve(symbolic_tree.nnodes_+1);
@@ -86,12 +84,32 @@ namespace spldlt {
             auto* nc = symbolic_tree[ni].next_child;
             fronts_[ni].next_child = nc ? &fronts_[nc->idx] :  nullptr;
          }
-
+         
+         std::vector<spral::ssids::cpu::Workspace> workspaces;
+         // std::vector<spldlt::Workspace> workspaces;
+         int nworkers = 0;
+#if defined(SPLDLT_USE_STARPU)
+         nworkers = starpu_cpu_worker_get_count();
+#endif
+         printf("[NumericTree] blksz = %d, nworkers = %d\n", blksz, nworkers);
+         
          spldlt::starpu::codelet_init<T, PoolAllocator>();
+         if (!posdef) { 
+
+            static const int INNER_BLOCK_SIZE = 32;
+
+            // Init StarPU codelets
+            codelet_init_indef<T, INNER_BLOCK_SIZE, CopyBackup<T, PoolAllocator>, PoolAllocator>();
+
+            // Prepare workspaces
+            workspaces.reserve(nworkers);
+            for(int i = 0; i < nworkers; ++i)
+               workspaces.emplace_back(PAGE_SIZE);
+         }
 
          auto start = std::chrono::high_resolution_clock::now();
          if (posdef) factor_mf_posdef(aval, child_contrib, options);
-         else        factor_mf_indef(aval, child_contrib, options);
+         else        factor_mf_indef(aval, child_contrib, workspaces, options);
          // factor_mf_posdef(aval, child_contrib, options);
          // factor_mf_indef(aval, child_contrib, options);
          auto end = std::chrono::high_resolution_clock::now();
@@ -101,13 +119,14 @@ namespace spldlt {
 #if defined(SPLDLT_USE_STARPU)
          starpu_task_wait_for_all();
 #endif         
-         
       }
+
       ////////////////////////////////////////////////////////////////////////////////   
       // factor_mf_indef
       void factor_mf_indef(
             T *aval, void** child_contrib, 
-            struct spral::ssids::cpu::cpu_factor_options const& options) {         
+            std::vector<spral::ssids::cpu::Workspace> &workspaces,
+            struct spral::ssids::cpu::cpu_factor_options& options) {
 
          printf("[factor_mf_indef] posdef = %d\n", posdef);
          // printf("[factor_mf_indef] nparts = %d\n", symb_.nparts_);
@@ -164,7 +183,8 @@ namespace spldlt {
             // factor_front_posdef(sfront, fronts_[ni], options);
 
             // Compute factors
-            factor_front_indef_nocontrib(sfront, fronts_[ni], options);
+            factor_front_indef_nocontrib(
+                  sfront, fronts_[ni], workspaces,  pool_alloc_, options);
 #if defined(SPLDLT_USE_STARPU)
             starpu_task_wait_for_all();
 #endif
@@ -175,7 +195,9 @@ namespace spldlt {
 
             // form contrib
             form_contrib_front(sfront, fronts_[ni], blksz);
-
+#if defined(SPLDLT_USE_STARPU)
+            starpu_task_wait_for_all();
+#endif
             // Assemble front: non fully-summed columns i.e. contribution block 
             for (auto* child=fronts_[ni].first_child; child!=NULL; child=child->next_child) {
 
@@ -201,9 +223,8 @@ namespace spldlt {
                      // int* cache = work.get_ptr<int>(cm); // TODO move cache array
                      // for (int i=0; i<cm; i++)
                      // csnode.map[i] = map[ csnode.rlist[csnode.ncol+i] ];
-                     int cncol = child_sfront.ncol + child->ndelay_in;
-                     int cnrow = child_sfront.nrow + child->ndelay_in;
-
+                     int cncol = child->get_ncol();
+                     int cnrow = child->get_nrow();
 
                      int csa = cncol / blksz;
                      // Number of block rows in child node

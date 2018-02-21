@@ -553,27 +553,80 @@ namespace spldlt { namespace starpu {
 
       ////////////////////////////////////////////////////////////////////////////////      
       // Update contribution blocks
-
+      
+      template <typename T, typename PoolAlloc>
       void udpate_contrib_block_indef_cpu_func(void *buffers[], void *cl_arg) {
 
          T *upd = (T *)STARPU_MATRIX_GET_PTR(buffers[0]); 
          unsigned ldupd = STARPU_MATRIX_GET_LD(buffers[0]); // Get leading dimensions
          unsigned updm = STARPU_MATRIX_GET_NX(buffers[0]);
          unsigned updn = STARPU_MATRIX_GET_NY(buffers[0]);
+
+         T *lik = (T *)STARPU_MATRIX_GET_PTR(buffers[1]);
+         unsigned ld_lik = STARPU_MATRIX_GET_LD(buffers[1]); // Get leading dimensions
+
+         T *ljk = (T *)STARPU_MATRIX_GET_PTR(buffers[2]);
+         unsigned ld_ljk = STARPU_MATRIX_GET_LD(buffers[2]); // Get leading dimensions
          
-         
+         NumericFront<T, PoolAlloc> *node = nullptr;
+         int k, i, j;
+         int blksz;
+
+         starpu_codelet_unpack_args(
+               cl_arg, &node, &k, &i, &j, &blksz);
+
+         int nrow = node->get_nrow();
+         int ncol = node->get_ncol();
+         int ldl = align_lda<T>(nrow);
+         int nelim = std::min(blksz, node->nelim - k*blksz);
+         T *lcol = node->lcol;
+         T *d = &lcol[ncol*ldl];
+         T *dk = &d[2*k*blksz]; // TODO: Get Dk ptr from StarPU
+
+         int ljk_first_row = std::max(0, ncol-j*blksz);
+         int lik_first_row = std::max(0, ncol-i*blksz);
+
+         // TODO: Use workspaces
+         int ldld = spral::ssids::cpu::align_lda<T>(blksz);
+         T *ld = new T[blksz*ldld];
 
          udpate_contrib_block(
                updm, updn, upd, ldupd,  
-               nelim, lik, ldl, ljk, ldl,
-               (blk == 0), dk, ld, ldld);
+               nelim, &lik[lik_first_row], ld_lik, &ljk[ljk_first_row], ld_ljk,
+               (k == 0), dk, ld, ldld);
+
+         delete[] ld;
       }
 
       extern struct starpu_codelet cl_udpate_contrib_block_indef;
 
       // insert_udpate_contrib_block_indef
-      void insert_udpate_contrib_block_indef() {
+      template <typename T, typename PoolAlloc>
+      void insert_udpate_contrib_block_indef(
+            starpu_data_handle_t upd_hdl,
+            starpu_data_handle_t lik_hdl,
+            starpu_data_handle_t ljk_hdl,
+            NumericFront<T, PoolAlloc> *node,
+            int k, int i, int j,
+            int blksz, int prio
+            ) {
+
+         int ret;
          
+         ret = starpu_insert_task(
+               &cl_udpate_contrib_block_indef,
+               STARPU_RW, upd_hdl,
+               STARPU_R, lik_hdl,
+               STARPU_R, ljk_hdl,
+               STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
+               STARPU_VALUE, &k, sizeof(int),
+               STARPU_VALUE, &i, sizeof(int),
+               STARPU_VALUE, &j, sizeof(int),
+               STARPU_VALUE, &blksz, sizeof(int),
+               STARPU_PRIORITY, prio,
+               0);
+         STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
+
       }
 
       /* As it is not possible to statically intialize codelet in C++,
@@ -635,6 +688,11 @@ namespace spldlt { namespace starpu {
          cl_adjust.cpu_funcs[0] = adjust_cpu_func<T, IntAlloc>;
 
          // Initialize udpate_contrib_block_indef StarPU codelet
+         starpu_codelet_init(&cl_udpate_contrib_block_indef);
+         cl_udpate_contrib_block_indef.where = STARPU_CPU;
+         cl_udpate_contrib_block_indef.nbuffers = STARPU_VARIABLE_NBUFFERS;
+         cl_udpate_contrib_block_indef.name = "ASSEMBLE_CONTRIB";
+         cl_udpate_contrib_block_indef.cpu_funcs[0] = udpate_contrib_block_indef_cpu_func<T, Allocator>;
          
       }
 }} /* namespaces spldlt::starpu  */
