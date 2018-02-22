@@ -43,6 +43,7 @@ namespace spldlt {
 //    }
 
 
+   ////////////////////////////////////////////////////////////////////////////////
    // Activate frontal matrix: allocate data structures
    template <typename T, typename FactorAlloc, typename PoolAlloc>
    void activate_front(
@@ -53,8 +54,6 @@ namespace spldlt {
          int blksz,
          FactorAlloc& factor_alloc,
          PoolAlloc& pool_alloc) {
-
-      // printf("[activate_front] posdef = %d\n", posdef);
 
       // Allocate frontal matrix
       if (posdef) alloc_front_posdef(front, factor_alloc, pool_alloc);
@@ -68,6 +67,51 @@ namespace spldlt {
 #endif
    }
 
+   ////////////////////////////////////////////////////////////////////////////////
+   /// @brief Launches a task for activating a node
+   template <typename T, typename FactorAlloc, typename PoolAlloc>
+   void activate_front_task(
+         bool posdef,
+         SymbolicFront &snode,
+         NumericFront<T, PoolAlloc> &node,
+         void** child_contrib,
+         int blksz,
+         FactorAlloc& factor_alloc,
+         PoolAlloc& pool_alloc) {
+
+
+      printf("[activate_front_task]\n");
+
+#if defined(SPLDLT_USE_STARPU)
+
+      int nchild = 0;
+      for (auto* child=node.first_child; child!=NULL; child=child->next_child)
+         nchild++;
+
+      starpu_data_handle_t *cnode_hdls = new starpu_data_handle_t[nchild];
+      
+      int i = 0;
+      for (auto* child=node.first_child; child!=NULL; child=child->next_child) {
+         cnode_hdls[i] = child->symb.hdl;
+         ++i;
+      }
+      
+      insert_activate_node(
+            snode.hdl, cnode_hdls, nchild,
+            posdef, &snode, &node, child_contrib, blksz, &factor_alloc, 
+            &pool_alloc); 
+
+      delete[] cnode_hdls;
+
+#else
+      activate_front_task(
+            posdef, sfront, front, child_contrib, blksz, factor_alloc, 
+            pool_alloc);
+#endif
+      
+   }
+
+   ////////////////////////////////////////////////////////////////////////////////
    // Initialize node
    template <typename T, typename PoolAlloc>
    void init_node_task(
@@ -89,6 +133,7 @@ namespace spldlt {
 
    }
 
+
    // Terminate node
    template <typename T, typename PoolAlloc>
    void fini_node_task(SymbolicFront &snode, 
@@ -103,7 +148,54 @@ namespace spldlt {
 
    }
 
-////////////////////////////////////////////////////////////////////////////////
+   ////////////////////////////////////////////////////////////////////////////////
+   /// @brief Lauches a task that activate and init a front
+   template <typename T, typename FactorAlloc, typename PoolAlloc>
+   void activate_init_front_task(
+         bool posdef,
+         SymbolicFront &snode,
+         NumericFront<T, PoolAlloc> &node,
+         void** child_contrib,
+         int blksz,
+         FactorAlloc& factor_alloc,
+         PoolAlloc& pool_alloc,
+         T *aval
+         ){
+
+#if defined(SPLDLT_USE_STARPU)
+
+      int nchild = 0;
+      for (auto* child=node.first_child; child!=NULL; child=child->next_child)
+         nchild++;
+
+      starpu_data_handle_t *cnode_hdls = new starpu_data_handle_t[nchild];
+      
+      int i = 0;
+      for (auto* child=node.first_child; child!=NULL; child=child->next_child) {
+         cnode_hdls[i] = child->symb.hdl;
+         ++i;
+      }
+      
+      insert_activate_init_node(
+            snode.hdl, cnode_hdls, nchild,
+            posdef, &snode, &node, child_contrib, blksz, &factor_alloc, 
+            &pool_alloc, aval); 
+      
+      delete[] cnode_hdls;
+      
+#else
+      // Allocate data structures
+      activate_front(
+            posdef, snode, node, child_contrib, blksz, factor_alloc,
+            pool_alloc); 
+
+      // Add coefficients from original matrix
+      init_node(snode, node, aval);
+#endif
+
+   }
+
+   ////////////////////////////////////////////////////////////////////////////////
    // Factorize block on the diagonal
 
    // TODO create and use BLK structure

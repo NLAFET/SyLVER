@@ -93,7 +93,7 @@ namespace spldlt {
 #endif
          printf("[NumericTree] blksz = %d, nworkers = %d\n", blksz, nworkers);
          
-         spldlt::starpu::codelet_init<T, PoolAllocator>();
+         spldlt::starpu::codelet_init<T, FactorAllocator, PoolAllocator>();
          if (!posdef) { 
 
             static const int INNER_BLOCK_SIZE = 32;
@@ -169,14 +169,16 @@ namespace spldlt {
 
             printf("[factor_mf_indef] ni = %d\n", ni);
             
-            // Activate frontal matrix
-            activate_front(false, sfront, fronts_[ni], child_contrib, blksz, 
-                           factor_alloc_, pool_alloc_);
-            // continue;
-            // Initialize frontal matrix 
-            init_node(sfront, fronts_[ni], aval);
+            // Activate and init frontal matrix
+            activate_init_front_task(
+                  false, sfront, fronts_[ni], child_contrib, blksz, 
+                  factor_alloc_, pool_alloc_, aval);                  
+#if defined(SPLDLT_USE_STARPU)
+            starpu_task_wait_for_all();
+#endif
 
-            // Assemble contributions from children fronts and subtreess
+
+            // assemble contributions from children fronts and subtreess
             assemble(symb_.n, fronts_[ni], child_contrib, pool_alloc_, blksz);
 
             // Compute factors and Schur complement
@@ -198,70 +200,29 @@ namespace spldlt {
 #if defined(SPLDLT_USE_STARPU)
             starpu_task_wait_for_all();
 #endif
-            // Assemble front: non fully-summed columns i.e. contribution block 
+
+            // Assemble contributions from children nodes into non
+            // fully-summed columns
+            assemble_contrib(fronts_[ni], child_contrib, blksz);
+            
+            // Deactivate children fronts
             for (auto* child=fronts_[ni].first_child; child!=NULL; child=child->next_child) {
 
-               // SymbolicNode const& csnode = child->symb;
-               SymbolicFront &child_sfront = symb_[child->symb.idx];
+               SymbolicFront &csnode = child->symb;
 
-               int ldcontrib = child_sfront.nrow - child_sfront.ncol;
-               // Handle expected contributions (only if something there)
-               // if (child->contrib) {
-               if (ldcontrib>0) {
-                  // Skip iteration if child node is in a subtree
-                  if (child_sfront.exec_loc != -1) {                     
-                     // Assemble contribution block from subtrees into non
-                     // fully-summed coefficients
-                     assemble_contrib_subtree(
-                           fronts_[ni], child_sfront, child_contrib, 
-                           child_sfront.contrib_idx, blksz);
-
-                  }
-                  else {                     
-
-                     // int cm = csnode.nrow - csnode.ncol;
-                     // int* cache = work.get_ptr<int>(cm); // TODO move cache array
-                     // for (int i=0; i<cm; i++)
-                     // csnode.map[i] = map[ csnode.rlist[csnode.ncol+i] ];
-                     int cncol = child->get_ncol();
-                     int cnrow = child->get_nrow();
-
-                     int csa = cncol / blksz;
-                     // Number of block rows in child node
-                     int cnr = (cnrow-1) / blksz + 1; 
-                     // int cnc = (csnode.ncol-1) / blksz + 1; // number of block columns in child node
-                     // Lopp over blocks in contribution blocks
-                     for (int jj = csa; jj < cnr; ++jj) {                     
-                        // int c_sa = (csnode.ncol > jj*blksz) ? 0 : (jj*blksz-csnode.ncol); // first col in block
-                        // int c_en = std::min((jj+1)*blksz-csnode.ncol, cm); // last col in block
-                        // assemble_expected_contrib(c_sa, c_en, nodes_[ni], *child, map, cache);
-                        for (int ii = jj; ii < cnr; ++ii) {
-                           assemble_contrib_block(
-                                 fronts_[ni], *child, ii, jj, child_sfront.map, 
-                                 blksz);
-                        }
-                     }
-                  }
-               }
-               // #if defined(SPLDLT_USE_STARPU)
-               //                      starpu_task_wait_for_all();
-               // #endif
-
-               if (child_sfront.exec_loc == -1) {
+               if (csnode.exec_loc == -1) {
                   fini_node(*child);
-
 #if defined(SPLDLT_USE_STARPU)
                   // TODO put in fini_node kernel
-                  unregister_node_submit(child_sfront, *child, blksz);
+                  unregister_node_submit(csnode, *child, blksz);
 #endif
                }
 #if defined(SPLDLT_USE_STARPU)
                // Unregister symbolic handle on child node
-               starpu_data_unregister_submit(child_sfront.hdl);
+               starpu_data_unregister_submit(csnode.hdl);
 #endif
             } // Loop over child nodes
             
-
          }
       }
 

@@ -1235,7 +1235,7 @@ namespace spldlt { namespace starpu {
          assemble_contrib_block(*node, *cnode, ii, jj, map, blksz);
       }
 
-      // // StarPU codelet
+      // StarPU codelet
       struct starpu_codelet cl_assemble_contrib_block;
 
       template <typename T, typename PoolAlloc>
@@ -1290,10 +1290,155 @@ namespace spldlt { namespace starpu {
 
       }
 
+      ////////////////////////////////////////////////////////////////////////////////
+      // Activate node
+
+      template <typename T, typename FactorAlloc, typename PoolAlloc>
+      void activate_node_cpu_func(void *buffers[], void *cl_arg) {
+         
+         bool posdef;
+         SymbolicFront *snode;
+         NumericFront<T, PoolAlloc> *node;
+         void** child_contrib;
+         int blksz;
+         FactorAlloc *factor_alloc;
+         PoolAlloc *pool_alloc;
+
+         printf("[activate_node_cpu_func]\n");
+
+         starpu_codelet_unpack_args(
+               cl_arg, &posdef, &snode, &node, &child_contrib, &blksz,
+               &factor_alloc, &pool_alloc);
+
+         activate_front(posdef, *snode, *node, child_contrib, blksz, 
+                        *factor_alloc, *pool_alloc);
+         
+      }
+
+      // StarPU codelet
+      struct starpu_codelet cl_activate_node;
+
+      template <typename T, typename FactorAlloc, typename PoolAlloc>
+      void
+      insert_activate_node(
+            starpu_data_handle_t node_hdl, // Node's symbolic handle
+            starpu_data_handle_t *cnode_hdls, int nhdl, // Children node's symbolic handles
+            bool posdef,
+            SymbolicFront *snode,
+            NumericFront<T, PoolAlloc> *node,
+            void** child_contrib,
+            int blksz,
+            FactorAlloc *factor_alloc,
+            PoolAlloc *pool_alloc
+            ) {
+
+
+         struct starpu_data_descr *descrs = new starpu_data_descr[nhdl+1];
+
+         int nh = 0;
+         descrs[nh].handle = node_hdl; descrs[nh].mode = STARPU_RW;
+         nh++;
+
+         for (int i=0; i<nhdl; i++) {
+            descrs[nh].handle = cnode_hdls[i]; descrs[nh].mode = STARPU_R;
+            nh++;
+         }
+
+         int ret;
+         ret = starpu_task_insert(&cl_activate_node,
+                                  STARPU_DATA_MODE_ARRAY, descrs, nh,
+                                  STARPU_VALUE, &posdef, sizeof(bool),
+                                  STARPU_VALUE, &snode, sizeof(SymbolicFront*),
+                                  STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
+                                  STARPU_VALUE, &child_contrib, sizeof(void**),
+                                  STARPU_VALUE, &blksz, sizeof(int),
+                                  STARPU_VALUE, &factor_alloc, sizeof(FactorAlloc*),
+                                  STARPU_VALUE, &pool_alloc, sizeof(PoolAlloc*),
+                                  0);
+      }
+
+      ////////////////////////////////////////////////////////////////////////////////
+      // Activate and init node
+
+      template <typename T, typename FactorAlloc, typename PoolAlloc>
+      void activate_init_node_cpu_func(void *buffers[], void *cl_arg) {
+         
+         bool posdef;
+         SymbolicFront *snode;
+         NumericFront<T, PoolAlloc> *node;
+         void** child_contrib;
+         int blksz;
+         FactorAlloc *factor_alloc;
+         PoolAlloc *pool_alloc;
+         T *aval;
+
+         starpu_codelet_unpack_args(
+               cl_arg, &posdef, &snode, &node, &child_contrib, &blksz,
+               &factor_alloc, &pool_alloc, &aval);
+         
+
+         // Allocate data structures
+         activate_front(
+               posdef, *snode, *node, child_contrib, blksz, *factor_alloc,
+               *pool_alloc);
+      
+         // Add coefficients from original matrix
+         init_node(*snode, *node, aval);
+      }
+
+      // StarPU codelet
+      struct starpu_codelet cl_activate_init_node;
+
+      template <typename T, typename FactorAlloc, typename PoolAlloc>
+      void insert_activate_init_node(
+            starpu_data_handle_t node_hdl, // Node's symbolic handle
+            starpu_data_handle_t *cnode_hdls, int nhdl, // Children node's symbolic handles
+            bool posdef,
+            SymbolicFront *snode,
+            NumericFront<T, PoolAlloc> *node,
+            void** child_contrib,
+            int blksz,
+            FactorAlloc *factor_alloc,
+            PoolAlloc *pool_alloc,
+            T *aval
+            ) {
+
+         struct starpu_data_descr *descrs = new starpu_data_descr[nhdl+1];
+
+         int nh = 0;
+         descrs[nh].handle = node_hdl; descrs[nh].mode = STARPU_RW;
+         nh++;
+
+         for (int i=0; i<nhdl; i++) {
+            descrs[nh].handle = cnode_hdls[i]; descrs[nh].mode = STARPU_R;
+            nh++;
+         }
+
+         int ret;
+         ret = starpu_task_insert(&cl_activate_init_node,
+                                  STARPU_DATA_MODE_ARRAY, descrs, nh,
+                                  STARPU_VALUE, &posdef, sizeof(bool),
+                                  STARPU_VALUE, &snode, sizeof(SymbolicFront*),
+                                  STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
+                                  STARPU_VALUE, &child_contrib, sizeof(void**),
+                                  STARPU_VALUE, &blksz, sizeof(int),
+                                  STARPU_VALUE, &factor_alloc, sizeof(FactorAlloc*),
+                                  STARPU_VALUE, &pool_alloc, sizeof(PoolAlloc*),
+                                  STARPU_VALUE, &aval, sizeof(T*),
+                                  0);
+      }
+
       // As it is not possible to statically intialize codelet in C++,
       // we do it via this function
-      template <typename T, typename PoolAlloc>
+      template <typename T, typename FactorAlloc, typename PoolAlloc>
       void codelet_init() {
+
+         // activate node StarPU codelet
+         starpu_codelet_init(&cl_activate_node);
+         cl_activate_node.where = STARPU_CPU;
+         cl_activate_node.nbuffers = STARPU_VARIABLE_NBUFFERS;
+         cl_activate_node.name = "ACTIVATE_NODE";
+         cl_activate_node.cpu_funcs[0] = activate_node_cpu_func<T, FactorAlloc,PoolAlloc>;
 
          // init_node StarPU codelet
          starpu_codelet_init(&cl_init_node);
@@ -1301,6 +1446,13 @@ namespace spldlt { namespace starpu {
          cl_init_node.nbuffers = STARPU_VARIABLE_NBUFFERS;
          cl_init_node.name = "INIT_NODE";
          cl_init_node.cpu_funcs[0] = init_node_cpu_func<T, PoolAlloc>;
+
+         // activate_init node StarPU codelet
+         starpu_codelet_init(&cl_activate_init_node);
+         cl_activate_init_node.where = STARPU_CPU;
+         cl_activate_init_node.nbuffers = STARPU_VARIABLE_NBUFFERS;
+         cl_activate_init_node.name = "ACTIVATE_INIT_NODE";
+         cl_activate_init_node.cpu_funcs[0] = activate_init_node_cpu_func<T, FactorAlloc,PoolAlloc>;
 
          // fini_node StarPU codelet
          starpu_codelet_init(&cl_fini_node);

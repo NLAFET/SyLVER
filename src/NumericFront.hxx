@@ -214,11 +214,13 @@ namespace spldlt {
          contrib = nullptr;
       }
 
-      int get_nrow() {
+      /// @brief Return the number of rows in the node
+      inline int get_nrow() {
          return symb.nrow + ndelay_in;
       }
 
-      int get_ncol() {
+      /// @brief Return the number of columns in the node
+      inline int get_ncol() {
          return symb.ncol + ndelay_in;
       }
 
