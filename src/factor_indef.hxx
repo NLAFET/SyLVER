@@ -16,6 +16,33 @@ namespace spldlt {
    static const int INNER_BLOCK_SIZE = 32;
 
    ////////////////////////////////////////////////////////////////////////////////
+   // factor_front_indef_firtstpass_nodcontrib
+   // 
+   /// @brief Factorize the front for the first pass (i.e. without
+   /// pivoting the failed columns outside their blocks). Do not
+   /// update the Shur complement.
+   template <typename T, typename PoolAlloc>
+   void factor_front_indef_firtstpass_nodcontrib(
+         NumericFront<T, PoolAlloc> &node,
+         struct cpu_factor_options& options,
+         PoolAlloc& pool_alloc
+         ) {
+
+      /* Extract useful information about node */
+      int m = node.get_nrow();
+      int n = node.get_ncol();
+      size_t ldl = align_lda<T>(m);
+      int blksz = options.cpu_block_size;
+
+      if (options.pivot_method==PivotMethod::app_block) {
+         
+         CopyBackup<T, PoolAlloc> backup(m, n, blksz, pool_alloc);
+
+      }      
+   }
+
+
+   ////////////////////////////////////////////////////////////////////////////////
    // factor_front_indef_nocontrib
    //
    // Perform the LDLT factorization of front without forming the
