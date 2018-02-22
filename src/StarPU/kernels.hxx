@@ -1428,6 +1428,50 @@ namespace spldlt { namespace starpu {
                                   0);
       }
 
+      ////////////////////////////////////////////////////////////////////////////////
+      // Assemble node
+
+      template <typename T, typename PoolAlloc>
+      void assemble_cpu_func(void *buffers[], void *cl_arg) {
+
+         int n;
+         NumericFront<T, PoolAlloc> *node;
+         void** child_contrib;
+         PoolAlloc *pool_alloc;
+         int blksz;
+
+         starpu_codelet_unpack_args(
+               cl_arg, &n, &node, &child_contrib, &pool_alloc, &blksz);
+
+         assemble(n, *node, child_contrib, *pool_alloc, blksz);         
+      }
+
+      // StarPU codelet
+      struct starpu_codelet cl_assemble;
+      
+      template <typename T, typename PoolAlloc>
+      void insert_assemble(
+            starpu_data_handle_t node_hdl, // Node's symbolic handle
+            int n,
+            NumericFront<T, PoolAlloc> *node,
+            void** child_contrib, 
+            PoolAlloc *pool_alloc,
+            int blksz
+            ) {
+         
+         int ret;
+         ret = starpu_task_insert(&cl_assemble,
+                                  STARPU_RW, node_hdl,
+                                  STARPU_VALUE, &n, sizeof(int),
+                                  STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
+                                  STARPU_VALUE, &child_contrib, sizeof(void**),
+                                  STARPU_VALUE, &pool_alloc, sizeof(PoolAlloc*),
+                                  STARPU_VALUE, &blksz, sizeof(int),
+                                  0);
+         STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
+
+      }
+
       // As it is not possible to statically intialize codelet in C++,
       // we do it via this function
       template <typename T, typename FactorAlloc, typename PoolAlloc>
@@ -1523,6 +1567,13 @@ namespace spldlt { namespace starpu {
          // cl_update_between.nbuffers = STARPU_VARIABLE_NBUFFERS;
          // cl_update_between.name = "UPDATE_BETWEEN_BLK";
          // cl_update_between.cpu_funcs[0] = update_between_cpu_func<T, PoolAlloc>;
+
+         // assemble StarPU codelet
+         starpu_codelet_init(&cl_assemble);
+         cl_assemble.where = STARPU_CPU;
+         cl_assemble.nbuffers = STARPU_VARIABLE_NBUFFERS;
+         cl_assemble.name = "ASSEMBLE";
+         cl_assemble.cpu_funcs[0] = assemble_cpu_func<T, PoolAlloc>;
 
          // assemble_block StarPU codelet
          starpu_codelet_init(&cl_assemble_block);

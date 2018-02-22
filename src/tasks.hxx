@@ -1053,6 +1053,29 @@ namespace spldlt {
       node.ndelay_out = 0; // no delays
    }
 
+   ////////////////////////////////////////////////////////////////////////////////
+   // assemble front
+   template <typename T, typename PoolAlloc>
+   void assemble_task(
+         int n,
+         SymbolicFront const& snode,
+         NumericFront<T, PoolAlloc> &node,
+         void** child_contrib, 
+         PoolAlloc& pool_alloc,
+         int blksz
+         ) {
+
+#if defined(SPLDLT_USE_STARPU)
+      
+      insert_assemble(snode.hdl, n, &node, child_contrib, &pool_alloc, blksz);
+
+#else
+      assemble(n, node, child_contrib, pool_alloc, blksz);
+#endif
+      
+   }
+   
+
    // // TODO: error managment
    // template <typename T, typename PoolAlloc>
    // void factorize_node_posdef(
