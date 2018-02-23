@@ -1,6 +1,7 @@
 #pragma once
 
 #include "kernels/ldlt_app.hxx"
+#include "kernels/factor_indef.hxx"
 // #include "StarPU/kernels.hxx"
 
 #include <starpu.h>
@@ -8,6 +9,104 @@
 namespace spldlt { namespace starpu {
 
       using namespace spldlt::ldlt_app_internal;
+
+      ////////////////////////////////////////////////////////////////////////////////      
+      // register_node_indef
+      //
+      /// @brief Register handles for a node in StarPU.
+      template <typename T, typename PoolAlloc>
+      void register_node_indef(
+            SymbolicFront &sfront,
+            NumericFront<T, PoolAlloc> &front,
+            int blksz) {
+
+         typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
+
+         int m = sfront.nrow + front.ndelay_in;
+         int n = sfront.ncol + front.ndelay_in;
+         T *a = front.lcol;
+         int lda = spral::ssids::cpu::align_lda<T>(m);
+         int nr = (m-1) / blksz + 1; // number of block rows
+         int nc = (n-1) / blksz + 1; // number of block columns
+         ColumnData<T, IntAlloc> &cdata = *front.cdata;
+
+         // sfront.handles.reserve(nr*nc);
+         sfront.handles.resize(nr*nc); // allocate handles
+         // printf("[register_front] sfront.handles size = %d\n", sfront.handles.size());
+         for(int j = 0; j < nc; ++j) {
+
+            int blkn = std::min(blksz, n - j*blksz);
+
+            // Register cdata for APP factorization.
+            // FIXME: Only if pivot_method is APP
+            cdata[j].register_handle();     
+
+            for(int i = j; i < nr; ++i) {
+               int blkm = std::min(blksz, m - i*blksz);
+
+               starpu_matrix_data_register(
+                     &(sfront.handles[i + j*nr]), // StarPU handle ptr 
+                     STARPU_MAIN_RAM, // memory 
+                     reinterpret_cast<uintptr_t>(&a[(j*blksz)*lda+(i*blksz)]),
+                     lda, blkm, blkn,
+                     sizeof(T));
+               // printf("[register_front] blk idx = %d, hdl = %p\n", i + j*nr, &(sfront.handles[i + j*nr]));
+
+            }
+         }
+
+         int ldcontrib = m-n;
+         
+         // Allocate and init handles in contribution blocks         
+         if (ldcontrib>0) {
+            // Index of first block in contrib
+            int rsa = n/blksz;
+            // Number of block in contrib
+            int ncontrib = nr-rsa;
+
+            for(int j = rsa; j < nr; j++) {
+               for(int i = j; i < nr; i++) {
+                  // Register block in StarPU
+                  front.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib].register_handle();
+               }
+            }
+         }
+
+         // T *contrib = node.contrib;
+
+         // // Allocate and init handles in contribution blocks         
+         // if (contrib) {
+         //    // Index of first block in contrib
+         //    int rsa = n/blksz;
+         //    // Number of block in contrib
+         //    int ncontrib = nr-rsa;
+         //    snode.contrib_handles.resize(ncontrib*ncontrib);
+
+         //    for(int j = rsa; j < nr; j++) {
+         //       // First col in contrib block
+         //       int first_col = std::max(j*blksz, n);
+         //       // Block width
+         //       int blkn = std::min((j+1)*blksz, m) - first_col;
+
+         //       for(int i = j; i < nr; i++) {
+         //          // First col in contrib block
+         //          int first_row = std::max(i*blksz, n);
+         //          // Block height
+         //          int blkm = std::min((i+1)*blksz, m) - first_row;
+
+         //          // starpu_matrix_data_register(
+         //          //       &(snode.contrib_handles[(i-rsa)+(j-rsa)*ncontrib]), // StarPU handle ptr
+         //          //       STARPU_MAIN_RAM, // memory 
+         //          //       reinterpret_cast<uintptr_t>(&contrib[(first_col-n)*ldcontrib+(first_row-n)]),
+         //          //       ldcontrib, blkm, blkn, sizeof(T));
+                  
+         //          node.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib].register_handle();
+         //       }
+         //    }
+
+         // }
+      }
+
 
       /* factor_block_app StarPU task
          
@@ -590,7 +689,7 @@ namespace spldlt { namespace starpu {
          int ldld = spral::ssids::cpu::align_lda<T>(blksz);
          T *ld = new T[blksz*ldld];
 
-         udpate_contrib_block(
+         update_contrib_block(
                updm, updn, upd, ldupd,  
                nelim, &lik[lik_first_row], ld_lik, &ljk[ljk_first_row], ld_ljk,
                (k == 0), dk, ld, ldld);
@@ -629,13 +728,76 @@ namespace spldlt { namespace starpu {
 
       }
 
+      ////////////////////////////////////////////////////////////////////////////////
+      // permute failed
+
+      // CPU kernel
+      template <typename T, typename IntAlloc, typename PoolAlloc>
+      void permute_failed_cpu_func(void *buffers[], void *cl_arg) {
+         
+         NumericFront<T, PoolAlloc> *node = nullptr;
+         PoolAlloc *alloc = nullptr;
+         int blksz;
+
+         starpu_codelet_unpack_args(
+               cl_arg, &node, &alloc, &blksz);
+
+         // printf("[permute_failed_cpu_func]\n");
+
+         int n = node->get_ncol();
+
+         if (node->nelim < n) {
+
+            CopyBackup<T, PoolAlloc> &backup = *node->backup; 
+
+            backup.release_all_memory(); 
+         
+            int m = node->get_nrow();
+            int ldl = node->get_ldl();
+            ColumnData<T, IntAlloc> &cdata = *node->cdata;
+            bool const debug = false;
+         
+            FactorSymIndef
+               <T, INNER_BLOCK_SIZE, CopyBackup<T, PoolAlloc>, debug, PoolAlloc>
+               ::permute_failed (
+                     m, n, node->perm, node->lcol, ldl,
+                     node->nelim, 
+                     cdata, blksz,
+                     *alloc);
+         }
+                  
+      }
+
+      extern struct starpu_codelet cl_permute_failed;
+
+      template <typename T, typename PoolAlloc>
+      void insert_permute_failed(
+            starpu_data_handle_t col_hdl,
+            NumericFront<T, PoolAlloc> *node,
+            PoolAlloc *pool_alloc,
+            int blksz
+            ) {
+         
+         int ret;
+         
+         ret = starpu_insert_task(
+               &cl_permute_failed,
+               STARPU_RW, col_hdl,
+               STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
+               STARPU_VALUE, &pool_alloc, sizeof(PoolAlloc *),
+               STARPU_VALUE, &blksz, sizeof(int),
+               0);
+         STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
+
+      }
+
       /* As it is not possible to statically intialize codelet in C++,
          we do it via this function */
       template <typename T, int iblksz, 
                 typename Backup, 
                 typename Allocator>
       void codelet_init_indef() {
-
+         
          // printf("[codelet_init_indef]\n");
 
          typedef typename std::allocator_traits<Allocator>::template rebind_alloc<int> IntAlloc;
@@ -693,6 +855,13 @@ namespace spldlt { namespace starpu {
          cl_udpate_contrib_block_indef.nbuffers = STARPU_VARIABLE_NBUFFERS;
          cl_udpate_contrib_block_indef.name = "ASSEMBLE_CONTRIB";
          cl_udpate_contrib_block_indef.cpu_funcs[0] = udpate_contrib_block_indef_cpu_func<T, Allocator>;
+
+         // permute failed
+         starpu_codelet_init(&cl_permute_failed);
+         cl_permute_failed.where = STARPU_CPU;
+         cl_permute_failed.nbuffers = STARPU_VARIABLE_NBUFFERS;
+         cl_permute_failed.name = "PERMUTE_FAILED";
+         cl_permute_failed.cpu_funcs[0] = permute_failed_cpu_func<T, IntAlloc, Allocator>;
          
       }
 }} /* namespaces spldlt::starpu  */

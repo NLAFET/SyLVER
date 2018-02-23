@@ -15,6 +15,7 @@ namespace spldlt {
 
    static const int INNER_BLOCK_SIZE = 32;
 
+
    ////////////////////////////////////////////////////////////////////////////////
    // factor_front_indef_firtstpass_nodcontrib
    // 
@@ -71,16 +72,66 @@ namespace spldlt {
 
       int blksz = options.cpu_block_size;
       // node.nelim = nelim;      
-      // CopyBackup<T> backup(m, n, blksz);
-      CopyBackup<T, PoolAlloc> backup(m, n, blksz, pool_alloc);
       bool const debug = false;
       T *upd = nullptr;
 
+      node.nelim = 0; // TODO add parameter from;
+
       if (options.pivot_method==PivotMethod::app_block) {
-         node.nelim = FactorSymIndef
+
+         typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
+         
+         // CopyBackup<T> backup(m, n, blksz);
+         // CopyBackup<T, PoolAlloc> backup(m, n, blksz, pool_alloc);
+
+         // node.alloc_backup();
+         CopyBackup<T, PoolAlloc> &backup = *node.backup; 
+         // node.alloc_cdata();
+         ColumnData<T, IntAlloc> &cdata = *node.cdata;
+
+         // int const nblk = calc_nblk(n, blksz);
+         // int const mblk = calc_nblk(m, blksz);
+
+         // ColumnData<T, IntAlloc> cdata(n, blksz, IntAlloc(pool_alloc));
+         // node.nelim = FactorSymIndef
+         //    <T, INNER_BLOCK_SIZE, CopyBackup<T, PoolAlloc>, debug, PoolAlloc>
+         //    ::ldlt_app(m, n, perm, lcol, ldl, d, backup, options, blksz, 0.0, upd, 0, 
+         //               workspaces, pool_alloc);
+           
+         FactorSymIndef
             <T, INNER_BLOCK_SIZE, CopyBackup<T, PoolAlloc>, debug, PoolAlloc>
-            ::ldlt_app(m, n, perm, lcol, ldl, d, backup, options, blksz, 0.0, upd, 0, 
-                       workspaces, pool_alloc);
+            ::factor_indef_app_async(m, n, perm, lcol, ldl, d, cdata, backup,
+                                     options, blksz, 0.0, upd, 0, workspaces,
+                                     pool_alloc, node.nelim);
+// #if defined(SPLDLT_USE_STARPU)
+//          starpu_task_wait_for_all();
+// #endif
+
+//          printf("[factor_front_indef_nocontrib] node_nelim = %d\n", node.nelim);
+
+         // node.nelim = nelim;
+
+         // realease all memory used for backup
+         // backup.release_all_memory(); 
+ 
+         // Permute failed entries to end
+         // if (nelim < n)
+         //    FactorSymIndef
+         //       <T, INNER_BLOCK_SIZE, CopyBackup<T, PoolAlloc>, debug, PoolAlloc>
+         //       ::permute_failed (
+         //             m, n, perm, lcol, ldl,
+         //             nelim, 
+         //             cdata, blksz,
+         //             pool_alloc);
+
+         FactorSymIndef
+            <T, INNER_BLOCK_SIZE, CopyBackup<T, PoolAlloc>, debug, PoolAlloc>
+            ::release_permute_failed_task (
+                  node, pool_alloc, blksz);
+
+#if defined(SPLDLT_USE_STARPU)
+         starpu_task_wait_for_all();
+#endif
          
          printf("[factor_front_indef_nocontrib] first pass = %d out of %d\n", node.nelim, n);
       }
@@ -99,7 +150,7 @@ namespace spldlt {
                   &d[2*nelim], ld, m-nelim, options.action, options.u, options.small, 
                   nelim, &lcol[nelim], ldl);
             delete[] ld;
-            printf("[factor_front_indef_nocontrib] second pass = %d\n", node.nelim-nelim);
+            printf("[factor_front_indef_nocontrib] second pass = %d out of %d\n", node.nelim, n);
 
          }
       }
@@ -1103,6 +1154,8 @@ namespace spldlt {
          return next_elim;
       }
 
+   public:
+
       /* Permute failed entries to the back of the matrix
        */
       static
@@ -1206,7 +1259,326 @@ namespace spldlt {
       
       }
 
-   public:
+      static
+      void release_permute_failed_task(
+            NumericFront<T, Allocator> &node,
+            Allocator& alloc,
+            int blksz
+            ) {
+
+#if defined(SPLDLT_USE_STARPU)
+
+         ColumnData<T, IntAlloc> &cdata = *node.cdata;
+         int n = node.get_ncol();
+         int const nblk = calc_nblk(n, blksz);
+
+         insert_permute_failed(
+               cdata[nblk-1].get_hdl(),
+               &node, &alloc, blksz
+               );
+
+#else
+         int m = node.get_nrow();
+         int n = node.get_ncol();
+         size_t ldl = align_lda<T>(m);
+         T *lcol = node.lcol;
+         int *perm = node.perm;
+         int num_elim = node.nelim;
+
+         CopyBackup<T, Allocator> &backup = *node.backup; 
+         ColumnData<T, IntAlloc> &cdata = *node.cdata;
+         
+         backup.release_all_memory(); 
+
+         if (num_elim < n)
+            permute_failed (
+                  m, n, perm, lcol, ldl,
+                  num_elim, 
+                  cdata, blksz,
+                  alloc);         
+#endif
+
+      }
+
+      ////////////////////////////////////////////////////////////////////////////////   
+      // factor_indef_app_async
+      //
+      /// @brief Perform the LDLT factorization of a matrix using a
+      /// APTP pivoting strategy. 
+      /// @note This call is asynchronous.
+      static
+      void factor_indef_app_async(
+            int const m, int const n, int* perm, T* a,
+            int const lda, T* d, ColumnData<T,IntAlloc>& cdata, Backup& backup,
+            struct cpu_factor_options& options, int const block_size,
+            T const beta, T* upd, int const ldupd, std::vector<spral::ssids::cpu::Workspace>& work,
+            Allocator const& alloc, int& next_elim, int const from_blk=0
+            ) {
+
+         typedef spldlt::ldlt_app_internal::Block<T, iblksz, IntAlloc> BlockSpec;
+         
+
+         int const nblk = calc_nblk(n, block_size);
+         int const mblk = calc_nblk(m, block_size);
+
+         /* Setup */
+         // int next_elim = from_blk*block_size;
+      
+         int num_blocks = nblk*mblk;
+         std::vector<BlockSpec> blocks;
+         blocks.reserve(num_blocks);
+
+         for(int jblk=0; jblk<nblk; jblk++) {
+            for(int iblk=0; iblk<mblk; iblk++) {
+               // Create and insert block at the end (column-wise storage)
+               blocks.emplace_back(iblk, jblk, m, n, cdata, &a[jblk*block_size*lda+iblk*block_size], lda, block_size);
+               // alternativel store pointer
+               // blocks[jblk*mblk + iblk] = new BlockSpec(iblk, jblk, m, n, cdata, &a[jblk*block_size*lda+iblk*block_size], lda, block_size);
+#if defined(SPLDLT_USE_STARPU)
+               // register handle for block (iblk, jblk)
+               blocks[jblk*mblk+iblk].register_handle(); 
+#endif
+            }
+         }
+
+         /* Inner loop - iterate over block columns */
+         // try {
+         for(int blk=from_blk; blk<nblk; blk++) {
+
+            // #if defined(SPLDLT_USE_STARPU)
+            //             starpu_task_wait_for_all();
+            // #endif
+
+            /*if(debug) {
+              printf("Bcol %d:\n", blk);
+              print_mat(mblk, nblk, m, n, blkdata, cdata, lda);
+              }*/
+
+            // Factor diagonal: depend on perm[blk*block_size] as we init npass
+            // {  
+            // BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
+            
+            // Factorize block on diagonal
+
+            // BlockSpec dblk(blk, blk, m, n, cdata, &a[blk*block_size*lda+blk*block_size], lda, block_size);
+           
+            factor_block_app_task(
+                  blocks[blk*(mblk+1)] /*dblk*/, next_elim,
+                  perm, d,
+                  cdata, backup,
+                  options/*, block_size*/, work, alloc);
+
+            // #if defined(SPLDLT_USE_STARPU)
+            //             starpu_task_wait_for_all();
+            // #endif
+
+            // DEBUG
+            // {
+            //    if(debug) printf("Factor(%d)\n", blk);
+            //    BlockSpec dblk(blk, blk, m, n, cdata, &a[blk*block_size*lda+blk*block_size], lda, block_size);
+            //    // Store a copy for recovery in case of a failed column
+            //    dblk.backup(backup);
+            //    // Perform actual factorization
+            //    int nelim = dblk.template factor<Allocator>(
+            //          next_elim, perm, d, options, work[0], /*work,*/ alloc
+            //          );
+            //    if(nelim<0) return nelim;
+            //    // Init threshold check (non locking => task dependencies)
+            //    cdata[blk].init_passed(nelim);
+            // }
+            // END DEBUG
+
+            // }
+            
+            // Loop over off-diagonal blocks applying pivot
+            for(int jblk=0; jblk<blk; jblk++) {
+
+               // BlockSpec cblk(blk, jblk, m, n, cdata, &a[jblk*block_size*lda+blk*block_size], lda, block_size);               
+               // Apply factorization on uneliminated entries of
+               // left-diagonal block
+               applyT_block_app_task(
+                     /*dblk*/ blocks[blk*(mblk+1)], /*cblk*/blocks[jblk*mblk+blk],
+                     cdata, backup,
+                     options);
+
+               // #if defined(SPLDLT_USE_STARPU)
+               //                starpu_task_wait_for_all();
+               // #endif
+
+               // DEBUG
+               // if(debug) printf("ApplyT(%d,%d)\n", blk, jblk);
+               // BlockSpec dblk(blk, blk, m, n, cdata, &a[blk*block_size*lda+blk*block_size], lda, block_size);
+               // BlockSpec cblk(blk, jblk, m, n, cdata, &a[jblk*block_size*lda+blk*block_size], lda, block_size);
+               // // Apply row permutation from factorization of dblk and in
+               // // the process, store a (permuted) copy for recovery in case of
+               // // a failed column
+               // cblk.apply_rperm_and_backup(backup);
+               // // Perform elimination and determine number of rows in block
+               // // passing a posteori threshold pivot test
+               // int blkpass = cblk.apply_pivot_app(
+               //       dblk, options.u, options.small
+               //       );
+               // // Update column's passed pivot count
+               // cdata[blk].update_passed(blkpass);
+               // END DEBUG
+            }
+            for(int iblk=blk+1; iblk<mblk; iblk++) {
+
+               // BlockSpec rblk(iblk, blk, m, n, cdata, &a[blk*block_size*lda+iblk*block_size], lda, block_size);
+               // Apply factorization on sub-diagonal block
+               applyN_block_app_task(
+                     /*dblk*/ blocks[blk*(mblk+1)], /*rblk*/ blocks[blk*mblk+iblk],
+                     cdata, backup,
+                     options);
+
+               // #if defined(SPLDLT_USE_STARPU)
+               //                starpu_task_wait_for_all();
+               // #endif
+
+               // DEBUG
+               // if(debug) printf("ApplyN(%d,%d)\n", iblk, blk);
+               // BlockSpec dblk(blk, blk, m, n, cdata, &a[blk*block_size*lda+blk*block_size], lda, block_size);
+               // BlockSpec rblk(iblk, blk, m, n, cdata, &a[blk*block_size*lda+iblk*block_size], lda, block_size);
+               // // Apply column permutation from factorization of dblk and in
+               // // the process, store a (permuted) copy for recovery in case of
+               // // a failed column
+               // rblk.apply_cperm_and_backup(backup);
+               // // Perform elimination and determine number of rows in block
+               // // passing a posteori threshold pivot test
+               // int blkpass = rblk.apply_pivot_app(dblk, options.u, options.small);
+               // // Update column's passed pivot count
+               // cdata[blk].update_passed(blkpass);
+               // END DEBUG
+            }
+
+            // Adjust column once all applys have finished and we know final
+            // number of passed columns.
+            adjust_task(/* dblk*/blocks[blk*(mblk+1)], next_elim, cdata);
+
+            // #if defined(SPLDLT_USE_STARPU)
+            //             starpu_task_wait_for_all();
+            // #endif
+
+            // DEBUG
+            // if(debug) printf("Adjust(%d)\n", blk);
+            // cdata[blk].adjust(next_elim);
+            // END DEBUG
+
+            // Update uneliminated columns
+            for(int jblk=0; jblk<blk; jblk++) {
+
+               // BlockSpec jsrc(blk, jblk, m, n, cdata, &a[jblk*block_size*lda+blk*block_size], lda, block_size);
+
+               for(int iblk=jblk; iblk<mblk; iblk++) {
+
+                  int isrc_row = (blk<=iblk) ? iblk : blk;
+                  int isrc_col = (blk<=iblk) ? blk : iblk;
+                  // BlockSpec isrc(isrc_row, isrc_col, m, n, cdata, &a[isrc_col*block_size*lda+isrc_row*block_size], lda,
+                  // block_size);
+                  // BlockSpec ublk(iblk, jblk, m, n, cdata, &a[jblk*block_size*lda+iblk*block_size], lda, block_size);
+
+                  // Update uneliminated entries in blocks on the left
+                  // of current block column
+                  updateT_block_app_task(
+                        // isrc, jsrc, ublk,
+                        blocks[isrc_col*mblk+isrc_row], blocks[jblk*mblk+blk], 
+                        blocks[jblk*mblk+iblk],
+                        cdata, backup, 
+                        work);
+
+                  // #if defined(SPLDLT_USE_STARPU)
+                  //             starpu_task_wait_for_all();
+                  // #endif
+
+                  // DEBUG
+                  // if(debug) printf("UpdateT(%d,%d,%d)\n", iblk, jblk, blk);
+                  // int thread_num = omp_get_thread_num();
+                  // BlockSpec ublk(iblk, jblk, m, n, cdata, &a[jblk*block_size*lda+iblk*block_size], lda, block_size);
+                  // int isrc_row = (blk<=iblk) ? iblk : blk;
+                  // int isrc_col = (blk<=iblk) ? blk : iblk;
+                  // BlockSpec isrc(isrc_row, isrc_col, m, n, cdata, &a[isrc_col*block_size*lda+isrc_row*block_size], lda,
+                  //                block_size);
+                  // BlockSpec jsrc(blk, jblk, m, n, cdata, &a[jblk*block_size*lda+blk*block_size], lda, block_size);
+                  // // If we're on the block row we've just eliminated, restore
+                  // // any failed rows and release resources storing backup
+                  // ublk.restore_if_required(backup, blk);
+                  // // Perform actual update
+                  // ublk.update(isrc, jsrc, work[0]);
+                  // END DEBUG
+               }
+            }
+            for(int jblk=blk; jblk<nblk; jblk++) {
+
+               // Source block
+               // BlockSpec jsrc(jblk, blk, m, n, cdata, &a[blk*block_size*lda+jblk*block_size], lda, block_size);
+
+               for(int iblk=jblk; iblk<mblk; iblk++) {
+
+                  // Source block
+                  // BlockSpec isrc(iblk, blk, m, n, cdata, &a[blk*block_size*lda+iblk*block_size], lda, block_size);
+                  // Destination block
+                  // BlockSpec ublk(iblk, jblk, m, n, cdata, &a[jblk*block_size*lda+iblk*block_size], lda, block_size);
+
+                  // If we are on the current block column, restore
+                  // any failed columns and release backups.
+                  // Update blocks on the right of the current block column
+                  updateN_block_app_task (
+                        // isrc, jsrc, ublk,
+                        blocks[blk*mblk+iblk], blocks[blk*mblk+jblk],
+                        blocks[jblk*mblk+iblk],
+                        cdata, backup,
+                        beta, upd, ldupd,
+                        work);
+
+                  // #if defined(SPLDLT_USE_STARPU)
+                  //                   starpu_task_wait_for_all();
+                  // #endif
+
+               }
+            }
+
+            // #if defined(SPLDLT_USE_STARPU)
+            //             starpu_task_wait_for_all();
+            // #endif
+            // Handle update to contribution block, if required
+            //             if(upd && mblk>nblk) {
+            //                int uoffset = std::min(nblk*block_size, m) - n;
+            //                T *upd2 = &upd[uoffset*(ldupd+1)];
+            //                for(int jblk=nblk; jblk<mblk; ++jblk)
+            //                   for(int iblk=jblk; iblk<mblk; ++iblk) {
+            //                      T* upd_ij = &upd2[(jblk-nblk)*block_size*ldupd + 
+            //                                        (iblk-nblk)*block_size];
+            //                      {
+
+            //                         BlockSpec ublk(iblk, jblk, m, n, cdata, &a[jblk*block_size*lda+iblk*block_size], lda, block_size);
+            //                         BlockSpec isrc(iblk, blk, m, n, cdata, &a[blk*block_size*lda+iblk*block_size], lda, block_size);
+            //                         BlockSpec jsrc(jblk, blk, m, n, cdata, &a[blk*block_size*lda+jblk*block_size], lda, block_size);
+
+            //                         udpate_contrib_task(
+            //                               // isrc, jsrc, ublk,
+            //                               blocks[blk*mblk+iblk], blocks[blk*mblk+jblk],
+            //                               blocks[jblk*mblk+iblk],
+            //                               beta, upd_ij, ldupd,
+            //                               work
+            //                               );
+
+            // // #if defined(SPLDLT_USE_STARPU)
+            // //             starpu_task_wait_for_all();
+            // // #endif
+
+            //                      }
+            //                   }
+            //             }
+
+            // #if defined(SPLDLT_USE_STARPU)
+            //             starpu_task_wait_for_all();
+            // #endif
+
+         } // loop on block columns
+         
+         
+      }
+
 
       ////////////////////////////////////////////////////////////////////////////////   
       // ldlt_app_notask

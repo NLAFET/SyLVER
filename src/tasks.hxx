@@ -13,6 +13,7 @@
 #if defined(SPLDLT_USE_STARPU)
 #include <starpu.h>
 #include "StarPU/kernels.hxx"
+#include "StarPU/kernels_indef.hxx"
 using namespace spldlt::starpu;
 #endif
 
@@ -63,12 +64,15 @@ namespace spldlt {
       // Register symbolic handle for current node in StarPU
       // starpu_void_data_register(&(sfront.hdl));
       // Register block handles
-      register_node(sfront, front, blksz);
+      // register_node(sfront, front, blksz);
+
+      if (posdef) register_node(sfront, front, blksz);
+      else        register_node_indef(sfront, front, blksz);
 #endif
    }
 
    ////////////////////////////////////////////////////////////////////////////////
-   /// @brief Launches a task for activating a node
+   /// @brief Launches a task for activating a node.
    template <typename T, typename FactorAlloc, typename PoolAlloc>
    void activate_front_task(
          bool posdef,
@@ -78,7 +82,6 @@ namespace spldlt {
          int blksz,
          FactorAlloc& factor_alloc,
          PoolAlloc& pool_alloc) {
-
 
       printf("[activate_front_task]\n");
 
@@ -112,7 +115,7 @@ namespace spldlt {
    }
 
    ////////////////////////////////////////////////////////////////////////////////
-   // Initialize node
+   // Initialize node.
    template <typename T, typename PoolAlloc>
    void init_node_task(
          SymbolicFront &sfront, 
@@ -149,7 +152,7 @@ namespace spldlt {
    }
 
    ////////////////////////////////////////////////////////////////////////////////
-   /// @brief Lauches a task that activate and init a front
+   /// @brief Lauches a task that activate and init a front.
    template <typename T, typename FactorAlloc, typename PoolAlloc>
    void activate_init_front_task(
          bool posdef,

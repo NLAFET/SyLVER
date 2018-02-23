@@ -88,6 +88,7 @@ namespace spldlt {
       // /* Get space for contribution block + (explicitly do not zero it!) */
       // node.alloc_contrib();
       front.alloc_contrib_blocks();
+
    }
 
    ////////////////////////////////////////////////////////////////////////////////
@@ -159,6 +160,13 @@ namespace spldlt {
       front.perm = FAIntTraits::allocate(factor_alloc_int, ncol); // ncol fully summed variables
       for(int i=0; i<sfront.ncol; i++)
          front.perm[i] = sfront.rlist[i];
+
+      // FIXME: Only if pivot_method is APP
+      // allocate backups
+      front.alloc_backup();
+      
+      // allocate cdata
+      front.alloc_cdata();
    }
 
    ////////////////////////////////////////////////////////////////////////////////

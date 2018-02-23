@@ -25,5 +25,9 @@ namespace spldlt { namespace starpu {
 
       // udpate_contrib_block_indef StarPU codelet
       struct starpu_codelet cl_udpate_contrib_block_indef;
+
+      // permute_failed StarPU codelet
+      struct starpu_codelet cl_permute_failed;
+
       
 }} /* namespaces spldlt::starpu  */

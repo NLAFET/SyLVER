@@ -3,7 +3,7 @@
 namespace spldlt {
 
    template <typename T>
-   void udpate_contrib_block(
+   void update_contrib_block(
          int m, int n,
          T *upd, int ldupd,
          int k,

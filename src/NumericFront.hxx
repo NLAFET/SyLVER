@@ -7,6 +7,7 @@
 
 #include "ssids/cpu/cpu_iface.hxx"
 #include "ssids/cpu/SymbolicNode.hxx"
+#include "kernels/ldlt_app.hxx"
 
 namespace spldlt {
 
@@ -93,6 +94,7 @@ namespace spldlt {
    template <typename T, typename PoolAllocator>
    class NumericFront {
       typedef std::allocator_traits<PoolAllocator> PATraits;
+      typedef typename std::allocator_traits<PoolAllocator>::template rebind_alloc<int> IntAlloc;
    public:
       /**
        * \brief Constructor
@@ -103,7 +105,8 @@ namespace spldlt {
             // spral::ssids::cpu::SymbolicNode const& symb, 
             SymbolicFront &symb,
             PoolAllocator const& pool_alloc, int blksz)
-         : symb(symb), contrib(nullptr), pool_alloc_(pool_alloc), blksz(blksz)
+         : symb(symb), contrib(nullptr), pool_alloc_(pool_alloc), blksz(blksz),
+           backup(nullptr), cdata(nullptr)
       {
 
          // Note: it is safer to initialize the contrib_blocks array
@@ -214,6 +217,20 @@ namespace spldlt {
          contrib = nullptr;
       }
 
+      /// @brief Allocate backups to prepare for the LDL^T
+      /// facorization using APTP strategy
+      void alloc_backup() {
+         backup = 
+            new spldlt::ldlt_app_internal::CopyBackup<T, PoolAllocator>(
+                  get_nrow(), get_ncol(), blksz, pool_alloc_);
+      }
+      
+      void alloc_cdata() {
+         cdata = 
+            new spldlt::ldlt_app_internal::ColumnData<T, IntAlloc> (
+                  get_ncol(), blksz, IntAlloc(pool_alloc_));
+      }
+
       /// @brief Return the number of rows in the node
       inline int get_nrow() {
          return symb.nrow + ndelay_in;
@@ -247,6 +264,8 @@ namespace spldlt {
       T *contrib; // Pointer to contribution block
       int blksz; // Blocking size
       std::vector<spldlt::Block<T, PoolAllocator>> contrib_blocks; // Block structures containing contrib
+      spldlt::ldlt_app_internal::CopyBackup<T, PoolAllocator> *backup; // Stores baclups of matrix blocks
+      spldlt::ldlt_app_internal::ColumnData<T, IntAlloc> *cdata;
    private:
       PoolAllocator pool_alloc_; // Our own version of pool allocator for freeing
       // contrib
