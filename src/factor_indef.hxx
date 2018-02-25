@@ -22,25 +22,25 @@ namespace spldlt {
    /// @brief Factorize the front for the first pass (i.e. without
    /// pivoting the failed columns outside their blocks). Do not
    /// update the Shur complement.
-   template <typename T, typename PoolAlloc>
-   void factor_front_indef_firtstpass_nodcontrib(
-         NumericFront<T, PoolAlloc> &node,
-         struct cpu_factor_options& options,
-         PoolAlloc& pool_alloc
-         ) {
+   // template <typename T, typename PoolAlloc>
+   // void factor_front_indef_firtstpass_nodcontrib(
+   //       NumericFront<T, PoolAlloc> &node,
+   //       struct cpu_factor_options& options,
+   //       PoolAlloc& pool_alloc
+   //       ) {
 
-      /* Extract useful information about node */
-      int m = node.get_nrow();
-      int n = node.get_ncol();
-      size_t ldl = align_lda<T>(m);
-      int blksz = options.cpu_block_size;
+   //    /* Extract useful information about node */
+   //    int m = node.get_nrow();
+   //    int n = node.get_ncol();
+   //    size_t ldl = align_lda<T>(m);
+   //    int blksz = options.cpu_block_size;
 
-      if (options.pivot_method==PivotMethod::app_block) {
+   //    if (options.pivot_method==PivotMethod::app_block) {
          
-         CopyBackup<T, PoolAlloc> backup(m, n, blksz, pool_alloc);
+   //       CopyBackup<T, PoolAlloc> backup(m, n, blksz, pool_alloc);
 
-      }      
-   }
+   //    }      
+   // }
 
 
    ////////////////////////////////////////////////////////////////////////////////
@@ -57,8 +57,8 @@ namespace spldlt {
          struct cpu_factor_options& options) {
 
       /* Extract useful information about node */
-      int m = snode.nrow + node.ndelay_in;
-      int n = snode.ncol + node.ndelay_in;
+      int m = node.get_nrow();
+      int n = node.get_ncol();
       size_t ldl = align_lda<T>(m);
       T *lcol = node.lcol;
       T *d = &node.lcol[n*ldl];
@@ -129,33 +129,40 @@ namespace spldlt {
             ::release_permute_failed_task (
                   node, pool_alloc, blksz);
 
-#if defined(SPLDLT_USE_STARPU)
-         starpu_task_wait_for_all();
-#endif
+// #if defined(SPLDLT_USE_STARPU)
+//          starpu_task_wait_for_all();
+// #endif
          
          printf("[factor_front_indef_nocontrib] first pass = %d out of %d\n", node.nelim, n);
       }
 
-      if (node.nelim < n) {
-         // Use TPP factor to eliminate the remaining columns in the following cases:
-         // 1) options.pivot_method is set to tpp;
-         // 2) We are at a root node;
-         // 3) options.failed_pivot_method is set to tpp.
-         if (m==n || options.pivot_method==PivotMethod::tpp ||
-               options.failed_pivot_method==FailedPivotMethod::tpp) {
-            nelim = node.nelim;
-            T *ld = new T[2*(m-nelim)]; // TODO: workspace
-            node.nelim += ldlt_tpp_factor(
-                  m-nelim, n-nelim, &perm[nelim], &lcol[nelim*(ldl+1)], ldl, 
-                  &d[2*nelim], ld, m-nelim, options.action, options.u, options.small, 
-                  nelim, &lcol[nelim], ldl);
-            delete[] ld;
-            printf("[factor_front_indef_nocontrib] second pass = %d out of %d\n", node.nelim, n);
+      factor_front_indef_secondpass_nocontrib_task(
+            node, workspaces,options);
 
-         }
-      }
+// #if defined(SPLDLT_USE_STARPU)
+//       starpu_task_wait_for_all();
+// #endif
 
-      node.ndelay_out = n - node.nelim;
+      // if (node.nelim < n) {
+      //    // Use TPP factor to eliminate the remaining columns in the following cases:
+      //    // 1) options.pivot_method is set to tpp;
+      //    // 2) We are at a root node;
+      //    // 3) options.failed_pivot_method is set to tpp.
+      //    if (m==n || options.pivot_method==PivotMethod::tpp ||
+      //          options.failed_pivot_method==FailedPivotMethod::tpp) {
+      //       nelim = node.nelim;
+      //       T *ld = new T[2*(m-nelim)]; // TODO: workspace
+      //       node.nelim += ldlt_tpp_factor(
+      //             m-nelim, n-nelim, &perm[nelim], &lcol[nelim*(ldl+1)], ldl, 
+      //             &d[2*nelim], ld, m-nelim, options.action, options.u, options.small, 
+      //             nelim, &lcol[nelim], ldl);
+      //       delete[] ld;
+      //       printf("[factor_front_indef_nocontrib] second pass = %d out of %d\n", node.nelim, n);
+
+      //    }
+      // }
+
+      // node.ndelay_out = n - node.nelim;
    }
 
    ////////////////////////////////////////////////////////////////////////////////

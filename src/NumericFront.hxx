@@ -246,6 +246,12 @@ namespace spldlt {
          return spral::ssids::cpu::align_lda<T>(symb.nrow + ndelay_in);
       }
 
+#if defined(SPLDLT_USE_STARPU)
+      starpu_data_handle_t get_hdl() {
+         return symb.hdl;
+      }
+#endif
+      
    public:
       /* Symbolic node associate with this one */
       // spral::ssids::cpu::SymbolicNode const& symb;

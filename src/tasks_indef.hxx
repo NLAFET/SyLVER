@@ -1,11 +1,15 @@
 #pragma once
 
+#include "ssids/cpu/cpu_iface.hxx"
+
 #include "kernels/factor_indef.hxx"
 
 #if defined(SPLDLT_USE_STARPU)
 #include "StarPU/kernels_indef.hxx"
 #endif
 namespace spldlt {
+
+   ////////////////////////////////////////////////////////////////////////////////
 
    template <typename T, typename PoolAlloc>
    void update_contrib_indef_task(
@@ -31,8 +35,8 @@ namespace spldlt {
 
 #else
 
-      int nrow = snode.nrow + node.ndelay_in;
-      int ncol = snode.ncol + node.ndelay_in;
+      int nrow = node.get_nrow();
+      int ncol = node.get_ncol();
       int rsa = ncol / blksz; // index of first block in contribution blocks
       T *lcol = node.lcol;
       int ldl = align_lda<T>(nrow);
@@ -64,4 +68,66 @@ namespace spldlt {
 #endif
    }
 
+
+   ////////////////////////////////////////////////////////////////////////////////
+   // factor_front_indef_secondpass_nocontrib_task
+
+   template <typename T, typename PoolAlloc>
+   void factor_front_indef_secondpass_nocontrib_task(
+         NumericFront<T, PoolAlloc> &node,
+         std::vector<spral::ssids::cpu::Workspace> &workspaces,
+         struct cpu_factor_options& options
+         ) {
+
+#if defined(SPLDLT_USE_STARPU)
+
+      typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
+      int blksz = options.cpu_block_size;
+
+      ColumnData<T, IntAlloc> &cdata = *node.cdata;
+      int n = node.get_ncol();
+      int const nblk = calc_nblk(n, blksz);
+      
+      insert_factor_front_indef_secondpass_nocontrib(
+            cdata[nblk-1].get_hdl(), node.get_hdl(),
+            &node, &workspaces, &options
+            );
+
+#else
+      
+      int m = node.get_nrow();
+      int n = node.get_ncol();
+      size_t ldl = align_lda<T>(m);
+      T *lcol = node.lcol;
+      T *d = &node.lcol[n*ldl];
+      int *perm = node.perm;
+
+      int nelim = 0;
+
+      // Try to eliminate the columns uneliminated at first pass
+      if (node.nelim < n) {
+         // Use TPP factor to eliminate the remaining columns in the following cases:
+         // 1) options.pivot_method is set to tpp;
+         // 2) We are at a root node;
+         // 3) options.failed_pivot_method is set to tpp.
+         if (m==n || options.pivot_method==PivotMethod::tpp ||
+             options.failed_pivot_method==FailedPivotMethod::tpp) {
+            nelim = node.nelim;
+            T *ld = new T[2*(m-nelim)]; // TODO: workspace
+            node.nelim += ldlt_tpp_factor(
+                  m-nelim, n-nelim, &perm[nelim], &lcol[nelim*(ldl+1)], ldl, 
+                  &d[2*nelim], ld, m-nelim, options.action, options.u, options.small, 
+                  nelim, &lcol[nelim], ldl);
+            delete[] ld;
+            printf("[factor_front_indef_nocontrib] second pass = %d out of %d\n", node.nelim, n);
+
+         }
+      }
+
+      // Update number of delayed columns
+      node.ndelay_out = n - node.nelim;
+#endif
+      
+   }
+   
 }

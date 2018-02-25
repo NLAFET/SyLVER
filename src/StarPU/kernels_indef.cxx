@@ -29,5 +29,7 @@ namespace spldlt { namespace starpu {
       // permute_failed StarPU codelet
       struct starpu_codelet cl_permute_failed;
 
+      // factor_front_indef_secondpass_nocontrib StarPU codelet
+      struct starpu_codelet cl_factor_front_indef_secondpass_nocontrib;
       
 }} /* namespaces spldlt::starpu  */

@@ -214,7 +214,8 @@ namespace spldlt {
                SymbolicFront &csnode = child->symb;
 
                if (csnode.exec_loc == -1) {
-                  fini_node(*child);
+                  // fini_node(*child);
+                  fini_node_task(*child, INIT_PRIO);
 #if defined(SPLDLT_USE_STARPU)
                   // TODO put in fini_node kernel
                   unregister_node_submit(csnode, *child, blksz);
@@ -419,7 +420,7 @@ namespace spldlt {
 
                if (child_sfront.exec_loc == -1) {
                   // fini_node(*child);
-                  fini_node_task(child_sfront, *child, INIT_PRIO);
+                  fini_node_task(*child, INIT_PRIO);
 // #if defined(SPLDLT_USE_STARPU)
 //                   starpu_task_wait_for_all();
 // #endif
