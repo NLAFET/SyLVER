@@ -15,6 +15,138 @@ namespace spldlt {
 
    static const int INNER_BLOCK_SIZE = 32;
 
+   ////////////////////////////////////////////////////////////////////////////////
+   // factor_front_indef
+   //
+   /// @brief Perform the LDLT factorization of front without forming
+   /// the contribution block
+   template <typename T, typename PoolAlloc>
+   void factor_front_indef(
+         SymbolicFront const& snode,
+         NumericFront<T, PoolAlloc> &node,
+         std::vector<spral::ssids::cpu::Workspace> &workspaces,
+         PoolAlloc& pool_alloc,
+         struct cpu_factor_options& options) {
+
+      /* Extract useful information about node */
+      int m = node.get_nrow();
+      int n = node.get_ncol();
+      size_t ldl = align_lda<T>(m);
+      T *lcol = node.lcol;
+      T *d = &node.lcol[n*ldl];
+      int *perm = node.perm;
+
+      int ldld = m;
+
+      int nelim = 0;
+
+      printf("[factor_front_indef]\n");
+
+      int blksz = options.cpu_block_size;
+      // node.nelim = nelim;      
+      bool const debug = false;
+      T *upd = nullptr;
+
+      node.nelim = 0; // TODO add parameter from;
+
+      if (options.pivot_method==PivotMethod::app_block) {
+
+         typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
+         
+         // CopyBackup<T> backup(m, n, blksz);
+         // CopyBackup<T, PoolAlloc> backup(m, n, blksz, pool_alloc);
+
+         // node.alloc_backup();
+         // node.alloc_cdata();
+
+         CopyBackup<T, PoolAlloc> &backup = *node.backup; 
+         ColumnData<T, IntAlloc> &cdata = *node.cdata;
+
+         // int const nblk = calc_nblk(n, blksz);
+         // int const mblk = calc_nblk(m, blksz);
+
+         //ColumnData<T, IntAlloc> cdata(n, blksz, IntAlloc(pool_alloc));
+
+         // node.nelim = FactorSymIndef
+         //    <T, INNER_BLOCK_SIZE, CopyBackup<T, PoolAlloc>, debug, PoolAlloc>
+         //    ::ldlt_app(m, n, perm, lcol, ldl, d, backup, options, blksz, 0.0, upd, 0, 
+         //               workspaces, pool_alloc);
+           
+         FactorSymIndef
+            <T, INNER_BLOCK_SIZE, CopyBackup<T, PoolAlloc>, debug, PoolAlloc>
+            ::factor_indef_app_async(m, n, perm, lcol, ldl, d, cdata, backup,
+                                     options, blksz, 0.0, upd, 0, workspaces,
+                                     pool_alloc, node.nelim);
+
+// #if defined(SPLDLT_USE_STARPU)
+//          starpu_task_wait_for_all();
+// #endif
+
+//          printf("[factor_front_indef_nocontrib] node_nelim = %d\n", node.nelim);
+
+         // // realease all memory used for backup
+         // backup.release_all_memory(); 
+         
+         // // Permute failed entries to end
+         // if (node.nelim < n)
+         //    FactorSymIndef
+         //       <T, INNER_BLOCK_SIZE, CopyBackup<T, PoolAlloc>, debug, PoolAlloc>
+         //       ::permute_failed (
+         //             m, n, perm, lcol, ldl,
+         //             nelim, 
+         //             cdata, blksz,
+         //             pool_alloc);
+
+         FactorSymIndef
+            <T, INNER_BLOCK_SIZE, CopyBackup<T, PoolAlloc>, debug, PoolAlloc>
+            ::release_permute_failed_task (
+                  node, pool_alloc, blksz);
+
+// #if defined(SPLDLT_USE_STARPU)
+//          starpu_task_wait_for_all();
+// #endif
+         
+//         printf("[factor_front_indef_nocontrib] first pass = %d out of %d\n", node.nelim, n);
+      }
+
+      // Process uneliminated columns 
+      factor_front_indef_secondpass_nocontrib_task(
+            node, workspaces,options);
+
+// #if defined(SPLDLT_USE_STARPU)
+//       starpu_task_wait_for_all();
+// #endif
+
+      // if (node.nelim < n) {
+      //    // Use TPP factor to eliminate the remaining columns in the following cases:
+      //    // 1) options.pivot_method is set to tpp;
+      //    // 2) We are at a root node;
+      //    // 3) options.failed_pivot_method is set to tpp.
+      //    if (m==n || options.pivot_method==PivotMethod::tpp ||
+      //          options.failed_pivot_method==FailedPivotMethod::tpp) {
+      //       nelim = node.nelim;
+      //       T *ld = new T[2*(m-nelim)]; // TODO: workspace
+      //       node.nelim += ldlt_tpp_factor(
+      //             m-nelim, n-nelim, &perm[nelim], &lcol[nelim*(ldl+1)], ldl, 
+      //             &d[2*nelim], ld, m-nelim, options.action, options.u, options.small, 
+      //             nelim, &lcol[nelim], ldl);
+      //       delete[] ld;
+      //       printf("[factor_front_indef_nocontrib] second pass = %d out of %d\n", node.nelim, n);
+
+      //    }
+      // }
+
+      // node.ndelay_out = n - node.nelim;
+
+// #if defined(SPLDLT_USE_STARPU)
+//       starpu_task_wait_for_all();
+// #endif
+
+      // Form contribution blocks
+      // form_contrib_front_task(node, blksz);
+      form_contrib_front(snode, node, blksz);
+
+   }
 
    ////////////////////////////////////////////////////////////////////////////////
    // factor_front_indef_firtstpass_nodcontrib
@@ -166,20 +298,6 @@ namespace spldlt {
       // node.ndelay_out = n - node.nelim;
    }
 
-// #if defined(SPLDLT_USE_STARPU)
-//    template <typename T, typename PoolAlloc>
-//    void factor_front_indef_nocontrib_cpu_func(void *buffers[], void *cl_arg) {
-      
-//       NumericFront<T, PoolAlloc> *node;
-//       std::vector<spral::ssids::cpu::Workspace> *workspaces;
-//       PoolAlloc *pool_alloc;
-//       struct cpu_factor_options *options;
-
-      
-      
-//    }
-// #endif
-
    ////////////////////////////////////////////////////////////////////////////////
    // form_contrib_front
    //
@@ -194,17 +312,18 @@ namespace spldlt {
 
       int iblksz = blksz;
       
-      int nrow = snode.nrow + node.ndelay_in;
-      int ncol = snode.ncol + node.ndelay_in;
+      int nrow = node.get_nrow();
+      int ncol = node.get_ncol();
       size_t contrib_dimn = nrow-ncol;
       printf("[form_contrib_front] contrib_dimn = %zu\n", contrib_dimn);
       if (contrib_dimn == 0) return; // Nothing to do
 
-      int n = node.nelim;
+      // int n = node.nelim;
       int ldl = align_lda<T>(nrow);
       T *lcol = node.lcol;
       int nr = (nrow-1) / blksz + 1; // number of block rows
-      int nc = (n-1) / blksz + 1; // number of block columns
+      // int nc = (n-1) / blksz + 1; // number of block columns
+      int nc = (ncol-1) / blksz + 1; // number of block columns
       int rsa = ncol / blksz; // index of first block in contribution blocks  
       int ncontrib = nr-rsa;
       T *d = &lcol[ncol*ldl];

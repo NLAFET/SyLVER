@@ -139,10 +139,11 @@ namespace spldlt {
          // Blocking size
          int blksz = options.cpu_block_size;
 
-         // Register symbolic handles on nodes
+         // Register symbolic handles.
          for(int ni = 0; ni < symb_.nnodes_; ++ni) {
             // TODO move hdl registration to activate task
-            starpu_void_data_register(&(symb_[ni].hdl));
+            starpu_void_data_register(&(symb_[ni].hdl)); // Node's symbolic handle
+            // starpu_void_data_register(&(fronts_[ni].contrib_hdl)); // Node's symbolic handle
          }
 
          for(int p = 0; p < symb_.nparts_; ++p) {
@@ -183,9 +184,9 @@ namespace spldlt {
             // assemble contributions from children fronts and subtreess
             // assemble(symb_.n, fronts_[ni], child_contrib, pool_alloc_, blksz);
             assemble_task(symb_.n, sfront, fronts_[ni], child_contrib, pool_alloc_, blksz);
-#if defined(SPLDLT_USE_STARPU)
-            starpu_task_wait_for_all();
-#endif
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
 
             // Compute factors and Schur complement
             // factor_front_posdef(sfront, fronts_[ni], options);
@@ -193,11 +194,8 @@ namespace spldlt {
             // Compute factors
             // factor_front_indef_nocontrib(
             //       sfront, fronts_[ni], workspaces,  pool_alloc_, options);
-            factor_front_indef_nocontrib_task(
-                  fronts_[ni], workspaces,  pool_alloc_, options);
-// #if defined(SPLDLT_USE_STARPU)
-//             starpu_task_wait_for_all();
-// #endif
+            // factor_front_indef_nocontrib_task(
+            //       fronts_[ni], workspaces,  pool_alloc_, options);
 
             // printf("[factor_mf_indef] nelim = %d\n", fronts_[ni].nelim);
             // printf("[factor_mf_indef] ndelay_in = %d\n", fronts_[ni].ndelay_in);
@@ -205,7 +203,14 @@ namespace spldlt {
 
             // form contrib
             // form_contrib_front(sfront, fronts_[ni], blksz);
-             form_contrib_front_task(fronts_[ni], blksz);
+//              form_contrib_front_task(fronts_[ni], blksz);
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
+
+            factor_front_indef_task(
+                  fronts_[ni], workspaces,  pool_alloc_, options);
+
 #if defined(SPLDLT_USE_STARPU)
             starpu_task_wait_for_all();
 #endif

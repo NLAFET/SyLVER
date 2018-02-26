@@ -83,7 +83,7 @@ namespace spldlt {
       int lda; ///< leading dimension of underlying storage
       T* a; ///< pointer to underlying matrix storage  
 #if defined(SPLDLT_USE_STARPU)
-   starpu_data_handle_t hdl;
+      starpu_data_handle_t hdl;
 #endif
    private:
       PoolAllocator pool_alloc_; // Our own version of pool allocator for freeing
@@ -272,6 +272,9 @@ namespace spldlt {
       std::vector<spldlt::Block<T, PoolAllocator>> contrib_blocks; // Block structures containing contrib
       spldlt::ldlt_app_internal::CopyBackup<T, PoolAllocator> *backup; // Stores baclups of matrix blocks
       spldlt::ldlt_app_internal::ColumnData<T, IntAlloc> *cdata;
+#if defined(SPLDLT_USE_STARPU)
+      starpu_data_handle_t contrib_hdl; // Symbolic handle for contribution blocks
+#endif
    private:
       PoolAllocator pool_alloc_; // Our own version of pool allocator for freeing
       // contrib

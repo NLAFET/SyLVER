@@ -23,16 +23,21 @@ namespace spldlt {
       
 #if defined(SPLDLT_USE_STARPU)
 
+      typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
 
-      int nrow = snode.nrow + node.ndelay_in;
-      int ncol = snode.ncol + node.ndelay_in;
+      int nrow = node.get_nrow();
+      int ncol = node.get_ncol();
       int rsa = ncol / blksz; // index of first block in contribution blocks
       int nr = (nrow-1) / blksz + 1; // number of block rows
       int ncontrib = nr-rsa;
 
+      ColumnData<T, IntAlloc> &cdata = *node.cdata;
+      int const nblk = calc_nblk(ncol, blksz);
+
       insert_udpate_contrib_block_indef(
             node.contrib_blocks[(jblk-rsa)*ncontrib+(iblk-rsa)].hdl,
             snode.handles[blk*nr+iblk], snode.handles[blk*nr+jblk],
+            cdata[nblk-1].get_hdl(), // make sure col has been processed
             &node, blk, iblk, jblk, blksz, prio);
 
 #else

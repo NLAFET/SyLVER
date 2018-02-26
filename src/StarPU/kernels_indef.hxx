@@ -679,6 +679,7 @@ namespace spldlt { namespace starpu {
          int ncol = node->get_ncol();
          int ldl = align_lda<T>(nrow);
          int nelim = std::min(blksz, node->nelim - k*blksz);
+         if (nelim <= 0) return; // No factors to update in current block-column
          T *lcol = node->lcol;
          T *d = &lcol[ncol*ldl];
          T *dk = &d[2*k*blksz]; // TODO: Get Dk ptr from StarPU
@@ -706,6 +707,7 @@ namespace spldlt { namespace starpu {
             starpu_data_handle_t upd_hdl,
             starpu_data_handle_t lik_hdl,
             starpu_data_handle_t ljk_hdl,
+            starpu_data_handle_t col_hdl,
             NumericFront<T, PoolAlloc> *node,
             int k, int i, int j,
             int blksz, int prio
@@ -718,6 +720,7 @@ namespace spldlt { namespace starpu {
                STARPU_RW, upd_hdl,
                STARPU_R, lik_hdl,
                STARPU_R, ljk_hdl,
+               STARPU_R, col_hdl,
                STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
                STARPU_VALUE, &k, sizeof(int),
                STARPU_VALUE, &i, sizeof(int),
@@ -786,7 +789,7 @@ namespace spldlt { namespace starpu {
                &cl_permute_failed,
                STARPU_RW, col_hdl,
                STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
-               STARPU_VALUE, &pool_alloc, sizeof(PoolAlloc *),
+               STARPU_VALUE, &pool_alloc, sizeof(PoolAlloc*),
                STARPU_VALUE, &blksz, sizeof(int),
                0);
          STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
@@ -871,7 +874,6 @@ namespace spldlt { namespace starpu {
                
       }
 
-
       ////////////////////////////////////////////////////////////////////////////////
 
       /* As it is not possible to statically intialize codelet in C++,
@@ -936,7 +938,7 @@ namespace spldlt { namespace starpu {
          starpu_codelet_init(&cl_udpate_contrib_block_indef);
          cl_udpate_contrib_block_indef.where = STARPU_CPU;
          cl_udpate_contrib_block_indef.nbuffers = STARPU_VARIABLE_NBUFFERS;
-         cl_udpate_contrib_block_indef.name = "ASSEMBLE_CONTRIB";
+         cl_udpate_contrib_block_indef.name = "UPDATE_CONTRIB_BLOCK_INDEF";
          cl_udpate_contrib_block_indef.cpu_funcs[0] = udpate_contrib_block_indef_cpu_func<T, Allocator>;
 
          // permute failed
