@@ -143,7 +143,7 @@ namespace spldlt {
          for(int ni = 0; ni < symb_.nnodes_; ++ni) {
             // TODO move hdl registration to activate task
             starpu_void_data_register(&(symb_[ni].hdl)); // Node's symbolic handle
-            // starpu_void_data_register(&(fronts_[ni].contrib_hdl)); // Node's symbolic handle
+            starpu_void_data_register(&(fronts_[ni].contrib_hdl)); // Node's symbolic handle
          }
 
          for(int p = 0; p < symb_.nparts_; ++p) {
@@ -196,17 +196,19 @@ namespace spldlt {
             //       sfront, fronts_[ni], workspaces,  pool_alloc_, options);
             // factor_front_indef_nocontrib_task(
             //       fronts_[ni], workspaces,  pool_alloc_, options);
-
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
             // printf("[factor_mf_indef] nelim = %d\n", fronts_[ni].nelim);
             // printf("[factor_mf_indef] ndelay_in = %d\n", fronts_[ni].ndelay_in);
             // printf("[factor_mf_indef] ndelay_out = %d\n", fronts_[ni].ndelay_out);
 
             // form contrib
             // form_contrib_front(sfront, fronts_[ni], blksz);
-//              form_contrib_front_task(fronts_[ni], blksz);
-// #if defined(SPLDLT_USE_STARPU)
-//             starpu_task_wait_for_all();
-// #endif
+            // form_contrib_front_task(fronts_[ni], blksz);
+#if defined(SPLDLT_USE_STARPU)
+            starpu_task_wait_for_all();
+#endif
 
             factor_front_indef_task(
                   fronts_[ni], workspaces,  pool_alloc_, options);
@@ -217,7 +219,11 @@ namespace spldlt {
 
             // Assemble contributions from children nodes into non
             // fully-summed columns
-            assemble_contrib(fronts_[ni], child_contrib, blksz);
+            // assemble_contrib(fronts_[ni], child_contrib, blksz);
+            assemble_contrib_task(fronts_[ni], child_contrib, blksz);
+#if defined(SPLDLT_USE_STARPU)
+            starpu_task_wait_for_all();
+#endif
             
             // Deactivate children fronts
             for (auto* child=fronts_[ni].first_child; child!=NULL; child=child->next_child) {

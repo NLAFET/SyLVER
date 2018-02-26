@@ -1062,7 +1062,7 @@ namespace spldlt {
          int n,
          SymbolicFront const& snode,
          NumericFront<T, PoolAlloc> &node,
-         void** child_contrib, 
+         void** child_contrib,
          PoolAlloc& pool_alloc,
          int blksz
          ) {
@@ -1076,7 +1076,28 @@ namespace spldlt {
 #endif
       
    }
+
+   ////////////////////////////////////////////////////////////////////////////////
+   // assemble front contribution block
    
+   template <typename T, typename PoolAlloc>
+   void assemble_contrib_task(
+         NumericFront<T, PoolAlloc> &node,
+         void** child_contrib,
+         int blksz
+         ){
+
+#if defined(SPLDLT_USE_STARPU)
+
+      insert_assemble_contrib(
+            node.get_hdl(), node.contrib_hdl, &node, child_contrib, blksz);
+
+#else
+
+      assemble_contrib(node, child_contrib, blksz);
+
+#endif
+   }
 
    // // TODO: error managment
    // template <typename T, typename PoolAlloc>

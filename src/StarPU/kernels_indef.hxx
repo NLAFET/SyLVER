@@ -707,7 +707,8 @@ namespace spldlt { namespace starpu {
             starpu_data_handle_t upd_hdl,
             starpu_data_handle_t lik_hdl,
             starpu_data_handle_t ljk_hdl,
-            starpu_data_handle_t col_hdl,
+            starpu_data_handle_t col_hdl, // Symbolic handle on block-column k
+            starpu_data_handle_t contrib_hdl, // Contribution blocks symbolic handle
             NumericFront<T, PoolAlloc> *node,
             int k, int i, int j,
             int blksz, int prio
@@ -721,6 +722,7 @@ namespace spldlt { namespace starpu {
                STARPU_R, lik_hdl,
                STARPU_R, ljk_hdl,
                STARPU_R, col_hdl,
+               STARPU_R, contrib_hdl, // Contribution blocks symbolic handle
                STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
                STARPU_VALUE, &k, sizeof(int),
                STARPU_VALUE, &i, sizeof(int),

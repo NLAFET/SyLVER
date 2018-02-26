@@ -1472,6 +1472,63 @@ namespace spldlt { namespace starpu {
 
       }
 
+      ////////////////////////////////////////////////////////////////////////////////
+      // Assemble node contribution blocks
+
+      template <typename T, typename PoolAlloc>
+      void assemble_contrib_cpu_func(void *buffers[], void *cl_arg) {
+
+         NumericFront<T, PoolAlloc> *node;
+         void** child_contrib;
+         int blksz;
+
+         starpu_codelet_unpack_args(
+               cl_arg, &node, &child_contrib, &blksz);
+
+         assemble_contrib(*node, child_contrib, blksz);         
+      }
+
+      // StarPU codelet
+      struct starpu_codelet cl_assemble_contrib;
+
+      template <typename T, typename PoolAlloc>
+      void insert_assemble_contrib(
+            starpu_data_handle_t node_hdl, // Node's symbolic handle
+            starpu_data_handle_t contrib_hdl, // Node's contribution blocks symbolic handle
+            NumericFront<T, PoolAlloc> *node,
+            void** child_contrib, 
+            int blksz
+            ) {
+
+         
+         // starpu_tag_t tagA = (starpu_tag_t) (2*node->symb.idx);
+         // starpu_tag_t tagB = (starpu_tag_t) (2*node->symb.idx+1);         
+         // starpu_tag_declare_deps(tagB, 1, tagA);
+         
+         int ret;
+         ret = starpu_task_insert(&cl_assemble_contrib,
+                                  STARPU_RW, node_hdl,
+                                  STARPU_RW, contrib_hdl,
+                                  // STARPU_TAG, tagB, 
+                                  STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
+                                  STARPU_VALUE, &child_contrib, sizeof(void**),
+                                  STARPU_VALUE, &blksz, sizeof(int),
+                                  0);
+         STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
+
+         // test/debug
+         // struct starpu_task *taskA = starpu_task_create();
+         // taskA->cl = NULL;
+         // taskA->use_tag = 1;
+         // taskA->tag_id = tagA;
+         // ret = starpu_task_submit(taskA); 
+         // STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_submit");
+         // end test/debug
+
+      }
+
+      ////////////////////////////////////////////////////////////////////////////////
+
       // As it is not possible to statically intialize codelet in C++,
       // we do it via this function
       template <typename T, typename FactorAlloc, typename PoolAlloc>
@@ -1574,6 +1631,13 @@ namespace spldlt { namespace starpu {
          cl_assemble.nbuffers = STARPU_VARIABLE_NBUFFERS;
          cl_assemble.name = "ASSEMBLE";
          cl_assemble.cpu_funcs[0] = assemble_cpu_func<T, PoolAlloc>;
+
+         // assemble_contrib StarPU codelet
+         starpu_codelet_init(&cl_assemble_contrib);
+         cl_assemble_contrib.where = STARPU_CPU;
+         cl_assemble_contrib.nbuffers = STARPU_VARIABLE_NBUFFERS;
+         cl_assemble_contrib.name = "ASSEMBLE_CONTRIB";
+         cl_assemble_contrib.cpu_funcs[0] = assemble_contrib_cpu_func<T, PoolAlloc>;
 
          // assemble_block StarPU codelet
          starpu_codelet_init(&cl_assemble_block);

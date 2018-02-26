@@ -121,7 +121,7 @@ namespace spldlt { namespace starpu {
       template <typename T, typename PoolAlloc>
       void insert_form_contrib_front(
             starpu_data_handle_t node_hdl,
-            starpu_data_handle_t col_hdl,
+            // starpu_data_handle_t col_hdl,
             NumericFront<T, PoolAlloc> *node,
             int blksz) {
 
@@ -130,7 +130,7 @@ namespace spldlt { namespace starpu {
          ret = starpu_task_insert(
                &cl_form_contrib_front,
                STARPU_R, node_hdl,
-               STARPU_R, col_hdl,
+               // STARPU_R, col_hdl,
                STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
                STARPU_VALUE, &blksz, sizeof(int),
                0);

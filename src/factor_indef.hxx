@@ -138,14 +138,19 @@ namespace spldlt {
 
       // node.ndelay_out = n - node.nelim;
 
-// #if defined(SPLDLT_USE_STARPU)
-//       starpu_task_wait_for_all();
-// #endif
-
       // Form contribution blocks
       // form_contrib_front_task(node, blksz);
       form_contrib_front(snode, node, blksz);
 
+      // Create task for synchronization purpose
+      // struct starpu_task *taskA = starpu_task_create();
+      taskA->cl = NULL;
+      taskA->use_tag = 1;
+      taskA->tag_id = tagA;
+      task->handles[0] = node.contrib_hdl;
+      ret = starpu_task_submit(taskA); 
+      STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_submit");
+      
    }
 
    ////////////////////////////////////////////////////////////////////////////////
