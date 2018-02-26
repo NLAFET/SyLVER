@@ -6,7 +6,9 @@
 
 #if defined(SPLDLT_USE_STARPU)
 #include "StarPU/kernels_indef.hxx"
+#include "StarPU/factor_indef.hxx"
 #endif
+
 namespace spldlt {
 
    ////////////////////////////////////////////////////////////////////////////////
@@ -130,4 +132,4 @@ namespace spldlt {
       
    }
    
-}
+} // namespace spldlt

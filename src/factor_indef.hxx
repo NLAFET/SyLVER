@@ -165,6 +165,20 @@ namespace spldlt {
       // node.ndelay_out = n - node.nelim;
    }
 
+// #if defined(SPLDLT_USE_STARPU)
+//    template <typename T, typename PoolAlloc>
+//    void factor_front_indef_nocontrib_cpu_func(void *buffers[], void *cl_arg) {
+      
+//       NumericFront<T, PoolAlloc> *node;
+//       std::vector<spral::ssids::cpu::Workspace> *workspaces;
+//       PoolAlloc *pool_alloc;
+//       struct cpu_factor_options *options;
+
+      
+      
+//    }
+// #endif
+
    ////////////////////////////////////////////////////////////////////////////////
    // form_contrib_front
    //

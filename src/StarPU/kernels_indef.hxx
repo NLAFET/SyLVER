@@ -292,6 +292,7 @@ namespace spldlt { namespace starpu {
                STARPU_VALUE, &options, sizeof(struct cpu_factor_options *),
                0);
          STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");         
+
       }
 
       /*  applyT_block_app StarPU task
@@ -867,7 +868,8 @@ namespace spldlt { namespace starpu {
          STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
                
       }
-      
+
+
       ////////////////////////////////////////////////////////////////////////////////
 
       /* As it is not possible to statically intialize codelet in C++,
@@ -950,4 +952,5 @@ namespace spldlt { namespace starpu {
          cl_factor_front_indef_secondpass_nocontrib.cpu_funcs[0] = factor_front_indef_secondpass_nocontrib_cpu_func<T, Allocator>;
 
       }
-}} /* namespaces spldlt::starpu  */
+      
+   }} /* namespaces spldlt::starpu  */

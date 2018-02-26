@@ -26,11 +26,13 @@
 // #include "kernels/common.hxx"
 #include "tasks.hxx"
 #include "factor_indef.hxx"
+#include "tasks_factor_indef.hxx"
 
 
 #if defined(SPLDLT_USE_STARPU)
 #include <starpu.h>
 #include "StarPU/kernels.hxx"
+#include "StarPU/factor_indef.hxx"
 #endif
 
 // profiling
@@ -99,8 +101,9 @@ namespace spldlt {
             static const int INNER_BLOCK_SIZE = 32;
 
             // Init StarPU codelets
-            codelet_init_indef<T, INNER_BLOCK_SIZE, CopyBackup<T, PoolAllocator>, PoolAllocator>();
-
+            spldlt::starpu::codelet_init_indef<T, INNER_BLOCK_SIZE, CopyBackup<T, PoolAllocator>, PoolAllocator>();
+            spldlt::starpu::codelet_init_factor_indef<T, PoolAllocator>();
+            
             // Prepare workspaces
             workspaces.reserve(nworkers);
             for(int i = 0; i < nworkers; ++i)
@@ -188,8 +191,10 @@ namespace spldlt {
             // factor_front_posdef(sfront, fronts_[ni], options);
 
             // Compute factors
-            factor_front_indef_nocontrib(
-                  sfront, fronts_[ni], workspaces,  pool_alloc_, options);
+            // factor_front_indef_nocontrib(
+            //       sfront, fronts_[ni], workspaces,  pool_alloc_, options);
+            factor_front_indef_nocontrib_task(
+                  fronts_[ni], workspaces,  pool_alloc_, options);
 #if defined(SPLDLT_USE_STARPU)
             starpu_task_wait_for_all();
 #endif
