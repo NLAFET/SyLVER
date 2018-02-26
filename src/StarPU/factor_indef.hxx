@@ -54,6 +54,45 @@ namespace spldlt { namespace starpu {
       ////////////////////////////////////////////////////////////////////////////////
 
       template <typename T, typename PoolAlloc>
+      void form_contrib_front_cpu_func(void *buffers[], void *cl_arg) {
+
+         NumericFront<T, PoolAlloc> *node;
+         int blksz;
+
+         printf("[form_contrib_front_cpu_func]\n");
+         
+         starpu_codelet_unpack_args (
+               cl_arg, &node, &blksz);
+
+         form_contrib_front(
+               node->symb, *node, blksz);
+         
+      }
+      
+      // SarPU codelet
+      extern struct starpu_codelet cl_form_contrib_front;
+
+      template <typename T, typename PoolAlloc>
+      void insert_form_contrib_front(
+            starpu_data_handle_t node_hdl,
+            NumericFront<T, PoolAlloc> *node,
+            int blksz) {
+
+         int ret;
+
+         ret = starpu_task_insert(
+               &cl_form_contrib_front,
+               STARPU_R, node_hdl,
+               STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
+               STARPU_VALUE, &blksz, sizeof(int),
+               0);
+         STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");         
+
+      }
+      
+      ////////////////////////////////////////////////////////////////////////////////
+
+      template <typename T, typename PoolAlloc>
       void codelet_init_factor_indef() {
 
          // Initialize factor_front_indef_nocontrib StarPU codelet
@@ -62,6 +101,13 @@ namespace spldlt { namespace starpu {
          cl_factor_front_indef_nocontrib.nbuffers = STARPU_VARIABLE_NBUFFERS;
          cl_factor_front_indef_nocontrib.name = "FACTOR_FRONT_NOCONTRIB";
          cl_factor_front_indef_nocontrib.cpu_funcs[0] = factor_front_indef_nocontrib_cpu_func<T, PoolAlloc>;
+
+         // Initialize form_contrib StarPU codelet
+         starpu_codelet_init(&cl_form_contrib_front);
+         cl_form_contrib_front.where = STARPU_CPU;
+         cl_form_contrib_front.nbuffers = STARPU_VARIABLE_NBUFFERS;
+         cl_form_contrib_front.name = "FORM_CONTRIB_FRONT";
+         cl_form_contrib_front.cpu_funcs[0] = form_contrib_front_cpu_func<T, PoolAlloc>;
 
       }
 

@@ -28,4 +28,27 @@ namespace spldlt {
 #endif
    }
 
+   
+   ////////////////////////////////////////////////////////////////////////////////
+
+   template <typename T, typename PoolAlloc>
+   void form_contrib_front_task(
+         NumericFront<T, PoolAlloc> &node,
+         int blksz) {
+
+#if defined(SPLDLT_USE_STARPU)
+
+
+      insert_form_contrib_front(
+            node.get_hdl(), &node, blksz);
+      
+#else
+
+      form_contrib_front(
+            node.symb, node, blksz);
+
+#endif
+
+   }
+   
 } // namespace spldlt

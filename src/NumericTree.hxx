@@ -158,9 +158,9 @@ namespace spldlt {
                      &options);
             }
          }
-#if defined(SPLDLT_USE_STARPU)
-         starpu_task_wait_for_all();
-#endif         
+// #if defined(SPLDLT_USE_STARPU)
+//          starpu_task_wait_for_all();
+// #endif         
          // Allocate mapping array
          // int *map = new int[symb_.n+1];
 
@@ -195,16 +195,17 @@ namespace spldlt {
             //       sfront, fronts_[ni], workspaces,  pool_alloc_, options);
             factor_front_indef_nocontrib_task(
                   fronts_[ni], workspaces,  pool_alloc_, options);
-#if defined(SPLDLT_USE_STARPU)
-            starpu_task_wait_for_all();
-#endif
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
 
-            printf("[factor_mf_indef] nelim = %d\n", fronts_[ni].nelim);
-            printf("[factor_mf_indef] ndelay_in = %d\n", fronts_[ni].ndelay_in);
-            printf("[factor_mf_indef] ndelay_out = %d\n", fronts_[ni].ndelay_out);
+            // printf("[factor_mf_indef] nelim = %d\n", fronts_[ni].nelim);
+            // printf("[factor_mf_indef] ndelay_in = %d\n", fronts_[ni].ndelay_in);
+            // printf("[factor_mf_indef] ndelay_out = %d\n", fronts_[ni].ndelay_out);
 
             // form contrib
-            form_contrib_front(sfront, fronts_[ni], blksz);
+            // form_contrib_front(sfront, fronts_[ni], blksz);
+             form_contrib_front_task(fronts_[ni], blksz);
 #if defined(SPLDLT_USE_STARPU)
             starpu_task_wait_for_all();
 #endif

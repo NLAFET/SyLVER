@@ -85,14 +85,16 @@ namespace spldlt {
          // CopyBackup<T, PoolAlloc> backup(m, n, blksz, pool_alloc);
 
          // node.alloc_backup();
-         CopyBackup<T, PoolAlloc> &backup = *node.backup; 
          // node.alloc_cdata();
+
+         CopyBackup<T, PoolAlloc> &backup = *node.backup; 
          ColumnData<T, IntAlloc> &cdata = *node.cdata;
 
          // int const nblk = calc_nblk(n, blksz);
          // int const mblk = calc_nblk(m, blksz);
 
-         // ColumnData<T, IntAlloc> cdata(n, blksz, IntAlloc(pool_alloc));
+         //ColumnData<T, IntAlloc> cdata(n, blksz, IntAlloc(pool_alloc));
+
          // node.nelim = FactorSymIndef
          //    <T, INNER_BLOCK_SIZE, CopyBackup<T, PoolAlloc>, debug, PoolAlloc>
          //    ::ldlt_app(m, n, perm, lcol, ldl, d, backup, options, blksz, 0.0, upd, 0, 
@@ -103,19 +105,18 @@ namespace spldlt {
             ::factor_indef_app_async(m, n, perm, lcol, ldl, d, cdata, backup,
                                      options, blksz, 0.0, upd, 0, workspaces,
                                      pool_alloc, node.nelim);
+
 // #if defined(SPLDLT_USE_STARPU)
 //          starpu_task_wait_for_all();
 // #endif
 
 //          printf("[factor_front_indef_nocontrib] node_nelim = %d\n", node.nelim);
 
-         // node.nelim = nelim;
-
-         // realease all memory used for backup
+         // // realease all memory used for backup
          // backup.release_all_memory(); 
- 
-         // Permute failed entries to end
-         // if (nelim < n)
+         
+         // // Permute failed entries to end
+         // if (node.nelim < n)
          //    FactorSymIndef
          //       <T, INNER_BLOCK_SIZE, CopyBackup<T, PoolAlloc>, debug, PoolAlloc>
          //       ::permute_failed (
@@ -133,7 +134,7 @@ namespace spldlt {
 //          starpu_task_wait_for_all();
 // #endif
          
-         printf("[factor_front_indef_nocontrib] first pass = %d out of %d\n", node.nelim, n);
+//         printf("[factor_front_indef_nocontrib] first pass = %d out of %d\n", node.nelim, n);
       }
 
       factor_front_indef_secondpass_nocontrib_task(
