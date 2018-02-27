@@ -667,6 +667,8 @@ namespace spldlt { namespace starpu {
 
          T *ljk = (T *)STARPU_MATRIX_GET_PTR(buffers[2]);
          unsigned ld_ljk = STARPU_MATRIX_GET_LD(buffers[2]); // Get leading dimensions
+
+         // printf("[udpate_contrib_block_indef_cpu_func]\n");
          
          NumericFront<T, PoolAlloc> *node = nullptr;
          int k, i, j;
@@ -713,6 +715,8 @@ namespace spldlt { namespace starpu {
             int k, int i, int j,
             int blksz, int prio
             ) {
+
+         // printf("[insert_udpate_contrib_block_indef]\n");
 
          int ret;
          
@@ -805,13 +809,14 @@ namespace spldlt { namespace starpu {
       template <typename T, typename PoolAlloc>      
       void factor_front_indef_secondpass_nocontrib_cpu_func(void *buffers[], void *cl_arg) {
 
+         // printf("[factor_front_indef_secondpass_nocontrib_cpu_func]\n");
+         
          NumericFront<T, PoolAlloc> *node = nullptr;
          std::vector<spral::ssids::cpu::Workspace> *workspaces;
          struct cpu_factor_options *options = nullptr;
 
          starpu_codelet_unpack_args(
                cl_arg, &node, &workspaces, &options);
-
 
          int m = node->get_nrow();
          int n = node->get_ncol();
@@ -856,7 +861,7 @@ namespace spldlt { namespace starpu {
       void
       insert_factor_front_indef_secondpass_nocontrib(
             starpu_data_handle_t col_hdl,
-            starpu_data_handle_t node_hdl,
+            // starpu_data_handle_t node_hdl,
             NumericFront<T, PoolAlloc> *node,
             std::vector<spral::ssids::cpu::Workspace> *workspaces,
             struct cpu_factor_options *options
@@ -867,7 +872,7 @@ namespace spldlt { namespace starpu {
          ret = starpu_insert_task(
                &cl_factor_front_indef_secondpass_nocontrib,
                STARPU_RW, col_hdl,
-               STARPU_RW, node_hdl,
+               // STARPU_RW, node_hdl,
                STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
                STARPU_VALUE, &workspaces, sizeof(std::vector<spral::ssids::cpu::Workspace>*),
                STARPU_VALUE, &options, sizeof(struct cpu_factor_options*),
@@ -876,6 +881,49 @@ namespace spldlt { namespace starpu {
                
       }
 
+      ////////////////////////////////////////////////////////////////////////////////
+
+      void factor_sync_cpu_func(void *buffers[], void *cl_arg) {
+
+         // printf("[factor_sync_cpu_func]\n");
+      }
+      
+      // SarPU kernel
+      extern struct starpu_codelet cl_factor_sync;
+
+      template <typename T, typename PoolAlloc>
+      void insert_factor_sync(
+            starpu_data_handle_t contrib_hdl,
+            NumericFront<T, PoolAlloc>& node
+            ) {
+
+         // printf("[insert_factor_sync]\n");
+
+         starpu_tag_t tag1 = (starpu_tag_t) (2*node.symb.idx);
+         starpu_tag_t tag2 = (starpu_tag_t) (2*node.symb.idx+1);
+         // starpu_tag_declare_deps(tag2, 1, tag1);
+         
+         int ret;
+
+         // test/debug
+         struct starpu_task *taskA = starpu_task_create();
+         taskA->cl = &cl_factor_sync;
+         taskA->use_tag = 1;
+         taskA->tag_id = tag1;
+         taskA->handles[0] = contrib_hdl;
+         ret = starpu_task_submit(taskA); 
+         STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_submit");
+         // end test/debug
+
+         // ret = starpu_insert_task(
+         //       &cl_factor_sync,
+         //       STARPU_TAG, tag1,
+         //       STARPU_RW, contrib_hdl,
+         //       0);
+         // STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
+         
+      }
+      
       ////////////////////////////////////////////////////////////////////////////////
 
       /* As it is not possible to statically intialize codelet in C++,
@@ -957,6 +1005,13 @@ namespace spldlt { namespace starpu {
          cl_factor_front_indef_secondpass_nocontrib.name = "FACTOR_FRONT_SECONDPASS_NOCONTRIB";
          cl_factor_front_indef_secondpass_nocontrib.cpu_funcs[0] = factor_front_indef_secondpass_nocontrib_cpu_func<T, Allocator>;
 
+         // Initialize factor_sync StarPU codelet
+         starpu_codelet_init(&cl_factor_sync);
+         cl_factor_sync.where = STARPU_NOWHERE; // STARPU_CPU;
+         cl_factor_sync.nbuffers = 1;// STARPU_VARIABLE_NBUFFERS;
+         cl_factor_sync.modes[0] = STARPU_RW;// STARPU_VARIABLE_NBUFFERS;
+         cl_factor_sync.name = "FACTOR_SYNC";
+         cl_factor_sync.cpu_funcs[0] = factor_sync_cpu_func;
       }
       
    }} /* namespaces spldlt::starpu  */

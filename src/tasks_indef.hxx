@@ -97,7 +97,7 @@ namespace spldlt {
       int const nblk = calc_nblk(n, blksz);
       
       insert_factor_front_indef_secondpass_nocontrib(
-            cdata[nblk-1].get_hdl(), node.get_hdl(),
+            cdata[nblk-1].get_hdl(), // node.get_hdl(),
             &node, &workspaces, &options
             );
 

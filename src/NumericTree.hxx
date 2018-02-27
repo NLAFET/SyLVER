@@ -213,9 +213,9 @@ namespace spldlt {
             factor_front_indef_task(
                   fronts_[ni], workspaces,  pool_alloc_, options);
 
-#if defined(SPLDLT_USE_STARPU)
-            starpu_task_wait_for_all();
-#endif
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
 
             // Assemble contributions from children nodes into non
             // fully-summed columns

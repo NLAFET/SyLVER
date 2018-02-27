@@ -31,5 +31,8 @@ namespace spldlt { namespace starpu {
 
       // factor_front_indef_secondpass_nocontrib StarPU codelet
       struct starpu_codelet cl_factor_front_indef_secondpass_nocontrib;
+
+      // factor_sync StarPU codelet
+      struct starpu_codelet cl_factor_sync;
       
 }} /* namespaces spldlt::starpu  */

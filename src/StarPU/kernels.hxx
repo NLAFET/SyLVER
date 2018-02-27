@@ -1482,6 +1482,8 @@ namespace spldlt { namespace starpu {
          void** child_contrib;
          int blksz;
 
+         printf("[assemble_contrib_cpu_func]\n");
+         
          starpu_codelet_unpack_args(
                cl_arg, &node, &child_contrib, &blksz);
 
@@ -1500,16 +1502,21 @@ namespace spldlt { namespace starpu {
             int blksz
             ) {
 
+         printf("[insert_assemble_contrib]\n");
          
          // starpu_tag_t tagA = (starpu_tag_t) (2*node->symb.idx);
          // starpu_tag_t tagB = (starpu_tag_t) (2*node->symb.idx+1);         
          // starpu_tag_declare_deps(tagB, 1, tagA);
          
+         starpu_tag_t tag1 = (starpu_tag_t) (2*node->symb.idx);
+         starpu_tag_t tag2 = (starpu_tag_t) (2*node->symb.idx+1);
+         starpu_tag_declare_deps(tag2, 1, tag1);
+         
          int ret;
          ret = starpu_task_insert(&cl_assemble_contrib,
                                   STARPU_RW, node_hdl,
-                                  STARPU_RW, contrib_hdl,
-                                  // STARPU_TAG, tagB, 
+                                  // STARPU_RW, contrib_hdl,
+                                  STARPU_TAG, tag2, 
                                   STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
                                   STARPU_VALUE, &child_contrib, sizeof(void**),
                                   STARPU_VALUE, &blksz, sizeof(int),

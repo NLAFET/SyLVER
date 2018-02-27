@@ -144,13 +144,16 @@ namespace spldlt {
 
       // Create task for synchronization purpose
       // struct starpu_task *taskA = starpu_task_create();
-      taskA->cl = NULL;
-      taskA->use_tag = 1;
-      taskA->tag_id = tagA;
-      task->handles[0] = node.contrib_hdl;
-      ret = starpu_task_submit(taskA); 
-      STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_submit");
-      
+      // taskA->cl = NULL;
+      // taskA->use_tag = 1;
+      // taskA->tag_id = tagA;
+      // task->handles[0] = node.contrib_hdl;
+      // ret = starpu_task_submit(taskA); 
+      // STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_submit");
+
+#if defined(SPLDLT_USE_STARPU)
+      insert_factor_sync(node.contrib_hdl, node);
+#endif
    }
 
    ////////////////////////////////////////////////////////////////////////////////
