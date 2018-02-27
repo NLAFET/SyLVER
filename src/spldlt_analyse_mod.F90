@@ -419,20 +419,9 @@ contains
     nnodes = akeep%nnodes
     ! ncpu = 2
 
-    ! print *, "Input topology"
-    ! do i = 1, size(akeep%topology)
-    !    print *, "Region ", i, " with ", akeep%topology(i)%nproc, " cores"
-    !    if(size(akeep%topology(i)%gpus).gt.0) &
-    !         print *, "---> gpus ", akeep%topology(i)%gpus
-    ! end do
-
-    ! ! Destroy topology given by SSIDS 
-    ! if (allocated(akeep%topology)) deallocate(akeep%topology, stat=st)
-
     ! Figure out topology
     ! Create simple topology with ncpu regions, one for each CPU
     ! worker
-
     if (allocated(akeep%topology)) deallocate(akeep%topology, stat=st)
     allocate(akeep%topology(ncpu), stat=st)
     do i = 1, ncpu
