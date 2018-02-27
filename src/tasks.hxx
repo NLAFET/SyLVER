@@ -140,10 +140,10 @@ namespace spldlt {
    // Terminate node
    template <typename T, typename PoolAlloc>
    void fini_node_task(NumericFront<T, PoolAlloc> &node, 
-                       int prio) {
+                       int blksz, int prio) {
 
 #if defined(SPLDLT_USE_STARPU)
-      insert_fini_node(&node, node.get_hdl(), prio);
+      insert_fini_node(node.get_hdl(), &node, blksz, prio);
 #else
       fini_node(node);
 #endif
@@ -1068,9 +1068,25 @@ namespace spldlt {
          ) {
 
 #if defined(SPLDLT_USE_STARPU)
-      
-      insert_assemble(snode.hdl, n, &node, child_contrib, &pool_alloc, blksz);
 
+      int nchild = 0;
+      for (auto* child=node.first_child; child!=NULL; child=child->next_child)
+         nchild++;
+
+      starpu_data_handle_t *cnode_hdls = new starpu_data_handle_t[nchild];
+      
+      int i = 0;
+      for (auto* child=node.first_child; child!=NULL; child=child->next_child) {
+         cnode_hdls[i] = child->symb.hdl;
+         ++i;
+      }
+      
+      insert_assemble(
+            snode.hdl, cnode_hdls, nchild,
+            n, &node, child_contrib, &pool_alloc, blksz);
+
+      delete[] cnode_hdls;
+      
 #else
       assemble(n, node, child_contrib, pool_alloc, blksz);
 #endif
@@ -1089,8 +1105,23 @@ namespace spldlt {
 
 #if defined(SPLDLT_USE_STARPU)
 
+      int nchild = 0;
+      for (auto* child=node.first_child; child!=NULL; child=child->next_child)
+         nchild++;
+
+      starpu_data_handle_t *cnode_hdls = new starpu_data_handle_t[nchild];
+      
+      int i = 0;
+      for (auto* child=node.first_child; child!=NULL; child=child->next_child) {
+         cnode_hdls[i] = child->symb.hdl;
+         ++i;
+      }
+
       insert_assemble_contrib(
-            node.get_hdl(), node.contrib_hdl, &node, child_contrib, blksz);
+            node.get_hdl(), cnode_hdls, nchild, //node.contrib_hdl,
+            &node, child_contrib, blksz);
+
+      delete[] cnode_hdls;
 
 #else
 

@@ -105,7 +105,7 @@ namespace spldlt { namespace starpu {
          NumericFront<T, PoolAlloc> *node;
          int blksz;
 
-         printf("[form_contrib_front_cpu_func]\n");
+         // printf("[form_contrib_front_cpu_func]\n");
          
          starpu_codelet_unpack_args (
                cl_arg, &node, &blksz);

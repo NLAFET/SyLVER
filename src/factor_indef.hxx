@@ -40,7 +40,7 @@ namespace spldlt {
 
       int nelim = 0;
 
-      printf("[factor_front_indef]\n");
+      // printf("[factor_front_indef]\n");
 
       int blksz = options.cpu_block_size;
       // node.nelim = nelim;      
@@ -208,7 +208,7 @@ namespace spldlt {
 
       int nelim = 0;
 
-      printf("[factor_front_indef_nocontrib]\n");
+      // printf("[factor_front_indef_nocontrib]\n");
 
       int blksz = options.cpu_block_size;
       // node.nelim = nelim;      
@@ -323,7 +323,7 @@ namespace spldlt {
       int nrow = node.get_nrow();
       int ncol = node.get_ncol();
       size_t contrib_dimn = nrow-ncol;
-      printf("[form_contrib_front] contrib_dimn = %zu\n", contrib_dimn);
+      // printf("[form_contrib_front] contrib_dimn = %zu\n", contrib_dimn);
       if (contrib_dimn == 0) return; // Nothing to do
 
       // int n = node.nelim;

@@ -112,7 +112,7 @@ namespace spldlt {
 
       int nelim = 0;
 
-      printf("[factor_front_indef_nocontrib] first pass = %d out of %d\n", node.nelim, n);
+      // printf("[factor_front_indef_nocontrib] first pass = %d out of %d\n", node.nelim, n);
 
       // Try to eliminate the columns uneliminated at first pass
       if (node.nelim < n) {
@@ -129,7 +129,7 @@ namespace spldlt {
                   &d[2*nelim], ld, m-nelim, options.action, options.u, options.small, 
                   nelim, &lcol[nelim], ldl);
             delete[] ld;
-            printf("[factor_front_indef_nocontrib] second pass = %d out of %d\n", node.nelim, n);
+            // printf("[factor_front_indef_nocontrib] second pass = %d out of %d\n", node.nelim, n);
 
          }
       }

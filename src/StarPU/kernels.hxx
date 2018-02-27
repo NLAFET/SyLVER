@@ -106,8 +106,8 @@ namespace spldlt { namespace starpu {
             int blksz) {
 
          // Get node info
-         int m = snode.nrow + node.ndelay_in;
-         int n = snode.ncol + node.ndelay_in;
+         int m = node.get_nrow();
+         int n = node.get_ncol();
          int nr = (m-1) / blksz + 1; // number of block rows
          int nc = (n-1) / blksz + 1; // number of block columns
 
@@ -191,19 +191,25 @@ namespace spldlt { namespace starpu {
       void fini_node_cpu_func(void *buffers[], void *cl_arg) {
          
          NumericFront<T, PoolAlloc> *node = nullptr;
+         int blksz;
          
-         starpu_codelet_unpack_args(cl_arg, &node);
+         starpu_codelet_unpack_args(cl_arg, &node, &blksz);
 
          fini_node(*node);
+
+         unregister_node_submit(
+               node->symb, *node, blksz);
       }
 
       // fini_node codelet
       struct starpu_codelet cl_fini_node;
       
       template <typename T, typename PoolAlloc>
-      void insert_fini_node(NumericFront<T, PoolAlloc> *node,
-                            starpu_data_handle_t node_hdl, 
-                            int prio) {
+      void insert_fini_node(
+            starpu_data_handle_t node_hdl, 
+            NumericFront<T, PoolAlloc> *node,
+            int blksz,
+            int prio) {
 
          int ret;
          
@@ -211,6 +217,7 @@ namespace spldlt { namespace starpu {
                &cl_fini_node,
                STARPU_RW, node_hdl,
                STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
+               STARPU_VALUE, &blksz, sizeof(int),
                STARPU_PRIORITY, prio,
                0);
       }
@@ -844,7 +851,7 @@ namespace spldlt { namespace starpu {
                &child_contrib,
                &options);
 
-         printf("[factor_subtree_cpu_func]\n");
+         // printf("[factor_subtree_cpu_func]\n");
          // printf("[factor_subtree_cpu_func] akeep = %p, fkeep = %p\n", akeep, fkeep);
          // printf("[factor_subtree_cpu_func] part: %d, child_contrib: %p\n", p+1, child_contrib);
          spldlt_factor_subtree_c(akeep, fkeep, p, aval, child_contrib, options);
@@ -1053,7 +1060,7 @@ namespace spldlt { namespace starpu {
                child_contrib[contrib_idx], &cn, &cval, &ldcontrib, &crlist,
                &ndelay, &delay_perm, &delay_val, &lddelay
                );
-         printf("[subtree_assemble_contrib_cpu_func] ndelay = %d, cval = %p\n", ndelay, cval);
+         // printf("[subtree_assemble_contrib_cpu_func] ndelay = %d, cval = %p\n", ndelay, cval);
          if(!cval) return; // child was all delays, nothing more to do
 
          int sa = snode.ncol / blksz; // Index of first block in contrib
@@ -1304,7 +1311,7 @@ namespace spldlt { namespace starpu {
          FactorAlloc *factor_alloc;
          PoolAlloc *pool_alloc;
 
-         printf("[activate_node_cpu_func]\n");
+         // printf("[activate_node_cpu_func]\n");
 
          starpu_codelet_unpack_args(
                cl_arg, &posdef, &snode, &node, &child_contrib, &blksz,
@@ -1452,16 +1459,28 @@ namespace spldlt { namespace starpu {
       template <typename T, typename PoolAlloc>
       void insert_assemble(
             starpu_data_handle_t node_hdl, // Node's symbolic handle
+            starpu_data_handle_t *cnode_hdls, int nhdl, // Children node's symbolic handles
             int n,
             NumericFront<T, PoolAlloc> *node,
             void** child_contrib, 
             PoolAlloc *pool_alloc,
             int blksz
             ) {
+
+         struct starpu_data_descr *descrs = new starpu_data_descr[nhdl+1];
+
+         int nh = 0;
+         descrs[nh].handle = node_hdl; descrs[nh].mode = STARPU_RW;
+         nh++;
+
+         for (int i=0; i<nhdl; i++) {
+            descrs[nh].handle = cnode_hdls[i]; descrs[nh].mode = STARPU_R;
+            nh++;
+         }
          
          int ret;
          ret = starpu_task_insert(&cl_assemble,
-                                  STARPU_RW, node_hdl,
+                                  STARPU_DATA_MODE_ARRAY, descrs, nh,
                                   STARPU_VALUE, &n, sizeof(int),
                                   STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
                                   STARPU_VALUE, &child_contrib, sizeof(void**),
@@ -1482,7 +1501,7 @@ namespace spldlt { namespace starpu {
          void** child_contrib;
          int blksz;
 
-         printf("[assemble_contrib_cpu_func]\n");
+         // printf("[assemble_contrib_cpu_func]\n");
          
          starpu_codelet_unpack_args(
                cl_arg, &node, &child_contrib, &blksz);
@@ -1496,13 +1515,25 @@ namespace spldlt { namespace starpu {
       template <typename T, typename PoolAlloc>
       void insert_assemble_contrib(
             starpu_data_handle_t node_hdl, // Node's symbolic handle
-            starpu_data_handle_t contrib_hdl, // Node's contribution blocks symbolic handle
+            // starpu_data_handle_t contrib_hdl, // Node's contribution blocks symbolic handle
+            starpu_data_handle_t *cnode_hdls, int nhdl, // Children node's symbolic handles
             NumericFront<T, PoolAlloc> *node,
             void** child_contrib, 
             int blksz
             ) {
 
-         printf("[insert_assemble_contrib]\n");
+         // printf("[insert_assemble_contrib]\n");
+
+         struct starpu_data_descr *descrs = new starpu_data_descr[nhdl+1];
+
+         int nh = 0;
+         descrs[nh].handle = node_hdl; descrs[nh].mode = STARPU_RW;
+         nh++;
+
+         for (int i=0; i<nhdl; i++) {
+            descrs[nh].handle = cnode_hdls[i]; descrs[nh].mode = STARPU_R;
+            nh++;
+         }
          
          // starpu_tag_t tagA = (starpu_tag_t) (2*node->symb.idx);
          // starpu_tag_t tagB = (starpu_tag_t) (2*node->symb.idx+1);         
@@ -1514,7 +1545,8 @@ namespace spldlt { namespace starpu {
          
          int ret;
          ret = starpu_task_insert(&cl_assemble_contrib,
-                                  STARPU_RW, node_hdl,
+                                  STARPU_DATA_MODE_ARRAY, descrs, nh,
+                                  // STARPU_RW, node_hdl,
                                   // STARPU_RW, contrib_hdl,
                                   STARPU_TAG, tag2, 
                                   STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),

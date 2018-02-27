@@ -136,7 +136,7 @@ namespace spldlt {
       // for(int contrib_idx : sfront.contrib) {
       // }
 
-      printf("[alloc_front] ndelay_in = %d\n", front.ndelay_in);
+      // printf("[alloc_front] ndelay_in = %d\n", front.ndelay_in);
       // front.ndelay_in = 0; // debug
 
       int nrow = sfront.nrow + front.ndelay_in;
@@ -536,7 +536,7 @@ namespace spldlt {
             child_contrib[contrib_idx], &cn, &cval, &ldcontrib, &crlist,
             &ndelay, &delay_perm, &delay_val, &lddelay
             );
-      printf("[assemble_subtree] ndelay = %d\n", ndelay);
+      // printf("[assemble_subtree] ndelay = %d\n", ndelay);
       /* Handle delays - go to back of node
        * (i.e. become the last rows as in lower triangular format) */
 
@@ -587,7 +587,7 @@ namespace spldlt {
             child_contrib[contrib_idx], &cn, &cval, &ldcontrib, &crlist,
             &ndelay, &delay_perm, &delay_val, &lddelay
             );
-      printf("[assemble_contrib_subtree] ndelay = %d, cval = %p\n", ndelay, cval);
+      // printf("[assemble_contrib_subtree] ndelay = %d, cval = %p\n", ndelay, cval);
       if(!cval) return; // child was all delays, nothing more to do
 
       int sa = ncol / blksz; // Index of first block in contrib
@@ -647,7 +647,7 @@ namespace spldlt {
        */
       int delay_col = snode.ncol;
 
-      printf("[assemble]\n");
+      // printf("[assemble]\n");
 
       // Allocate mapping array
       // int *map = new int[n+1];
@@ -675,7 +675,7 @@ namespace spldlt {
          if (csnode.exec_loc == -1) {
             // Assemble contributions from child front
 
-            printf("[assemble] child->ndelay_out = %d\n", child->ndelay_out);
+            // printf("[assemble] child->ndelay_out = %d\n", child->ndelay_out);
 
             /* Handle delays - go to back of node
              * (i.e. become the last rows as in lower triangular format) */

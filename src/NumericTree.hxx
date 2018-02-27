@@ -171,7 +171,7 @@ namespace spldlt {
             // Skip iteration if node is in a subtree
             if (sfront.exec_loc != -1) continue;
 
-            printf("[factor_mf_indef] ni = %d\n", ni);
+            // printf("[factor_mf_indef] ni = %d\n", ni);
             
             // Activate and init frontal matrix
             activate_init_front_task(
@@ -206,9 +206,9 @@ namespace spldlt {
             // form contrib
             // form_contrib_front(sfront, fronts_[ni], blksz);
             // form_contrib_front_task(fronts_[ni], blksz);
-#if defined(SPLDLT_USE_STARPU)
-            starpu_task_wait_for_all();
-#endif
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
 
             factor_front_indef_task(
                   fronts_[ni], workspaces,  pool_alloc_, options);
@@ -221,9 +221,9 @@ namespace spldlt {
             // fully-summed columns
             // assemble_contrib(fronts_[ni], child_contrib, blksz);
             assemble_contrib_task(fronts_[ni], child_contrib, blksz);
-#if defined(SPLDLT_USE_STARPU)
-            starpu_task_wait_for_all();
-#endif
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
             
             // Deactivate children fronts
             for (auto* child=fronts_[ni].first_child; child!=NULL; child=child->next_child) {
@@ -232,18 +232,22 @@ namespace spldlt {
 
                if (csnode.exec_loc == -1) {
                   // fini_node(*child);
-                  fini_node_task(*child, INIT_PRIO);
-#if defined(SPLDLT_USE_STARPU)
+                  fini_node_task(*child, blksz, INIT_PRIO);
+                  //#if defined(SPLDLT_USE_STARPU)
                   // TODO put in fini_node kernel
-                  unregister_node_submit(csnode, *child, blksz);
-#endif
+                  // unregister_node_submit(csnode, *child, blksz);
+                  //#endif
                }
 #if defined(SPLDLT_USE_STARPU)
                // Unregister symbolic handle on child node
                starpu_data_unregister_submit(csnode.hdl);
 #endif
             } // Loop over child nodes
-            
+
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
+
          }
       }
 
@@ -437,14 +441,14 @@ namespace spldlt {
 
                if (child_sfront.exec_loc == -1) {
                   // fini_node(*child);
-                  fini_node_task(*child, INIT_PRIO);
+                  fini_node_task(*child, blksz, INIT_PRIO);
 // #if defined(SPLDLT_USE_STARPU)
 //                   starpu_task_wait_for_all();
 // #endif
 
-#if defined(SPLDLT_USE_STARPU)
-                  unregister_node_submit(child_sfront, *child, blksz);
-#endif
+// #if defined(SPLDLT_USE_STARPU)
+//                   unregister_node_submit(child_sfront, *child, blksz);
+// #endif
                }
 #if defined(SPLDLT_USE_STARPU)
                // Unregister symbolic handle on child node
