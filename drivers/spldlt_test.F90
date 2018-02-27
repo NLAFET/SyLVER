@@ -218,7 +218,21 @@ program spldlt_test
    call internal_calc_norm(n, ptr, row, val, soln, rhs, nrhs, res)
    print *, "bwd error scaled = ", res
 
-   call ssids_free(spldlt_akeep%akeep, spldlt_fkeep%fkeep, cuda_error)
+   ! call ssids_free(spldlt_akeep%akeep, spldlt_fkeep%fkeep, cuda_error)
+   ! call ssids_free(spldlt_akeep%akeep, cuda_error)
+   ! call ssids_free(spldlt_fkeep%fkeep, cuda_error)
+   ! if (allocated(spldlt_fkeep%fkeep%scaling)) deallocate(spldlt_fkeep%fkeep%scaling)
+   ! if (allocated(spldlt_fkeep%fkeep%subtree)) then
+   !    do i = 1, size(spldlt_fkeep%fkeep%subtree)
+   !       if (spldlt_akeep%akeep%subtree(i)%exec_loc .eq. -1) cycle
+   !       if (associated(spldlt_fkeep%fkeep%subtree(i)%ptr)) then
+   !          ! call spldlt_fkeep%fkeep%subtree(i)%ptr%cleanup()
+   !          deallocate(spldlt_fkeep%fkeep%subtree(i)%ptr)
+   !          nullify(spldlt_fkeep%fkeep%subtree(i)%ptr)
+   !       end if
+   !    end do
+   !    deallocate(spldlt_fkeep%fkeep%subtree)
+   ! end if
 
    stop
    
