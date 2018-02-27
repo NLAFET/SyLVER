@@ -672,10 +672,14 @@ namespace spldlt { namespace starpu {
          
          NumericFront<T, PoolAlloc> *node = nullptr;
          int k, i, j;
+         std::vector<spral::ssids::cpu::Workspace> *workspaces;
          int blksz;
 
          starpu_codelet_unpack_args(
-               cl_arg, &node, &k, &i, &j, &blksz);
+               cl_arg, &node, &k, &i, &j, &workspaces, &blksz);
+
+         int workerid = starpu_worker_get_id();         
+         spral::ssids::cpu::Workspace &work = (*workspaces)[workerid];
 
          int nrow = node->get_nrow();
          int ncol = node->get_ncol();
@@ -691,14 +695,15 @@ namespace spldlt { namespace starpu {
 
          // TODO: Use workspaces
          int ldld = spral::ssids::cpu::align_lda<T>(blksz);
-         T *ld = new T[blksz*ldld];
+         // T *ld = new T[blksz*ldld];
+         T *ld = work.get_ptr<T>(blksz*ldld);
 
          update_contrib_block(
                updm, updn, upd, ldupd,  
                nelim, &lik[lik_first_row], ld_lik, &ljk[ljk_first_row], ld_ljk,
                (k == 0), dk, ld, ldld);
 
-         delete[] ld;
+         // delete[] ld;
       }
 
       extern struct starpu_codelet cl_udpate_contrib_block_indef;
@@ -713,6 +718,7 @@ namespace spldlt { namespace starpu {
             starpu_data_handle_t contrib_hdl, // Contribution blocks symbolic handle
             NumericFront<T, PoolAlloc> *node,
             int k, int i, int j,
+            std::vector<spral::ssids::cpu::Workspace> *workspaces,
             int blksz, int prio
             ) {
 
@@ -731,6 +737,7 @@ namespace spldlt { namespace starpu {
                STARPU_VALUE, &k, sizeof(int),
                STARPU_VALUE, &i, sizeof(int),
                STARPU_VALUE, &j, sizeof(int),
+               STARPU_VALUE, &workspaces, sizeof(std::vector<spral::ssids::cpu::Workspace>*),
                STARPU_VALUE, &blksz, sizeof(int),
                STARPU_PRIORITY, prio,
                0);

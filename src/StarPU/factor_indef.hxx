@@ -103,15 +103,16 @@ namespace spldlt { namespace starpu {
       void form_contrib_front_cpu_func(void *buffers[], void *cl_arg) {
 
          NumericFront<T, PoolAlloc> *node;
+         std::vector<spral::ssids::cpu::Workspace> *workspaces;
          int blksz;
 
          // printf("[form_contrib_front_cpu_func]\n");
          
-         starpu_codelet_unpack_args (
-               cl_arg, &node, &blksz);
+         starpu_codelet_unpack_args(
+               cl_arg, &node, &workspaces, &blksz);
 
          form_contrib_front(
-               node->symb, *node, blksz);
+               node->symb, *node, *workspaces, blksz);
          
       }
       
@@ -123,6 +124,7 @@ namespace spldlt { namespace starpu {
             starpu_data_handle_t node_hdl,
             // starpu_data_handle_t col_hdl,
             NumericFront<T, PoolAlloc> *node,
+            std::vector<spral::ssids::cpu::Workspace> *workspaces,
             int blksz) {
 
          int ret;
@@ -132,6 +134,7 @@ namespace spldlt { namespace starpu {
                STARPU_R, node_hdl,
                // STARPU_R, col_hdl,
                STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
+               STARPU_VALUE, &workspaces, sizeof(std::vector<spral::ssids::cpu::Workspace>*),
                STARPU_VALUE, &blksz, sizeof(int),
                0);
          STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");         

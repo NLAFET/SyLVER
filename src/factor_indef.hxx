@@ -140,7 +140,7 @@ namespace spldlt {
 
       // Form contribution blocks
       // form_contrib_front_task(node, blksz);
-      form_contrib_front(snode, node, blksz);
+      form_contrib_front(snode, node, workspaces, blksz);
 
       // Create task for synchronization purpose
       // struct starpu_task *taskA = starpu_task_create();
@@ -314,6 +314,7 @@ namespace spldlt {
    void form_contrib_front(
          SymbolicFront const& snode,
          NumericFront<T, PoolAlloc> &node,
+         std::vector<spral::ssids::cpu::Workspace> &workspaces,
          int blksz) {
 
       int UPDATE_PRIO = 4;
@@ -369,7 +370,7 @@ namespace spldlt {
             for (int iblk = jblk;  iblk < nr; ++iblk) {
                
                update_contrib_indef_task(
-                     snode, node, blk, iblk, jblk, blksz, UPDATE_PRIO);
+                     snode, node, blk, iblk, jblk, workspaces, blksz, UPDATE_PRIO);
             }            
          }
       }

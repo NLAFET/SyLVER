@@ -18,6 +18,7 @@ namespace spldlt {
          SymbolicFront const& snode,
          NumericFront<T, PoolAlloc> &node,
          int blk, int iblk, int jblk,
+         std::vector<spral::ssids::cpu::Workspace> &workspaces,
          int blksz, int prio
          ) {
       
@@ -39,7 +40,9 @@ namespace spldlt {
             snode.handles[blk*nr+iblk], snode.handles[blk*nr+jblk],
             cdata[nblk-1].get_hdl(), // make sure col has been processed
             node.contrib_hdl, // For synchronization purpose
-            &node, blk, iblk, jblk, blksz, prio);
+            &node, blk, iblk, jblk, 
+            &workspaces,
+            blksz, prio);
 
 #else
 
@@ -64,7 +67,7 @@ namespace spldlt {
       T *lik = &lcol[(blk*blksz)*ldl+lik_first_row];
 
       int ldld = spral::ssids::cpu::align_lda<T>(blksz);
-      T *ld = new T[blksz*ldld];
+      T *ld = new T[blksz*ldld]; // TODO: Use workspaces
 
       udpate_contrib_block(
             upd.m, upd.n, upd.a, upd.lda,  

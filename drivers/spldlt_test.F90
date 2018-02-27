@@ -82,7 +82,7 @@ program spldlt_test
    ! Read in a matrix
    write(*, "(a)") "Reading..."
    ! DEBUG ensure matrix is diag dominant
-    ! rb_options%values = 3 ! Force diagonal dominance
+    ! rb_options%values = -3 ! Force diagonal dominance
    rb_options%values = 2 ! symmetric make up values if necessary (if only pattern is given)
    ! rb_options%values = 0 ! as per file
    call rb_read(matfile, m, n, ptr, row, val, rb_options, rb_flag)
