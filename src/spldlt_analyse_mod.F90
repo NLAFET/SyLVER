@@ -419,7 +419,6 @@ contains
     nnodes = akeep%nnodes
     ! ncpu = 2
 
-    ! Sort out subtrees
     ! print *, "Input topology"
     ! do i = 1, size(akeep%topology)
     !    print *, "Region ", i, " with ", akeep%topology(i)%nproc, " cores"
@@ -433,9 +432,18 @@ contains
     ! Figure out topology
     ! Create simple topology with ncpu regions, one for each CPU
     ! worker
+
+    if (allocated(akeep%topology)) deallocate(akeep%topology, stat=st)
     allocate(akeep%topology(ncpu), stat=st)
     do i = 1, ncpu
        akeep%topology(i)%nproc = 1
+       allocate(akeep%topology(i)%gpus(0), stat=st)
+    end do
+    print *, "Input topology"
+    do i = 1, size(akeep%topology)
+       print *, "Region ", i, " with ", akeep%topology(i)%nproc, " cores"
+       if(size(akeep%topology(i)%gpus).gt.0) &
+            print *, "---> gpus ", akeep%topology(i)%gpus
     end do
 
     ! perform rest of analyse
@@ -666,7 +674,7 @@ contains
     do i = 1, size(topology)
        ngpu = ngpu + size(topology(i)%gpus)
     end do
-    !print *, "running on ", nregion, " regions and ", ngpu, " gpus"
+    print *, "running on ", nregion, " regions and ", ngpu, " gpus"
 
     ! Keep splitting until we meet balance criterion
     best_load_balance = huge(best_load_balance)
@@ -683,6 +691,9 @@ contains
             ngpu, options%min_gpu_work, st)
        if (st .ne. 0) return
     end do
+
+    print *, "[find_subtree_partition] max_load_inbalance = ", options%max_load_inbalance
+    print *, "[find_subtree_partition] load_balance = ", load_balance
 
     ! Consolidate adjacent non-children nodes into same part and regen exec_alloc
     !print *
