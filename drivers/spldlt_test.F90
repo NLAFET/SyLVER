@@ -66,7 +66,7 @@ program spldlt_test
 
    integer :: cuda_error ! DEBUG not useful for now 
 
-   pos_def = .true. ! Matrix assumed posdef by default
+   pos_def = .false. ! Matrix assumed indef by default
    
    call proc_args(ssids_opt, nrhs, pos_def, ncpu, matfile)
 
@@ -183,6 +183,9 @@ program spldlt_test
    smfact = (stop_t - start_t)/real(rate_t)
    ! stop
 
+   ! Shutdown SpLDLT
+   call spldlt_finalize()
+
    ! Solve
    write(*, "(a)") "[SpLDLT Test] Solve..."
    ! call system_clock(start_t, rate_t)
@@ -216,9 +219,6 @@ program spldlt_test
    print *, "bwd error scaled = ", res
 
    call ssids_free(spldlt_akeep%akeep, spldlt_fkeep%fkeep, cuda_error)
-
-   ! Shutdown SpLDLT
-   call spldlt_finalize()
 
    stop
    
