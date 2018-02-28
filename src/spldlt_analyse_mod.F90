@@ -1103,8 +1103,8 @@ contains
     integer(long), allocatable :: weight(:) ! weight(i) contains weight below node i 
     integer :: j
     integer :: node
-    !integer :: i
-    ! integer                         :: c
+    integer :: i
+    integer :: c ! child node index
     integer :: nlz ! number of nodes in the lzero layer
     integer :: leaves ! current number of leaf nodes
     integer :: totleaves ! total number of leaf nodes in the atree
