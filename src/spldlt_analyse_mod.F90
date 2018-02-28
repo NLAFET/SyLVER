@@ -675,7 +675,7 @@ contains
     ! Keep splitting until we meet balance criterion
     best_load_balance = huge(best_load_balance)
     do i = 1, 2*(nregion+ngpu)
-       print *, "size order = ", size_order(1:nparts)
+       ! print *, "size order = ", size_order(1:nparts)
        ! Check load balance criterion
        load_balance = calc_exec_alloc(nparts, part, size_order, is_child,  &
             flops, topology, min_gpu_work, options%gpu_perf_coeff, &
