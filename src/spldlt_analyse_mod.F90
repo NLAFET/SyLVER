@@ -1084,6 +1084,7 @@ contains
   ! Tree pruning method. Inspired by the strategy employed in qr_mumps
   ! for pruning the atree.
   subroutine prune_tree(nnodes, sptr, sparent, rptr, nth)
+    use spldlt_utils_mod, only: sort
     implicit none
 
     integer, intent(in) :: nnodes
