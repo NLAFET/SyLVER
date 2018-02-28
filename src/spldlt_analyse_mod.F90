@@ -364,7 +364,8 @@ contains
     integer, dimension(:), allocatable :: order2
     integer(long), dimension(:), allocatable :: ptr2 ! col ptrs for expanded mat
     integer, dimension(:), allocatable :: row2 ! row indices for expanded matrix
-
+    integer ncpu_topo
+    
     ! Prepare analysis phase
     akeep => spldlt_akeep%akeep
     
@@ -417,23 +418,25 @@ contains
 
 
     nnodes = akeep%nnodes
+    ncpu_topo = ncpu
     ! ncpu = 2
+    ! ncpu_topo = 2*ncpu
 
     ! Figure out topology
     ! Create simple topology with ncpu regions, one for each CPU
     ! worker
     if (allocated(akeep%topology)) deallocate(akeep%topology, stat=st)
-    allocate(akeep%topology(ncpu), stat=st)
-    do i = 1, ncpu
+    allocate(akeep%topology(ncpu_topo), stat=st)
+    do i = 1, ncpu_topo
        akeep%topology(i)%nproc = 1
        allocate(akeep%topology(i)%gpus(0), stat=st)
     end do
-    print *, "Input topology"
-    do i = 1, size(akeep%topology)
-       print *, "Region ", i, " with ", akeep%topology(i)%nproc, " cores"
-       if(size(akeep%topology(i)%gpus).gt.0) &
-            print *, "---> gpus ", akeep%topology(i)%gpus
-    end do
+    ! print *, "Input topology"
+    ! do i = 1, size(akeep%topology)
+    !    print *, "Region ", i, " with ", akeep%topology(i)%nproc, " cores"
+    !    if(size(akeep%topology(i)%gpus).gt.0) &
+    !         print *, "---> gpus ", akeep%topology(i)%gpus
+    ! end do
 
     ! perform rest of analyse
     ! if (check) then
@@ -622,6 +625,10 @@ contains
     real :: load_balance, best_load_balance
     integer :: nregion, ngpu
     logical :: has_parent
+    integer(long) :: min_gpu_work
+    
+    min_gpu_work = options%min_gpu_work
+    ! min_gpu_work = 0
 
     ! Count flops below each node
     allocate(flops(nnodes+1), stat=st)
@@ -668,16 +675,17 @@ contains
     ! Keep splitting until we meet balance criterion
     best_load_balance = huge(best_load_balance)
     do i = 1, 2*(nregion+ngpu)
+       print *, "size order = ", size_order(1:nparts)
        ! Check load balance criterion
        load_balance = calc_exec_alloc(nparts, part, size_order, is_child,  &
-            flops, topology, options%min_gpu_work, options%gpu_perf_coeff, &
+            flops, topology, min_gpu_work, options%gpu_perf_coeff, &
             exec_loc, st)
        if (st .ne. 0) return
        best_load_balance = min(load_balance, best_load_balance)
        if (load_balance .lt. options%max_load_inbalance) exit ! allocation is good
        ! Split tree further
        call split_tree(nparts, part, size_order, is_child, sparent, flops, &
-            ngpu, options%min_gpu_work, st)
+            ngpu, min_gpu_work, st)
        if (st .ne. 0) return
     end do
 
@@ -702,7 +710,7 @@ contains
     !print *, "post merge", part(1:nparts+1)
     call create_size_order(nparts, part, flops, size_order)
     load_balance = calc_exec_alloc(nparts, part, size_order, is_child,  &
-         flops, topology, options%min_gpu_work, options%gpu_perf_coeff, &
+         flops, topology, min_gpu_work, options%gpu_perf_coeff, &
          exec_loc, st)
     if (st .ne. 0) return
     !print *, "exec_loc ", exec_loc(1:nparts)
@@ -1071,7 +1079,218 @@ contains
        size_order(j) = i
     end do
   end subroutine create_size_order
-  
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! Tree pruning method. Inspired by the strategy employed in qr_mumps
+  ! for pruning the atree.
+  subroutine prune_tree(nnodes, sptr, sparent, rptr, nth)
+    implicit none
+
+    integer, intent(in) :: nnodes
+    integer, dimension(nnodes+1), intent(in) :: sptr
+    integer, dimension(nnodes), intent(in) :: sparent
+    integer(long), dimension(nnodes+1), intent(in) :: rptr
+    ! type(spllt_akeep), intent(inout) :: akeep
+    ! integer, dimension(:), intent(in) :: sparent ! atree
+    integer, intent(in) :: nth ! number of workers
+    ! type(spllt_fkeep), target, intent(in) :: fkeep
+
+    integer(long), allocatable :: weight(:) ! weight(i) contains weight below node i 
+    integer :: j
+    integer :: node
+    !integer :: i
+    ! integer                         :: c
+    integer :: nlz ! number of nodes in the lzero layer
+    integer :: leaves ! current number of leaf nodes
+    integer :: totleaves ! total number of leaf nodes in the atree
+    ! integer                         :: n ! node to be replaced by its direct descendents in lzero
+    ! integer(long) :: p 
+    integer(long) :: totflops
+    !real(kind(1.d0))                :: rm
+    real(kind(1.d0)) :: smallth
+    integer, allocatable :: lzero(:)
+    integer(long), allocatable :: lzero_w(:), proc_w(:)
+    ! logical                         :: found
+    integer, allocatable :: nchild(:)
+    
+    ! Count flops below each node
+    allocate(weight(nnodes+1))
+    weight(:) = 0
+    do node = 1, nnodes
+       weight(node) = weight(node) + compute_flops(nnodes, sptr, rptr, node)
+       j = sparent(node)
+       weight(j) = weight(j) + weight(node)
+       !print *, "Node ", node, "parent", j, " flops ", flops(node)
+    end do
+    
+    allocate(lzero_w (nnodes))
+    allocate(lzero   (nnodes))
+    allocate(proc_w  (nth))
+
+    smallth = 0.01
+
+10  continue
+    totleaves = 0
+!     akeep%small = 0
+    
+    totflops = weight(nnodes+1)
+!     ! write(*,*)'totflops: ', totflops
+!     ! write(*,*)'weights: ', akeep%weight 
+!     ! write(*,*)'nnodes: ', akeep%nnodes
+!     ! write(*,*)'root: ', sparent(1)
+!     ! initialize the l0 layer with the root nodes
+    nlz = 0
+!     ! do node = 1, akeep%nnodes+1
+!     !    write(*,*) 'node: ', node, ', weight: ', akeep%weight(node)
+!     !    if (sparent(node) .gt. akeep%nnodes) then
+!     !    ! if (sparent(node) .le. 0) then
+!     !       ! write(*,*) 'weight: ', real(akeep%weight(node), kind(1.d0))
+!     !       ! write(*,*) 'thresh: ', smallth*real(totflops, kind(1.d0))
+!     !       if(real(akeep%weight(node), kind(1.d0)) .gt. smallth*real(totflops, kind(1.d0))) then
+!     !          nlz = nlz+1
+!     !          lzero(nlz) = node
+!     !          lzero_w(nlz) = -akeep%weight(node)
+!     !          write(*,*) 'node: ', node,', weight: ', akeep%weight(node)
+!     !       else
+!     !          akeep%small(node) = 1 ! node is too small; mark it
+!     !       end if
+!     !    end if
+!     !    if(keep%nodes(node)%nchild .eq. 0) totleaves = totleaves+1
+!     ! end do
+
+    node = nnodes+1 ! root node (symbolic)
+    nlz = nlz+1
+    lzero(nlz) = node
+    lzero_w(nlz) = -weight(node)
+    ! count number of children per node
+    allocate(nchild(nnodes+1))
+    nchild = 0
+    do node = 1, nnodes+1
+       j = sparent(node)
+       nchild(j) = nchild(j) + 1 
+    end do
+    ! count leaf nodes
+    do node = 1, nnodes+1
+       if(nchild(node).eq.0) totleaves = totleaves+1       
+    end do
+    
+    leaves = 0
+
+    godown: do
+       ! if (nth .eq. 1) exit ! serial execution process the whole tree as a subtree
+       if (nlz .le. 0) exit ! only small nodes ! 
+       if(nlz .gt. nth*max(2.d0,(log(real(nth,kind(1.d0)))/log(2.d0))**2)) exit ! exit if already too many nodes in l0
+
+       proc_w = 0
+       
+!        ! sort lzero_w into ascending order and apply the same order on
+!        ! lzero array
+!        call spllt_sort(lzero_w, nlz, map=lzero)
+!        ! write(*,*) 'lzero_w: ', lzero_w(1:nlz)
+!        ! map subtrees to threads round-robin 
+!        do node=1, nlz
+!           ! find the least loaded proc
+!           p = minloc(proc_w,1)
+!           proc_w(p) = proc_w(p) + abs(lzero_w(node))
+!        end do
+!        ! write(*,*)'nlz: ', nlz       
+!        ! all the subtrees have been mapped. Evaluate load balance
+!        rm = minval(proc_w)/maxval(proc_w)
+!        ! print *, "rm: ", rm
+!        if((rm .gt. 0.9) .and. (nlz .ge. 1*nth)) exit ! if balance is higher than 90%, we're happy
+
+!        ! if load is not balanced, replace heaviest node with its kids (if any)
+!        found = .false.
+!        findn: do
+!           if(leaves .eq. totleaves) exit godown ! reached the bottom of the tree
+        
+!           if(leaves .eq. nlz) then
+!              if(nlz .ge. nth*max(2.d0,(log(real(nth,kind(1.d0)))/log(2.d0))**2)) then 
+!                 exit godown ! all the nodes in l0 are leaves. nothing to do
+!              else
+!                 smallth = smallth/2.d0
+!                 if(smallth .lt. 1e-4) then
+!                    exit godown
+!                 else
+!                    goto 10
+!                 end if
+!              end if
+!           end if
+!           n = lzero(leaves+1) ! n is the node that must be replaced
+!           ! print *, "n:", n, ", nchild:", fkeep%nodes(n)%nchild, ", sz:", size(fkeep%nodes(n)%child)
+!           ! print *, "children:", fkeep%nodes(n)%child
+!           ! append children of n
+!           do i=1, size(fkeep%nodes(n)%child) ! fkeep%nodes(n)%nchild
+!              c = fkeep%nodes(n)%child(i)
+!              ! print *, "c:", c             
+!              if(real(akeep%weight(c), kind(1.d0)) .gt. smallth*real(totflops, kind(1.d0))) then
+!                 ! this child is big enough, add it
+!                 found = .true.
+!                 nlz = nlz+1
+!                 lzero  (nlz) = c
+!                 lzero_w(nlz) = -akeep%weight(c)
+!              else
+!                 ! print *, "TETET"
+!                 akeep%small(fkeep%nodes(c)%least_desc:c) = -c
+!                 akeep%small(c) = 1 ! node is too smal; mark it
+!              end if
+
+!           end do
+!           if(found) exit findn ! if at least one child was added then we redo the mapping
+!           leaves = leaves+1          
+!        end do findn
+!        ! write(*,*) 'lzero: ', lzero(1:nlz)
+
+!        ! swap n with last element
+!        lzero  (leaves+1) = lzero  (nlz)
+!        lzero_w(leaves+1) = lzero_w(nlz)
+!        nlz = nlz-1
+
+    end do godown
+
+!     ! write(*,*)'nlz: ', nlz
+!     ! write(*,*)'final lzero: ', lzero(1:nlz)
+
+!     ! DEBUG
+!     ! akeep%small = 0
+!     ! nlz = 1
+!     ! lzero(1) = 1
+
+!     ! mark all the children of nodes in l0
+!     do i=1, nlz
+!        n = lzero(i)
+!        ! write(*,*)'n: ', n
+!        ! print *, "n:", n, ", nchild:", fkeep%nodes(n)%nchild, ", sz:", size(fkeep%nodes(n)%child) 
+!        do j=1, size(fkeep%nodes(n)%child) ! fkeep%nodes(n)%nchild
+!           c = fkeep%nodes(n)%child(j)
+!           ! print *, "c: ", c
+!           ! write(*,*)'desc: ', fkeep%nodes(c)%least_desc
+!           akeep%small(fkeep%nodes(c)%least_desc:c) = -c
+!           akeep%small(c) = 1
+!        end do
+!     end do
+
+!     ! print *, "TETETET"
+
+!     ! DEBUG
+!     ! akeep%small = 0
+!     ! c = 703
+!     ! akeep%small(fkeep%nodes(c)%least_desc:c) = -c
+!     ! akeep%small(c) = 1
+
+!     ! c = 668
+!     ! akeep%small(fkeep%nodes(c)%least_desc:c) = -c
+!     ! akeep%small(c) = 1
+
+    deallocate(lzero_w)
+    deallocate(lzero)
+    deallocate(proc_w)
+
+    return
+  end subroutine prune_tree
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !> @brief Print assembly tree in a dot file
   subroutine spldlt_print_atree(akeep)
     use spral_ssids_akeep, only: ssids_akeep
     ! use spral_ssids
@@ -1130,21 +1349,22 @@ contains
   !> @brief Compute flops for processing a node
   !> @param akeep Information generated in analysis phase by SSIDS  
   !> @param node Node
-  function compute_flops(akeep, node)
-    use spral_ssids_akeep, only: ssids_akeep
+  function compute_flops(nnodes, sptr, rptr, node)
     implicit none
 
-    type(ssids_akeep), intent(in) :: akeep
-    integer, intent(in) :: node
-    integer(long) :: compute_flops
+    integer, intent(in) :: nnodes
+    integer, dimension(nnodes+1), intent(in) :: sptr
+    integer(long), dimension(nnodes+1), intent(in) :: rptr
+    integer, intent(in) :: node ! node index
+    integer(long) :: compute_flops ! return value
     
     integer :: n, m ! node sizes
-    integer(long) :: jj    
+    integer(long) :: jj
 
-    compute_flops = 0 
+    compute_flops = 0
     
-    m = int(akeep%rptr(node+1)-akeep%rptr(node))
-    n = akeep%sptr(node+1)-akeep%sptr(node)
+    m = int(rptr(node+1)-rptr(node))
+    n = sptr(node+1)-sptr(node)
     do jj = m-n+1, m
        compute_flops = compute_flops + jj**2
     end do
@@ -1152,7 +1372,7 @@ contains
   end function compute_flops
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  !> @brief Print assembly tree with partitions
+  !> @brief Print assembly tree (including partitions) in a dot file
   subroutine spldlt_print_atree_part(akeep)
     use spral_ssids_akeep, only: ssids_akeep
     ! use spral_ssids
@@ -1175,7 +1395,7 @@ contains
     allocate(flops(akeep%nnodes+1))
     flops(:) = 0
     do node = 1, akeep%nnodes
-       flops(node) = flops(node) + compute_flops(akeep, node)
+       flops(node) = flops(node) + compute_flops(akeep%nnodes, akeep%sptr, akeep%rptr, node)
        j = akeep%sparent(node)
        flops(j) = flops(j) + flops(node)
        !print *, "Node ", node, "parent", j, " flops ", flops(node)
