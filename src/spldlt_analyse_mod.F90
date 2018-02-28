@@ -1087,6 +1087,10 @@ contains
     use spldlt_utils_mod, only: sort
     implicit none
 
+    type node_type
+       integer, allocatable :: child(:)
+    end type node_type
+    
     integer, intent(in) :: nnodes
     integer, dimension(nnodes+1), intent(in) :: sptr
     integer, dimension(nnodes), intent(in) :: sparent
@@ -1104,16 +1108,17 @@ contains
     integer :: nlz ! number of nodes in the lzero layer
     integer :: leaves ! current number of leaf nodes
     integer :: totleaves ! total number of leaf nodes in the atree
-    ! integer                         :: n ! node to be replaced by its direct descendents in lzero
-    ! integer(long) :: p 
+    integer :: n ! node to be replaced by its direct descendents in lzero
+    integer(long) :: p ! proc 
     integer(long) :: totflops
-    !real(kind(1.d0))                :: rm
+    real(kind(1.d0)) :: rm ! load balance
     real(kind(1.d0)) :: smallth
     integer, allocatable :: lzero(:)
     integer(long), allocatable :: lzero_w(:), proc_w(:)
-    ! logical                         :: found
-    integer, allocatable :: nchild(:)
-    
+    logical :: found
+    integer, allocatable :: nchild(:) ! nchild(i) contains the number of child nodes for node i
+    type(node_type), allocatable :: nodes(:)
+
     ! Count flops below each node
     allocate(weight(nnodes+1))
     weight(:) = 0
@@ -1168,11 +1173,22 @@ contains
     nchild = 0
     do node = 1, nnodes+1
        j = sparent(node)
-       nchild(j) = nchild(j) + 1 
+       nchild(j) = nchild(j) + 1
     end do
-    ! count leaf nodes
+
+    ! allocate child nodes list and count leaves
+    allocate(nodes(nnodes+1))
     do node = 1, nnodes+1
-       if(nchild(node).eq.0) totleaves = totleaves+1       
+       if(nchild(node).eq.0) totleaves = totleaves+1
+       allocate(nodes(node)%child(nchild(node)))
+    end do
+
+    nchild = 0
+    ! list children node
+    do node = 1, nnodes+1
+       j = sparent(node)
+       nchild(j) = nchild(j) + 1
+       nodes(j)%child(nchild(j)) = node
     end do
     
     leaves = 0
@@ -1184,63 +1200,63 @@ contains
 
        proc_w = 0
        
-!        ! sort lzero_w into ascending order and apply the same order on
-!        ! lzero array
-!        call spllt_sort(lzero_w, nlz, map=lzero)
-!        ! write(*,*) 'lzero_w: ', lzero_w(1:nlz)
-!        ! map subtrees to threads round-robin 
-!        do node=1, nlz
-!           ! find the least loaded proc
-!           p = minloc(proc_w,1)
-!           proc_w(p) = proc_w(p) + abs(lzero_w(node))
-!        end do
-!        ! write(*,*)'nlz: ', nlz       
-!        ! all the subtrees have been mapped. Evaluate load balance
-!        rm = minval(proc_w)/maxval(proc_w)
-!        ! print *, "rm: ", rm
-!        if((rm .gt. 0.9) .and. (nlz .ge. 1*nth)) exit ! if balance is higher than 90%, we're happy
+       ! sort lzero_w into ascending order and apply the same order on
+       ! lzero array
+       call sort(lzero_w, nlz, map=lzero)
+       ! write(*,*) 'lzero_w: ', lzero_w(1:nlz)
+       ! map subtrees to threads round-robin 
+       do node=1, nlz
+          ! find the least loaded proc
+          p = minloc(proc_w,1)
+          proc_w(p) = proc_w(p) + abs(lzero_w(node))
+       end do
+       ! write(*,*)'nlz: ', nlz       
+       ! all the subtrees have been mapped. Evaluate load balance
+       rm = minval(proc_w)/maxval(proc_w)
+       ! print *, "rm: ", rm
+       if((rm .gt. 0.9) .and. (nlz .ge. 1*nth)) exit ! if balance is higher than 90%, we're happy
 
-!        ! if load is not balanced, replace heaviest node with its kids (if any)
-!        found = .false.
-!        findn: do
-!           if(leaves .eq. totleaves) exit godown ! reached the bottom of the tree
+       ! if load is not balanced, replace heaviest node with its kids (if any)
+       found = .false.
+       findn: do
+          if(leaves .eq. totleaves) exit godown ! reached the bottom of the tree
         
-!           if(leaves .eq. nlz) then
-!              if(nlz .ge. nth*max(2.d0,(log(real(nth,kind(1.d0)))/log(2.d0))**2)) then 
-!                 exit godown ! all the nodes in l0 are leaves. nothing to do
-!              else
-!                 smallth = smallth/2.d0
-!                 if(smallth .lt. 1e-4) then
-!                    exit godown
-!                 else
-!                    goto 10
-!                 end if
-!              end if
-!           end if
-!           n = lzero(leaves+1) ! n is the node that must be replaced
-!           ! print *, "n:", n, ", nchild:", fkeep%nodes(n)%nchild, ", sz:", size(fkeep%nodes(n)%child)
-!           ! print *, "children:", fkeep%nodes(n)%child
-!           ! append children of n
-!           do i=1, size(fkeep%nodes(n)%child) ! fkeep%nodes(n)%nchild
-!              c = fkeep%nodes(n)%child(i)
-!              ! print *, "c:", c             
-!              if(real(akeep%weight(c), kind(1.d0)) .gt. smallth*real(totflops, kind(1.d0))) then
-!                 ! this child is big enough, add it
-!                 found = .true.
-!                 nlz = nlz+1
-!                 lzero  (nlz) = c
-!                 lzero_w(nlz) = -akeep%weight(c)
-!              else
-!                 ! print *, "TETET"
-!                 akeep%small(fkeep%nodes(c)%least_desc:c) = -c
-!                 akeep%small(c) = 1 ! node is too smal; mark it
-!              end if
+          if(leaves .eq. nlz) then
+             if(nlz .ge. nth*max(2.d0,(log(real(nth,kind(1.d0)))/log(2.d0))**2)) then 
+                exit godown ! all the nodes in l0 are leaves. nothing to do
+             else
+                smallth = smallth/2.d0
+                if(smallth .lt. 1e-4) then
+                   exit godown
+                else
+                   goto 10
+                end if
+             end if
+          end if
+          n = lzero(leaves+1) ! n is the node that must be replaced
+          ! print *, "n:", n, ", nchild:", fkeep%nodes(n)%nchild, ", sz:", size(fkeep%nodes(n)%child)
+          ! print *, "children:", fkeep%nodes(n)%child
+          ! append children of n
+          do i=1, size(nodes(n)%child) ! nchild(n)
+             c = nodes(n)%child(i)
+             ! print *, "c:", c
+             if(real(weight(c), kind(1.d0)) .gt. smallth*real(totflops, kind(1.d0))) then
+                ! this child is big enough, add it
+                found = .true.
+                nlz = nlz+1
+                lzero  (nlz) = c
+                lzero_w(nlz) = -weight(c)
+             else
+                ! ! print *, "TETET"
+                ! akeep%small(fkeep%nodes(c)%least_desc:c) = -c
+                ! akeep%small(c) = 1 ! node is too smal; mark it
+             end if
 
-!           end do
-!           if(found) exit findn ! if at least one child was added then we redo the mapping
-!           leaves = leaves+1          
-!        end do findn
-!        ! write(*,*) 'lzero: ', lzero(1:nlz)
+          end do
+          if(found) exit findn ! if at least one child was added then we redo the mapping
+          leaves = leaves+1          
+       end do findn
+       ! write(*,*) 'lzero: ', lzero(1:nlz)
 
 !        ! swap n with last element
 !        lzero  (leaves+1) = lzero  (nlz)
