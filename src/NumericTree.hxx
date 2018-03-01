@@ -146,22 +146,28 @@ namespace spldlt {
             starpu_void_data_register(&(fronts_[ni].contrib_hdl)); // Node's symbolic handle
          }
 
-         for(int p = 0; p < symb_.nparts_; ++p) {
+         // for(int p = 0; p < symb_.nparts_; ++p) {
 
-            int root = symb_.part_[p+1]-2; // Part is 1-indexed
-            // printf("[factor_mf] part = %d, root = %d\n", p, root);
+         //    int root = symb_.part_[p+1]-2; // symb_.part_ is 1-indexed
+         //    // printf("[factor_mf] part = %d, root = %d\n", p, root);
 
-            // Check if current partition is a subtree
-            if (symb_[root].exec_loc != -1) {
+         //    // Check if current partition is a subtree
+         //    if (symb_[root].exec_loc != -1) {
 
-               factor_subtree_task(
-                     symb_.akeep_, fkeep_, symb_[root], aval, p, child_contrib, 
-                     &options);
-            }
+         //       factor_subtree_task(
+         //             symb_.akeep_, fkeep_, symb_[root], aval, p, child_contrib, 
+         //             &options);
+         //    }
+         // }
+         for(int p = 0; p < symb_.nsubtrees_; ++p) {
+            int root = symb_.subtrees_[p]-1; // subtrees is 1-indexed
+            factor_subtree_task(
+                  symb_.akeep_, fkeep_, symb_[root], aval, p, child_contrib, 
+                  &options);
          }
-// #if defined(SPLDLT_USE_STARPU)
-//          starpu_task_wait_for_all();
-// #endif         
+         // #if defined(SPLDLT_USE_STARPU)
+         //          starpu_task_wait_for_all();
+         // #endif         
          // Allocate mapping array
          // int *map = new int[symb_.n+1];
 
@@ -257,7 +263,7 @@ namespace spldlt {
             T *aval, void** child_contrib, 
             struct spral::ssids::cpu::cpu_factor_options const& options) {
 
-         printf("[factor_mf_posdef] nparts = %d\n", symb_.nparts_);
+         // printf("[factor_mf_posdef] nparts = %d\n", symb_.nparts_);
          int INIT_PRIO = 4;
          int ASSEMBLE_PRIO = 4;
 
@@ -270,20 +276,28 @@ namespace spldlt {
             starpu_void_data_register(&(symb_[ni].hdl));
          }
          
-         for(int p = 0; p < symb_.nparts_; ++p) {
+         // for(int p = 0; p < symb_.nparts_; ++p) {
 
-            int root = symb_.part_[p+1]-2; // Part is 1-indexed
-            // printf("[factor_mf] part = %d, root = %d\n", p, root);
+         //    int root = symb_.part_[p+1]-2; // Part is 1-indexed
+         //    // printf("[factor_mf] part = %d, root = %d\n", p, root);
 
-            // Check if current partition is a subtree
-            if (symb_[root].exec_loc != -1) {
+         //    // Check if current partition is a subtree
+         //    if (symb_[root].exec_loc != -1) {
 
-               factor_subtree_task(
-                     symb_.akeep_, fkeep_, symb_[root], aval, p, child_contrib, 
-                     &options);
-            }
+         //       factor_subtree_task(
+         //             symb_.akeep_, fkeep_, symb_[root], aval, p, child_contrib, 
+         //             &options);
+         //    }
+         // }
+         for(int p = 0; p < symb_.nsubtrees_; ++p) {
+            int root = symb_.subtrees_[p]-1; // subtrees is 1-indexed
+            printf("[factor_mf] nsubtrees = %d, p = %d, root = %d\n", symb_.nsubtrees_, p, root);
+            factor_subtree_task(
+                  symb_.akeep_, fkeep_, symb_[root], aval, p, child_contrib, 
+                  &options);
          }
 
+         
 // #if defined(SPLDLT_USE_STARPU)
 //          starpu_task_wait_for_all();
 // #endif         

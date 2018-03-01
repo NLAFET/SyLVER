@@ -146,7 +146,7 @@ program spldlt_test
    ! print atree
    ! call spldlt_print_atree(akeep)
    ! print atree with partitions
-   call spldlt_print_atree_part(spldlt_akeep%akeep)
+   ! call spldlt_print_atree_part(spldlt_akeep%akeep)
 
    ! Initialize SpLDLT
    call spldlt_init(ncpu)

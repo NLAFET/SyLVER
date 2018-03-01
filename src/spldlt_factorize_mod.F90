@@ -335,7 +335,8 @@ contains
     posdef = fkeep%pos_def
     ! posdef = .true.
 
-    call c_f_pointer(child_contrib_c(akeep%contrib_idx(part)), contrib)
+    ! call c_f_pointer(child_contrib_c(akeep%contrib_idx(part)), contrib)
+    call c_f_pointer(child_contrib_c(part), contrib)
 
     select type(subtree_ptr => akeep%subtree(part)%ptr)
     type is (cpu_symbolic_subtree)
@@ -343,12 +344,12 @@ contains
             subtree_ptr, posdef, val, child_contrib_c, coptions)
     end select
 
-    if (akeep%contrib_idx(part) .le. akeep%nparts) then
-       ! There is a parent subtree to contribute to
-       ! print *, "[spldlt_factor_subtree_c] part = ", part, ", contrib to = ",  akeep%contrib_idx(part)
-       contrib = fkeep%subtree(part)%ptr%get_contrib()
-       contrib%ready = .true.
-    end if
+    !if (akeep%contrib_idx(part) .le. akeep%nparts) then
+    ! There is a parent subtree to contribute to
+    ! print *, "[spldlt_factor_subtree_c] part = ", part, ", contrib to = ",  akeep%contrib_idx(part)
+    contrib = fkeep%subtree(part)%ptr%get_contrib()
+    contrib%ready = .true.
+    !end if
 
   end subroutine spldlt_factor_subtree_c
   
@@ -505,10 +506,12 @@ contains
     fkeep => spldlt_fkeep%fkeep
 
     ! Allocate space for subtrees
-    allocate(fkeep%subtree(akeep%nparts), stat=st)
+    !allocate(fkeep%subtree(akeep%nparts), stat=st)
+    allocate(fkeep%subtree(spldlt_akeep%nsubtrees), stat=st)
     if (st .ne. 0) goto 100
 
-    allocate(child_contrib(akeep%nparts), stat=st)
+    ! allocate(child_contrib(akeep%nparts), stat=st)
+    allocate(child_contrib(spldlt_akeep%nsubtrees), stat=st)
     ! allocate(exec_loc_aux(akeep%nparts), stat=st)
     if (st .ne. 0) goto 100
     ! exec_loc_aux = 0
@@ -688,8 +691,9 @@ contains
     fkeep => spldlt_fkeep%fkeep
 
     ! Subtree solves
-    ! Fwd solve    
-    do part = 1, akeep%nparts
+    ! Fwd solve
+    ! do part = 1, akeep%nparts
+    do part = 1, spldlt_akeep%nsubtrees
        if (akeep%subtree(part)%exec_loc .eq. -1) cycle
        call fkeep%subtree(part)%ptr%solve_fwd(nrhs, x2, n, inform)
        if (inform%stat .ne. 0) goto 100
@@ -726,7 +730,8 @@ contains
     call spldlt_fkeep%numeric_tree%solve_diag_bwd(posdef, nrhs, x2, ldx)
 
     ! Diag bwd solve
-    do part = akeep%nparts, 1, -1
+    !do part = akeep%nparts, 1, -1
+    do part = spldlt_akeep%nsubtrees, 1, -1
        if (akeep%subtree(part)%exec_loc .eq. -1) cycle
        call fkeep%subtree(part)%ptr%solve_diag_bwd(nrhs, x2, n, inform)
        if (inform%stat .ne. 0) goto 100
