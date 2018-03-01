@@ -655,7 +655,7 @@ namespace spldlt {
          }
       }
 
-      printf("[assemble_contrib_subtree_task] nh = %d\n", nh);
+      // printf("[assemble_contrib_subtree_task] nh = %d\n", nh);
       // Insert assembly tasks if there are any contributions
       if (nh > 0) {
          insert_subtree_assemble_contrib(

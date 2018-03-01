@@ -295,7 +295,7 @@ namespace spldlt {
          // }
          for(int p = 0; p < symb_.nsubtrees_; ++p) {
             int root = symb_.subtrees_[p]-1; // subtrees is 1-indexed
-            printf("[factor_mf] nsubtrees = %d, p = %d, root = %d\n", symb_.nsubtrees_, p, root);
+            // printf("[factor_mf] nsubtrees = %d, p = %d, root = %d\n", symb_.nsubtrees_, p, root);
             factor_subtree_task(
                   symb_.akeep_, fkeep_, symb_[root], aval, p, child_contrib, 
                   &options);
