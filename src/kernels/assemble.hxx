@@ -139,8 +139,8 @@ namespace spldlt {
       // printf("[alloc_front] ndelay_in = %d\n", front.ndelay_in);
       // front.ndelay_in = 0; // debug
 
-      int nrow = sfront.nrow + front.ndelay_in;
-      int ncol = sfront.ncol + front.ndelay_in;
+      int nrow = front.get_nrow();
+      int ncol = front.get_ncol();
 
       /* Get space for node now we know it size using Fortran allocator + zero it*/
       // NB L is  nrow x ncol and D is 2 x ncol (but no D if posdef)
@@ -161,12 +161,15 @@ namespace spldlt {
       for(int i=0; i<sfront.ncol; i++)
          front.perm[i] = sfront.rlist[i];
 
-      // FIXME: Only if pivot_method is APP
-      // allocate backups
+      // TODO: Only if pivot_method is APP
+      // Allocate backups
       front.alloc_backup();
       
-      // allocate cdata
+      // Allocate cdata
       front.alloc_cdata();
+
+      // Allocate block structure
+      front.alloc_blocks();
    }
 
    ////////////////////////////////////////////////////////////////////////////////

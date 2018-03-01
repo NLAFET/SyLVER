@@ -43,6 +43,8 @@
 
 // namespace spral { namespace ssids { namespace cpu {
 namespace spldlt {
+
+   const int INNER_BLOCK_SIZE = 32;
    
    template<typename T, int iblksz, typename Backup, bool debug,
             typename Allocator>
@@ -64,7 +66,7 @@ void ldlt_app_solve_bwd(int m, int n, T const* l, int ldl, int nrhs, T* x, int l
 
 namespace ldlt_app_internal {
 
-static const int INNER_BLOCK_SIZE = 32;
+   // static const int INNER_BLOCK_SIZE = 32;
 
 /** \return number of blocks for given n */
 inline int calc_nblk(int n, int block_size) {

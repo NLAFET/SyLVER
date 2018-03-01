@@ -11,6 +11,8 @@
 
 namespace spldlt {
 
+   // static const int INNER_BLOCK_SIZE = 32;
+   
    template<typename T, typename PoolAllocator>
    class Tile {
       typedef std::allocator_traits<PoolAllocator> PATraits;
@@ -95,6 +97,7 @@ namespace spldlt {
    class NumericFront {
       typedef std::allocator_traits<PoolAllocator> PATraits;
       typedef typename std::allocator_traits<PoolAllocator>::template rebind_alloc<int> IntAlloc;
+      typedef spldlt::ldlt_app_internal::Block<T, INNER_BLOCK_SIZE, IntAlloc> BlockSpec;
    public:
       /**
        * \brief Constructor
@@ -231,6 +234,33 @@ namespace spldlt {
                   get_ncol(), blksz, IntAlloc(pool_alloc_));
       }
 
+      /// @brief Allocate blocks (structre only)
+      /// Note: factor data must be allocated
+      /// Note: cdata must be allocated and intialized
+      void alloc_blocks() {
+
+         int const m = get_nrow();
+         int const n = get_ncol();
+         int const ldl = get_ldl();
+         int const mblk = get_nr();
+         int const nblk = get_nc();
+         int const num_blocks = nblk*mblk;
+         blocks.reserve(num_blocks);
+
+         for(int jblk=0; jblk<nblk; jblk++) {
+            for(int iblk=0; iblk<mblk; iblk++) {
+               // Create and insert block at the end (column-wise storage)
+               blocks.emplace_back(iblk, jblk, m, n, *cdata, &lcol[jblk*blksz*ldl+iblk*blksz], ldl, blksz);
+               // alternativel store pointer
+               // blocks[jblk*mblk + iblk] = new BlockSpec(iblk, jblk, m, n, cdata, &a[jblk*block_size*lda+iblk*block_size], lda, block_size);
+#if defined(SPLDLT_USE_STARPU)
+               // register handle for block (iblk, jblk)
+               blocks[jblk*mblk+iblk].register_handle(); 
+#endif
+            }
+         }
+      }
+      
       /// @brief Return the number of rows in the node
       inline int get_nrow() {
          return symb.nrow + ndelay_in;
@@ -239,6 +269,16 @@ namespace spldlt {
       /// @brief Return the number of columns in the node
       inline int get_ncol() {
          return symb.ncol + ndelay_in;
+      }
+
+      /// @brief Return the number of block rows in the node
+      inline int get_nr() {
+         return (get_nrow()-1) / blksz + 1;
+      }
+
+      /// @brief Return the number of block rows in the node
+      inline int get_nc() {
+         return (get_ncol()-1) / blksz + 1;
       }
 
       /** \brief Return leading dimension of node's lcol member. */
@@ -270,8 +310,10 @@ namespace spldlt {
       T *contrib; // Pointer to contribution block
       int blksz; // Tileing size
       std::vector<spldlt::Tile<T, PoolAllocator>> contrib_blocks; // Tile structures containing contrib
-      spldlt::ldlt_app_internal::CopyBackup<T, PoolAllocator> *backup; // Stores baclups of matrix blocks
+      spldlt::ldlt_app_internal::CopyBackup<T, PoolAllocator> *backup; // Stores backups of matrix blocks
+      // Structures for indef factor
       spldlt::ldlt_app_internal::ColumnData<T, IntAlloc> *cdata;
+      std::vector<BlockSpec> blocks;
 #if defined(SPLDLT_USE_STARPU)
       starpu_data_handle_t contrib_hdl; // Symbolic handle for contribution blocks
 #endif
