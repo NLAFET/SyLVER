@@ -240,7 +240,7 @@ namespace spldlt {
       int cnr = (cnrow-1) / blksz + 1; // number of block rows in child node
       int cncontrib = cnr-csa;
       // Source block
-      Block<T, PoolAlloc> &blk = cnode.contrib_blocks[(ii-csa)+(jj-csa)*cncontrib];
+      Tile<T, PoolAlloc> &blk = cnode.contrib_blocks[(ii-csa)+(jj-csa)*cncontrib];
       int blk_lda = blk.lda;
       int blk_m = blk.m;
       int blk_n = blk.n;
@@ -399,7 +399,7 @@ namespace spldlt {
       int csa = cncol / blksz; // Index of first block in contrib
       int cnr = (cnrow-1) / blksz + 1; // number of block rows in child node
       int cncontrib = cnr-csa;
-      Block<T, PoolAlloc> &src_blk = cnode.contrib_blocks[(ii-csa)+(jj-csa)*cncontrib];
+      Tile<T, PoolAlloc> &src_blk = cnode.contrib_blocks[(ii-csa)+(jj-csa)*cncontrib];
       int src_blk_lda = src_blk.lda;
       int src_blk_m = src_blk.m;
       int src_blk_n = src_blk.n;
@@ -455,7 +455,7 @@ namespace spldlt {
                // printf("[assemble_contrib_block] rr: %d, cc: %d\n", rr, cc);
                // printf("[assemble_contrib_block] r: %d, c: %d\n", r, c);
                // printf("[assemble_contrib_block] dest_row_sa: %d, dest_col_sa: %d\n", dest_row_sa, dest_col_sa);
-               Block<T, PoolAlloc> &dest_blk = node.contrib_blocks[(rr-sa)+(cc-sa)*ncontrib];
+               Tile<T, PoolAlloc> &dest_blk = node.contrib_blocks[(rr-sa)+(cc-sa)*ncontrib];
                int dest_blk_lda = dest_blk.lda;
                T *dest = &dest_blk.a[ (c - ncol - dest_col_sa)*dest_blk_lda ];
 
@@ -609,7 +609,7 @@ namespace spldlt {
                int rr = r / blksz; // Destination block row
                // First row index in CB of destination block
                int dest_row_sa = (ncol > rr*blksz) ? 0 : (rr*blksz-ncol);
-               Block<T, PoolAlloc> &dest_blk = node.contrib_blocks[(rr-sa)+(cc-sa)*ncontrib];
+               Tile<T, PoolAlloc> &dest_blk = node.contrib_blocks[(rr-sa)+(cc-sa)*ncontrib];
                int dest_blk_lda = dest_blk.lda;
                T *dest = &dest_blk.a[ (c - ncol - dest_col_sa)*dest_blk_lda ];
                // Assemble destination block

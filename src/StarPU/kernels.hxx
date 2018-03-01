@@ -1083,7 +1083,7 @@ namespace spldlt { namespace starpu {
                   int rr = r / blksz; // Destination block row
                   // First row index in CB of destination block
                   int dest_row_sa = (snode.ncol > rr*blksz) ? 0 : (rr*blksz-snode.ncol);
-                  Block<T, PoolAlloc> &dest_blk = node->contrib_blocks[(rr-sa)+(cc-sa)*ncontrib];
+                  Tile<T, PoolAlloc> &dest_blk = node->contrib_blocks[(rr-sa)+(cc-sa)*ncontrib];
                   int dest_blk_lda = dest_blk.lda;
                   T *dest = &dest_blk.a[ (c - snode.ncol - dest_col_sa)*dest_blk_lda ];
                   // Assemble destination block

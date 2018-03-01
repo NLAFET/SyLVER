@@ -12,39 +12,39 @@
 namespace spldlt {
 
    template<typename T, typename PoolAllocator>
-   class Block {
+   class Tile {
       typedef std::allocator_traits<PoolAllocator> PATraits;
    public:
 
       /// \brief Constuctor.
-      // Block()
+      // Tile()
       //    : m_(0), n_(0), lda_(0), a_(nullptr)
       // {}
 
       /// \brief Constuctor.
-      /// \param i Block's row index.
-      /// \param j Block's column index.
+      /// \param i Tile's row index.
+      /// \param j Tile's column index.
       /// \param m Number of rows in matrix.
       /// \param n Number of columns in matrix.
       /// \param a Pointer to matrix data.
       /// \param lda leading dimension associated with data.
-      // Block(int i, int j, int m, int n, T* a, int lda)
+      // Tile(int i, int j, int m, int n, T* a, int lda)
       //    : i_(i), j_(j), m_(m), n_(n), lda_(lda), a_(a)
       // {}
 
       /// \brief Constuctor.
-      /// \param i Block's row index.
-      /// \param j Block's column index.
+      /// \param i Tile's row index.
+      /// \param j Tile's column index.
       /// \param m Number of rows in matrix.
       /// \param n Number of columns in matrix.
-      Block(int i, int j, int m, int n, int lda, 
+      Tile(int i, int j, int m, int n, int lda, 
             PoolAllocator const& pool_alloc)
          : i(i), j(j), m(m), n(n), lda(lda), a(nullptr),
            pool_alloc_(pool_alloc)
       {}
       
       /// \brief Descructor.
-      ~Block() {
+      ~Tile() {
          free();
       }
 
@@ -124,12 +124,12 @@ namespace spldlt {
          //    for(int j = rsa; j < nr; j++) {
          //       // First col in contrib block
          //       int first_col = std::max(j*blksz, n);
-         //       // Block width
+         //       // Tile width
          //       int blkn = std::min((j+1)*blksz, m) - first_col;
          //       for(int i = rsa; i < nr; i++) {
          //          // First col in contrib block
          //          int first_row = std::max(i*blksz, n);
-         //          // Block height
+         //          // Tile height
          //          int blkm = std::min((i+1)*blksz, m) - first_row;
          //          contrib_blocks.emplace_back(i-rsa, j-rsa, blkm, blkn, blkm, pool_alloc_);
          //       }
@@ -159,12 +159,12 @@ namespace spldlt {
             for(int j = rsa; j < nr; j++) {
                // First col in contrib block
                int first_col = std::max(j*blksz, n);
-               // Block width
+               // Tile width
                int blkn = std::min((j+1)*blksz, m) - first_col;
                for(int i = rsa; i < nr; i++) {
                   // First col in contrib block
                   int first_row = std::max(i*blksz, n);
-                  // Block height
+                  // Tile height
                   int blkm = std::min((i+1)*blksz, m) - first_row;
                   contrib_blocks.emplace_back(i-rsa, j-rsa, blkm, blkn, blkm, pool_alloc_);
                }
@@ -268,8 +268,8 @@ namespace spldlt {
       T *lcol; // Pointer to start of factor data
       int *perm; // Pointer to permutation
       T *contrib; // Pointer to contribution block
-      int blksz; // Blocking size
-      std::vector<spldlt::Block<T, PoolAllocator>> contrib_blocks; // Block structures containing contrib
+      int blksz; // Tileing size
+      std::vector<spldlt::Tile<T, PoolAllocator>> contrib_blocks; // Tile structures containing contrib
       spldlt::ldlt_app_internal::CopyBackup<T, PoolAllocator> *backup; // Stores baclups of matrix blocks
       spldlt::ldlt_app_internal::ColumnData<T, IntAlloc> *cdata;
 #if defined(SPLDLT_USE_STARPU)

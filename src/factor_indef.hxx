@@ -54,18 +54,17 @@ namespace spldlt {
          typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
          
          // CopyBackup<T> backup(m, n, blksz);
-         // CopyBackup<T, PoolAlloc> backup(m, n, blksz, pool_alloc);
 
          // node.alloc_backup();
          // node.alloc_cdata();
 
-         CopyBackup<T, PoolAlloc> &backup = *node.backup; 
+         CopyBackup<T, PoolAlloc> &backup = *node.backup;
+         // CopyBackup<T, PoolAlloc> backup(m, n, blksz, pool_alloc);
          ColumnData<T, IntAlloc> &cdata = *node.cdata;
+         //ColumnData<T, IntAlloc> cdata(n, blksz, IntAlloc(pool_alloc));
 
          // int const nblk = calc_nblk(n, blksz);
          // int const mblk = calc_nblk(m, blksz);
-
-         //ColumnData<T, IntAlloc> cdata(n, blksz, IntAlloc(pool_alloc));
 
          // node.nelim = FactorSymIndef
          //    <T, INNER_BLOCK_SIZE, CopyBackup<T, PoolAlloc>, debug, PoolAlloc>
