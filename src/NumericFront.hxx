@@ -183,11 +183,11 @@ namespace spldlt {
       }
 
       void free_contrib_blocks() {
-         int m = symb.nrow + ndelay_in;
-         int n = symb.ncol + ndelay_in;            
+         int m = get_nrow();
+         int n = get_ncol();            
          size_t contrib_dimn = m-n; // Dimension of contribution block
          if (contrib_dimn>0) {
-            int nr = (m-1) / blksz + 1; // number of block rows in front amtrix
+            int nr = get_nr(); // number of block rows in front amtrix
             int rsa = n / blksz; // index of first block in contribution blocks  
             int ncontrib = nr-rsa;
             for(int j = 0; j < ncontrib; j++) {
@@ -255,7 +255,7 @@ namespace spldlt {
                // blocks[jblk*mblk + iblk] = new BlockSpec(iblk, jblk, m, n, cdata, &a[jblk*block_size*lda+iblk*block_size], lda, block_size);
 #if defined(SPLDLT_USE_STARPU)
                // register handle for block (iblk, jblk)
-               blocks[jblk*mblk+iblk].register_handle(); 
+               if (iblk >= jblk) blocks[jblk*mblk+iblk].register_handle(); 
 #endif
             }
          }

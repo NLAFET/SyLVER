@@ -1320,6 +1320,10 @@ public:
             &hdl_, 0, (uintptr_t) aval_, lda_, nrow(), ncol(),
             sizeof(T));
    }
+
+   void unregeister_handle_submit() {
+      starpu_data_unregister_submit(hdl_);
+   }
 #endif
 private:
    /** \brief return number of columns in given block column */
