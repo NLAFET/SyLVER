@@ -289,7 +289,7 @@ contains
     cpu_factor%csubtree = &
          c_create_numeric_subtree(posdef, cpu_factor%symbolic%csubtree, &
          val, cscaling, child_contrib_c, coptions, cstats)
-
+         
     ! Success, set result and return
     spldlt_factor_subtree_cpu => cpu_factor
 

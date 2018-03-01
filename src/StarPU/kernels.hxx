@@ -853,7 +853,7 @@ namespace spldlt { namespace starpu {
 
          // printf("[factor_subtree_cpu_func]\n");
          // printf("[factor_subtree_cpu_func] akeep = %p, fkeep = %p\n", akeep, fkeep);
-         // printf("[factor_subtree_cpu_func] part: %d, child_contrib: %p\n", p+1, child_contrib);
+         // printf("[factor_subtree_cpu_func] subtree: %d, child_contrib: %p\n", p+1, child_contrib);
          spldlt_factor_subtree_c(akeep, fkeep, p, aval, child_contrib, options);
 
       }

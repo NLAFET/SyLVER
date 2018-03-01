@@ -20,7 +20,8 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mtune=native -std=c++11" )
 
 # Fortran flags
 set(CMAKE_Fortran_FLAGS_RELWITHDEBINFO "${CMAKE_Fortran_FLAGS_RELWITHDEBINFO} -mtune=native" )
-set(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -fcheck=bounds")
+#set(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -fcheck=all")
+set(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -Wall -Wextra -Warray-temporaries -Wconversion -ffpe-trap=zero,overflow,underflow -fbacktrace -ffree-line-length-0 -fcheck=bounds,do,mem,pointer -finit-real=nan")
 # set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -ffpe-trap=underflow,denormal")
 
 # Set default build type

@@ -164,6 +164,9 @@ namespace spldlt {
             factor_subtree_task(
                   symb_.akeep_, fkeep_, symb_[root], aval, p, child_contrib, 
                   &options);
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
          }
          // #if defined(SPLDLT_USE_STARPU)
          //          starpu_task_wait_for_all();
