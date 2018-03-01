@@ -1176,7 +1176,7 @@ contains
     ! count number of children per node
     allocate(nchild(nnodes+1))
     nchild = 0
-    do node = 1, nnodes+1
+    do node = 1, nnodes
        j = sparent(node)
        nchild(j) = nchild(j) + 1
     end do
