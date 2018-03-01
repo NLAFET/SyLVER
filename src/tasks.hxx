@@ -486,12 +486,7 @@ namespace spldlt {
 
       spldlt::starpu::insert_factor_subtree(
             root.hdl, akeep, fkeep, p, aval, child_contrib, options);
-      // insert_factor_subtree(root.hdl, posdef, aval, akeep, fkeep, p, child_contrib, options);
 
-      // Debug
-      // insert_factor_subtree(root.hdl, akeep, fkeep, p);
-
-      // spldlt_factor_subtree_c(posdef, aval, akeep, fkeep, p, child_contrib, options);
 #else
       spldlt_factor_subtree_c(akeep, fkeep, p, aval, child_contrib, options);
 #endif
