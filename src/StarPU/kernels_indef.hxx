@@ -249,6 +249,9 @@ namespace spldlt { namespace starpu {
          spldlt::ldlt_app_internal::Block<T, iblksz, IntAlloc> dblk(blk, blk, m, n, *cdata, a_kk, ld_a_kk, options->cpu_block_size);
          spldlt::ldlt_app_internal::Block<T, iblksz, IntAlloc> rblk(iblk, blk, m, n, *cdata, a_ik, ld_a_ik, options->cpu_block_size);
          
+         // printf("[applyN_block_app_cpu_func] m = %d, n = %d\n", m, n);
+         // printf("[applyN_block_app_cpu_func] ld_akk = %d, ld_aik = %d\n", ld_a_kk, ld_a_ik);
+
          // Apply column permutation from factorization of dblk and in
          // the process, store a (permuted) copy for recovery in case of
          // a failed column
@@ -327,6 +330,8 @@ namespace spldlt { namespace starpu {
 
          spldlt::ldlt_app_internal::Block<T, iblksz, IntAlloc> dblk(blk, blk, m, n, *cdata, a_kk, ld_a_kk, options->cpu_block_size);
          spldlt::ldlt_app_internal::Block<T, iblksz, IntAlloc> cblk(blk, jblk, m, n, *cdata, a_kj, ld_a_kj, options->cpu_block_size);
+
+         // printf("[applyT_block_app_cpu_func] m = %d, n = %d\n", m, n);
          
          // Apply row permutation from factorization of dblk and in
          // the process, store a (permuted) copy for recovery in case of

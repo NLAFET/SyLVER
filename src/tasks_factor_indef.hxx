@@ -10,8 +10,8 @@ namespace spldlt {
 
    template <typename T, typename PoolAlloc>
    void factor_front_indef_task(
-         NumericFront<T, PoolAlloc> &node,
-         std::vector<spral::ssids::cpu::Workspace> &workspaces,
+         NumericFront<T, PoolAlloc>& node,
+         std::vector<spral::ssids::cpu::Workspace>& workspaces,
          PoolAlloc& pool_alloc,
          struct cpu_factor_options& options
          ) {

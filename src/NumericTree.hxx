@@ -164,9 +164,9 @@ namespace spldlt {
             factor_subtree_task(
                   symb_.akeep_, fkeep_, symb_[root], aval, p, child_contrib, 
                   &options);
-// #if defined(SPLDLT_USE_STARPU)
-//             starpu_task_wait_for_all();
-// #endif
+#if defined(SPLDLT_USE_STARPU)
+            starpu_task_wait_for_all();
+#endif
          }
 
 // #if defined(SPLDLT_USE_STARPU)
@@ -177,7 +177,7 @@ namespace spldlt {
 
          for(int ni = 0; ni < symb_.nnodes_; ++ni) {
             
-            SymbolicFront &sfront = symb_[ni];
+            SymbolicFront& sfront = symb_[ni];
             // Skip iteration if node is in a subtree
             if (sfront.exec_loc != -1) continue;
 
@@ -265,7 +265,7 @@ namespace spldlt {
       // factor_mf_posdef
       void factor_mf_posdef(
             T *aval, void** child_contrib, 
-            struct spral::ssids::cpu::cpu_factor_options const& options) {
+            struct spral::ssids::cpu::cpu_factor_options& options) {
 
          // printf("[factor_mf_posdef] nparts = %d\n", symb_.nparts_);
          int INIT_PRIO = 4;
@@ -316,7 +316,7 @@ namespace spldlt {
          // Loop over node in the assemnly tree
          for(int ni = 0; ni < symb_.nnodes_; ++ni) {
             
-            SymbolicFront &sfront = symb_[ni];
+            SymbolicFront& sfront = symb_[ni];
             
             // Skip iteration if node is in a subtree
             if (sfront.exec_loc != -1) continue;
@@ -462,10 +462,6 @@ namespace spldlt {
                   fini_node_task(*child, blksz, INIT_PRIO);
 // #if defined(SPLDLT_USE_STARPU)
 //                   starpu_task_wait_for_all();
-// #endif
-
-// #if defined(SPLDLT_USE_STARPU)
-//                   unregister_node_submit(child_sfront, *child, blksz);
 // #endif
                }
 #if defined(SPLDLT_USE_STARPU)

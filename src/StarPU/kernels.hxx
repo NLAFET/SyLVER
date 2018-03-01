@@ -828,7 +828,7 @@ namespace spldlt { namespace starpu {
 
       extern "C" void spldlt_factor_subtree_c(
             void *akeep, void *fkeep, int p, double *aval, 
-            void **child_contrib, struct spral::ssids::cpu::cpu_factor_options const* options);
+            void **child_contrib, struct spral::ssids::cpu::cpu_factor_options *options);
 
       // CPU kernel
       template <typename T>
@@ -870,7 +870,7 @@ namespace spldlt { namespace starpu {
             int p,
             T *aval,
             void **child_contrib,
-            struct spral::ssids::cpu::cpu_factor_options const* options) {
+            struct spral::ssids::cpu::cpu_factor_options *options) {
 
          int ret;
 
@@ -1421,6 +1421,8 @@ namespace spldlt { namespace starpu {
             nh++;
          }
 
+         // printf("[insert_activate_init_node] node = %d, nh = %d\n", snode->idx, nh);
+         
          int ret;
          ret = starpu_task_insert(&cl_activate_init_node,
                                   STARPU_DATA_MODE_ARRAY, descrs, nh,
@@ -1433,6 +1435,8 @@ namespace spldlt { namespace starpu {
                                   STARPU_VALUE, &pool_alloc, sizeof(PoolAlloc*),
                                   STARPU_VALUE, &aval, sizeof(T*),
                                   0);
+         STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
+
       }
 
       ////////////////////////////////////////////////////////////////////////////////
@@ -1477,7 +1481,8 @@ namespace spldlt { namespace starpu {
             descrs[nh].handle = cnode_hdls[i]; descrs[nh].mode = STARPU_R;
             nh++;
          }
-         
+         // printf("[insert_assemble] node = %d, nh = %d\n", node->symb.idx+1, nh);
+
          int ret;
          ret = starpu_task_insert(&cl_assemble,
                                   STARPU_DATA_MODE_ARRAY, descrs, nh,

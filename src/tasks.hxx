@@ -155,8 +155,8 @@ namespace spldlt {
    template <typename T, typename FactorAlloc, typename PoolAlloc>
    void activate_init_front_task(
          bool posdef,
-         SymbolicFront &snode,
-         NumericFront<T, PoolAlloc> &node,
+         SymbolicFront& snode,
+         NumericFront<T, PoolAlloc>& node,
          void** child_contrib,
          int blksz,
          FactorAlloc& factor_alloc,
@@ -177,7 +177,7 @@ namespace spldlt {
          cnode_hdls[i] = child->symb.hdl;
          ++i;
       }
-      
+      // printf("[activate_init_front_task] node = %d, nchild = %d\n", snode.idx+1, nchild);
       insert_activate_init_node(
             snode.hdl, cnode_hdls, nchild,
             posdef, &snode, &node, child_contrib, blksz, &factor_alloc, 
@@ -474,13 +474,13 @@ namespace spldlt {
 
    extern "C" void spldlt_factor_subtree_c(
          void *akeep, void *fkeep, int p, double *aval, 
-         void **child_contrib, struct spral::ssids::cpu::cpu_factor_options const* options);
+         void **child_contrib, struct spral::ssids::cpu::cpu_factor_options *options);
 
    template <typename T>
    void factor_subtree_task(
          void *akeep, void *fkeep, SymbolicFront const& root, /*bool posdef,*/ T *aval, 
          int p, void **child_contrib, 
-         struct spral::ssids::cpu::cpu_factor_options const* options) {
+         struct spral::ssids::cpu::cpu_factor_options *options) {
 
 #if defined(SPLDLT_USE_STARPU)
 
@@ -1055,8 +1055,8 @@ namespace spldlt {
    template <typename T, typename PoolAlloc>
    void assemble_task(
          int n,
-         SymbolicFront const& snode,
-         NumericFront<T, PoolAlloc> &node,
+         SymbolicFront& snode,
+         NumericFront<T, PoolAlloc>& node,
          void** child_contrib,
          PoolAlloc& pool_alloc,
          int blksz
@@ -1075,7 +1075,7 @@ namespace spldlt {
          cnode_hdls[i] = child->symb.hdl;
          ++i;
       }
-      
+      // printf("[assemble_task] node = %d, nchild = %d\n", snode.idx+1, nchild);
       insert_assemble(
             snode.hdl, cnode_hdls, nchild,
             n, &node, child_contrib, &pool_alloc, blksz);
@@ -1093,7 +1093,7 @@ namespace spldlt {
    
    template <typename T, typename PoolAlloc>
    void assemble_contrib_task(
-         NumericFront<T, PoolAlloc> &node,
+         NumericFront<T, PoolAlloc>& node,
          void** child_contrib,
          int blksz
          ){
@@ -1111,6 +1111,7 @@ namespace spldlt {
          cnode_hdls[i] = child->symb.hdl;
          ++i;
       }
+      // printf("[assemble_contrib_task] node = %d, nchild = %d\n", node.symb.idx+1, nchild);
 
       insert_assemble_contrib(
             node.get_hdl(), cnode_hdls, nchild, //node.contrib_hdl,
