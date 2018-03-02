@@ -16,19 +16,19 @@ namespace spldlt { namespace starpu {
       /// @brief Register handles for a node in StarPU.
       template <typename T, typename PoolAlloc>
       void register_node_indef(
-            SymbolicFront &sfront,
-            NumericFront<T, PoolAlloc> &front,
+            SymbolicFront& sfront,
+            NumericFront<T, PoolAlloc>& front,
             int blksz) {
 
          typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
 
-         int m = sfront.nrow + front.ndelay_in;
-         int n = sfront.ncol + front.ndelay_in;
+         int m = front.get_nrow();
+         int n = front.get_ncol();
          T *a = front.lcol;
          int lda = spral::ssids::cpu::align_lda<T>(m);
-         int nr = (m-1) / blksz + 1; // number of block rows
-         int nc = (n-1) / blksz + 1; // number of block columns
-         ColumnData<T, IntAlloc> &cdata = *front.cdata;
+         int nr = front.get_nr(); // number of block rows
+         int nc = front.get_nc(); // number of block columns
+         ColumnData<T, IntAlloc>& cdata = *front.cdata;
 
          // sfront.handles.reserve(nr*nc);
          sfront.handles.resize(nr*nc); // allocate handles
@@ -873,19 +873,19 @@ namespace spldlt { namespace starpu {
             // 2) We are at a root node;
             // 3) options.failed_pivot_method is set to tpp.
             if (
-                  m==n ||
-                  options->pivot_method==PivotMethod::tpp ||
-                  options->failed_pivot_method==FailedPivotMethod::tpp
+                  m==n // ||
+                  // options->pivot_method==PivotMethod::tpp ||
+                  // options->failed_pivot_method==FailedPivotMethod::tpp
                   ) {
                nelim = node->nelim;
-               //T *ld = new T[2*(m-nelim)]; // TODO: workspace
+
                T *ld = work.get_ptr<T>(m-nelim);
                node->nelim += ldlt_tpp_factor(
                      m-nelim, n-nelim, &perm[nelim], &lcol[nelim*(ldl+1)], ldl, 
                      &d[2*nelim], ld, m-nelim, options->action, options->u, options->small, 
                      nelim, &lcol[nelim], ldl);
-               // delete[] ld;
-               // printf("[factor_front_indef_secondpass_nocontrib_cpu_func] second pass = %d out of %d\n", node->nelim, n);
+
+               printf("[factor_front_indef_secondpass_nocontrib_cpu_func] second pass = %d out of %d\n", node->nelim, n);
 
                if (
                      (m-n>0) && // We're not at a root node
@@ -902,13 +902,15 @@ namespace spldlt { namespace starpu {
 
                      int first_col = std::max(k*blksz, nelim);
                      int last_col = std::min((k+1)*blksz, node->nelim-1);
+                     //int nelim_col = 0;
                      int nelim_col = last_col-first_col+1;
                      T *dk = &d[2*k*blksz];
-                     // printf("[factor_front_indef_secondpass_nocontrib_cpu_func] first_col = %d, last_col = %d, nelim_col = %d\n", first_col, last_col, nelim_col);
+                     printf("[factor_front_indef_secondpass_nocontrib_cpu_func] first_col = %d, last_col = %d, nelim_col = %d\n", first_col, last_col, nelim_col);
                      for (int j = rsa; j < nr; ++j) {
 
                         int ljk_first_row = std::max(j*blksz, n);
                         T *ljk = &lcol[first_col*ldl+ljk_first_row];
+                        //T *ljk = &lcol[k*blksz*ldl+j*blksz];
 
                         for (int i = j; i < nr; ++i) {
                            
@@ -924,7 +926,7 @@ namespace spldlt { namespace starpu {
                            // printf("[factor_front_indef_secondpass_nocontrib_cpu_func] k = %d, i = %d, j = %d\n", k, i, j);
                            // printf("[factor_front_indef_secondpass_nocontrib_cpu_func] lik_first_row = %d, ljk_first_row = %d\n", lik_first_row, ljk_first_row);
 
-                           // printf("[factor_front_indef_secondpass_nocontrib_cpu_func] updm = %d, updn = %d\n", upd.m, upd.n);
+                           printf("[factor_front_indef_secondpass_nocontrib_cpu_func] updm = %d, updn = %d\n", upd.m, upd.n);
                            
                            update_contrib_block(
                                  upd.m, upd.n, upd.a, upd.lda,  

@@ -140,9 +140,8 @@ program spldlt_test
    ! smaflop = real(inform%num_flops)
    ! smafact = real(inform%num_factor)
 
-   ! perform spldlt analysis
+   ! Perform spldlt analysis
    call spldlt_analyse(spldlt_akeep, n, ptr, row, ssids_opt, inform, ncpu, val=val)
-
    ! print atree
    ! call spldlt_print_atree(akeep)
    ! print atree with partitions
