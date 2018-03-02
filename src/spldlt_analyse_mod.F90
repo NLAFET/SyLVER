@@ -299,8 +299,8 @@ contains
     ! print *, " contrib_idx = ", akeep%contrib_idx(1:akeep%nparts)
     ! print *, " contrib_dest = ", contrib_dest(1:akeep%nparts)
 
-    ! nth = size(akeep%topology)
-    nth = 2
+    nth = size(akeep%topology)
+    ! nth = 2
     call prune_tree(akeep%nnodes, akeep%sptr, akeep%sparent, akeep%rptr, nth, &
          spldlt_akeep%nsubtrees, small, contrib_dest, subtree_sa, spldlt_akeep%subtree_en)
 
