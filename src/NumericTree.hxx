@@ -88,7 +88,7 @@ namespace spldlt {
          }
          
          std::vector<spral::ssids::cpu::Workspace> workspaces;
-         // std::vector<spldlt::Workspace> workspaces;
+
          int nworkers = 0;
 #if defined(SPLDLT_USE_STARPU)
          nworkers = starpu_cpu_worker_get_count();
@@ -182,15 +182,22 @@ namespace spldlt {
             if (sfront.exec_loc != -1) continue;
 
             // printf("[factor_mf_indef] ni = %d\n", ni);
-            
+
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif            
             // Activate and init frontal matrix
+            // Allocate data structures
+            // activate_front(
+            //       false, sfront, fronts_[ni], child_contrib, blksz, factor_alloc_,
+            //       pool_alloc_);
             activate_init_front_task(
                   false, sfront, fronts_[ni], child_contrib, blksz, 
                   factor_alloc_, pool_alloc_, aval);
 // #if defined(SPLDLT_USE_STARPU)
 //             starpu_task_wait_for_all();
 // #endif
-
+            
             // assemble contributions from children fronts and subtreess
             // assemble(symb_.n, fronts_[ni], child_contrib, pool_alloc_, blksz);
             assemble_task(symb_.n, sfront, fronts_[ni], child_contrib, pool_alloc_, blksz);
@@ -222,10 +229,12 @@ namespace spldlt {
 
             factor_front_indef_task(
                   fronts_[ni], workspaces,  pool_alloc_, options);
-
 // #if defined(SPLDLT_USE_STARPU)
 //             starpu_task_wait_for_all();
 // #endif
+//             factor_front_indef(
+//                   sfront, fronts_[ni], workspaces, pool_alloc_, options);
+
 
             // Assemble contributions from children nodes into non
             // fully-summed columns
@@ -243,6 +252,10 @@ namespace spldlt {
                if (csnode.exec_loc == -1) {
                   // fini_node(*child);
                   fini_node_task(*child, blksz, INIT_PRIO);
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
+
                   //#if defined(SPLDLT_USE_STARPU)
                   // TODO put in fini_node kernel
                   // unregister_node_submit(csnode, *child, blksz);

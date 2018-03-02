@@ -1321,10 +1321,11 @@ public:
             sizeof(T));
    }
 
-   void unregeister_handle_submit() {
+   void unregister_handle_submit() {
       starpu_data_unregister_submit(hdl_);
    }
 #endif
+
 private:
    /** \brief return number of columns in given block column */
    inline int get_ncol(int blk) const {

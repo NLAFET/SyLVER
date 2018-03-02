@@ -115,6 +115,7 @@ namespace spldlt {
 
       SymbolicFront const& sfront = front.symb;
 
+      front.ndelay_out = 0;
       front.ndelay_in = 0;
       /* Count incoming delays and determine size of node */
       for(auto* child=front.first_child; child!=NULL; child=child->next_child) {
@@ -228,19 +229,19 @@ namespace spldlt {
    template <typename T, typename PoolAlloc>
    void assemble_block(NumericFront<T,PoolAlloc>& node, 
                        NumericFront<T,PoolAlloc>& cnode, 
-                       int ii, int jj, int *cmap, int blksz) {
+                       int ii, int jj, int *cmap) {
       
       SymbolicFront const& csnode = cnode.symb;
-
+      int blksz = cnode.blksz;
       // printf("[assemble_block] ii: %d, jj: %d\n", ii, jj);
       
       // Source node
-      int cnrow = csnode.nrow + cnode.ndelay_in; // Number of rows (including delays) 
-      int cncol = csnode.ncol + cnode.ndelay_in; // Number of cols (including delays)
+      int cnrow = cnode.get_nrow(); // Number of rows (including delays) 
+      int cncol = cnode.get_ncol(); // Number of cols (including delays)
 
       int cm = csnode.nrow - csnode.ncol;
       int csa = cncol / blksz; // Index of first block in contrib
-      int cnr = (cnrow-1) / blksz + 1; // number of block rows in child node
+      int cnr = cnode.get_nr(); // number of block rows in child node
       int cncontrib = cnr-csa;
       // Source block
       Tile<T, PoolAlloc> &blk = cnode.contrib_blocks[(ii-csa)+(jj-csa)*cncontrib];
@@ -641,8 +642,8 @@ namespace spldlt {
 
       SymbolicFront snode = node.symb;
 
-      int nrow = snode.nrow + node.ndelay_in;
-      int ncol = snode.ncol + node.ndelay_in;
+      int nrow = node.get_nrow();
+      int ncol = node.get_ncol();
       size_t ldl = align_lda<double>(nrow);
 
       /*
@@ -709,15 +710,15 @@ namespace spldlt {
                // spral::ssids::cpu::assemble_expected(0, cm, node, *child, map, cache);
                // delete cache;
                   
-               int cnrow = csnode.nrow + child->ndelay_in;
-               int cncol = csnode.ncol + child->ndelay_in;
+               int cnrow = child->get_nrow();
+               int cncol = child->get_ncol();
                   
                int csa = cncol / blksz;
-               int cnr = (cnrow-1) / blksz + 1; // number of block rows
+               int cnr = child->get_nr(); // number of block rows
                // Loop over blocks in contribution blocks
                for (int jj = csa; jj < cnr; ++jj) {
                   for (int ii = jj; ii < cnr; ++ii) {
-                     assemble_block(node, *child, ii, jj, csnode.map, blksz);
+                     assemble_block(node, *child, ii, jj, csnode.map);
                   }
                }
             }

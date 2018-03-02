@@ -772,7 +772,7 @@ namespace spldlt {
          int crsa = csnode.ncol/blksz;
          int cncontrib = cnr-crsa;
       
-         insert_assemble_block(&node, &cnode, ii, jj, cmap, blksz, 
+         insert_assemble_block(&node, &cnode, ii, jj, cmap, 
                                // csnode.contrib_handles[(jj-crsa)*cncontrib+(ii-crsa)],
                                cnode.contrib_blocks[(jj-crsa)*cncontrib+(ii-crsa)].hdl,
                                hdls, nh, snode.hdl, csnode.hdl,

@@ -24,7 +24,7 @@ namespace spldlt { namespace starpu {
       struct starpu_codelet cl_restore_block_app;
 
       // udpate_contrib_block_indef StarPU codelet
-      struct starpu_codelet cl_udpate_contrib_block_indef;
+      struct starpu_codelet cl_update_contrib_block_app;
 
       // permute_failed StarPU codelet
       struct starpu_codelet cl_permute_failed;

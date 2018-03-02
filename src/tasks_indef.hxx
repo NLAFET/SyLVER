@@ -13,9 +13,10 @@ namespace spldlt {
 
    ////////////////////////////////////////////////////////////////////////////////
 
-   template <typename T, typename PoolAlloc>
-   void update_contrib_indef_task(
-         SymbolicFront const& snode,
+   template <typename T, typename PoolAlloc, typename BlockSpec>
+   void update_contrib_block_app_task(
+         BlockSpec isrc, BlockSpec jsrc,
+         Tile<T, PoolAlloc>& upd, 
          NumericFront<T, PoolAlloc> &node,
          int blk, int iblk, int jblk,
          std::vector<spral::ssids::cpu::Workspace> &workspaces,
@@ -26,18 +27,18 @@ namespace spldlt {
 
       typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
 
-      int nrow = node.get_nrow();
       int ncol = node.get_ncol();
       int rsa = ncol / blksz; // index of first block in contribution blocks
-      int nr = (nrow-1) / blksz + 1; // number of block rows
+      int nr = node.get_nr(); // number of block rows
       int ncontrib = nr-rsa;
 
       ColumnData<T, IntAlloc> &cdata = *node.cdata;
-      int const nblk = calc_nblk(ncol, blksz);
-
-      insert_udpate_contrib_block_indef(
-            node.contrib_blocks[(jblk-rsa)*ncontrib+(iblk-rsa)].hdl,
-            snode.handles[blk*nr+iblk], snode.handles[blk*nr+jblk],
+      int const nblk = node.get_nc(); // number of block columns in factors      
+      
+      insert_update_contrib_block_app(
+            upd.hdl, isrc.get_hdl(), jsrc.get_hdl(),
+            // node.contrib_blocks[(jblk-rsa)*ncontrib+(iblk-rsa)].hdl,
+            // snode.handles[blk*nr+iblk], snode.handles[blk*nr+jblk],
             cdata[nblk-1].get_hdl(), // make sure col has been processed
             node.contrib_hdl, // For synchronization purpose
             &node, blk, iblk, jblk, 
@@ -69,7 +70,7 @@ namespace spldlt {
       int ldld = spral::ssids::cpu::align_lda<T>(blksz);
       T *ld = new T[blksz*ldld]; // TODO: Use workspaces
 
-      udpate_contrib_block(
+      update_contrib_block(
             upd.m, upd.n, upd.a, upd.lda,  
             nelim, lik, ldl, ljk, ldl,
             (blk == 0), dk, ld, ldld);
@@ -115,6 +116,7 @@ namespace spldlt {
 
       int nelim = 0;
 
+      node.nelim1 = node.nelim // update number of columns eliminated during the first pass
       // printf("[factor_front_indef_nocontrib] first pass = %d out of %d\n", node.nelim, n);
 
       // Try to eliminate the columns uneliminated at first pass

@@ -659,8 +659,8 @@ namespace spldlt { namespace starpu {
       ////////////////////////////////////////////////////////////////////////////////      
       // Update contribution blocks
       
-      template <typename T, typename PoolAlloc>
-      void udpate_contrib_block_indef_cpu_func(void *buffers[], void *cl_arg) {
+      template <typename T, typename IntAlloc, typename PoolAlloc>
+      void update_contrib_block_app_cpu_func(void *buffers[], void *cl_arg) {
 
          T *upd = (T *)STARPU_MATRIX_GET_PTR(buffers[0]); 
          unsigned ldupd = STARPU_MATRIX_GET_LD(buffers[0]); // Get leading dimensions
@@ -672,7 +672,7 @@ namespace spldlt { namespace starpu {
 
          T *ljk = (T *)STARPU_MATRIX_GET_PTR(buffers[2]);
          unsigned ld_ljk = STARPU_MATRIX_GET_LD(buffers[2]); // Get leading dimensions
-
+         
          // printf("[udpate_contrib_block_indef_cpu_func]\n");
          
          NumericFront<T, PoolAlloc> *node = nullptr;
@@ -683,14 +683,13 @@ namespace spldlt { namespace starpu {
          starpu_codelet_unpack_args(
                cl_arg, &node, &k, &i, &j, &workspaces, &blksz);
 
-         int workerid = starpu_worker_get_id();         
+         int workerid = starpu_worker_get_id();
          spral::ssids::cpu::Workspace &work = (*workspaces)[workerid];
 
          int nrow = node->get_nrow();
          int ncol = node->get_ncol();
          int ldl = align_lda<T>(nrow);
-         int nelim = std::min(blksz, node->nelim - k*blksz);
-         if (nelim <= 0) return; // No factors to update in current block-column
+         // int nelim = std::min(blksz, node->nelim - k*blksz);
          T *lcol = node->lcol;
          T *d = &lcol[ncol*ldl];
          T *dk = &d[2*k*blksz]; // TODO: Get Dk ptr from StarPU
@@ -698,24 +697,34 @@ namespace spldlt { namespace starpu {
          int ljk_first_row = std::max(0, ncol-j*blksz);
          int lik_first_row = std::max(0, ncol-i*blksz);
 
+         ColumnData<T,IntAlloc> *cdata = node->cdata;
+         int cnelim = (*cdata)[k].nelim;
+         
+         // printf("[udpate_contrib_block_app_cpu_func] k = %d, celim = %d, nrow = %d, ncol = %d, blksz = %d\n", k, cnelim, nrow, ncol, blksz);
+         // printf("[udpate_contrib_block_app_cpu_func] lik_first_row = %d, ljk_first_row = %d\n", lik_first_row, ljk_first_row);
+         // printf("[udpate_contrib_block_app_cpu_func] updm = %d, updn = %d, ldupd = %d\n", updm, updn, ldupd);
+         
+         // if (nelim <= 0) return; // No factors to update in current block-column
+         if (cnelim <= 0) return; // No factors to update in current block-column
+
          // TODO: Use workspaces
          int ldld = spral::ssids::cpu::align_lda<T>(blksz);
          // T *ld = new T[blksz*ldld];
          T *ld = work.get_ptr<T>(blksz*ldld);
 
          update_contrib_block(
-               updm, updn, upd, ldupd,  
-               nelim, &lik[lik_first_row], ld_lik, &ljk[ljk_first_row], ld_ljk,
+               updm, updn, upd, ldupd,
+               cnelim, &lik[lik_first_row], ld_lik, &ljk[ljk_first_row], ld_ljk,
                (k == 0), dk, ld, ldld);
 
-         // delete[] ld;
+         //delete[] ld;
       }
 
-      extern struct starpu_codelet cl_udpate_contrib_block_indef;
+      extern struct starpu_codelet cl_update_contrib_block_app;
 
       // insert_udpate_contrib_block_indef
       template <typename T, typename PoolAlloc>
-      void insert_udpate_contrib_block_indef(
+      void insert_update_contrib_block_app(
             starpu_data_handle_t upd_hdl,
             starpu_data_handle_t lik_hdl,
             starpu_data_handle_t ljk_hdl,
@@ -732,7 +741,7 @@ namespace spldlt { namespace starpu {
          int ret;
          
          ret = starpu_insert_task(
-               &cl_udpate_contrib_block_indef,
+               &cl_update_contrib_block_app,
                STARPU_RW, upd_hdl,
                STARPU_R, lik_hdl,
                STARPU_R, ljk_hdl,
@@ -795,23 +804,32 @@ namespace spldlt { namespace starpu {
 
       template <typename T, typename PoolAlloc>
       void insert_permute_failed(
-            starpu_data_handle_t col_hdl,
+            starpu_data_handle_t *col_hdls, int nhdl,
             NumericFront<T, PoolAlloc> *node,
             PoolAlloc *pool_alloc,
             int blksz
             ) {
          
          int ret;
-         
+
+         struct starpu_data_descr *descrs = new starpu_data_descr[nhdl];
+
+         int nh = 0;
+         for (int i=0; i<nhdl; i++) {
+            descrs[nh].handle = col_hdls[i]; descrs[nh].mode = STARPU_RW;
+            nh++;
+         }
+
          ret = starpu_insert_task(
                &cl_permute_failed,
-               STARPU_RW, col_hdl,
+               STARPU_DATA_MODE_ARRAY, descrs, nh,
                STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
                STARPU_VALUE, &pool_alloc, sizeof(PoolAlloc*),
                STARPU_VALUE, &blksz, sizeof(int),
                0);
          STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
 
+         delete[] descrs;
       }
 
       ////////////////////////////////////////////////////////////////////////////////
@@ -830,41 +848,99 @@ namespace spldlt { namespace starpu {
          starpu_codelet_unpack_args(
                cl_arg, &node, &workspaces, &options);
 
+         int workerid = starpu_worker_get_id();
+         spral::ssids::cpu::Workspace &work = (*workspaces)[workerid];
+
          int m = node->get_nrow();
          int n = node->get_ncol();
          size_t ldl = align_lda<T>(m);
          T *lcol = node->lcol;
          T *d = &node->lcol[n*ldl];
          int *perm = node->perm;
-
+         int blksz = node->blksz;
+         
          int nelim = 0;
 
-         // printf("[factor_front_indef_secondpass_nocontrib_cpu_func] first pass = %d out of %d\n", node->nelim, n);
+         // update number of columns eliminated during the first pass
+         node->nelim1 = node->nelim; 
 
          // Try to eliminate the columns uneliminated at first pass
          if (node->nelim < n) {
+            // printf("[factor_front_indef_secondpass_nocontrib_cpu_func] first pass = %d out of %d, node idx = %d\n", node->nelim, n, node->symb.idx+1);
+
             // Use TPP factor to eliminate the remaining columns in the following cases:
             // 1) options.pivot_method is set to tpp;
             // 2) We are at a root node;
             // 3) options.failed_pivot_method is set to tpp.
-            if (m==n || options->pivot_method==PivotMethod::tpp ||
-                options->failed_pivot_method==FailedPivotMethod::tpp) {
+            if (
+                  m==n ||
+                  options->pivot_method==PivotMethod::tpp ||
+                  options->failed_pivot_method==FailedPivotMethod::tpp
+                  ) {
                nelim = node->nelim;
-               T *ld = new T[2*(m-nelim)]; // TODO: workspace
+               //T *ld = new T[2*(m-nelim)]; // TODO: workspace
+               T *ld = work.get_ptr<T>(m-nelim);
                node->nelim += ldlt_tpp_factor(
                      m-nelim, n-nelim, &perm[nelim], &lcol[nelim*(ldl+1)], ldl, 
                      &d[2*nelim], ld, m-nelim, options->action, options->u, options->small, 
                      nelim, &lcol[nelim], ldl);
-               delete[] ld;
+               // delete[] ld;
                // printf("[factor_front_indef_secondpass_nocontrib_cpu_func] second pass = %d out of %d\n", node->nelim, n);
 
+               if (
+                     (m-n>0) && // We're not at a root node
+                     (node->nelim > nelim) // We've eliminated columns at second pass
+                     ) {
+                  // Form contrib
+                  int fc = nelim/blksz; // First block column
+                  int lc = (node->nelim-1)/blksz;
+                  int nr = node->get_nr();
+                  int rsa = n/blksz;                  
+                  int ncontrib = nr-rsa;
+
+                  for (int k = fc; k <= lc; ++k) {
+
+                     int first_col = std::max(k*blksz, nelim);
+                     int last_col = std::min((k+1)*blksz, node->nelim-1);
+                     int nelim_col = last_col-first_col+1;
+                     T *dk = &d[2*k*blksz];
+                     // printf("[factor_front_indef_secondpass_nocontrib_cpu_func] first_col = %d, last_col = %d, nelim_col = %d\n", first_col, last_col, nelim_col);
+                     for (int j = rsa; j < nr; ++j) {
+
+                        int ljk_first_row = std::max(j*blksz, n);
+                        T *ljk = &lcol[first_col*ldl+ljk_first_row];
+
+                        for (int i = j; i < nr; ++i) {
+                           
+                           int lik_first_row = std::max(i*blksz, n);
+                           T *lik = &lcol[first_col*ldl+lik_first_row];
+
+                           Tile<T, PoolAlloc>& upd =
+                              node->contrib_blocks[(j-rsa)*ncontrib+(i-rsa)];
+                           
+                           int ldld = spral::ssids::cpu::align_lda<T>(blksz);
+                           T *ld = work.get_ptr<T>(blksz*ldld);
+
+                           // printf("[factor_front_indef_secondpass_nocontrib_cpu_func] k = %d, i = %d, j = %d\n", k, i, j);
+                           // printf("[factor_front_indef_secondpass_nocontrib_cpu_func] lik_first_row = %d, ljk_first_row = %d\n", lik_first_row, ljk_first_row);
+
+                           // printf("[factor_front_indef_secondpass_nocontrib_cpu_func] updm = %d, updn = %d\n", upd.m, upd.n);
+                           
+                           update_contrib_block(
+                                 upd.m, upd.n, upd.a, upd.lda,  
+                                 nelim_col, lik, ldl, ljk, ldl,
+                                 (nelim==0), dk, ld, ldld);
+
+                        }
+                     }
+                  }
+               }
             }
          }
 
          // Update number of delayed columns
-         node->ndelay_out = n - node->nelim;
-         
-      }      
+         node->ndelay_out = n - node->nelim;         
+      }
 
       // SarPU kernel
       extern struct starpu_codelet cl_factor_front_indef_secondpass_nocontrib;
@@ -884,7 +960,6 @@ namespace spldlt { namespace starpu {
          ret = starpu_insert_task(
                &cl_factor_front_indef_secondpass_nocontrib,
                STARPU_RW, col_hdl,
-               // STARPU_RW, node_hdl,
                STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
                STARPU_VALUE, &workspaces, sizeof(std::vector<spral::ssids::cpu::Workspace>*),
                STARPU_VALUE, &options, sizeof(struct cpu_factor_options*),
@@ -896,7 +971,6 @@ namespace spldlt { namespace starpu {
       ////////////////////////////////////////////////////////////////////////////////
 
       void factor_sync_cpu_func(void *buffers[], void *cl_arg) {
-
          // printf("[factor_sync_cpu_func]\n");
       }
       
@@ -905,7 +979,7 @@ namespace spldlt { namespace starpu {
 
       template <typename T, typename PoolAlloc>
       void insert_factor_sync(
-            starpu_data_handle_t contrib_hdl,
+            starpu_data_handle_t col_hdl,
             NumericFront<T, PoolAlloc>& node
             ) {
 
@@ -917,15 +991,13 @@ namespace spldlt { namespace starpu {
          
          int ret;
 
-         // test/debug
          struct starpu_task *taskA = starpu_task_create();
          taskA->cl = &cl_factor_sync;
          taskA->use_tag = 1;
          taskA->tag_id = tag1;
-         taskA->handles[0] = contrib_hdl;
+         taskA->handles[0] = col_hdl;
          ret = starpu_task_submit(taskA); 
          STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_submit");
-         // end test/debug
 
          // ret = starpu_insert_task(
          //       &cl_factor_sync,
@@ -996,12 +1068,12 @@ namespace spldlt { namespace starpu {
          cl_adjust.name = "ADJUST";
          cl_adjust.cpu_funcs[0] = adjust_cpu_func<T, IntAlloc>;
 
-         // Initialize udpate_contrib_block_indef StarPU codelet
-         starpu_codelet_init(&cl_udpate_contrib_block_indef);
-         cl_udpate_contrib_block_indef.where = STARPU_CPU;
-         cl_udpate_contrib_block_indef.nbuffers = STARPU_VARIABLE_NBUFFERS;
-         cl_udpate_contrib_block_indef.name = "UPDATE_CONTRIB_BLOCK_INDEF";
-         cl_udpate_contrib_block_indef.cpu_funcs[0] = udpate_contrib_block_indef_cpu_func<T, Allocator>;
+         // Initialize update_contrib_block_indef StarPU codelet
+         starpu_codelet_init(&cl_update_contrib_block_app);
+         cl_update_contrib_block_app.where = STARPU_CPU;
+         cl_update_contrib_block_app.nbuffers = STARPU_VARIABLE_NBUFFERS;
+         cl_update_contrib_block_app.name = "UPDATE_CONTRIB_BLOCK_APP";
+         cl_update_contrib_block_app.cpu_funcs[0] = update_contrib_block_app_cpu_func<T, IntAlloc, Allocator>;
 
          // permute failed
          starpu_codelet_init(&cl_permute_failed);
@@ -1019,9 +1091,11 @@ namespace spldlt { namespace starpu {
 
          // Initialize factor_sync StarPU codelet
          starpu_codelet_init(&cl_factor_sync);
-         cl_factor_sync.where = STARPU_NOWHERE; // STARPU_CPU;
+         // cl_factor_sync.where = STARPU_NOWHERE;
+         cl_factor_sync.where = STARPU_CPU;
          cl_factor_sync.nbuffers = 1;// STARPU_VARIABLE_NBUFFERS;
-         cl_factor_sync.modes[0] = STARPU_RW;// STARPU_VARIABLE_NBUFFERS;
+         cl_factor_sync.modes[0] = STARPU_RW;
+         // cl_factor_sync.modes[0] = STARPU_R;
          cl_factor_sync.name = "FACTOR_SYNC";
          cl_factor_sync.cpu_funcs[0] = factor_sync_cpu_func;
       }

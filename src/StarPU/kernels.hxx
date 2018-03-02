@@ -1155,13 +1155,12 @@ namespace spldlt { namespace starpu {
          NumericFront<T, PoolAlloc> *node = nullptr, *cnode = nullptr;
          int ii, jj; // Block indexes
          int *map;
-         int blksz; // Block size
 
          starpu_codelet_unpack_args(cl_arg, 
                                     &node, &cnode,
-                                    &ii, &jj, &map, &blksz);
+                                    &ii, &jj, &map);
 
-         assemble_block(*node, *cnode, ii, jj, map, blksz);
+         assemble_block(*node, *cnode, ii, jj, map);
       }
 
       // // StarPU codelet
@@ -1172,7 +1171,7 @@ namespace spldlt { namespace starpu {
             NumericFront<T, PoolAlloc> *node,
             NumericFront<T, PoolAlloc> *cnode,
             int ii, int jj,
-            int *cmap, int nb,
+            int *cmap,
             starpu_data_handle_t bc_hdl,
             starpu_data_handle_t *dest_hdls, int ndest,
             starpu_data_handle_t node_hdl, // Symbolic handle for destination node
@@ -1211,7 +1210,6 @@ namespace spldlt { namespace starpu {
                                   STARPU_VALUE, &ii, sizeof(int),
                                   STARPU_VALUE, &jj, sizeof(int),
                                   STARPU_VALUE, &cmap, sizeof(int*),
-                                  STARPU_VALUE, &nb, sizeof(int),
                                   STARPU_PRIORITY, prio,
                                   0);
          delete[] descrs;
@@ -1437,6 +1435,7 @@ namespace spldlt { namespace starpu {
                                   0);
          STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
 
+         delete[] descrs;
       }
 
       ////////////////////////////////////////////////////////////////////////////////

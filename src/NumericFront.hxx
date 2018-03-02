@@ -304,6 +304,7 @@ namespace spldlt {
       /* Data that changes during factorize */
       int ndelay_in; // Number of delays arising from children
       int ndelay_out; // Number of delays arising to push into parent
+      int nelim1; // Number of columns succesfully eliminated during first pass
       int nelim; // Number of columns succesfully eliminated
       T *lcol; // Pointer to start of factor data
       int *perm; // Pointer to permutation

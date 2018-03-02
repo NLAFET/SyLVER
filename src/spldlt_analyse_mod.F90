@@ -299,7 +299,8 @@ contains
     ! print *, " contrib_idx = ", akeep%contrib_idx(1:akeep%nparts)
     ! print *, " contrib_dest = ", contrib_dest(1:akeep%nparts)
 
-    nth = size(akeep%topology)
+    ! nth = size(akeep%topology)
+    nth = 2
     call prune_tree(akeep%nnodes, akeep%sptr, akeep%sparent, akeep%rptr, nth, &
          spldlt_akeep%nsubtrees, small, contrib_dest, subtree_sa, spldlt_akeep%subtree_en)
 
@@ -342,10 +343,12 @@ contains
          spldlt_akeep%nsubtrees, spldlt_akeep%subtree_en, small, contrib_dest)
          !akeep%nparts, akeep%part, akeep%contrib_idx, exec_loc, contrib_dest)
 
+    return
+    
 100 continue
     inform%stat = st
     if (inform%stat .ne. 0) then
-       inform%flag = SSIDS_ERROR_ALLOCATION ! TODO Use SPLDLT error codes
+       inform%flag = SSIDS_ERROR_ALLOCATION
     end if
     return
     
@@ -1329,9 +1332,11 @@ contains
        small(nodes(n)%least_desc:n) = -n
        small(n) = 1
        nsubtrees = nsubtrees + 1 ! add new partition                 
-       j = sparent(n) ! get parent node
        contrib_dest(nsubtrees) = 0
-       if (j .lt. nnodes) contrib_dest(nsubtrees) = j
+       if (n .lt. nnodes) then
+          j = sparent(n) ! get parent node
+          if (j .lt. nnodes) contrib_dest(nsubtrees) = j
+       end if
        subtree_sa(nsubtrees) = nodes(n)%least_desc
        subtree_en(nsubtrees) = n
        
@@ -1474,7 +1479,6 @@ contains
     integer :: i, j
 
     integer(long), dimension(:), allocatable :: flops
-    integer(long) :: jj    
     real :: tot_weight, weight
     character(len=5) :: part_str 
 

@@ -26,6 +26,9 @@ namespace spldlt {
          PoolAlloc& pool_alloc,
          struct cpu_factor_options& options) {
 
+      typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
+
+      
       /* Extract useful information about node */
       int m = node.get_nrow();
       int n = node.get_ncol();
@@ -48,8 +51,6 @@ namespace spldlt {
       node.nelim = 0; // TODO add parameter from;
 
       if (options.pivot_method==PivotMethod::app_block) {
-
-         typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
          
          // CopyBackup<T> backup(m, n, blksz);
 
@@ -61,7 +62,6 @@ namespace spldlt {
          ColumnData<T, IntAlloc> &cdata = *node.cdata;
          //ColumnData<T, IntAlloc> cdata(n, blksz, IntAlloc(pool_alloc));
 
-         // int const nblk = calc_nblk(n, blksz);
          // int const mblk = calc_nblk(m, blksz);
 
          // node.nelim = FactorSymIndef
@@ -69,11 +69,17 @@ namespace spldlt {
          //    ::ldlt_app(m, n, perm, lcol, ldl, d, backup, options, blksz, 0.0, upd, 0, 
          //               workspaces, pool_alloc);
            
+         // FactorSymIndef
+         //    <T, INNER_BLOCK_SIZE, CopyBackup<T, PoolAlloc>, debug, PoolAlloc>
+         //    ::factor_indef_app_async(m, n, perm, lcol, ldl, d, cdata, backup,
+         //                             options, blksz, 0.0, upd, 0, workspaces,
+         //                             pool_alloc, node.nelim);
+
          FactorSymIndef
             <T, INNER_BLOCK_SIZE, CopyBackup<T, PoolAlloc>, debug, PoolAlloc>
-            ::factor_indef_app_async(m, n, perm, lcol, ldl, d, cdata, backup,
-                                     options, blksz, 0.0, upd, 0, workspaces,
-                                     pool_alloc, node.nelim);
+            ::factor_indef_app_async(
+                  node, options, blksz, 0.0, upd, 0, workspaces, pool_alloc,
+                  node.nelim);
 
 // #if defined(SPLDLT_USE_STARPU)
 //          starpu_task_wait_for_all();
@@ -137,7 +143,7 @@ namespace spldlt {
 
       // Form contribution blocks
       // form_contrib_front_task(node, blksz);
-      form_contrib_front(snode, node, workspaces, blksz);
+      // form_contrib_front(snode, node, workspaces, blksz);
 
       // Create task for synchronization purpose
       // struct starpu_task *taskA = starpu_task_create();
@@ -149,7 +155,10 @@ namespace spldlt {
       // STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_submit");
 
 #if defined(SPLDLT_USE_STARPU)
-      insert_factor_sync(node.contrib_hdl, node);
+      ColumnData<T, IntAlloc> &cdata = *node.cdata;
+      int const nblk = calc_nblk(n, blksz);
+      insert_factor_sync(cdata[nblk-1].get_hdl(), node);
+      // insert_factor_sync(node.contrib_hdl, node);
 #endif
    }
 
@@ -245,9 +254,9 @@ namespace spldlt {
 
          FactorSymIndef
             <T, INNER_BLOCK_SIZE, CopyBackup<T, PoolAlloc>, debug, PoolAlloc>
-            ::factor_indef_app_async(m, n, perm, node.blocks, d, cdata, backup,
-                                     options, blksz, 0.0, upd, 0, workspaces,
-                                     pool_alloc, node.nelim);
+            ::factor_indef_app_async(
+                  node, options, blksz, 0.0, upd, 0, workspaces, pool_alloc,
+                  node.nelim);
 
 // #if defined(SPLDLT_USE_STARPU)
 //          starpu_task_wait_for_all();
@@ -320,6 +329,7 @@ namespace spldlt {
          std::vector<spral::ssids::cpu::Workspace> &workspaces,
          int blksz) {
 
+      return;
       int UPDATE_PRIO = 4;
 
       int iblksz = blksz;
@@ -372,8 +382,8 @@ namespace spldlt {
 
             for (int iblk = jblk;  iblk < nr; ++iblk) {
                
-               update_contrib_indef_task(
-                     snode, node, blk, iblk, jblk, workspaces, blksz, UPDATE_PRIO);
+               // update_contrib_indef_task(
+               //       snode, node, blk, iblk, jblk, workspaces, blksz, UPDATE_PRIO);
             }            
          }
       }
@@ -1425,11 +1435,16 @@ namespace spldlt {
          int n = node.get_ncol();
          int const nblk = calc_nblk(n, blksz);
 
+         starpu_data_handle_t *col_hdls = new starpu_data_handle_t[nblk];
+         for (int c = 0; c < nblk; c++)
+            col_hdls[c] = cdata[c].get_hdl();
+            
          insert_permute_failed(
-               cdata[nblk-1].get_hdl(),
+               col_hdls, nblk,
                &node, &alloc, blksz
                );
 
+         delete[] col_hdls;
 #else
          int m = node.get_nrow();
          int n = node.get_ncol();
@@ -1461,19 +1476,37 @@ namespace spldlt {
       /// @note This call is asynchronous.
       static
       void factor_indef_app_async(
-            int const m, int const n, int* perm, std::vector<Block<T, iblksz, IntAlloc>>& blocks,
-            T* d, ColumnData<T,IntAlloc>& cdata, Backup& backup,
+            // int const m, int const n, int* perm, std::vector<Block<T, iblksz, IntAlloc>>& blocks,
+            // std::vector<spldlt::Tile<T, PoolAllocator>>& contrib_blocks
+            // T* d, ColumnData<T,IntAlloc>& cdata, Backup& backup,
+            NumericFront<T, Allocator> &node,
             struct cpu_factor_options& options, int const block_size,
             T const beta, T* upd, int const ldupd, std::vector<spral::ssids::cpu::Workspace>& workspaces,
             Allocator const& alloc, int& next_elim, int const from_blk=0
             ) {
-
+         
          typedef spldlt::ldlt_app_internal::Block<T, iblksz, IntAlloc> BlockSpec;
          
-
+         int const m = node.get_nrow();
+         int const n = node.get_ncol();
+         T *lcol = node.lcol;
+         int ldl = align_lda<T>(m);
+         T *d = &node.lcol[n*ldl];
+         int *perm = node.perm;
+         std::vector<Block<T, iblksz, IntAlloc>>& blocks = node.blocks;
+         std::vector<spldlt::Tile<T, Allocator>>& contrib_blocks = node.contrib_blocks;
+         ColumnData<T, IntAlloc> &cdata = *node.cdata;
+         CopyBackup<T, Allocator> &backup = *node.backup;
+         
          int const nblk = calc_nblk(n, block_size);
          int const mblk = calc_nblk(m, block_size);
 
+         size_t contrib_dimn = m-n;
+         int rsa = n/block_size; // index of first block in contribution blocks  
+         int ncontrib = mblk-rsa;
+
+         int UPDATE_PRIO = 4;
+         
          /* Setup */
          // int next_elim = from_blk*block_size;
       
@@ -1504,9 +1537,9 @@ namespace spldlt {
                   cdata, backup,
                   options/*, block_size*/, workspaces, alloc);
 
-            // #if defined(SPLDLT_USE_STARPU)
-            //             starpu_task_wait_for_all();
-            // #endif
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
 
             // DEBUG
             // {
@@ -1537,9 +1570,9 @@ namespace spldlt {
                      cdata, backup,
                      options);
 
-               // #if defined(SPLDLT_USE_STARPU)
-               //                starpu_task_wait_for_all();
-               // #endif
+// #if defined(SPLDLT_USE_STARPU)
+//                starpu_task_wait_for_all();
+// #endif
 
                // DEBUG
                // if(debug) printf("ApplyT(%d,%d)\n", blk, jblk);
@@ -1567,9 +1600,9 @@ namespace spldlt {
                      cdata, backup,
                      options);
 
-               // #if defined(SPLDLT_USE_STARPU)
-               //                starpu_task_wait_for_all();
-               // #endif
+// #if defined(SPLDLT_USE_STARPU)
+//                starpu_task_wait_for_all();
+// #endif
 
                // DEBUG
                // if(debug) printf("ApplyN(%d,%d)\n", iblk, blk);
@@ -1591,9 +1624,9 @@ namespace spldlt {
             // number of passed columns.
             adjust_task(/* dblk*/blocks[blk*(mblk+1)], next_elim, cdata);
 
-            // #if defined(SPLDLT_USE_STARPU)
-            //             starpu_task_wait_for_all();
-            // #endif
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
 
             // DEBUG
             // if(debug) printf("Adjust(%d)\n", blk);
@@ -1622,9 +1655,9 @@ namespace spldlt {
                         cdata, backup, 
                         workspaces);
 
-                  // #if defined(SPLDLT_USE_STARPU)
-                  //             starpu_task_wait_for_all();
-                  // #endif
+// #if defined(SPLDLT_USE_STARPU)
+//                   starpu_task_wait_for_all();
+// #endif
 
                   // DEBUG
                   // if(debug) printf("UpdateT(%d,%d,%d)\n", iblk, jblk, blk);
@@ -1666,45 +1699,29 @@ namespace spldlt {
                         beta, upd, ldupd,
                         workspaces);
 
-                  // #if defined(SPLDLT_USE_STARPU)
-                  //                   starpu_task_wait_for_all();
-                  // #endif
+// #if defined(SPLDLT_USE_STARPU)
+//                   starpu_task_wait_for_all();
+// #endif
 
                }
             }
 
-            // #if defined(SPLDLT_USE_STARPU)
-            //             starpu_task_wait_for_all();
-            // #endif
             // Handle update to contribution block, if required
-            //             if(upd && mblk>nblk) {
-            //                int uoffset = std::min(nblk*block_size, m) - n;
-            //                T *upd2 = &upd[uoffset*(ldupd+1)];
-            //                for(int jblk=nblk; jblk<mblk; ++jblk)
-            //                   for(int iblk=jblk; iblk<mblk; ++iblk) {
-            //                      T* upd_ij = &upd2[(jblk-nblk)*block_size*ldupd + 
-            //                                        (iblk-nblk)*block_size];
-            //                      {
+            if (contrib_dimn > 0) {
+               for (int jblk = rsa; jblk < mblk; ++jblk) {
+                  for (int iblk = jblk;  iblk < mblk; ++iblk) {
+                     update_contrib_block_app_task(
+                           blocks[blk*mblk+iblk], blocks[blk*mblk+jblk],
+                           contrib_blocks[(jblk-rsa)*ncontrib+(iblk-rsa)],
+                           node,
+                           blk, iblk, jblk, workspaces, block_size, UPDATE_PRIO);
+// #if defined(SPLDLT_USE_STARPU)
+//                      starpu_task_wait_for_all();
+// #endif
 
-            //                         BlockSpec ublk(iblk, jblk, m, n, cdata, &a[jblk*block_size*lda+iblk*block_size], lda, block_size);
-            //                         BlockSpec isrc(iblk, blk, m, n, cdata, &a[blk*block_size*lda+iblk*block_size], lda, block_size);
-            //                         BlockSpec jsrc(jblk, blk, m, n, cdata, &a[blk*block_size*lda+jblk*block_size], lda, block_size);
-
-            //                         udpate_contrib_task(
-            //                               // isrc, jsrc, ublk,
-            //                               blocks[blk*mblk+iblk], blocks[blk*mblk+jblk],
-            //                               blocks[jblk*mblk+iblk],
-            //                               beta, upd_ij, ldupd,
-            //                               work
-            //                               );
-
-            // // #if defined(SPLDLT_USE_STARPU)
-            // //             starpu_task_wait_for_all();
-            // // #endif
-
-            //                      }
-            //                   }
-            //             }
+                  }    
+               }
+            }
 
             // #if defined(SPLDLT_USE_STARPU)
             //             starpu_task_wait_for_all();
