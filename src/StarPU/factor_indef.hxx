@@ -22,7 +22,7 @@ namespace spldlt { namespace starpu {
                cl_arg, &node, &workspaces, &pool_alloc, &options);
 
          factor_front_indef(
-               node->symb, *node, *workspaces, *pool_alloc, *options);
+               *node, *workspaces, *pool_alloc, *options);
       }      
 
       // SarPU codelet

@@ -20,7 +20,6 @@ namespace spldlt {
    /// the contribution block
    template <typename T, typename PoolAlloc>
    void factor_front_indef(
-         SymbolicFront const& snode,
          NumericFront<T, PoolAlloc> &node,
          std::vector<spral::ssids::cpu::Workspace> &workspaces,
          PoolAlloc& pool_alloc,

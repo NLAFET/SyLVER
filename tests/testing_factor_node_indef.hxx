@@ -94,7 +94,7 @@ namespace spldlt {
          
       // Setup pool allocator
       typedef BuddyAllocator<T, std::allocator<T>> PoolAllocator;
-      PoolAllocator pool_alloc(m*n);
+      PoolAllocator pool_alloc(lda*n);
 
       SymbolicFront sfront;
       sfront.nrow = m;
@@ -105,9 +105,10 @@ namespace spldlt {
       // Setup allocator for factors
       typedef spral::test::AlignedAllocator<T> FactorAllocator;
       FactorAllocator allocT;
-      
-      front.lcol = allocT.allocate(m*lda);;
-      memcpy(front.lcol, a, m*lda*sizeof(T)); // Copy a to l
+
+      size_t len = lda*n;
+      front.lcol = allocT.allocate(len);
+      memcpy(front.lcol, a, len); // Copy a to l
       // Setup permutation vector
       front.perm = new int[m];
       for(int i=0; i<m; i++) front.perm[i] = i;
@@ -119,7 +120,33 @@ namespace spldlt {
       front.alloc_backup();
       // Setup cdata
       front.alloc_cdata();
-      
+
+      // Allocate contribution blocks
+      front.alloc_contrib_blocks();
+
+      // Copy A (n+1 to m columns) into contrib blocks
+      size_t contrib_dimn = m-n; // Dimension of contribution block
+      if (contrib_dimn>0) {
+         int nr = front.get_nr();
+         int rsa = n/blksz;
+         int ncontrib = nr-rsa;
+
+         for(int j = rsa; j < nr; j++) {
+            // First col in contrib block
+            int first_col = std::max(j*blksz, n);
+            // Tile width
+            int blkn = std::min((j+1)*blksz, m) - first_col;
+            for(int i = rsa; i < nr; i++) {
+               // First col in contrib block
+               int first_row = std::max(i*blksz, n);
+               // Tile height
+               int blkm = std::min((i+1)*blksz, m) - first_row;
+               memcpy(front.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib].a,
+                      &a[first_col*lda + first_row], blkm*blkn);
+            }
+         }
+      }
+     
       // Initialize solver (tasking system in particular)
 #if defined(SPLDLT_USE_STARPU)
       struct starpu_conf *conf = new starpu_conf;
@@ -130,7 +157,7 @@ namespace spldlt {
 #endif
 
       // Setup workspaces
-      std::vector<spral::ssids::cpu::Workspace> work;
+      std::vector<spral::ssids::cpu::Workspace> workspaces;
       const int PAGE_SIZE = 8*1024*1024; // 8 MB
       int nworkers;
 #if defined(SPLDLT_USE_STARPU)
@@ -138,9 +165,9 @@ namespace spldlt {
 #else
       nworkers = omp_get_num_threads();
 #endif
-      work.reserve(nworkers);
+      workspaces.reserve(nworkers);
       for(int i = 0; i < nworkers; ++i)
-         work.emplace_back(PAGE_SIZE);
+         workspaces.emplace_back(PAGE_SIZE);
       
 
       // Init factoriization 
@@ -154,8 +181,19 @@ namespace spldlt {
 
       int q1; // Number of eliminated colmuns
 
-      
-//       // q1 = LDLT
+      // Factor front (first and second pass) and from contrib blocks
+      factor_front_indef(
+            front, workspaces, pool_alloc, options);
+
+      // By default function calls are asynchronous, so we put a
+      // barrier and wait for the DAG to be executed
+#if defined(SPLDLT_USE_STARPU)
+      starpu_task_wait_for_all();      
+#endif
+         
+      q1 = front.nelim;
+         
+         //       // q1 = LDLT
 //       //    <T, iblksz, CopyBackup<T>, false, debug>
 //       //    ::factor(
 //       //          m, n, node.perm, node.lcol, lda, d, backup, options, options.pivot_method,
@@ -182,13 +220,11 @@ namespace spldlt {
 //       //       m, n, node.perm, node.lcol, lda, d, 0.0, upd, 0,
 //       //       options, work, pool_alloc);
       
-//       // By default function calls are asynchronous, so we put a
-//       // barrier and wait for the DAG to be executed
 // #if defined(SPLDLT_USE_STARPU)
 //       starpu_task_wait_for_all();
 // #endif
       
-//       std::cout << "FIRST FACTOR CALL ELIMINATED " << q1 << " of " << n << " pivots" << std::endl;
+      std::cout << "FIRST FACTOR CALL ELIMINATED " << q1 << " of " << n << " pivots" << std::endl;
       
 //       if(debug) {
 //          std::cout << "L after first elim:" << std::endl;
@@ -246,10 +282,11 @@ namespace spldlt {
 //       EXPECT_LE(bwderr, 5e-14) << "(test " << test << " seed " << seed << ")" << std::endl;
 
 //       // Cleanup memory
-//       delete[] a; allocT.deallocate(node.lcol, m*lda);
-//       delete[] b;
-//       delete[] node.perm;
-//       delete[] d; delete[] soln;
+      delete[] a; allocT.deallocate(front.lcol, m*lda);
+      delete[] b;
+      delete[] front.perm;
+      delete[] d;
+      // delete[] soln;
 
       return failed ? -1 : 0;
    }
