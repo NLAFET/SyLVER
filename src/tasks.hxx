@@ -21,56 +21,6 @@ using namespace spldlt::starpu;
 
 namespace spldlt {
 
-//    /* Activate node: allocate data structures */
-//    template <typename T, typename FactorAlloc, typename PoolAlloc>
-//    void activate_node(
-//          SymbolicSNode &snode,
-//          spldlt::NumericNode<T, PoolAlloc> &node,
-//          int blksz,
-//          FactorAlloc& factor_alloc,
-//          PoolAlloc& pool_alloc) {
-
-//       alloc_node(snode, node, factor_alloc, pool_alloc);
-
-// #if defined(SPLDLT_USE_STARPU)
-//       starpu_void_data_register(&(snode.hdl));
-
-//       /* Register blocks in StarPU */
-//       // printf("[NumericTree] regiter node: %d\n", ni);
-//       register_node(snode, node, blksz);
-
-//       // activate_node(snode, nodes_[ni], nb);
-// #endif      
-//    }
-
-
-   ////////////////////////////////////////////////////////////////////////////////
-   // Activate frontal matrix: allocate data structures
-   template <typename T, typename FactorAlloc, typename PoolAlloc>
-   void activate_front(
-         bool posdef,
-         SymbolicFront &sfront,
-         NumericFront<T, PoolAlloc> &front,
-         void** child_contrib,
-         int blksz,
-         FactorAlloc& factor_alloc,
-         PoolAlloc& pool_alloc) {
-
-      // Allocate frontal matrix
-      if (posdef) alloc_front_posdef(front, factor_alloc, pool_alloc);
-      else        alloc_front_indef(front, child_contrib, factor_alloc, pool_alloc);
-
-#if defined(SPLDLT_USE_STARPU)
-      // Register symbolic handle for current node in StarPU
-      // starpu_void_data_register(&(sfront.hdl));
-      // Register block handles
-      // register_node(sfront, front, blksz);
-
-      if (posdef) register_node(sfront, front, blksz);
-      else        register_node_indef(sfront, front, blksz);
-#endif
-   }
-
    ////////////////////////////////////////////////////////////////////////////////
    /// @brief Launches a task for activating a node.
    template <typename T, typename FactorAlloc, typename PoolAlloc>
@@ -136,7 +86,7 @@ namespace spldlt {
 
    }
 
-
+   ////////////////////////////////////////////////////////////////////////////////
    // Terminate node
    template <typename T, typename PoolAlloc>
    void fini_node_task(NumericFront<T, PoolAlloc> &node, 
@@ -239,12 +189,14 @@ namespace spldlt {
          //                      contrib, ldcontrib,
          //                      kk==0);
 
-         insert_factorize_block(kk, snode.handles[kk*nr + kk], node.contrib_blocks[0].hdl, 
-                                snode.hdl, prio);
+         spldlt::starpu::insert_factorize_block(
+               kk, snode.handles[kk*nr + kk], node.contrib_blocks[0].hdl,
+               snode.hdl, prio);
       }
       else {
          // printf("blkm: %d, blkn: %d, ldcontrib:%d\n", blkm, blkn, ldcontrib);
-         insert_factorize_block(snode.handles[kk*nr + kk], snode.hdl, prio);
+         spldlt::starpu::insert_factorize_block(
+               snode.handles[kk*nr + kk], snode.hdl, prio);
       }
 
 #else

@@ -65,7 +65,7 @@ endif()
 ## Set runtime system to be used for the execution
 SET(RUNTIME "STF" CACHE STRING "Runtime system")
 set_property(CACHE RUNTIME PROPERTY STRINGS STF StarPU)
-MESSAGE( STATUS "Runtime:         " ${RUNTIME} )
+MESSAGE( STATUS "Runtime: " ${RUNTIME} )
 
 # # Set BLAS and LAPACK libraries to use for linking
 # SET(BLAS_LAPACK "MKL" CACHE STRING "BLAS and LAPACK libraries")
@@ -73,8 +73,8 @@ MESSAGE( STATUS "Runtime:         " ${RUNTIME} )
 # MESSAGE( STATUS "BLAS/LAPACK:         " ${BLAS_LAPACK} )
 
 # Decide wheter we want to compile the kernel test driver or not
-option(KERNEL_TEST "Kernel test" OFF)
-# MESSAGE( STATUS "Kernel test:         " ${KERNEL_TEST})
+option(KERNEL_TESTS "Kernel test" OFF)
+MESSAGE( STATUS "Kernel tests: " ${KERNEL_TESTS})
 
 # spral
 set(SPRAL_DIR $ENV{SPRALDIR} CACHE PATH "Location of Spral Library")
@@ -263,7 +263,7 @@ target_link_libraries(spldlt_test spldlt)
 # target_link_libraries(spldlt_test_debug spldlt)
 
 # Kernel test driver
-if (${KERNEL_TEST} MATCHES "ON")
+if (${KERNEL_TESTS} MATCHES "ON")
 
   file(
     GLOB_RECURSE
@@ -285,7 +285,7 @@ find_library(SPRAL_LIBRARY spral PATHS ${SPRAL_DIR} ${SPRAL_DIR})
 target_link_libraries(spldlt_test ${SPRAL_LIBRARY})
 # target_link_libraries(spldlt_test_debug ${SPRAL_LIBRARY})
 
-if (${KERNEL_TEST} MATCHES "ON")
+if (${KERNEL_TESTS} MATCHES "ON")
   # MESSAGE( STATUS "spral directory:         " ${SPRAL_DIR})
 
   target_include_directories(spldlt_kernel_test PUBLIC ${SPRAL_DIR})
@@ -302,7 +302,7 @@ set(test_drivers)
 list(APPEND test_drivers "drivers/spldlt_test.F90")
 # list(APPEND test_drivers "drivers/spldlt_test_debug.F90")
 
-if (${KERNEL_TEST} MATCHES "ON")
+if (${KERNEL_TESTS} MATCHES "ON")
 
   list(APPEND test_drivers "drivers/spldlt_kernel_test.F90")
 

@@ -2,6 +2,7 @@
 
 #include "ssids/cpu/cpu_iface.hxx"
 
+#include "kernels/ldlt_app.hxx"
 #include "kernels/factor_indef.hxx"
 
 #if defined(SPLDLT_USE_STARPU)
@@ -32,10 +33,10 @@ namespace spldlt {
       int nr = node.get_nr(); // number of block rows
       int ncontrib = nr-rsa;
 
-      ColumnData<T, IntAlloc> &cdata = *node.cdata;
+      spldlt::ldlt_app_internal::ColumnData<T, IntAlloc> &cdata = *node.cdata;
       int const nblk = node.get_nc(); // number of block columns in factors      
       
-      insert_update_contrib_block_app(
+      spldlt::starpu::insert_update_contrib_block_app(
             upd.hdl, isrc.get_hdl(), jsrc.get_hdl(),
             // node.contrib_blocks[(jblk-rsa)*ncontrib+(iblk-rsa)].hdl,
             // snode.handles[blk*nr+iblk], snode.handles[blk*nr+jblk],
@@ -96,11 +97,11 @@ namespace spldlt {
       typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
       int blksz = options.cpu_block_size;
 
-      ColumnData<T, IntAlloc> &cdata = *node.cdata;
+      spldlt::ldlt_app_internal::ColumnData<T, IntAlloc> &cdata = *node.cdata;
       int n = node.get_ncol();
-      int const nblk = calc_nblk(n, blksz);
+      int const nblk = node.get_nc(); // Number of block-columns
       
-      insert_factor_front_indef_secondpass_nocontrib(
+      spldlt::starpu::insert_factor_front_indef_secondpass_nocontrib(
             cdata[nblk-1].get_hdl(), // node.get_hdl(),
             &node, &workspaces, &options
             );

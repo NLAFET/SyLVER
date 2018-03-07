@@ -28,6 +28,7 @@ int starpu_f_init_c(int ncpus) {
 #endif
 
   info = starpu_init(conf);
+  STARPU_CHECK_RETURN_VALUE(info, "starpu_init");
 
   free(conf);
   return info;

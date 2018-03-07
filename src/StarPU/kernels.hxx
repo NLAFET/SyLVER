@@ -1,102 +1,19 @@
 #pragma once
 
+// SSIDS
 // #include <vector>
 #include "ssids/cpu/cpu_iface.hxx"
+#include "ssids/contrib.h"
+
 // SpLDLT
 // #include "SymbolicSNode.hxx"
 // #include "NumericNode.hxx"
 #include "kernels/factor.hxx"
-// #include "kernels/assemble.hxx"
+#include "kernels/assemble.hxx"
 
 #include <starpu.h>
 
 namespace spldlt { namespace starpu {
-
-      // Register handles for a node in StarPU
-      template <typename T, typename PoolAlloc>
-      void register_node(
-            SymbolicFront &sfront,
-            NumericFront<T, PoolAlloc> &front,
-            int blksz) {
-
-         int m = sfront.nrow + front.ndelay_in;
-         int n = sfront.ncol + front.ndelay_in;
-         T *a = front.lcol;
-         int lda = spral::ssids::cpu::align_lda<T>(m);
-         int nr = (m-1) / blksz + 1; // number of block rows
-         int nc = (n-1) / blksz + 1; // number of block columns
-         // sfront.handles.reserve(nr*nc);
-         sfront.handles.resize(nr*nc); // allocate handles
-         // printf("[register_front] sfront.handles size = %d\n", sfront.handles.size());
-         for(int j = 0; j < nc; ++j) {
-
-            int blkn = std::min(blksz, n - j*blksz);
-
-            for(int i = j; i < nr; ++i) {
-               int blkm = std::min(blksz, m - i*blksz);
-
-               starpu_matrix_data_register(
-                     &(sfront.handles[i + j*nr]), // StarPU handle ptr 
-                     STARPU_MAIN_RAM, // memory 
-                     reinterpret_cast<uintptr_t>(&a[(j*blksz)*lda+(i*blksz)]),
-                     lda, blkm, blkn,
-                     sizeof(T));
-               // printf("[register_front] blk idx = %d, hdl = %p\n", i + j*nr, &(sfront.handles[i + j*nr]));
-
-            }
-         }
-
-         int ldcontrib = m-n;
-         
-         // Allocate and init handles in contribution blocks         
-         if (ldcontrib>0) {
-            // Index of first block in contrib
-            int rsa = n/blksz;
-            // Number of block in contrib
-            int ncontrib = nr-rsa;
-
-            for(int j = rsa; j < nr; j++) {
-               for(int i = j; i < nr; i++) {
-                  // Register block in StarPU
-                  front.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib].register_handle();
-               }
-            }
-         }
-
-         // T *contrib = node.contrib;
-
-         // // Allocate and init handles in contribution blocks         
-         // if (contrib) {
-         //    // Index of first block in contrib
-         //    int rsa = n/blksz;
-         //    // Number of block in contrib
-         //    int ncontrib = nr-rsa;
-         //    snode.contrib_handles.resize(ncontrib*ncontrib);
-
-         //    for(int j = rsa; j < nr; j++) {
-         //       // First col in contrib block
-         //       int first_col = std::max(j*blksz, n);
-         //       // Block width
-         //       int blkn = std::min((j+1)*blksz, m) - first_col;
-
-         //       for(int i = j; i < nr; i++) {
-         //          // First col in contrib block
-         //          int first_row = std::max(i*blksz, n);
-         //          // Block height
-         //          int blkm = std::min((i+1)*blksz, m) - first_row;
-
-         //          // starpu_matrix_data_register(
-         //          //       &(snode.contrib_handles[(i-rsa)+(j-rsa)*ncontrib]), // StarPU handle ptr
-         //          //       STARPU_MAIN_RAM, // memory 
-         //          //       reinterpret_cast<uintptr_t>(&contrib[(first_col-n)*ldcontrib+(first_row-n)]),
-         //          //       ldcontrib, blkm, blkn, sizeof(T));
-                  
-         //          node.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib].register_handle();
-         //       }
-         //    }
-
-         // }
-      }
 
       // unregister handles for a node in StarPU
       template <typename T, typename PoolAlloc>
@@ -160,7 +77,7 @@ namespace spldlt { namespace starpu {
       }
 
       // init_node codelet
-      struct starpu_codelet cl_init_node;      
+      extern struct starpu_codelet cl_init_node;      
 
       template <typename T, typename PoolAlloc>
       void insert_init_node(
@@ -202,7 +119,7 @@ namespace spldlt { namespace starpu {
       }
 
       // fini_node codelet
-      struct starpu_codelet cl_fini_node;
+      extern struct starpu_codelet cl_fini_node;
       
       template <typename T, typename PoolAlloc>
       void insert_fini_node(
@@ -225,11 +142,11 @@ namespace spldlt { namespace starpu {
       ////////////////////////////////////////////////////////////////////////////////
       // factorize_block StarPU task
 
-      // CPU task
-      // TODO generic prec
+      // CPU kernel
+      template<typename T>
       void factorize_block_cpu_func(void *buffers[], void *cl_arg) {
          
-         double *blk = (double *)STARPU_MATRIX_GET_PTR(buffers[0]);
+         T *blk = (T *)STARPU_MATRIX_GET_PTR(buffers[0]);
          unsigned m = STARPU_MATRIX_GET_NX(buffers[0]);
          unsigned n = STARPU_MATRIX_GET_NY(buffers[0]);
          unsigned ld = STARPU_MATRIX_GET_LD(buffers[0]);
@@ -237,16 +154,16 @@ namespace spldlt { namespace starpu {
          factorize_diag_block(m, n, blk, ld);
       }
 
-      // CPU task
-      // TODO generic prec
+      // CPU kernel
+      template<typename T>      
       void factorize_contrib_block_cpu_func(void *buffers[], void *cl_arg) {
          
-         double *blk = (double *)STARPU_MATRIX_GET_PTR(buffers[0]);
+         T *blk = (T *)STARPU_MATRIX_GET_PTR(buffers[0]);
          unsigned m = STARPU_MATRIX_GET_NX(buffers[0]);
          unsigned n = STARPU_MATRIX_GET_NY(buffers[0]);
          unsigned ld = STARPU_MATRIX_GET_LD(buffers[0]);
 
-         double *contrib = (double *)STARPU_MATRIX_GET_PTR(buffers[1]);
+         T *contrib = (T *)STARPU_MATRIX_GET_PTR(buffers[1]);
          unsigned mcontrib = STARPU_MATRIX_GET_NX(buffers[1]);
          unsigned ncontrib = STARPU_MATRIX_GET_NY(buffers[1]);
          unsigned ldcontrib = STARPU_MATRIX_GET_LD(buffers[1]);
@@ -256,11 +173,6 @@ namespace spldlt { namespace starpu {
          starpu_codelet_unpack_args(
                cl_arg,
                &k);
-
-         // printf("[factorize_contrib_block_cpu_func] kk: %d\n", kk);
-         // printf("[factorize_contrib_block_cpu_func] contrib: %p, ldcontrib: %d\n", 
-         // contrib, ldcontrib);
-         // printf("[factorize_contrib_block_cpu_func] mcontrib: %d, ncontrib: %d, ldcontrib: %d\n", mcontrib, ncontrib, ldcontrib);
 
          factorize_diag_block(m, n, blk, ld, contrib, ldcontrib,
                               k==0);
@@ -277,81 +189,39 @@ namespace spldlt { namespace starpu {
       // };
 
       // factorize block codelet
-      struct starpu_codelet cl_factorize_contrib_block;
+      extern struct starpu_codelet cl_factorize_contrib_block;
 
       void insert_factorize_block(
-            int k,
+            int k, 
             starpu_data_handle_t bc_hdl,
             starpu_data_handle_t contrib_hdl,
             starpu_data_handle_t node_hdl, // Symbolic node handle
-            int prio) {
-
-         int ret;
-
-         if (node_hdl) {
-            ret = starpu_insert_task(
-                  &cl_factorize_contrib_block,
-                  STARPU_VALUE, &k, sizeof(int),
-                  STARPU_RW, bc_hdl,
-                  STARPU_RW, contrib_hdl,
-                  STARPU_R, node_hdl,
-                  STARPU_PRIORITY, prio,
-                  0);
-         }
-         else {
-            ret = starpu_insert_task(
-                  &cl_factorize_contrib_block,
-                  STARPU_VALUE, &k, sizeof(int),
-                  STARPU_RW, bc_hdl,
-                  STARPU_RW, contrib_hdl,
-                  STARPU_PRIORITY, prio,
-                  0);
-         }
-
-         STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
-      }
+            int prio);
+      
+      ////////////////////////////////////////////////////////////////////////////////   
+      // factorize_block
 
       // factorize block codelet
-      struct starpu_codelet cl_factorize_block;      
+      extern struct starpu_codelet cl_factorize_block;      
 
       void insert_factorize_block(
             starpu_data_handle_t bc_hdl,
             starpu_data_handle_t node_hdl, // Symbolic node handle
-            int prio) {
-                  
-         int ret;
-
-         if (node_hdl) {
-            ret = starpu_insert_task(
-                  &cl_factorize_block,
-                  STARPU_RW, bc_hdl,
-                  STARPU_R, node_hdl,
-                  STARPU_PRIORITY, prio,
-                  0);
-         }
-         else {
-            ret = starpu_insert_task(
-                  &cl_factorize_block,
-                  STARPU_RW, bc_hdl,
-                  STARPU_PRIORITY, prio,
-                  0);
-         }
-
-         STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
-      }
-
+            int prio);
+      
       ////////////////////////////////////////////////////////////////////////////////
-      // solve_block StarPU task
+      // solve_block
 
-      // CPU task
+      // CPU kernel
+      template<typename T>
       void solve_block_cpu_func(void *buffers[], void *cl_arg) {
 
          /* Get diag block pointer and info */
-         double *blk = (double *)STARPU_MATRIX_GET_PTR(buffers[0]);
+         T *blk = (T *)STARPU_MATRIX_GET_PTR(buffers[0]);
          unsigned ld = STARPU_MATRIX_GET_LD(buffers[0]);
 
          /* Get sub diag block pointer and info */
-         double *blk_ik = (double *)STARPU_MATRIX_GET_PTR(buffers[1]);
+         T *blk_ik = (T *)STARPU_MATRIX_GET_PTR(buffers[1]);
          unsigned m = STARPU_MATRIX_GET_NX(buffers[1]);
          unsigned n = STARPU_MATRIX_GET_NY(buffers[1]);
          unsigned ld_ik = STARPU_MATRIX_GET_LD(buffers[1]);
@@ -360,8 +230,8 @@ namespace spldlt { namespace starpu {
          solve_block(m, n, blk, ld, blk_ik, ld_ik);
       }
 
-      /* solve_block codelet */
-      struct starpu_codelet cl_solve_block;
+      // solve_block codelet
+      extern struct starpu_codelet cl_solve_block;
 
       // Insert solve of subdiag block into StarPU
       void insert_solve_block(
@@ -369,35 +239,26 @@ namespace spldlt { namespace starpu {
             starpu_data_handle_t bc_ik_hdl, /* sub diag block handle */
             starpu_data_handle_t node_hdl,
             int prio
-            ) {
-
-         int ret;
-
-         ret = starpu_insert_task(
-               &cl_solve_block,
-               STARPU_R, bc_kk_hdl,
-               STARPU_RW, bc_ik_hdl,
-               STARPU_R, node_hdl,
-               STARPU_PRIORITY, prio,
-               0);
-
-         STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
-      }
+            );
+      
+      ////////////////////////////////////////////////////////////////////////////////
+      // solve_contrib_block
 
       // CPU task
+      template<typename T>
       void solve_contrib_block_cpu_func(void *buffers[], void *cl_arg) {
 
          // Get diag block pointer and info
-         double *blk = (double *)STARPU_MATRIX_GET_PTR(buffers[0]);
+         T *blk = (T *)STARPU_MATRIX_GET_PTR(buffers[0]);
          unsigned ld = STARPU_MATRIX_GET_LD(buffers[0]);
 
          // Get sub diag block pointer and info
-         double *blk_ik = (double *)STARPU_MATRIX_GET_PTR(buffers[1]);
+         T *blk_ik = (T *)STARPU_MATRIX_GET_PTR(buffers[1]);
          unsigned m = STARPU_MATRIX_GET_NX(buffers[1]);
          unsigned n = STARPU_MATRIX_GET_NY(buffers[1]);
          unsigned ld_ik = STARPU_MATRIX_GET_LD(buffers[1]);
 
-         double *contrib = (double *)STARPU_MATRIX_GET_PTR(buffers[2]);
+         T *contrib = (T *)STARPU_MATRIX_GET_PTR(buffers[2]);
          unsigned ldcontrib = STARPU_MATRIX_GET_LD(buffers[2]);
 
          int k, nb;
@@ -409,7 +270,7 @@ namespace spldlt { namespace starpu {
                      contrib, ldcontrib, k==0, nb);
       }
 
-      struct starpu_codelet cl_solve_contrib_block;
+      extern struct starpu_codelet cl_solve_contrib_block;
 
       // Insert solve of subdiag block into StarPU
       void insert_solve_block(
@@ -418,42 +279,27 @@ namespace spldlt { namespace starpu {
             starpu_data_handle_t bc_ik_hdl, // Sub diag block handle
             starpu_data_handle_t contrib_hdl, // Contrib block handle
             starpu_data_handle_t node_hdl,
-            int prio) {
-
-         int ret;
-
-         ret = starpu_insert_task(
-               &cl_solve_contrib_block,
-               STARPU_R, bc_kk_hdl,
-               STARPU_RW, bc_ik_hdl,
-               STARPU_RW, contrib_hdl,
-               STARPU_R, node_hdl,
-               STARPU_PRIORITY, prio,
-               STARPU_VALUE, &k, sizeof(int),
-               STARPU_VALUE, &nb, sizeof(int),
-               0);
-
-         STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
-      }      
-
+            int prio);
+      
       ////////////////////////////////////////////////////////////////////////////////
-      // Update_block StarPU task
+      // update_block StarPU task
 
       // CPU kernel
+      template<typename T>
       void update_block_cpu_func(void *buffers[], void *cl_arg) {
 
          /* Get A_ij pointer */
-         double *blk_ij = (double *)STARPU_MATRIX_GET_PTR(buffers[0]);
+         T *blk_ij = (T *)STARPU_MATRIX_GET_PTR(buffers[0]);
          unsigned m = STARPU_MATRIX_GET_NX(buffers[0]);
          unsigned n = STARPU_MATRIX_GET_NY(buffers[0]);
          unsigned ld_ij = STARPU_MATRIX_GET_LD(buffers[0]);
                   
          /* Get A_ik pointer */
-         double *blk_ik = (double *)STARPU_MATRIX_GET_PTR(buffers[1]);
+         T *blk_ik = (T *)STARPU_MATRIX_GET_PTR(buffers[1]);
          unsigned k = STARPU_MATRIX_GET_NY(buffers[1]);
          unsigned ld_ik = STARPU_MATRIX_GET_LD(buffers[1]); 
 
-         double *blk_jk = (double *)STARPU_MATRIX_GET_PTR(buffers[2]);
+         T *blk_jk = (T *)STARPU_MATRIX_GET_PTR(buffers[2]);
          unsigned ld_jk = STARPU_MATRIX_GET_LD(buffers[2]); 
         
          update_block(m, n, blk_ij, ld_ij,
@@ -463,47 +309,37 @@ namespace spldlt { namespace starpu {
       }
 
       // update_block codelet
-      struct starpu_codelet cl_update_block;      
+      extern struct starpu_codelet cl_update_block;      
 
       void insert_update_block(
             starpu_data_handle_t bc_ij_hdl, /* A_ij block handle */
             starpu_data_handle_t bc_ik_hdl, /* A_ik block handle */
             starpu_data_handle_t bc_jk_hdl, /* A_jk block handle */
             starpu_data_handle_t node_hdl,
-            int prio) {
+            int prio);
 
-         int ret;
-
-         ret = starpu_insert_task(
-               &cl_update_block,
-               STARPU_RW, bc_ij_hdl,
-               STARPU_R, bc_ik_hdl,
-               STARPU_R, bc_jk_hdl,
-               STARPU_R, node_hdl,
-               STARPU_PRIORITY, prio,
-               0);
-
-         STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");         
-      }
+      ////////////////////////////////////////////////////////////////////////////////
+      // update_contrib_block StarPU task
 
       // CPU kernel
+      template<typename T>
       void update_contrib_block_cpu_func(void *buffers[], void *cl_arg) {
 
          /* Get A_ij pointer */
-         double *blk_ij = (double *)STARPU_MATRIX_GET_PTR(buffers[0]);
+         T *blk_ij = (T *)STARPU_MATRIX_GET_PTR(buffers[0]);
          unsigned m = STARPU_MATRIX_GET_NX(buffers[0]);
          unsigned n = STARPU_MATRIX_GET_NY(buffers[0]);
          unsigned ld_ij = STARPU_MATRIX_GET_LD(buffers[0]);
                   
          /* Get A_ik pointer */
-         double *blk_ik = (double *)STARPU_MATRIX_GET_PTR(buffers[1]);
+         T *blk_ik = (T *)STARPU_MATRIX_GET_PTR(buffers[1]);
          unsigned k = STARPU_MATRIX_GET_NY(buffers[1]);
          unsigned ld_ik = STARPU_MATRIX_GET_LD(buffers[1]);
 
-         double *blk_jk = (double *)STARPU_MATRIX_GET_PTR(buffers[2]);
+         T *blk_jk = (T *)STARPU_MATRIX_GET_PTR(buffers[2]);
          unsigned ld_jk = STARPU_MATRIX_GET_LD(buffers[2]);
 
-         double *contrib = (double *)STARPU_MATRIX_GET_PTR(buffers[3]);
+         T *contrib = (T *)STARPU_MATRIX_GET_PTR(buffers[3]);
          unsigned cbm = STARPU_MATRIX_GET_NX(buffers[3]);
          unsigned cbn = STARPU_MATRIX_GET_NY(buffers[3]);
          unsigned ldcontrib = STARPU_MATRIX_GET_LD(buffers[3]);
@@ -522,8 +358,7 @@ namespace spldlt { namespace starpu {
                       kk==0, nb);
       }
 
-
-      struct starpu_codelet cl_update_contrib_block;      
+      extern struct starpu_codelet cl_update_contrib_block;      
 
       void insert_update_block(
             int k, int nb,
@@ -532,25 +367,8 @@ namespace spldlt { namespace starpu {
             starpu_data_handle_t bc_jk_hdl, /* A_jk block handle */
             starpu_data_handle_t contrib_hdl, /* A_ij block handle */
             starpu_data_handle_t node_hdl,
-            int prio) {
-
-         int ret;
-
-         ret = starpu_insert_task(
-               &cl_update_contrib_block,
-               STARPU_RW, bc_ij_hdl,
-               STARPU_R, bc_ik_hdl,
-               STARPU_R, bc_jk_hdl,
-               STARPU_RW, contrib_hdl,
-               STARPU_R, node_hdl,
-               STARPU_PRIORITY, prio,
-               STARPU_VALUE, &k, sizeof(int),
-               STARPU_VALUE, &nb, sizeof(int),
-               0);
-
-         STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");         
-      }
-
+            int prio);
+      
       // update_diag_block StarPU task
 
       // void update_diag_block_cpu_func(void *buffers[], void *cl_arg) {
@@ -598,23 +416,25 @@ namespace spldlt { namespace starpu {
       //    STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");         
       // }
 
-      // Update contrib StarPU task
+      ////////////////////////////////////////////////////////////////////////////////
+      // update_contrib StarPU task
 
       // CPU task
+      template<typename T>
       void update_contrib_cpu_func(void *buffers[], void *cl_arg) {
 
          /* Get A_ij pointer */
-         double *blk_ij = (double *)STARPU_MATRIX_GET_PTR(buffers[0]);
+         T *blk_ij = (T *)STARPU_MATRIX_GET_PTR(buffers[0]);
          unsigned m = STARPU_MATRIX_GET_NX(buffers[0]);
          unsigned n = STARPU_MATRIX_GET_NY(buffers[0]);
          unsigned ld_ij = STARPU_MATRIX_GET_LD(buffers[0]);
                   
          /* Get A_ik pointer */
-         double *blk_ik = (double *)STARPU_MATRIX_GET_PTR(buffers[1]);
+         T *blk_ik = (T *)STARPU_MATRIX_GET_PTR(buffers[1]);
          unsigned k = STARPU_MATRIX_GET_NY(buffers[1]);
          unsigned ld_ik = STARPU_MATRIX_GET_LD(buffers[1]); 
 
-         double *blk_jk = (double *)STARPU_MATRIX_GET_PTR(buffers[2]);
+         T *blk_jk = (T *)STARPU_MATRIX_GET_PTR(buffers[2]);
          unsigned ld_jk = STARPU_MATRIX_GET_LD(buffers[2]); 
         
          int kk;
@@ -629,7 +449,7 @@ namespace spldlt { namespace starpu {
       }
 
       // update_contrib codelet
-      struct starpu_codelet cl_update_contrib;      
+      extern struct starpu_codelet cl_update_contrib;      
 
       void insert_update_contrib(
             int k,
@@ -637,23 +457,8 @@ namespace spldlt { namespace starpu {
             starpu_data_handle_t bc_ik_hdl, /* A_ik block handle */
             starpu_data_handle_t bc_jk_hdl, /* A_jk block handle */
             starpu_data_handle_t node_hdl,
-            int prio) {
-
-         int ret;
-
-         ret = starpu_insert_task(
-               &cl_update_contrib,
-               STARPU_RW, bc_ij_hdl,
-               STARPU_R, bc_ik_hdl,
-               STARPU_R, bc_jk_hdl,
-               STARPU_R, node_hdl,
-               STARPU_PRIORITY, prio,
-               STARPU_VALUE, &k, sizeof(int),
-               0);
-
-         STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");         
-      }
-
+            int prio);
+      
       ////////////////////////////////////////////////////////////////////////////////
       // update_between StarPU task
 
@@ -858,8 +663,8 @@ namespace spldlt { namespace starpu {
 
       }
 
-      // StarPU codelet
-      struct starpu_codelet cl_factor_subtree;
+      // factor_subtree StarPU codelet
+      extern struct starpu_codelet cl_factor_subtree;
 
       // Debug
       template <typename T>
@@ -988,8 +793,8 @@ namespace spldlt { namespace starpu {
 
       }
 
-      // StarPU codelet
-      struct starpu_codelet cl_subtree_assemble;
+      // subtree_assemble StarPU codelet
+      extern struct starpu_codelet cl_subtree_assemble;
 
       template <typename T, typename PoolAlloc>
       void insert_subtree_assemble(
@@ -1098,7 +903,7 @@ namespace spldlt { namespace starpu {
       }
 
       // StarPU codelet
-      struct starpu_codelet cl_subtree_assemble_contrib;
+      extern struct starpu_codelet cl_subtree_assemble_contrib;
 
       template <typename T, typename PoolAlloc>
       void insert_subtree_assemble_contrib(
@@ -1163,8 +968,8 @@ namespace spldlt { namespace starpu {
          assemble_block(*node, *cnode, ii, jj, map);
       }
 
-      // // StarPU codelet
-      struct starpu_codelet cl_assemble_block;
+      // assemble_block StarPU codelet
+      extern struct starpu_codelet cl_assemble_block;
 
       template <typename T, typename PoolAlloc>
       void insert_assemble_block(
@@ -1240,8 +1045,8 @@ namespace spldlt { namespace starpu {
          assemble_contrib_block(*node, *cnode, ii, jj, map, blksz);
       }
 
-      // StarPU codelet
-      struct starpu_codelet cl_assemble_contrib_block;
+      // assemble_contrib_block StarPU codelet
+      extern struct starpu_codelet cl_assemble_contrib_block;
 
       template <typename T, typename PoolAlloc>
       void insert_assemble_contrib_block(
@@ -1320,12 +1125,11 @@ namespace spldlt { namespace starpu {
          
       }
 
-      // StarPU codelet
-      struct starpu_codelet cl_activate_node;
+      // activate_node StarPU codelet
+      extern struct starpu_codelet cl_activate_node;
 
       template <typename T, typename FactorAlloc, typename PoolAlloc>
-      void
-      insert_activate_node(
+      void insert_activate_node(
             starpu_data_handle_t node_hdl, // Node's symbolic handle
             starpu_data_handle_t *cnode_hdls, int nhdl, // Children node's symbolic handles
             bool posdef,
@@ -1391,8 +1195,8 @@ namespace spldlt { namespace starpu {
          init_node(*snode, *node, aval);
       }
 
-      // StarPU codelet
-      struct starpu_codelet cl_activate_init_node;
+      // activate_init_node StarPU codelet
+      extern struct starpu_codelet cl_activate_init_node;
 
       template <typename T, typename FactorAlloc, typename PoolAlloc>
       void insert_activate_init_node(
@@ -1456,8 +1260,8 @@ namespace spldlt { namespace starpu {
          assemble(n, *node, child_contrib, *pool_alloc, blksz);         
       }
 
-      // StarPU codelet
-      struct starpu_codelet cl_assemble;
+      // assemble StarPU codelet
+      extern struct starpu_codelet cl_assemble;
       
       template <typename T, typename PoolAlloc>
       void insert_assemble(
@@ -1513,8 +1317,8 @@ namespace spldlt { namespace starpu {
          assemble_contrib(*node, child_contrib, blksz);         
       }
 
-      // StarPU codelet
-      struct starpu_codelet cl_assemble_contrib;
+      // assemble_contrib StarPU codelet
+      extern struct starpu_codelet cl_assemble_contrib;
 
       template <typename T, typename PoolAlloc>
       void insert_assemble_contrib(
@@ -1610,42 +1414,42 @@ namespace spldlt { namespace starpu {
          cl_factorize_block.where = STARPU_CPU;
          cl_factorize_block.nbuffers = STARPU_VARIABLE_NBUFFERS;
          cl_factorize_block.name = "FACTO_BLK";
-         cl_factorize_block.cpu_funcs[0] = factorize_block_cpu_func;
+         cl_factorize_block.cpu_funcs[0] = factorize_block_cpu_func<T>;
 
          // factorize_contrib_block StarPU codelet
          starpu_codelet_init(&cl_factorize_contrib_block);
          cl_factorize_contrib_block.where = STARPU_CPU;
          cl_factorize_contrib_block.nbuffers = STARPU_VARIABLE_NBUFFERS;
          cl_factorize_contrib_block.name = "FACTO_CONTRIB_BLK";
-         cl_factorize_contrib_block.cpu_funcs[0] = factorize_contrib_block_cpu_func;
+         cl_factorize_contrib_block.cpu_funcs[0] = factorize_contrib_block_cpu_func<T>;
 
          // solve_block StarPU codelet
          starpu_codelet_init(&cl_solve_block);
          cl_solve_block.where = STARPU_CPU;
          cl_solve_block.nbuffers = STARPU_VARIABLE_NBUFFERS;
          cl_solve_block.name = "SOLVE_BLK";
-         cl_solve_block.cpu_funcs[0] = solve_block_cpu_func;
+         cl_solve_block.cpu_funcs[0] = solve_block_cpu_func<T>;
 
          // solve_contrib_block StarPU codelet
          starpu_codelet_init(&cl_solve_contrib_block);
          cl_solve_contrib_block.where = STARPU_CPU;
          cl_solve_contrib_block.nbuffers = STARPU_VARIABLE_NBUFFERS;
          cl_solve_contrib_block.name = "SOLVE_CONTRIB_BLK";
-         cl_solve_contrib_block.cpu_funcs[0] = solve_contrib_block_cpu_func;
+         cl_solve_contrib_block.cpu_funcs[0] = solve_contrib_block_cpu_func<T>;
 
          // update_block StarPU codelet
          starpu_codelet_init(&cl_update_block);
          cl_update_block.where = STARPU_CPU;
          cl_update_block.nbuffers = STARPU_VARIABLE_NBUFFERS;
          cl_update_block.name = "UPDATE_BLK";
-         cl_update_block.cpu_funcs[0] = update_block_cpu_func;
+         cl_update_block.cpu_funcs[0] = update_block_cpu_func<T>;
 
          // update_contrib_block StarPU codelet
          starpu_codelet_init(&cl_update_contrib_block);
          cl_update_contrib_block.where = STARPU_CPU;
          cl_update_contrib_block.nbuffers = STARPU_VARIABLE_NBUFFERS;
          cl_update_contrib_block.name = "UPDATE_CONTRIB_BLK";
-         cl_update_contrib_block.cpu_funcs[0] = update_contrib_block_cpu_func;
+         cl_update_contrib_block.cpu_funcs[0] = update_contrib_block_cpu_func<T>;
 
          // // update_diag_block StarPU codelet
          // starpu_codelet_init(&cl_update_diag_block);
@@ -1659,7 +1463,7 @@ namespace spldlt { namespace starpu {
          cl_update_contrib.where = STARPU_CPU;
          cl_update_contrib.nbuffers = STARPU_VARIABLE_NBUFFERS;
          cl_update_contrib.name = "UPDATE_CONTRIB";
-         cl_update_contrib.cpu_funcs[0] = update_contrib_cpu_func;
+         cl_update_contrib.cpu_funcs[0] = update_contrib_cpu_func<T>;
 
          // // update_between StarPU codelet
          // starpu_codelet_init(&cl_update_between);

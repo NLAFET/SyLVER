@@ -7,7 +7,7 @@
 #include "ssids/cpu/kernels/wrappers.hxx"
 // #include "ldlt_tpp.hxx"
 // #include "ldlt_app.hxx"
-#include "testing_factor_indef.hxx"
+// #include "testing_factor_indef.hxx"
 #include "testing_factor_node_indef.hxx"
 
 // using namespace spral::ssids::cpu;
@@ -40,5 +40,9 @@ int main(int argc, char** argv) {
    printf("No CPU: %d\n", opts.ncpu);
 
    // factor_node_indef_test<double, 32, false>(0.01, 1e-20, true, false, opts.m, opts.n, opts.nb, opts.ncpu);
-   factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, opts.m, opts.n, opts.nb, opts.ncpu);
+   // factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, opts.m, opts.n, opts.nb, opts.ncpu);
+   factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, 1000, 500, 128, 1);
+   // factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, 1000, 500, 128, 4);
+   // factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, 1000, 500, 128, 8);
+
 }

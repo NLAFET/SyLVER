@@ -396,6 +396,9 @@ namespace spldlt {
    void factor_indef_init() {
 #if defined(SPLDLT_USE_STARPU)
       codelet_init_indef<T, iblksz, Backup, PoolAlloc>();
+      // spldlt::starpu::codelet_init<T, FactorAllocator, PoolAllocator>();
+      // spldlt::starpu::codelet_init_indef<T, iblksz, Backup, PoolAllocator>();
+      // spldlt::starpu::codelet_init_factor_indef<T, PoolAllocator>();
 #endif
    }
 

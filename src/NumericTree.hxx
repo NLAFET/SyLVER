@@ -57,6 +57,7 @@ namespace spldlt {
             bool posdef>
    class NumericTree {
       typedef spldlt::BuddyAllocator<T,std::allocator<T>> PoolAllocator;
+      typedef CopyBackup<T, PoolAllocator> Backup;
    public:
 
    public:
@@ -95,13 +96,16 @@ namespace spldlt {
 #endif
          printf("[NumericTree] blksz = %d, nworkers = %d\n", blksz, nworkers);
          
-         spldlt::starpu::codelet_init<T, FactorAllocator, PoolAllocator>();
-         if (!posdef) { 
+
+         if (posdef) {
+            spldlt::starpu::codelet_init<T, FactorAllocator, PoolAllocator>();
+         } else {
 
             static const int INNER_BLOCK_SIZE = 32;
 
             // Init StarPU codelets
-            spldlt::starpu::codelet_init_indef<T, INNER_BLOCK_SIZE, CopyBackup<T, PoolAllocator>, PoolAllocator>();
+            spldlt::starpu::codelet_init<T, FactorAllocator, PoolAllocator>();
+            spldlt::starpu::codelet_init_indef<T, INNER_BLOCK_SIZE, Backup, PoolAllocator>();
             spldlt::starpu::codelet_init_factor_indef<T, PoolAllocator>();
             
             // Prepare workspaces
