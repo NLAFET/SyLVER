@@ -41,12 +41,36 @@ int main(int argc, char** argv) {
 
    // factor_node_indef_test<double, 32, false>(0.01, 1e-20, true, false, opts.m, opts.n, opts.nb, opts.ncpu);
    // factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, opts.m, opts.n, opts.nb, opts.ncpu);
-   // factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, 256, 128, 128, 1);
 
-   // factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, 128, 128, 128, 1);
-   factor_node_indef_test<double, 32, true>(0.01, 1e-20, false, false, 8, 8, 8, 1);
+   // factor_node_indef_test<double, 32, true>(0.01, 1e-20, false, false, 8, 8, 8, 1);
+   // factor_node_indef_test<double, 32, true>(0.01, 1e-20, false, false, 8, 8, 8, 1);
+   
+   ////////////////////////////////////////////////////////////////////////////////
+   // Square matrices 
+   // Sequential (1 worker)
+   // No delays
+   // factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, 32, 32, 32, 1);
+   // factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, 64, 64, 32, 1); // Outer blocking
+   // factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, 64, 64, 64, 1); // Inner blocking
+   // factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, 1024, 1024, 128, 1); // Inner and outer blocking
 
-   // factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, 1000, 500, 128, 4);
-   // factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, 1000, 500, 128, 8);
+   // Cause delays
+   // factor_node_indef_test<double, 32, false>(0.01, 1e-20, true, false, 32, 32, 32, 1);
+   // factor_node_indef_test<double, 32, false>(0.01, 1e-20, true, false, 64, 64, 32, 1);
+   int nerr = 0;
+   
+   nerr += run_factor_node_indef_tests();
+
+   if(nerr==0) {
+      printf(ANSI_COLOR_BLUE "\n====================================\n"
+             ANSI_COLOR_GREEN  "   All tests passed sucessfully\n"
+             ANSI_COLOR_BLUE   "====================================\n"
+             ANSI_COLOR_RESET);
+   } else {
+      printf(ANSI_COLOR_BLUE "\n====================================\n"
+             ANSI_COLOR_RED    "   %d tests FAILED!\n"
+             ANSI_COLOR_BLUE  "====================================\n"
+             ANSI_COLOR_RESET, nerr);
+   }
 
 }

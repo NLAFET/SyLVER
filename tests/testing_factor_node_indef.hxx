@@ -203,8 +203,9 @@ namespace spldlt {
 
       auto start = std::chrono::high_resolution_clock::now();
 
-      int q1; // Number of eliminated colmuns
-
+      int q1 = 0; // Number of eliminated colmuns (first pass)
+      int q2 = 0; // Number of eliminated colmuns (second pass)
+      
       // Factor front (first and second pass) and from contrib blocks
       factor_front_indef(
             front, workspaces, pool_alloc, options);
@@ -217,8 +218,9 @@ namespace spldlt {
       if(debug) printf("[factor_node_indef_test] factorization done\n");
       if(debug) printf("[factor_node_indef_test] nelim1 = %d\n", front.nelim1);
          
-      q1 = front.nelim;
-         
+      q1 = front.nelim1;
+      q2 = front.nelim;
+      
          //       // q1 = LDLT
 //       //    <T, iblksz, CopyBackup<T>, false, debug>
 //       //    ::factor(
@@ -251,6 +253,7 @@ namespace spldlt {
 // #endif
       
       std::cout << "FIRST FACTOR CALL ELIMINATED " << q1 << " of " << n << " pivots" << std::endl;
+      std::cout << "SECOND FACTOR CALL ELIMINATED " << q2-q1 << " of " << n << " pivots" << std::endl;
       
 //       if(debug) {
 //          std::cout << "L after first elim:" << std::endl;
@@ -348,7 +351,7 @@ namespace spldlt {
 
       // Cleanup memory
       allocT.deallocate(l, m*lda);
-      delete[] a; //allocT.deallocate(front.lcol, m*lda);
+      delete[] a; allocT.deallocate(front.lcol, m*lda);
       delete[] b;
       delete[] front.perm;
       delete[] soln;

@@ -4,30 +4,41 @@ namespace spldlt {
 
    int run_factor_node_indef_tests() {
 
-      int err = 0;
+      int nerr = 0;
 
-      printf("[FactorNodeIndef tests]\n");
+      printf("[run_factor_node_indef_tests tests]\n");
 
-      /* 10x3 matrix
-         blksz: 10
-         inner blksz: 5
-         debug: enabled
-      */
-      // factor_node_indef_test<double, 5, true>(0.01, 1e-20, true, false, 10, 3, 5);
+      ////////////////////////////////////////////////////////////////////////////////
+      // Square matrices 
+      // Sequential (1 worker)
+      // No delays
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, 32, 32, 32, 1) )); // No blocking
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, 128, 128, 32, 1) )); // Outer blocking
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, 128, 128, 128, 1) )); // Inner blocking
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, 1024, 1024, 128, 1) )); // Inner and outer blocking
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, 2048, 2048, 256, 1) )); // Inner and outer blocking
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, 3000, 3000, 256, 1) )); // Inner and outer blocking
 
-      /* 12x12 matrix
-         blksz: 12
-         inner blksz: 4
-         debug: enabled
-      */
-      // factor_node_indef_test<double, 4, true>(0.01, 1e-20, true, false, 12, 12, 4);
+      // Cause delays
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, true, false, 32, 32, 32, 1) )); // No blocking
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, true, false, 64, 64, 32, 1) )); // Outer blocking
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, true, false, 64, 64, 64, 1) )); // Inner blocking
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, true, false, 1024, 1024, 128, 1) )); // Inner and outer blocking
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, true, false, 2048, 2048, 256, 1) )); // Inner and outer blocking
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, true, false, 3000, 3000, 256, 1) )); // Inner and outer blocking
 
-      // factor_node_indef_test<double, 4, true>(0.01, 1e-20, true, false, 8, 8, 4);
+      ////////////////////////////////////////////////////////////////////////////////
+      // Parallel (8 worker)
+      // No delays
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, 1024, 1024, 128, 8) )); // Inner and outer blocking
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, 2048, 2048, 256, 8) )); // Inner and outer blocking
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, 3000, 3000, 256, 8) )); // Inner and outer blocking
 
-      factor_node_indef_test<double, 32, false>(0.01, 1e-20, true, false, 512, 512, 128, 1);
+      // Cause delays
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, true, false, 1024, 1024, 128, 8) )); // Inner and outer blocking
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, true, false, 2048, 2048, 256, 8) )); // Inner and outer blocking
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, true, false, 3000, 3000, 256, 8) )); // Inner and outer blocking
 
-      // factor_node_indef_test<double, 32, false>(0.01, 1e-20, true, false, 2048, 2048, 512);
-
-      return err;
+      return nerr;
    }
 }
