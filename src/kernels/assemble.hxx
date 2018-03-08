@@ -113,13 +113,12 @@ namespace spldlt {
       //
       /// @brief Register handles for a node in StarPU.
       template <typename T, typename PoolAlloc>
-      void register_node_indef(
-            SymbolicFront& sfront,
-            NumericFront<T, PoolAlloc>& front,
-            int blksz) {
+      void register_node_indef(NumericFront<T, PoolAlloc>& front) {
 
          typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
 
+         SymbolicFront& sfront = front.symb;
+         int blksz = front.blksz;
          int m = front.get_nrow();
          int n = front.get_ncol();
          T *a = front.lcol;
@@ -231,7 +230,7 @@ namespace spldlt {
       // register_node(sfront, front, blksz);
 
       if (posdef) spldlt::starpu::register_node(sfront, front, blksz);
-      else        spldlt::starpu::register_node_indef(sfront, front, blksz);
+      else        spldlt::starpu::register_node_indef(front);
 #endif
    }
 
@@ -335,8 +334,7 @@ namespace spldlt {
 
       front.lcol = FADoubleTraits::allocate(factor_alloc_double, len);
 
-      // /* Get space for contribution block + (explicitly do not zero it!) */
-      // node.alloc_contrib();
+      // Get space for contribution block + (explicitly do not zero it!)
       front.alloc_contrib_blocks();
 
       /* Alloc + set perm for expected eliminations at this node (delays are set

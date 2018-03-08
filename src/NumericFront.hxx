@@ -109,7 +109,8 @@ namespace spldlt {
             SymbolicFront &symb,
             PoolAllocator const& pool_alloc, int blksz)
          : symb(symb), contrib(nullptr), pool_alloc_(pool_alloc), blksz(blksz),
-           backup(nullptr), cdata(nullptr)
+           backup(nullptr), cdata(nullptr), ndelay_in(0), ndelay_out(0),
+           lcol(nullptr)
       {}
       
       /**

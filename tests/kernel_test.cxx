@@ -41,7 +41,11 @@ int main(int argc, char** argv) {
 
    // factor_node_indef_test<double, 32, false>(0.01, 1e-20, true, false, opts.m, opts.n, opts.nb, opts.ncpu);
    // factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, opts.m, opts.n, opts.nb, opts.ncpu);
-   factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, 1000, 500, 128, 1);
+   // factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, 256, 128, 128, 1);
+
+   // factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, 128, 128, 128, 1);
+   factor_node_indef_test<double, 32, true>(0.01, 1e-20, false, false, 8, 8, 8, 1);
+
    // factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, 1000, 500, 128, 4);
    // factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, 1000, 500, 128, 8);
 

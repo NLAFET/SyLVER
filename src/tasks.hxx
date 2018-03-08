@@ -93,7 +93,7 @@ namespace spldlt {
                        int blksz, int prio) {
 
 #if defined(SPLDLT_USE_STARPU)
-      insert_fini_node(node.get_hdl(), &node, blksz, prio);
+      insert_fini_node(node.get_hdl(), &node, prio);
 #else
       fini_node(node);
 #endif

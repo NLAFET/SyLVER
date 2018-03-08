@@ -672,10 +672,9 @@ namespace spldlt { namespace starpu {
          
          NumericFront<T, PoolAlloc> *node = nullptr;
          PoolAlloc *alloc = nullptr;
-         int blksz;
 
          starpu_codelet_unpack_args(
-               cl_arg, &node, &alloc, &blksz);
+               cl_arg, &node, &alloc);
 
          // printf("[permute_failed_cpu_func]\n");
 
@@ -691,7 +690,8 @@ namespace spldlt { namespace starpu {
             int ldl = node->get_ldl();
             ColumnData<T, IntAlloc> &cdata = *node->cdata;
             bool const debug = false;
-         
+            int blksz = node->blksz;
+            
             FactorSymIndef
                <T, INNER_BLOCK_SIZE, CopyBackup<T, PoolAlloc>, debug, PoolAlloc>
                ::permute_failed (
@@ -710,8 +710,7 @@ namespace spldlt { namespace starpu {
       void insert_permute_failed(
             starpu_data_handle_t *col_hdls, int nhdl,
             NumericFront<T, PoolAlloc> *node,
-            PoolAlloc *pool_alloc,
-            int blksz
+            PoolAlloc *pool_alloc
             ) {
          
          int ret;
@@ -729,7 +728,6 @@ namespace spldlt { namespace starpu {
                STARPU_DATA_MODE_ARRAY, descrs, nh,
                STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
                STARPU_VALUE, &pool_alloc, sizeof(PoolAlloc*),
-               STARPU_VALUE, &blksz, sizeof(int),
                0);
          STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
 

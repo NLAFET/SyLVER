@@ -100,19 +100,31 @@ namespace spldlt {
       sfront.nrow = m;
       sfront.ncol = n;
       NumericFront<T, PoolAllocator> front(sfront, pool_alloc, blksz);
-      
+      front.ndelay_in = 0; // No incoming delayed columns      
+      front.ndelay_out = 0;
       // Init node
       // Setup allocator for factors
       typedef spral::test::AlignedAllocator<T> FactorAllocator;
       FactorAllocator allocT;
 
-      size_t len = lda*n;
+      size_t len = (lda+2)*n; // Includes D
+      if (debug) printf("m = %d, n = %d, lda = %d, len = %zu\n", m, n, lda, len);
       front.lcol = allocT.allocate(len);
-      memcpy(front.lcol, a, len); // Copy a to l
+      memcpy(front.lcol, a, lda*n*sizeof(T)); // Copy a to l
+      
+      if (debug) {
+         std::cout << "LCOL:" << std::endl;
+         print_mat("%10.2e", m, front.lcol, lda);
+      }
+      
+      // Allocate block structure
+      front.alloc_blocks();
+
       // Setup permutation vector
       front.perm = new int[m];
       for(int i=0; i<m; i++) front.perm[i] = i;
-      T *d = new T[2*m];      
+      T *d = &front.lcol[lda*n];
+      // T *d = new T[2*m];      
 //       T* upd = nullptr;
       // Setup backup
       typedef spldlt::ldlt_app_internal::CopyBackup<T, PoolAllocator> Backup;
@@ -126,6 +138,7 @@ namespace spldlt {
 
       // Copy A (n+1 to m columns) into contrib blocks
       size_t contrib_dimn = m-n; // Dimension of contribution block
+      if(debug) printf("[factor_node_indef_test] contrib dimn = %zu\n", contrib_dimn);
       if (contrib_dimn>0) {
          int nr = front.get_nr();
          int rsa = n/blksz;
@@ -142,7 +155,7 @@ namespace spldlt {
                // Tile height
                int blkm = std::min((i+1)*blksz, m) - first_row;
                memcpy(front.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib].a,
-                      &a[first_col*lda + first_row], blkm*blkn);
+                      &a[first_col*lda + first_row], blkm*blkn*sizeof(T));
             }
          }
       }
@@ -168,7 +181,7 @@ namespace spldlt {
       workspaces.reserve(nworkers);
       for(int i = 0; i < nworkers; ++i)
          workspaces.emplace_back(PAGE_SIZE);
-      
+      if(debug) printf("[factor_node_indef_test] nworkers =  %d\n", nworkers);
 
       // Init factoriization 
 #if defined(SPLDLT_USE_STARPU)
@@ -176,6 +189,17 @@ namespace spldlt {
       spldlt::starpu::codelet_init_indef<T, iblksz, Backup, PoolAllocator>();
       spldlt::starpu::codelet_init_factor_indef<T, PoolAllocator>();
 #endif
+
+
+#if defined(SPLDLT_USE_STARPU)
+      // Register symbolic handles
+      starpu_void_data_register(&(sfront.hdl)); // Node's symbolic handle
+      starpu_void_data_register(&(front.contrib_hdl));
+      // Register StarPU data handles
+      spldlt::starpu::register_node_indef(front);
+#endif
+      
+      if(debug) printf("[factor_node_indef_test] factor front..\n");
 
       auto start = std::chrono::high_resolution_clock::now();
 
@@ -190,6 +214,8 @@ namespace spldlt {
 #if defined(SPLDLT_USE_STARPU)
       starpu_task_wait_for_all();      
 #endif
+      if(debug) printf("[factor_node_indef_test] factorization done\n");
+      if(debug) printf("[factor_node_indef_test] nelim1 = %d\n", front.nelim1);
          
       q1 = front.nelim;
          
@@ -252,6 +278,13 @@ namespace spldlt {
       long ttotal = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count();
       printf("[testing_factor_node_indef] factor time: %e\n", 1e-9*ttotal);
 
+#if defined(SPLDLT_USE_STARPU)
+      unregister_node_submit(front);
+      starpu_data_unregister_submit(sfront.hdl); // Node's symbolic handle
+      starpu_data_unregister_submit(front.contrib_hdl);
+      starpu_task_wait_for_all(); // Wait for unregistration of handles      
+#endif
+      
       // Deinitialize solver (shutdown tasking system in particular)
 #if defined(SPLDLT_USE_STARPU)
       starpu_shutdown();
@@ -267,26 +300,58 @@ namespace spldlt {
 //          print_d<T>(m, d);
 //       }
 
-//       // Perform solve
-//       T *soln = new T[m];
-//       solve(m, q1, node.perm, node.lcol, lda, d, b, soln);
-//       if(debug) {
-//          printf("soln = ");
-//          for(int i=0; i<m; i++) printf(" %le", soln[i]);
-//          printf("\n");
-//       }
+      // Copy factors into l array
+      T *l = allocT.allocate(lda*m);
+      memcpy(l, front.lcol, lda*n*sizeof(T)); // Copy a to l
+      // Copy L (n+1 to m columns) from contrib blocks into l
+      if (contrib_dimn>0) {
+         int nr = front.get_nr();
+         int rsa = n/blksz;
+         int ncontrib = nr-rsa;
 
-//       // Check residual
-//       T bwderr = backward_error(m, a, lda, b, 1, soln, m);
-//       /*if(debug)*/ printf("bwderr = %le\n", bwderr);
-//       EXPECT_LE(bwderr, 5e-14) << "(test " << test << " seed " << seed << ")" << std::endl;
+         for(int j = rsa; j < nr; j++) {
+            // First col in contrib block
+            int first_col = std::max(j*blksz, n);
+            // Tile width
+            int blkn = std::min((j+1)*blksz, m) - first_col;
+            for(int i = rsa; i < nr; i++) {
+               // First col in contrib block
+               int first_row = std::max(i*blksz, n);
+               // Tile height
+               int blkm = std::min((i+1)*blksz, m) - first_row;
+               memcpy(&l[first_col*lda + first_row],
+                      front.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib].a,
+                      blkm*blkn*sizeof(T));
+            }
+         }
+      }
 
-//       // Cleanup memory
-      delete[] a; allocT.deallocate(front.lcol, m*lda);
+      // if (debug) print_mat("%10.2e", m, front.lcol, lda, front.perm);
+      if (debug) {
+         std::cout << "L:" << std::endl;
+         print_mat("%10.2e", m, l, lda, front.perm);
+      }
+      
+      // Perform solve
+      T *soln = new T[m];
+      solve(m, q1, front.perm, l, lda, d, b, soln);
+      if(debug) {
+         printf("soln = ");
+         for(int i=0; i<m; i++) printf(" %le", soln[i]);
+         printf("\n");
+      }
+
+      // Check residual
+      T bwderr = backward_error(m, a, lda, b, 1, soln, m);
+      /*if(debug)*/ printf("bwderr = %le\n", bwderr);
+      EXPECT_LE(bwderr, 5e-14) << "(test " << test << " seed " << seed << ")" << std::endl;
+
+      // Cleanup memory
+      allocT.deallocate(l, m*lda);
+      delete[] a; //allocT.deallocate(front.lcol, m*lda);
       delete[] b;
       delete[] front.perm;
-      delete[] d;
-      // delete[] soln;
+      delete[] soln;
 
       return failed ? -1 : 0;
    }

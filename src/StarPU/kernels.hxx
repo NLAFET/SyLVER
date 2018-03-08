@@ -18,11 +18,12 @@ namespace spldlt { namespace starpu {
       // unregister handles for a node in StarPU
       template <typename T, typename PoolAlloc>
       void unregister_node_submit(
-            SymbolicFront &snode,
-            NumericFront<T, PoolAlloc> &node,
-            int blksz) {
+            NumericFront<T, PoolAlloc> &node
+            ) {
 
          // Get node info
+         SymbolicFront &snode = node.symb;
+         int blksz = node.blksz;
          int m = node.get_nrow();
          int n = node.get_ncol();
          int nr = (m-1) / blksz + 1; // number of block rows
@@ -108,14 +109,12 @@ namespace spldlt { namespace starpu {
       void fini_node_cpu_func(void *buffers[], void *cl_arg) {
          
          NumericFront<T, PoolAlloc> *node = nullptr;
-         int blksz;
          
-         starpu_codelet_unpack_args(cl_arg, &node, &blksz);
+         starpu_codelet_unpack_args(cl_arg, &node);
 
          fini_node(*node);
 
-         unregister_node_submit(
-               node->symb, *node, blksz);
+         unregister_node_submit(*node);
       }
 
       // fini_node codelet
@@ -125,7 +124,6 @@ namespace spldlt { namespace starpu {
       void insert_fini_node(
             starpu_data_handle_t node_hdl, 
             NumericFront<T, PoolAlloc> *node,
-            int blksz,
             int prio) {
 
          int ret;
@@ -134,7 +132,6 @@ namespace spldlt { namespace starpu {
                &cl_fini_node,
                STARPU_RW, node_hdl,
                STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
-               STARPU_VALUE, &blksz, sizeof(int),
                STARPU_PRIORITY, prio,
                0);
       }

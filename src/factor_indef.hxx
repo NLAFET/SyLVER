@@ -42,13 +42,13 @@ namespace spldlt {
 
       // printf("[factor_front_indef]\n");
 
-      int blksz = options.cpu_block_size;
+      int blksz = node.blksz;
       // node.nelim = nelim;      
       bool const debug = false;
       T *upd = nullptr;
 
       node.nelim = 0; // TODO add parameter from;
-
+      
       if (options.pivot_method==PivotMethod::app_block) {
          
          // CopyBackup<T> backup(m, n, blksz);
@@ -76,15 +76,15 @@ namespace spldlt {
 
          FactorSymIndef
             <T, INNER_BLOCK_SIZE, CopyBackup<T, PoolAlloc>, debug, PoolAlloc>
-            ::factor_indef_app_async(
-                  node, options, blksz, 0.0, upd, 0, workspaces, pool_alloc,
+            ::factor_front_indef_app(
+                  node, options, 0.0, upd, 0, workspaces, pool_alloc,
                   node.nelim);
 
 // #if defined(SPLDLT_USE_STARPU)
 //          starpu_task_wait_for_all();
 // #endif
 
-//          printf("[factor_front_indef_nocontrib] node_nelim = %d\n", node.nelim);
+//          printf("[factor_front_indef] node_nelim = %d\n", node.nelim);
 
          // // realease all memory used for backup
          // backup.release_all_memory(); 
@@ -102,7 +102,7 @@ namespace spldlt {
          FactorSymIndef
             <T, INNER_BLOCK_SIZE, CopyBackup<T, PoolAlloc>, debug, PoolAlloc>
             ::release_permute_failed_task (
-                  node, pool_alloc, blksz);
+                  node, pool_alloc);
 
 // #if defined(SPLDLT_USE_STARPU)
 //          starpu_task_wait_for_all();
@@ -253,8 +253,8 @@ namespace spldlt {
 
          FactorSymIndef
             <T, INNER_BLOCK_SIZE, CopyBackup<T, PoolAlloc>, debug, PoolAlloc>
-            ::factor_indef_app_async(
-                  node, options, blksz, 0.0, upd, 0, workspaces, pool_alloc,
+            ::factor_front_indef_app(
+                  node, options, 0.0, upd, 0, workspaces, pool_alloc,
                   node.nelim);
 
 // #if defined(SPLDLT_USE_STARPU)
@@ -279,7 +279,7 @@ namespace spldlt {
          FactorSymIndef
             <T, INNER_BLOCK_SIZE, CopyBackup<T, PoolAlloc>, debug, PoolAlloc>
             ::release_permute_failed_task (
-                  node, pool_alloc, blksz);
+                  node, pool_alloc);
 
 // #if defined(SPLDLT_USE_STARPU)
 //          starpu_task_wait_for_all();
@@ -449,7 +449,6 @@ namespace spldlt {
             int* perm, T* d,
             ColumnData<T,IntAlloc>& cdata, Backup& backup,
             struct cpu_factor_options& options,
-            /*int const block_size,*/
             std::vector<spral::ssids::cpu::Workspace>& work,
             Allocator const& alloc) {
 
@@ -1427,15 +1426,14 @@ namespace spldlt {
       static
       void release_permute_failed_task(
             NumericFront<T, Allocator> &node,
-            Allocator& alloc,
-            int blksz
+            Allocator& alloc
             ) {
 
 #if defined(SPLDLT_USE_STARPU)
 
          ColumnData<T, IntAlloc> &cdata = *node.cdata;
          int n = node.get_ncol();
-         int const nblk = calc_nblk(n, blksz);
+         int const nblk = calc_nblk(n, node.blksz);
 
          starpu_data_handle_t *col_hdls = new starpu_data_handle_t[nblk];
          for (int c = 0; c < nblk; c++)
@@ -1443,8 +1441,7 @@ namespace spldlt {
             
          insert_permute_failed(
                col_hdls, nblk,
-               &node, &alloc, blksz
-               );
+               &node, &alloc);
 
          delete[] col_hdls;
 #else
@@ -1477,18 +1474,17 @@ namespace spldlt {
       /// APTP pivoting strategy. 
       /// @note This call is asynchronous.
       static
-      void factor_indef_app_async(
-            // int const m, int const n, int* perm, std::vector<Block<T, iblksz, IntAlloc>>& blocks,
-            // std::vector<spldlt::Tile<T, PoolAllocator>>& contrib_blocks
-            // T* d, ColumnData<T,IntAlloc>& cdata, Backup& backup,
+      void factor_front_indef_app(
             NumericFront<T, Allocator> &node,
-            struct cpu_factor_options& options, int const block_size,
-            T const beta, T* upd, int const ldupd, std::vector<spral::ssids::cpu::Workspace>& workspaces,
+            struct cpu_factor_options& options,
+            T const beta, T* upd, int const ldupd,
+            std::vector<spral::ssids::cpu::Workspace>& workspaces,
             Allocator const& alloc, int& next_elim, int const from_blk=0
             ) {
          
          typedef spldlt::ldlt_app_internal::Block<T, iblksz, IntAlloc> BlockSpec;
          
+         int const block_size = node.blksz;
          int const m = node.get_nrow();
          int const n = node.get_ncol();
          T *lcol = node.lcol;
@@ -1508,7 +1504,7 @@ namespace spldlt {
          int ncontrib = mblk-rsa;
 
          int UPDATE_PRIO = 4;
-         
+
          /* Setup */
          // int next_elim = from_blk*block_size;
       
@@ -1516,14 +1512,11 @@ namespace spldlt {
          // try {
          for(int blk=from_blk; blk<nblk; blk++) {
 
-            // #if defined(SPLDLT_USE_STARPU)
-            //             starpu_task_wait_for_all();
-            // #endif
-
-            /*if(debug) {
-              printf("Bcol %d:\n", blk);
-              print_mat(mblk, nblk, m, n, blkdata, cdata, lda);
-              }*/
+            // printf("k = %d\n", blk);
+            // if(debug) {
+            //    printf("Bcol %d:\n", blk);
+            //    // print_mat(mblk, nblk, m, n, blkdata, cdata, lda);
+            // }
 
             // Factor diagonal: depend on perm[blk*block_size] as we init npass
             // {  
@@ -1538,7 +1531,7 @@ namespace spldlt {
                   perm, d,
                   cdata, backup,
                   options/*, block_size*/, workspaces, alloc);
-
+            
 // #if defined(SPLDLT_USE_STARPU)
 //             starpu_task_wait_for_all();
 // #endif
