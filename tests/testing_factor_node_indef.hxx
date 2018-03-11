@@ -137,30 +137,12 @@ namespace spldlt { namespace tests {
       front.alloc_contrib_blocks();
 
       // Copy A (n+1 to m columns) into contrib blocks
-      size_t contrib_dimn = m-n; // Dimension of contribution block
-      if (contrib_dimn>0) {
-         int nr = front.get_nr();
-         int rsa = n/blksz;
-         int ncontrib = nr-rsa;
+      copy_a_to_cb(a, lda, front);
+      if (debug) {
+         std::cout << "CB:" << std::endl;
+         print_cb("%10.2e", front);
+      }           
 
-         for(int j = rsa; j < nr; j++) {
-            // First col in contrib block
-            int first_col = std::max(j*blksz, n);
-            // Tile width
-            int blkn = std::min((j+1)*blksz, m) - first_col;
-            for(int i = rsa; i < nr; i++) {
-               // First col in contrib block
-               int first_row = std::max(i*blksz, n);
-               // Tile height
-               int blkm = std::min((i+1)*blksz, m) - first_row;
-               memcpy(
-                     front.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib].a,
-                     &a[first_col*lda + first_row],
-                     blkm*blkn*sizeof(T));
-            }
-         }
-      }
-     
       // Initialize solver (tasking system in particular)
 #if defined(SPLDLT_USE_STARPU)
       struct starpu_conf *conf = new starpu_conf;
@@ -304,56 +286,39 @@ namespace spldlt { namespace tests {
 //          print_d<T>(m, d);
 //       }
 
+      if (debug) {
+         std::cout << "CB:" << std::endl;
+         print_cb("%10.2e", front);
+      }
+
       // Copy factors from lcol into l array
       T *l = allocT.allocate(lda*m);
       memcpy(l, front.lcol, lda*n*sizeof(T)); // Copy a to l
-      // Copy L (n+1 to m columns) from contrib blocks into l
-      if (contrib_dimn>0) {
-         int nr = front.get_nr();
-         int rsa = n/blksz;
-         int ncontrib = nr-rsa;
 
-         for(int j = rsa; j < nr; j++) {
-            // First col in contrib block
-            int first_col = std::max(j*blksz, n);
-            // Tile width
-            int blkn = std::min((j+1)*blksz, m) - first_col;
-            for(int i = rsa; i < nr; i++) {
-               // First col in contrib block
-               int first_row = std::max(i*blksz, n);
-               // Tile height
-               int blkm = std::min((i+1)*blksz, m) - first_row;
-               memcpy(&l[first_col*lda + first_row],
-                      front.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib].a,
-                      blkm*blkn*sizeof(T));
-            }
-         }
+      // Eliminate remaining columns
+      if (m > n) {   
+         // Copy L (n+1 to m columns) from contrib blocks into l
+         copy_cb_to_a(front, l, lda);
+
+         // Finish off with TPP
+         T *ld = new T[2*m];
+         q2 += ldlt_tpp_factor(m-q2-q1, m-q2-q1, &front.perm[q1+q2], &l[(q1+q2)*(lda+1)], lda,
+                               &d[2*(q1+q2)], ld, m, options.action, u, small, q1+q2, &l[q1+q2], lda);
+         delete[] ld;
       }
-
-      // if (debug) print_mat("%10.2e", m, front.lcol, lda, front.perm);
+      
       if (debug) {
          std::cout << "L:" << std::endl;
          print_mat("%10.2e", m, l, lda, front.perm);
       }
 
-      // Finish off with TPP
-      if(q2 < n) {
-         T *ld = new T[2*m];
-         q2 += ldlt_tpp_factor(m-q2, n-q2, &front.perm[q2], &front.lcol[(q2)*(lda+1)], lda,
-                               &d[2*(q2)], ld, m, options.action, u, small, q2, &front.lcol[q2], lda);
-         delete[] ld;
-
-      }
-
-      if (debug) {
-         std::cout << "q2 = " << q2 << std::endl;
-      }
-
+      if (debug) std::cout << "q2 " << q2 << std::endl;
+      
       EXPECT_EQ(m, q1+q2) << "(test " << test << " seed " << seed << ")" << std::endl;
       
       // Perform solve
       T *soln = new T[m];
-      solve(m, q2, front.perm, l, lda, d, b, soln);
+      solve(m, q1+q2, front.perm, l, lda, d, b, soln);
       if(debug) {
          printf("soln = ");
          for(int i=0; i<m; i++) printf(" %le", soln[i]);

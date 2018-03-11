@@ -18,6 +18,15 @@ file(
   kernels/*.hxx
   )
 
+file(
+  GLOB 
+  to_remove
+  debug.cxx)
+
+# Source files to ignore for compilation
+list(REMOVE_ITEM sources ${to_remove})
+list(REMOVE_ITEM kernel_sources ${to_remove})
+
 # message(STATUS "Kernel sources: ${kernel_sources}")
 set(sources ${sources} ${kernel_sources})
 
