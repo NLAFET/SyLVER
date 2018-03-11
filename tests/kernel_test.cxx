@@ -12,6 +12,7 @@
 
 // using namespace spral::ssids::cpu;
 using namespace spldlt;
+using namespace spldlt::tests;
 
 int main(int argc, char** argv) {
    

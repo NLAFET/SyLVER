@@ -12,7 +12,7 @@
 #include "ssids/cpu/cpu_iface.hxx"
 #include "tests/ssids/kernels/AlignedAllocator.hxx"
 #include "ssids/cpu/BuddyAllocator.hxx"
-#include "ssids/cpu/NumericNode.hxx"
+// #include "ssids/cpu/NumericNode.hxx"
 #include "ssids/cpu/kernels/ldlt_tpp.hxx"
 #include "ssids/cpu/kernels/ldlt_app.hxx"
 // SSIDS tests
@@ -26,7 +26,7 @@
 
 // using namespace spral::ssids::cpu;
 
-namespace spldlt {
+namespace spldlt { namespace tests {
 
    using namespace spldlt::ldlt_app_internal;
    
@@ -138,7 +138,6 @@ namespace spldlt {
 
       // Copy A (n+1 to m columns) into contrib blocks
       size_t contrib_dimn = m-n; // Dimension of contribution block
-      if(debug) printf("[factor_node_indef_test] contrib dimn = %zu\n", contrib_dimn);
       if (contrib_dimn>0) {
          int nr = front.get_nr();
          int rsa = n/blksz;
@@ -154,8 +153,10 @@ namespace spldlt {
                int first_row = std::max(i*blksz, n);
                // Tile height
                int blkm = std::min((i+1)*blksz, m) - first_row;
-               memcpy(front.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib].a,
-                      &a[first_col*lda + first_row], blkm*blkn*sizeof(T));
+               memcpy(
+                     front.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib].a,
+                     &a[first_col*lda + first_row],
+                     blkm*blkn*sizeof(T));
             }
          }
       }
@@ -219,7 +220,7 @@ namespace spldlt {
       if(debug) printf("[factor_node_indef_test] nelim1 = %d\n", front.nelim1);
          
       q1 = front.nelim1;
-      q2 = front.nelim;
+      q2 = front.nelim - front.nelim1;
       
          //       // q1 = LDLT
 //       //    <T, iblksz, CopyBackup<T>, false, debug>
@@ -253,7 +254,7 @@ namespace spldlt {
 // #endif
       
       std::cout << "FIRST FACTOR CALL ELIMINATED " << q1 << " of " << n << " pivots" << std::endl;
-      std::cout << "SECOND FACTOR CALL ELIMINATED " << q2-q1 << " of " << n << " pivots" << std::endl;
+      std::cout << "SECOND FACTOR CALL ELIMINATED " << q2 << " of " << n << " pivots" << std::endl;
       
 //       if(debug) {
 //          std::cout << "L after first elim:" << std::endl;
@@ -294,7 +295,7 @@ namespace spldlt {
 #endif
 
 //       std::cout << "q1=" << q1 << " q2=" << q2 << std::endl;
-
+      
 //       // Print out matrices if requested
 //       if(debug) {
 //          std::cout << "L:" << std::endl;
@@ -303,7 +304,7 @@ namespace spldlt {
 //          print_d<T>(m, d);
 //       }
 
-      // Copy factors into l array
+      // Copy factors from lcol into l array
       T *l = allocT.allocate(lda*m);
       memcpy(l, front.lcol, lda*n*sizeof(T)); // Copy a to l
       // Copy L (n+1 to m columns) from contrib blocks into l
@@ -334,10 +335,25 @@ namespace spldlt {
          std::cout << "L:" << std::endl;
          print_mat("%10.2e", m, l, lda, front.perm);
       }
+
+      // Finish off with TPP
+      if(q2 < n) {
+         T *ld = new T[2*m];
+         q2 += ldlt_tpp_factor(m-q2, n-q2, &front.perm[q2], &front.lcol[(q2)*(lda+1)], lda,
+                               &d[2*(q2)], ld, m, options.action, u, small, q2, &front.lcol[q2], lda);
+         delete[] ld;
+
+      }
+
+      if (debug) {
+         std::cout << "q2 = " << q2 << std::endl;
+      }
+
+      EXPECT_EQ(m, q1+q2) << "(test " << test << " seed " << seed << ")" << std::endl;
       
       // Perform solve
       T *soln = new T[m];
-      solve(m, q1, front.perm, l, lda, d, b, soln);
+      solve(m, q2, front.perm, l, lda, d, b, soln);
       if(debug) {
          printf("soln = ");
          for(int i=0; i<m; i++) printf(" %le", soln[i]);
@@ -362,4 +378,4 @@ namespace spldlt {
    // Run tests for the APTP node factorization
    int run_factor_node_indef_tests();
 
-}
+   }} // namespace spldlt::tests

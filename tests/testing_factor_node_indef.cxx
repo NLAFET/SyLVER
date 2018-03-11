@@ -1,23 +1,27 @@
 #include "testing_factor_node_indef.hxx"
 
-namespace spldlt {
+namespace spldlt { namespace tests {
 
-   int run_factor_node_indef_tests() {
+   /// @brief Performs tests for factor_node_indef kernel in
+   /// sequential
+   int run_factor_node_indef_tests_seq() {
 
       int nerr = 0;
-
-      printf("[run_factor_node_indef_tests tests]\n");
+         
+      // Sequential (1 worker)
 
       ////////////////////////////////////////////////////////////////////////////////
-      // Square matrices 
-      // Sequential (1 worker)
+      // Square matrices
       // No delays
+      /*
       TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, 32, 32, 32, 1) )); // No blocking
       TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, 128, 128, 32, 1) )); // Outer blocking
       TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, 128, 128, 128, 1) )); // Inner blocking
       TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, 1024, 1024, 128, 1) )); // Inner and outer blocking
       TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, 2048, 2048, 256, 1) )); // Inner and outer blocking
       TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, 3000, 3000, 256, 1) )); // Inner and outer blocking
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, 5179, 5179, 512, 1) )); // Inner and outer blocking
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, 4085, 4085, 315, 1) )); // Inner and outer blocking
 
       // Cause delays
       TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, true, false, 32, 32, 32, 1) )); // No blocking
@@ -26,6 +30,19 @@ namespace spldlt {
       TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, true, false, 1024, 1024, 128, 1) )); // Inner and outer blocking
       TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, true, false, 2048, 2048, 256, 1) )); // Inner and outer blocking
       TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, true, false, 3000, 3000, 256, 1) )); // Inner and outer blocking
+      */
+
+      ////////////////////////////////////////////////////////////////////////////////
+      // Rectangular matrices
+      // No delays
+      TEST(( factor_node_indef_test<double, 32, true>(0.01, 1e-20, false, false, 8, 4, 4, 1) ));
+
+      return nerr;
+   }
+
+   int run_factor_node_indef_tests_par() {
+
+      int nerr = 0;
 
       ////////////////////////////////////////////////////////////////////////////////
       // Parallel (8 worker)
@@ -33,6 +50,8 @@ namespace spldlt {
       TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, 1024, 1024, 128, 8) )); // Inner and outer blocking
       TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, 2048, 2048, 256, 8) )); // Inner and outer blocking
       TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, 3000, 3000, 256, 8) )); // Inner and outer blocking
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, 5179, 5179, 512, 8) )); // Inner and outer blocking
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, 4085, 4085, 315, 8) )); // Inner and outer blocking
 
       // Cause delays
       TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, true, false, 1024, 1024, 128, 8) )); // Inner and outer blocking
@@ -40,5 +59,21 @@ namespace spldlt {
       TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, true, false, 3000, 3000, 256, 8) )); // Inner and outer blocking
 
       return nerr;
+
    }
-}
+      
+   /// @brief Performs all the tests for factor_node_indef kernel
+   int run_factor_node_indef_tests() {
+
+      int nerr = 0;
+
+      printf("[run_factor_node_indef_tests tests]\n");
+
+      // Sequential tests
+      nerr += run_factor_node_indef_tests_seq();
+      // Parallel tests
+      // nerr += run_factor_node_indef_tests_par();
+      
+      return nerr;
+   }
+}} // namespace spldlt::tests

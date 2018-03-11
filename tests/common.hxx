@@ -1,5 +1,8 @@
 #pragma once
 
+// SpLDLT
+#include "NumericFront.hxx"
+
 #include <cstdio>
 #include <cmath>
 #include <algorithm>
@@ -272,4 +275,39 @@ namespace spldlt {
       delete[] ad21;
    }
 
-}
+   /// @brief Copy the cotributions blocks from a front into the array a
+   template<typename T, typename PoolAllocator,
+            bool debug=false>
+   void copy_front_cb(NumericFront<T, PoolAllocator>& node, T* a, int lda) {
+
+      int m = node.get_nrow();
+      int n = node.get_ncol();
+      size_t contrib_dimn = m-n; // Dimension of contribution block
+      int blksz =  node.blksz;
+      
+      if(debug) printf("[copy_front_cb] contrib dimn = %zu\n", contrib_dimn);
+
+      if (contrib_dimn>0) {
+         int nr = node.get_nr();
+         int rsa = n/blksz;
+         int ncontrib = nr-rsa;
+
+         for(int j = rsa; j < nr; j++) {
+            // First col in contrib block
+            int first_col = std::max(j*blksz, n);
+            // Tile width
+            int blkn = std::min((j+1)*blksz, m) - first_col;
+            for(int i = rsa; i < nr; i++) {
+               // First col in contrib block
+               int first_row = std::max(i*blksz, n);
+               // Tile height
+               int blkm = std::min((i+1)*blksz, m) - first_row;
+               memcpy(node.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib].a,
+                      &a[first_col*lda + first_row], blkm*blkn*sizeof(T));
+            }
+         }
+      }
+
+   }
+   
+} // namespace spldlt

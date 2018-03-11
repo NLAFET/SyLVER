@@ -5,9 +5,13 @@
 
 #pragma once
 
-#include "ssids/cpu/cpu_iface.hxx"
-#include "ssids/cpu/SymbolicNode.hxx"
+// SpLDLT
+#include "SymbolicFront.hxx"
 #include "kernels/ldlt_app.hxx"
+
+// SSIDS
+#include "ssids/cpu/cpu_iface.hxx"
+// #include "ssids/cpu/SymbolicNode.hxx"
 
 namespace spldlt {
 
