@@ -761,6 +761,7 @@ namespace spldlt { namespace starpu {
 
          // update number of columns eliminated during the first pass
          node->nelim1 = node->nelim; 
+         printf("[factor_front_indef_secondpass_nocontrib_cpu_func] first pass = %d out of %d\n", node->nelim, n);
 
          // Try to eliminate the columns uneliminated at first pass
          if (node->nelim < n) {
@@ -796,13 +797,16 @@ namespace spldlt { namespace starpu {
                   int rsa = n/blksz;                  
                   int ncontrib = nr-rsa;
 
+                  printf("[factor_front_indef_secondpass_nocontrib_cpu_func] nelim1 = %d, nelim = %d, blksz = %d\n", nelim, node->nelim, blksz);
+                  printf("[factor_front_indef_secondpass_nocontrib_cpu_func] fc = %d, lc = %d\n", fc, lc);
+
                   for (int k = fc; k <= lc; ++k) {
 
-                     int first_col = std::max(k*blksz, nelim);
-                     int last_col = std::min((k+1)*blksz, node->nelim-1);
+                     int first_col = std::max(k*blksz, nelim); // first column in current block-column of L
+                     int last_col = std::min((k+1)*blksz, node->nelim-1); // last column in current block-column of L
                      //int nelim_col = 0;
                      int nelim_col = last_col-first_col+1;
-                     T *dk = &d[2*k*blksz];
+                     T *dk = &d[2*(k*blksz+first_col)];
                      printf("[factor_front_indef_secondpass_nocontrib_cpu_func] first_col = %d, last_col = %d, nelim_col = %d\n", first_col, last_col, nelim_col);
                      for (int j = rsa; j < nr; ++j) {
 
@@ -821,10 +825,9 @@ namespace spldlt { namespace starpu {
                            int ldld = spral::ssids::cpu::align_lda<T>(blksz);
                            T *ld = work.get_ptr<T>(blksz*ldld);
 
-                           // printf("[factor_front_indef_secondpass_nocontrib_cpu_func] k = %d, i = %d, j = %d\n", k, i, j);
-                           // printf("[factor_front_indef_secondpass_nocontrib_cpu_func] lik_first_row = %d, ljk_first_row = %d\n", lik_first_row, ljk_first_row);
-
+                           // printf("[factor_front_indef_secondpass_nocontrib_cpu_func] i = %d, j = %d, rsa = %d\n", i, j, rsa);
                            printf("[factor_front_indef_secondpass_nocontrib_cpu_func] updm = %d, updn = %d\n", upd.m, upd.n);
+                           printf("[factor_front_indef_secondpass_nocontrib_cpu_func] lik_first_row = %d, ljk_first_row = %d\n", lik_first_row, ljk_first_row);
                            
                            update_contrib_block(
                                  upd.m, upd.n, upd.a, upd.lda,  
