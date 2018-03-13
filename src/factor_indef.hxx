@@ -1710,9 +1710,10 @@ namespace spldlt {
                            contrib_blocks[(jblk-rsa)*ncontrib+(iblk-rsa)],
                            node,
                            blk, iblk, jblk, workspaces, block_size, UPDATE_PRIO);
-// #if defined(SPLDLT_USE_STARPU)
-//                      starpu_task_wait_for_all();
-// #endif
+
+                     // #if defined(SPLDLT_USE_STARPU)
+                     //                      starpu_task_wait_for_all();
+                     // #endif
 
                   }    
                }

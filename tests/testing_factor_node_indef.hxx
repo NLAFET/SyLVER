@@ -28,28 +28,7 @@
 
 namespace spldlt { namespace tests {
 
-   using namespace spldlt::ldlt_app_internal;
    
-   template<typename T>
-   void solve(int m, int n, const int *perm, const T *l, int ldl, const T *d, const T *b, T *x) {
-      for(int i=0; i<m; i++) x[i] = b[perm[i]];
-      // Fwd slv
-      ldlt_app_solve_fwd(m, n, l, ldl, 1, x, m);
-      ldlt_app_solve_fwd(m-n, m-n, &l[n*(ldl+1)], ldl, 1, &x[n], m);
-      // Diag slv
-      ldlt_app_solve_diag(n, d, 1, x, m);
-      ldlt_app_solve_diag(m-n, &d[2*n], 1, &x[n], m);
-      // Bwd slv
-      ldlt_app_solve_bwd(m-n, m-n, &l[n*(ldl+1)], ldl, 1, &x[n], m);
-      ldlt_app_solve_bwd(m, n, l, ldl, 1, x, m);
-      // Undo permutation
-      T *temp = new T[m];
-      for(int i=0; i<m; i++) temp[i] = x[i];
-      for(int i=0; i<m; i++) x[perm[i]] = temp[i];
-      // Free mem
-      delete[] temp;
-   }
-
    template<typename T,
             int iblksz=INNER_BLOCK_SIZE,
             bool debug = false>
@@ -60,7 +39,9 @@ namespace spldlt { namespace tests {
       bool failed = false;
 
       if (debug) printf("[factor_node_indef_test] %d x %d\n", m, n);
-   
+
+      ASSERT_TRUE(m >= n);
+         
       // Generate test matrix
       int lda = spral::ssids::cpu::align_lda<T>(m);
       T* a = new double[m*lda];
@@ -107,10 +88,12 @@ namespace spldlt { namespace tests {
       typedef spral::test::AlignedAllocator<T> FactorAllocator;
       FactorAllocator allocT;
 
-      size_t len = (lda+2)*n; // Includes D
+      // Make lcol m columns wide for debugging
+      size_t len = (lda+2)*m; // Includes D
       if (debug) printf("m = %d, n = %d, lda = %d, len = %zu\n", m, n, lda, len);
       front.lcol = allocT.allocate(len);
-      memcpy(front.lcol, a, lda*n*sizeof(T)); // Copy a to l
+      // Copy the whole matrix into LCOL for debugging
+      memcpy(front.lcol, a, lda*m*sizeof(T)); // Copy a to l
       
       if (debug) {
          std::cout << "LCOL:" << std::endl;
@@ -286,33 +269,70 @@ namespace spldlt { namespace tests {
 //          print_d<T>(m, d);
 //       }
 
+
       if (debug) {
          std::cout << "CB:" << std::endl;
          print_cb("%10.2e", front);
       }
 
-      // Copy factors from lcol into l array
+      // Alloc L array for storing factors
       T *l = allocT.allocate(lda*m);
-      memcpy(l, front.lcol, lda*n*sizeof(T)); // Copy a to l
-
-      // Eliminate remaining columns
-      if (m > n) {   
-         // Copy L (n+1 to m columns) from contrib blocks into l
-         copy_cb_to_a(front, l, lda);
-
-         // Finish off with TPP
-         T *ld = new T[2*m];
-         q2 += ldlt_tpp_factor(m-q2-q1, m-q2-q1, &front.perm[q1+q2], &l[(q1+q2)*(lda+1)], lda,
-                               &d[2*(q1+q2)], ld, m, options.action, u, small, q1+q2, &l[q1+q2], lda);
-         delete[] ld;
-      }
+      // Initialize L with zeros
+      for (int j=0; j<m; ++j)
+         for (int i=j; i<m; ++i)
+            l[i+j*lda] = 0.0;
       
+      // Copy factors from LCOL into L array
+      // Copy only factors (colmuns 1 to n)
+      // memcpy(l, front.lcol, lda*m*sizeof(T)); // Copy a to l
+      
+      // Copy back the whole LCOL matrix into L for debugging (columns
+      // 1 to m)
+      memcpy(l, front.lcol, lda*m*sizeof(T)); // Copy a to l
+
       if (debug) {
+         std::cout << "LCOL:" << std::endl;
+         print_mat("%10.2e", m, front.lcol, lda, front.perm);                  
          std::cout << "L:" << std::endl;
          print_mat("%10.2e", m, l, lda, front.perm);
       }
 
-      if (debug) std::cout << "q2 " << q2 << std::endl;
+      // Eliminate remaining columns in L
+      if (m > n) {   
+
+         // Copy L (n+1 to m columns) from contrib blocks into l
+         // copy_cb_to_a(front, l, lda);
+
+         // Ignore CB and do update
+         // Apply outer product update
+         do_update<T>(m-n, q1+q2, &l[n*(lda+1)], &l[n], lda, d);
+
+         
+         if (debug) {
+            std::cout << "D:" << std::endl;
+            print_d(m, d);
+            std::cout << "L:" << std::endl;
+            print_mat("%10.2e", m, l, lda, front.perm);
+         }
+
+         if (debug) std::cout << "Eliminate remaining columns using TPP.." << std::endl;
+            
+         // Finish off with TPP
+         T *ld = new T[2*m];
+         q2 += ldlt_tpp_factor(
+               m-q2-q1, m-q2-q1, &front.perm[q1+q2], &l[(q1+q2)*(lda+1)], lda,
+               &d[2*(q1+q2)], ld, m, options.action, u, small, q1+q2, &l[q1+q2], lda);
+         delete[] ld;
+      }
+      
+      if (debug) {
+         std::cout << "D:" << std::endl;
+         print_d(m, d);
+         std::cout << "L:" << std::endl;
+         print_mat("%10.2e", m, l, lda, front.perm);
+      }
+
+      if (debug) std::cout << "q2 = " << q2 << std::endl;
       
       EXPECT_EQ(m, q1+q2) << "(test " << test << " seed " << seed << ")" << std::endl;
       

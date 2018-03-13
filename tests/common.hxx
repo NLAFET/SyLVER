@@ -9,12 +9,40 @@
 #include <iomanip>
 #include <iostream>
 
+// SSIDS
 #include "ssids/cpu/kernels/wrappers.hxx"
 #include "ssids/cpu/cpu_iface.hxx"
+#include "ssids/cpu/kernels/ldlt_app.hxx"
 
-using namespace spral::ssids::cpu;
+//using namespace spral::ssids::cpu;
 
-namespace spldlt {
+namespace spldlt { namespace tests {
+
+    //using namespace spldlt::ldlt_app_internal;
+
+   /// @brief Sovle Ax = b whre A = PLDL^{T}P^{T}
+   template<typename T>
+   void solve(int m, int n, const int *perm, const T *l, int ldl, const T *d, const T *b, T *x) {
+      for(int i=0; i<m; i++) x[i] = b[perm[i]];
+      // Fwd slv
+      // Lz = P^{T}b
+      spral::ssids::cpu::ldlt_app_solve_fwd(m, n, l, ldl, 1, x, m);
+      spral::ssids::cpu::ldlt_app_solve_fwd(m-n, m-n, &l[n*(ldl+1)], ldl, 1, &x[n], m);
+      // Diag slv
+      // Dy = z
+      spral::ssids::cpu::ldlt_app_solve_diag(n, d, 1, x, m);
+      spral::ssids::cpu::ldlt_app_solve_diag(m-n, &d[2*n], 1, &x[n], m);
+      // Bwd slv
+      // L^{T}P^{T}x = y
+      spral::ssids::cpu::ldlt_app_solve_bwd(m-n, m-n, &l[n*(ldl+1)], ldl, 1, &x[n], m);
+      spral::ssids::cpu::ldlt_app_solve_bwd(m, n, l, ldl, 1, x, m);
+      // Undo permutation
+      T *temp = new T[m];
+      for(int i=0; i<m; i++) temp[i] = x[i];
+      for(int i=0; i<m; i++) x[perm[i]] = temp[i];
+      // Free mem
+      delete[] temp;
+   }
 
    // Permutes rows of a as per perm such that row i becomes row (perm[i]-offset)
    template<typename T>
@@ -396,4 +424,4 @@ namespace spldlt {
       
    }
    
-} // namespace spldlt
+   }} // namespace spldlt::tests

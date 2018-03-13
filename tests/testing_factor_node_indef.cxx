@@ -35,7 +35,8 @@ namespace spldlt { namespace tests {
       ////////////////////////////////////////////////////////////////////////////////
       // Rectangular matrices
       // No delays
-      TEST(( factor_node_indef_test<double, 32, true>(0.01, 1e-20, false, false, 8, 4, 4, 1) ));
+      TEST(( factor_node_indef_test<double, 32, true>(0.01, 1e-20, false, false, 2, 1, 1, 1) ));
+      // TEST(( factor_node_indef_test<double, 32, true>(0.01, 1e-20, false, false, 8, 4, 4, 1) ));
 
       return nerr;
    }

@@ -3,12 +3,14 @@
 
 #include <cstring>
 
-#include "tests/ssids/kernels/framework.hxx"
+// SSIDS
 #include "ssids/cpu/kernels/wrappers.hxx"
+// SSIDS tests
+#include "tests/ssids/kernels/framework.hxx"
 
 using namespace spral::ssids::cpu;
 
-namespace spldlt {
+namespace spldlt { namespace tests {
 
    template<typename T,
       bool debug=true>
@@ -106,4 +108,5 @@ namespace spldlt {
 
       return err;
    }
-}
+
+}} // namespace spldlt::tests

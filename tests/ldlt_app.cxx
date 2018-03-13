@@ -1,9 +1,12 @@
+// SpLDLT
+#include "kernels/ldlt_app.hxx"
 #include "ldlt_app.hxx"
 #include "common.hxx"
 
 #include <cstring>
 #include <vector>
 
+// SSIDS
 #include "tests/ssids/kernels/framework.hxx"
 #include "tests/ssids/kernels/AlignedAllocator.hxx"
 #include "ssids/cpu/BuddyAllocator.hxx"
@@ -13,34 +16,35 @@
 #include "ssids/cpu/kernels/ldlt_tpp.hxx"
 #include "ssids/cpu/cpu_iface.hxx"
 
-#include "kernels/ldlt_app.hxx"
+// SSIDS tests
+#include "tests/ssids/kernels/framework.hxx"
 
 using namespace spral::ssids::cpu;
 
-namespace spldlt {
+namespace spldlt { namespace tests {
 
    // static const int INNER_BLOCK_SIZE = 32; // same as in ssids/cpu/kernels/ldlt_app.cxx 
    using namespace spldlt::ldlt_app_internal;
 
-   template<typename T>
-   void solve(int m, int n, const int *perm, const T *l, int ldl, const T *d, const T *b, T *x) {
-      for(int i=0; i<m; i++) x[i] = b[perm[i]];
-      // Fwd slv
-      ldlt_app_solve_fwd(m, n, l, ldl, 1, x, m);
-      ldlt_app_solve_fwd(m-n, m-n, &l[n*(ldl+1)], ldl, 1, &x[n], m);
-      // Diag slv
-      ldlt_app_solve_diag(n, d, 1, x, m);
-      ldlt_app_solve_diag(m-n, &d[2*n], 1, &x[n], m);
-      // Bwd slv
-      ldlt_app_solve_bwd(m-n, m-n, &l[n*(ldl+1)], ldl, 1, &x[n], m);
-      ldlt_app_solve_bwd(m, n, l, ldl, 1, x, m);
-      // Undo permutation
-      T *temp = new T[m];
-      for(int i=0; i<m; i++) temp[i] = x[i];
-      for(int i=0; i<m; i++) x[perm[i]] = temp[i];
-      // Free mem
-      delete[] temp;
-   }
+   // template<typename T>
+   // void solve(int m, int n, const int *perm, const T *l, int ldl, const T *d, const T *b, T *x) {
+   //    for(int i=0; i<m; i++) x[i] = b[perm[i]];
+   //    // Fwd slv
+   //    ldlt_app_solve_fwd(m, n, l, ldl, 1, x, m);
+   //    ldlt_app_solve_fwd(m-n, m-n, &l[n*(ldl+1)], ldl, 1, &x[n], m);
+   //    // Diag slv
+   //    ldlt_app_solve_diag(n, d, 1, x, m);
+   //    ldlt_app_solve_diag(m-n, &d[2*n], 1, &x[n], m);
+   //    // Bwd slv
+   //    ldlt_app_solve_bwd(m-n, m-n, &l[n*(ldl+1)], ldl, 1, &x[n], m);
+   //    ldlt_app_solve_bwd(m, n, l, ldl, 1, x, m);
+   //    // Undo permutation
+   //    T *temp = new T[m];
+   //    for(int i=0; i<m; i++) temp[i] = x[i];
+   //    for(int i=0; i<m; i++) x[perm[i]] = temp[i];
+   //    // Free mem
+   //    delete[] temp;
+   // }
 
    /*
      bool dblk_singular singular diagonal blocks
@@ -218,4 +222,4 @@ namespace spldlt {
       return err;
    }
 
-}
+   }} // namespace spldlt::tests
