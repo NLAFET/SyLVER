@@ -39,12 +39,12 @@ namespace spldlt { namespace tests {
       // TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, 8, 4, 4, 1) ));
       // TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, 128, 64, 32, 1) )); // Outer blocking
       // TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, 1000, 200, 32, 1) )); // Outer blocking
-      // TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, 2048, 512, 128, 1) )); // Outer blocking
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, 2048, 512, 128, 1) )); // Outer blocking
 
       // Cause delays
-      //TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, true, false, 2, 1, 1, 1) ));
-      // TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, true, false, 4, 2, 2, 1) ));
-      TEST(( factor_node_indef_test<double, 32, true>(0.01, 1e-20, true, false, 8, 4, 4, 1) ));
+      // TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, true, false, 2, 1, 1, 1) ));
+      //TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, true, false, 4, 2, 2, 1) ));
+      // TEST(( factor_node_indef_test<double, 32, true>(0.01, 1e-20, true, false, 8, 4, 4, 1) ));
 
       return nerr;
    }

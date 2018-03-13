@@ -806,7 +806,7 @@ namespace spldlt { namespace starpu {
                      int last_col = std::min((k+1)*blksz, node->nelim-1); // last column in current block-column of L
                      //int nelim_col = 0;
                      int nelim_col = last_col-first_col+1;
-                     T *dk = &d[2*(k*blksz+first_col)];
+                     T *dk = &d[2*first_col];
                      printf("[factor_front_indef_secondpass_nocontrib_cpu_func] first_col = %d, last_col = %d, nelim_col = %d\n", first_col, last_col, nelim_col);
                      for (int j = rsa; j < nr; ++j) {
 
