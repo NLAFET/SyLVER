@@ -155,7 +155,7 @@ namespace spldlt {
          int ldcontrib = m-n;
          
          // Allocate and init handles in contribution blocks         
-         if (ldcontrib>0) {
+         if (ldcontrib>0 && front.contrib_blocks.size()>0) {
             // Index of first block in contrib
             int rsa = n/blksz;
             // Number of block in contrib

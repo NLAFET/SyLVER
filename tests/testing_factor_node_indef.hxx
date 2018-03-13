@@ -3,9 +3,11 @@
 // STD
 #include <vector>
 #include <cstdio>
+
 // SpLDLT
 #include "SymbolicFront.hxx"
 #include "factor_indef.hxx"
+// SpLDLT tests
 #include "common.hxx"
 
 // SSIDS
@@ -94,6 +96,12 @@ namespace spldlt { namespace tests {
       front.lcol = allocT.allocate(len);
       // Copy the whole matrix into LCOL for debugging
       memcpy(front.lcol, a, lda*m*sizeof(T)); // Copy a to l
+      // Put nans on the bottom right corner of the LCOL matrix
+      // for (int j = n; j < m; ++j) {
+      //    for (int i = j; i < m; ++i) {
+      //       front.lcol[lda*j+i] = std::numeric_limits<T>::signaling_NaN(); 
+      //    }
+      // }
       
       if (debug) {
          std::cout << "LCOL:" << std::endl;
@@ -156,7 +164,6 @@ namespace spldlt { namespace tests {
       spldlt::starpu::codelet_init_factor_indef<T, PoolAllocator>();
 #endif
 
-
 #if defined(SPLDLT_USE_STARPU)
       // Register symbolic handles
       starpu_void_data_register(&(sfront.hdl)); // Node's symbolic handle
@@ -173,8 +180,7 @@ namespace spldlt { namespace tests {
       int q2 = 0; // Number of eliminated colmuns (second pass)
       
       // Factor front (first and second pass) and from contrib blocks
-      factor_front_indef(
-            front, workspaces, pool_alloc, options);
+      factor_front_indef(front, workspaces, pool_alloc, options);
 
       // By default function calls are asynchronous, so we put a
       // barrier and wait for the DAG to be executed
@@ -298,7 +304,7 @@ namespace spldlt { namespace tests {
       }
 
       // Eliminate remaining columns in L
-      if (m > n) {   
+      if (m > n) {
 
          // Copy L (n+1 to m columns) from contrib blocks into l
          // copy_cb_to_a(front, l, lda);
@@ -360,7 +366,7 @@ namespace spldlt { namespace tests {
       return failed ? -1 : 0;
    }
 
-   // Run tests for the APTP node factorization
+   // Run tests for the node factorization
    int run_factor_node_indef_tests();
 
    }} // namespace spldlt::tests
