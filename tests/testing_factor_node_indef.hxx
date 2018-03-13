@@ -94,8 +94,8 @@ namespace spldlt { namespace tests {
       size_t len = (lda+2)*m; // Includes D
       if (debug) printf("m = %d, n = %d, lda = %d, len = %zu\n", m, n, lda, len);
       front.lcol = allocT.allocate(len);
-      // Copy the whole matrix into LCOL for debugging
-      memcpy(front.lcol, a, lda*m*sizeof(T)); // Copy a to l
+
+      memcpy(front.lcol, a, lda*n*sizeof(T)); // Copy a to l
       // Put nans on the bottom right corner of the LCOL matrix
       // for (int j = n; j < m; ++j) {
       //    for (int i = j; i < m; ++i) {
@@ -128,11 +128,11 @@ namespace spldlt { namespace tests {
       front.alloc_contrib_blocks();
 
       // Copy A (n+1 to m columns) into contrib blocks
-      copy_a_to_cb(a, lda, front);
-      if (debug) {
-         std::cout << "CB:" << std::endl;
-         print_cb("%10.2e", front);
-      }           
+      // copy_a_to_cb(a, lda, front);
+      // if (debug) {
+      //    std::cout << "CB:" << std::endl;
+      //    print_cb("%10.2e", front);
+      // }           
 
       // Initialize solver (tasking system in particular)
 #if defined(SPLDLT_USE_STARPU)
@@ -290,29 +290,28 @@ namespace spldlt { namespace tests {
       
       // Copy factors from LCOL into L array
       // Copy only factors (colmuns 1 to n)
-      // memcpy(l, front.lcol, lda*m*sizeof(T)); // Copy a to l
-      
-      // Copy back the whole LCOL matrix into L for debugging (columns
-      // 1 to m)
-      memcpy(l, front.lcol, lda*m*sizeof(T)); // Copy a to l
+      memcpy(l, front.lcol, lda*n*sizeof(T)); // Copy a to l
 
       if (debug) {
          std::cout << "LCOL:" << std::endl;
          print_mat("%10.2e", m, front.lcol, lda, front.perm);                  
-         std::cout << "L:" << std::endl;
-         print_mat("%10.2e", m, l, lda, front.perm);
+         // std::cout << "L:" << std::endl;
+         // print_mat("%10.2e", m, l, lda, front.perm);
       }
 
       // Eliminate remaining columns in L
       if (m > n) {
 
-         // Copy L (n+1 to m columns) from contrib blocks into l
-         // copy_cb_to_a(front, l, lda);
-
+         // Copy A (columns n+1 to m) into L
+         memcpy(&l[lda*n], &a[lda*n], lda*(m-n)*sizeof(T));
+         // Add entries (columns n+1 to m) form CB into L
+         add_cb_to_a(front, l, lda);
+         
+         // Debug
          // Ignore CB and do update
          // Apply outer product update
-         do_update<T>(m-n, q1+q2, &l[n*(lda+1)], &l[n], lda, d);
-
+         // memcpy(&l[n*lda], &a[n*lda], lda*(m-n)*sizeof(T));
+         // do_update<T>(m-n, q1+q2, &l[n*(lda+1)], &l[n], lda, d);
          
          if (debug) {
             std::cout << "D:" << std::endl;

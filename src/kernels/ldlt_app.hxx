@@ -1045,6 +1045,8 @@ public:
          //              INNER_BLOCK_SIZE, 0, nullptr, 0, work, alloc
          //              );
 
+         // printf("[Block::factor] nrow = %d, ncol = %d\n", nrow(), ncol());
+
          cdata_[i_].nelim =
             FactorSymIndef
             <T, INNER_BLOCK_SIZE, CopyBackup<T,Allocator>, debug, Allocator>
@@ -1055,7 +1057,6 @@ public:
                   );
          
          // printf("cdata_[i_].nelim: %d\n", cdata_[i_].nelim);
-         // printf("ncol: %d\n", ncol());
 
          if(cdata_[i_].nelim < 0) return cdata_[i_].nelim;
          int* temp = work.get_ptr<int>(ncol());
@@ -1068,6 +1069,7 @@ public:
       } else { /* block_size == INNER_BLOCK_SIZE */
          // Call another routine for small block factorization
          if(ncol() < INNER_BLOCK_SIZE || !is_aligned(aval_)) {
+            // printf("[Block::factor] nrow = %d, ncol = %d\n", nrow(), ncol());
          // if(ncol() < INNER_BLOCK_SIZE || !(reinterpret_cast<uintptr_t>(aval_) % 32 == 0)) {
             T* ld = work.get_ptr<T>(2*INNER_BLOCK_SIZE);
             cdata_[i_].nelim = ldlt_tpp_factor(

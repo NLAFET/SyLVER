@@ -388,6 +388,45 @@ namespace spldlt { namespace tests {
 
    }
 
+   /// @brief Add the contribution blocks into the array a
+   template<typename T, typename PoolAllocator,
+            bool debug=false>
+   void add_cb_to_a(NumericFront<T, PoolAllocator>& node, T* a, int lda) {
+
+      int m = node.get_nrow();
+      int n = node.get_ncol();
+      size_t contrib_dimn = m-n; // Dimension of contribution block
+      int blksz =  node.blksz;
+      if (contrib_dimn <= 0) return;
+
+      int nr = node.get_nr();
+      int rsa = n/blksz;
+      int ncontrib = nr-rsa;
+
+      for(int j = rsa; j < nr; j++) {
+         // First col in contrib block
+         int first_col = std::max(j*blksz, n);
+         // Tile width
+         // int blkn = std::min((j+1)*blksz, m) - first_col;
+         for(int i = j; i < nr; i++) {
+            // First col in contrib block
+            int first_row = std::max(i*blksz, n);
+            // Tile height
+            // int blkm = std::min((i+1)*blksz, m) - first_row;
+           
+            spldlt::Tile<T, PoolAllocator>& cb = node.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib];
+
+            // FIXME: use copy routine from BLAS
+            for (int c = 0; c < cb.n; ++c) {
+               for (int r = 0; r < cb.m; ++r) {
+                  a[(first_col+c)*lda + (first_row+r)] += cb.a[c*cb.lda+r];
+               }
+            }
+         }
+      }
+
+   }
+
    /// @brief Print node's contribution blocks
    template<typename T, typename PoolAllocator>
    void print_cb(char const* format, NumericFront<T, PoolAllocator>& node) {

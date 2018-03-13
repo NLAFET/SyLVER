@@ -604,10 +604,6 @@ namespace spldlt { namespace starpu {
          ColumnData<T,IntAlloc> *cdata = node->cdata;
          int cnelim = (*cdata)[k].nelim;
          
-         // printf("[udpate_contrib_block_app_cpu_func] k = %d, celim = %d, nrow = %d, ncol = %d, blksz = %d\n", k, cnelim, nrow, ncol, blksz);
-         // printf("[udpate_contrib_block_app_cpu_func] lik_first_row = %d, ljk_first_row = %d\n", lik_first_row, ljk_first_row);
-         // printf("[udpate_contrib_block_app_cpu_func] updm = %d, updn = %d, ldupd = %d\n", updm, updn, ldupd);
-         
          // if (nelim <= 0) return; // No factors to update in current block-column
          if (cnelim <= 0) return; // No factors to update in current block-column
 

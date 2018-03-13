@@ -40,22 +40,18 @@ namespace spldlt {
 
       int nelim = 0;
 
-      // printf("[factor_front_indef]\n");
+      // printf("[factor_front_indef] m = %d, n = %d\n", node.get_nrow(), node.get_ncol());
 
       int blksz = node.blksz;
       // node.nelim = nelim;      
       bool const debug = false;
       T *upd = nullptr;
 
+      // Factorize from first column
       node.nelim = 0; // TODO add parameter from;
-      
+
       if (options.pivot_method==PivotMethod::app_block) {
          
-         // CopyBackup<T> backup(m, n, blksz);
-
-         // node.alloc_backup();
-         // node.alloc_cdata();
-
          CopyBackup<T, PoolAlloc> &backup = *node.backup;
          // CopyBackup<T, PoolAlloc> backup(m, n, blksz, pool_alloc);
          ColumnData<T, IntAlloc> &cdata = *node.cdata;
@@ -79,7 +75,7 @@ namespace spldlt {
             ::factor_front_indef_app(
                   node, options, 0.0, upd, 0, workspaces, pool_alloc,
                   node.nelim);
-
+         
 // #if defined(SPLDLT_USE_STARPU)
 //          starpu_task_wait_for_all();
 // #endif
@@ -455,6 +451,8 @@ namespace spldlt {
          int blk = dblk.get_row();
 
 #if defined(SPLDLT_USE_STARPU)
+
+         // printf("[factor_block_app_task] m = %d, n = %d\n", dblk.get_m(), dblk.get_n());
 
          insert_factor_block_app_task (
                dblk.get_hdl(), cdata[blk].get_hdl(),
