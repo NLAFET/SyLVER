@@ -176,6 +176,7 @@ namespace spldlt {
 // #if defined(SPLDLT_USE_STARPU)
 //          starpu_task_wait_for_all();
 // #endif         
+
          // Allocate mapping array
          // int *map = new int[symb_.n+1];
 

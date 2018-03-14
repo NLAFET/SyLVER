@@ -761,7 +761,7 @@ namespace spldlt { namespace starpu {
 
          // update number of columns eliminated during the first pass
          node->nelim1 = node->nelim; 
-         printf("[factor_front_indef_secondpass_nocontrib_cpu_func] first pass = %d out of %d\n", node->nelim, n);
+         // printf("[factor_front_indef_secondpass_nocontrib_cpu_func] first pass = %d out of %d\n", node->nelim, n);
 
          // Try to eliminate the columns uneliminated at first pass
          if (node->nelim < n) {
@@ -784,7 +784,7 @@ namespace spldlt { namespace starpu {
                      &d[2*nelim], ld, m-nelim, options->action, options->u, options->small, 
                      nelim, &lcol[nelim], ldl);
 
-               printf("[factor_front_indef_secondpass_nocontrib_cpu_func] second pass = %d out of %d\n", node->nelim, n);
+               // printf("[factor_front_indef_secondpass_nocontrib_cpu_func] second pass = %d out of %d\n", node->nelim, n);
 
                if (
                      (m-n>0) && // We're not at a root node
