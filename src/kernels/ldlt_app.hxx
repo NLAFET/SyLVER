@@ -194,6 +194,10 @@ public:
    void register_handle() {
       starpu_void_data_register(&hdl_);
    }
+   // @brief Unregister data handle on column in StarPU
+   void unregister_handle_submit() {
+      starpu_data_unregister_submit(hdl_);
+   }
 #endif
 
 private:
@@ -1314,6 +1318,7 @@ public:
    /* return StarPU on block */
    starpu_data_handle_t get_hdl() { return hdl_; }
 
+   /// @brief Register data handle in StarPU
    void register_handle() {
       
       // printf("[Block::register_handle]\n");
@@ -1323,6 +1328,7 @@ public:
             sizeof(T));
    }
 
+   /// @brief Unregister data handle in StarPU
    void unregister_handle_submit() {
       starpu_data_unregister_submit(hdl_);
    }

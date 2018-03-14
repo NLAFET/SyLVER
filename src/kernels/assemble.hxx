@@ -204,6 +204,53 @@ namespace spldlt {
          // }
       }
 
+      /// @brief Unregister StarPU data handles associated with a node
+      template <typename T, typename PoolAlloc>
+      void unregister_node_indef_submit(
+            NumericFront<T, PoolAlloc> &node
+            ) {
+
+         typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
+ 
+         // Get node info
+         SymbolicFront &snode = node.symb;
+         int blksz = node.blksz;
+         int m = node.get_nrow();
+         int n = node.get_ncol();
+         int nr = (m-1) / blksz + 1; // number of block rows
+         int nc = (n-1) / blksz + 1; // number of block columns
+         spldlt::ldlt_app_internal::ColumnData<T, IntAlloc>& cdata = *node.cdata;
+
+         // Unregister block handles in the factors
+         for(int j = 0; j < nc; ++j) {
+
+            // FIXME: only if PivotMethod is APP
+            cdata[j].unregister_handle_submit();
+
+            for(int i = j; i < nr; ++i) {
+               starpu_data_unregister_submit(snode.handles[i + j*nr]);
+            }
+         }
+
+         // Unregister block handles in the contribution blocks
+         int ldcontrib = m-n;
+
+         if (ldcontrib>0) {
+            // Index of first block in contrib
+            int rsa = n/blksz;
+            // Number of block in contrib
+            int ncontrib = nr-rsa;
+
+            for(int j = rsa; j < nr; j++) {
+               for(int i = j; i < nr; i++) {
+                  // Register block in StarPU
+                  node.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib].unregister_handle_submit();
+               }
+            }
+
+         }
+      }
+
    } // namespace spldlt::starpu
 #endif
    

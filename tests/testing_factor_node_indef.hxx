@@ -134,6 +134,7 @@ namespace spldlt { namespace tests {
       conf->ncpus = ncpu;
       int ret = starpu_init(conf);
       STARPU_CHECK_RETURN_VALUE(ret, "starpu_init");
+      delete conf;
 #endif
 
       // Setup workspaces
@@ -168,9 +169,6 @@ namespace spldlt { namespace tests {
       if(debug) printf("[factor_node_indef_test] factor front..\n");
 
       auto start = std::chrono::high_resolution_clock::now();
-
-      int q1 = 0; // Number of eliminated colmuns (first pass)
-      int q2 = 0; // Number of eliminated colmuns (second pass)
       
       // Factor front (first and second pass) and from contrib blocks
       factor_front_indef(front, workspaces, pool_alloc, options);
@@ -182,9 +180,10 @@ namespace spldlt { namespace tests {
 #endif
       if(debug) printf("[factor_node_indef_test] factorization done\n");
       if(debug) printf("[factor_node_indef_test] nelim1 = %d\n", front.nelim1);
-         
-      q1 = front.nelim1;
-      q2 = front.nelim - front.nelim1;
+      
+      int nelim = front.nelim; // Number of eliminated columns
+      int q1 = front.nelim1;
+      int q2 = nelim - front.nelim1;
       
          //       // q1 = LDLT
 //       //    <T, iblksz, CopyBackup<T>, false, debug>
@@ -247,7 +246,7 @@ namespace spldlt { namespace tests {
       printf("[testing_factor_node_indef] factor time: %e\n", 1e-9*ttotal);
 
 #if defined(SPLDLT_USE_STARPU)
-      unregister_node_submit(front);
+      spldlt::starpu::unregister_node_indef_submit(front);
       starpu_task_wait_for_all(); // Wait for unregistration of handles      
       starpu_data_unregister(sfront.hdl); // Node's symbolic handle
       starpu_data_unregister(front.contrib_hdl);
@@ -298,7 +297,7 @@ namespace spldlt { namespace tests {
          // Copy A (columns n+1 to m) into L
          memcpy(&l[lda*n], &a[lda*n], lda*(m-n)*sizeof(T));
          // Add entries (columns n+1 to m) form CB into L
-         add_cb_to_a(front, l, lda);
+         if (front.nelim > 0) add_cb_to_a(front, l, lda);
          
          // Debug
          // Ignore CB and do update
@@ -317,9 +316,9 @@ namespace spldlt { namespace tests {
             
          // Finish off with TPP
          T *ld = new T[2*m];
-         q2 += ldlt_tpp_factor(
-               m-q2-q1, m-q2-q1, &front.perm[q1+q2], &l[(q1+q2)*(lda+1)], lda,
-               &d[2*(q1+q2)], ld, m, options.action, u, small, q1+q2, &l[q1+q2], lda);
+         nelim += ldlt_tpp_factor(
+               m-nelim, m-nelim, &front.perm[nelim], &l[nelim*(lda+1)], lda,
+               &d[2*nelim], ld, m, options.action, u, small, nelim, &l[nelim], lda);
          delete[] ld;
       }
       
@@ -330,13 +329,13 @@ namespace spldlt { namespace tests {
          print_mat("%10.2e", m, l, lda, front.perm);
       }
 
-      if (debug) std::cout << "q2 = " << q2 << std::endl;
+      if (debug) std::cout << "nelim = " << nelim << std::endl;
       
-      EXPECT_EQ(m, q1+q2) << "(test " << test << " seed " << seed << ")" << std::endl;
+      EXPECT_EQ(m, nelim) << "(test " << test << " seed " << seed << ")" << std::endl;
       
       // Perform solve
       T *soln = new T[m];
-      solve(m, q1+q2, front.perm, l, lda, d, b, soln);
+      solve(m, nelim, front.perm, l, lda, d, b, soln);
       if(debug) {
          printf("soln = ");
          for(int i=0; i<m; i++) printf(" %le", soln[i]);
