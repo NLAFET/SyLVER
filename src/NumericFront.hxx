@@ -11,7 +11,6 @@
 
 // SSIDS
 #include "ssids/cpu/cpu_iface.hxx"
-// #include "ssids/cpu/SymbolicNode.hxx"
 
 namespace spldlt {
 
@@ -111,7 +110,6 @@ namespace spldlt {
        * \param pool_alloc Pool Allocator to use for contrib allocation.
        */
       NumericFront(
-            // spral::ssids::cpu::SymbolicNode const& symb, 
             SymbolicFront &symb,
             PoolAllocator const& pool_alloc, int blksz)
          : symb(symb), contrib(nullptr), pool_alloc_(pool_alloc), blksz(blksz),
@@ -124,6 +122,7 @@ namespace spldlt {
        */
       ~NumericFront() {
          free_contrib();
+         free_contrib_blocks();
       }
 
       /// \brief Allocate block structures and memory space for

@@ -576,9 +576,7 @@ namespace spldlt { namespace starpu {
 
          T *ljk = (T *)STARPU_MATRIX_GET_PTR(buffers[2]);
          unsigned ld_ljk = STARPU_MATRIX_GET_LD(buffers[2]); // Get leading dimensions
-         
-         // printf("[udpate_contrib_block_indef_cpu_func]\n");
-         
+                  
          NumericFront<T, PoolAlloc> *node = nullptr;
          int k, i, j;
          std::vector<spral::ssids::cpu::Workspace> *workspaces;
@@ -593,21 +591,23 @@ namespace spldlt { namespace starpu {
          int nrow = node->get_nrow();
          int ncol = node->get_ncol();
          int ldl = align_lda<T>(nrow);
-         // int nelim = std::min(blksz, node->nelim - k*blksz);
+
          T *lcol = node->lcol;
          T *d = &lcol[ncol*ldl];
-         T *dk = &d[2*k*blksz]; // TODO: Get Dk ptr from StarPU
 
          int ljk_first_row = std::max(0, ncol-j*blksz);
          int lik_first_row = std::max(0, ncol-i*blksz);
+         // printf("[udpate_contrib_block_app_cpu_func] lik_first_row = %d, ljk_first_row = %d\n", lik_first_row, ljk_first_row);
 
          ColumnData<T,IntAlloc> *cdata = node->cdata;
          int cnelim = (*cdata)[k].nelim;
+         bool first_elim = (*cdata)[k].first_elim;
+         T *dk = (*cdata)[k].d;
          
-         // if (nelim <= 0) return; // No factors to update in current block-column
+         // printf("[udpate_contrib_block_app_cpu_func] k = %d, i = %d, j = %d, cnelim = %d, first_elim = %d\n", k, i, j, cnelim, first_elim);
+
          if (cnelim <= 0) return; // No factors to update in current block-column
 
-         // TODO: Use workspaces
          int ldld = spral::ssids::cpu::align_lda<T>(blksz);
          // T *ld = new T[blksz*ldld];
          T *ld = work.get_ptr<T>(blksz*ldld);
@@ -615,7 +615,7 @@ namespace spldlt { namespace starpu {
          update_contrib_block(
                updm, updn, upd, ldupd,
                cnelim, &lik[lik_first_row], ld_lik, &ljk[ljk_first_row], ld_ljk,
-               (k == 0), dk, ld, ldld);
+               first_elim, dk, ld, ldld);
 
          //delete[] ld;
       }
@@ -753,7 +753,7 @@ namespace spldlt { namespace starpu {
          int n = node->get_ncol();
          size_t ldl = align_lda<T>(m);
          T *lcol = node->lcol;
-         T *d = &node->lcol[n*ldl];
+         T *d = &lcol[n*ldl];
          int *perm = node->perm;
          int blksz = node->blksz;
          
@@ -790,57 +790,13 @@ namespace spldlt { namespace starpu {
                      (m-n>0) && // We're not at a root node
                      (node->nelim > nelim) // We've eliminated columns at second pass
                      ) {
-                  // Form contrib
-                  int fc = nelim/blksz; // First block column
-                  int lc = (node->nelim-1)/blksz;
-                  int nr = node->get_nr();
-                  int rsa = n/blksz;                  
-                  int ncontrib = nr-rsa;
-
-                  printf("[factor_front_indef_secondpass_nocontrib_cpu_func] nelim1 = %d, nelim = %d, blksz = %d\n", nelim, node->nelim, blksz);
-                  printf("[factor_front_indef_secondpass_nocontrib_cpu_func] fc = %d, lc = %d\n", fc, lc);
-
-                  for (int k = fc; k <= lc; ++k) {
-
-                     int first_col = std::max(k*blksz, nelim); // first column in current block-column of L
-                     int last_col = std::min((k+1)*blksz, node->nelim-1); // last column in current block-column of L
-                     //int nelim_col = 0;
-                     int nelim_col = last_col-first_col+1;
-                     T *dk = &d[2*first_col];
-                     printf("[factor_front_indef_secondpass_nocontrib_cpu_func] first_col = %d, last_col = %d, nelim_col = %d\n", first_col, last_col, nelim_col);
-                     for (int j = rsa; j < nr; ++j) {
-
-                        int ljk_first_row = std::max(j*blksz, n);
-                        T *ljk = &lcol[first_col*ldl+ljk_first_row];
-                        //T *ljk = &lcol[k*blksz*ldl+j*blksz];
-
-                        for (int i = j; i < nr; ++i) {
-                           
-                           int lik_first_row = std::max(i*blksz, n);
-                           T *lik = &lcol[first_col*ldl+lik_first_row];
-
-                           Tile<T, PoolAlloc>& upd =
-                              node->contrib_blocks[(j-rsa)*ncontrib+(i-rsa)];
-                           
-                           int ldld = spral::ssids::cpu::align_lda<T>(blksz);
-                           T *ld = work.get_ptr<T>(blksz*ldld);
-
-                           // printf("[factor_front_indef_secondpass_nocontrib_cpu_func] i = %d, j = %d, rsa = %d\n", i, j, rsa);
-                           printf("[factor_front_indef_secondpass_nocontrib_cpu_func] updm = %d, updn = %d\n", upd.m, upd.n);
-                           printf("[factor_front_indef_secondpass_nocontrib_cpu_func] lik_first_row = %d, ljk_first_row = %d\n", lik_first_row, ljk_first_row);
-                           
-                           update_contrib_block(
-                                 upd.m, upd.n, upd.a, upd.lda,  
-                                 nelim_col, lik, ldl, ljk, ldl,
-                                 (nelim==0), dk, ld, ldld);
-
-                        }
-                     }
-                  }
+                  
+                  // Compute contribution blocks
+                  form_contrib(*node, work, nelim, node->nelim-1);
                }
             }
-         }
 
+         }
          // Update number of delayed columns
          node->ndelay_out = n - node->nelim;         
       }

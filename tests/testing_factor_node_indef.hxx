@@ -14,7 +14,6 @@
 #include "ssids/cpu/cpu_iface.hxx"
 #include "tests/ssids/kernels/AlignedAllocator.hxx"
 #include "ssids/cpu/BuddyAllocator.hxx"
-// #include "ssids/cpu/NumericNode.hxx"
 #include "ssids/cpu/kernels/ldlt_tpp.hxx"
 #include "ssids/cpu/kernels/ldlt_app.hxx"
 // SSIDS tests
@@ -74,6 +73,7 @@ namespace spldlt { namespace tests {
       // options.pivot_method = (aggressive) ? PivotMethod::app_aggressive
       //                                     : PivotMethod::app_block;
       options.failed_pivot_method = FailedPivotMethod::tpp;
+      // options.failed_pivot_method = FailedPivotMethod::pass;
          
       // Setup pool allocator
       typedef BuddyAllocator<T, std::allocator<T>> PoolAllocator;
@@ -126,13 +126,6 @@ namespace spldlt { namespace tests {
 
       // Allocate contribution blocks
       front.alloc_contrib_blocks();
-
-      // Copy A (n+1 to m columns) into contrib blocks
-      // copy_a_to_cb(a, lda, front);
-      // if (debug) {
-      //    std::cout << "CB:" << std::endl;
-      //    print_cb("%10.2e", front);
-      // }           
 
       // Initialize solver (tasking system in particular)
 #if defined(SPLDLT_USE_STARPU)
@@ -255,9 +248,9 @@ namespace spldlt { namespace tests {
 
 #if defined(SPLDLT_USE_STARPU)
       unregister_node_submit(front);
-      starpu_data_unregister_submit(sfront.hdl); // Node's symbolic handle
-      starpu_data_unregister_submit(front.contrib_hdl);
       starpu_task_wait_for_all(); // Wait for unregistration of handles      
+      starpu_data_unregister(sfront.hdl); // Node's symbolic handle
+      starpu_data_unregister(front.contrib_hdl);
 #endif
       
       // Deinitialize solver (shutdown tasking system in particular)
@@ -298,7 +291,7 @@ namespace spldlt { namespace tests {
          // std::cout << "L:" << std::endl;
          // print_mat("%10.2e", m, l, lda, front.perm);
       }
-
+      
       // Eliminate remaining columns in L
       if (m > n) {
 
@@ -356,8 +349,13 @@ namespace spldlt { namespace tests {
       EXPECT_LE(bwderr, 5e-14) << "(test " << test << " seed " << seed << ")" << std::endl;
 
       // Cleanup memory
+
+      // Free contribution blocks
+      delete front.cdata;
+      delete front.backup;
+
       allocT.deallocate(l, m*lda);
-      delete[] a; allocT.deallocate(front.lcol, m*lda);
+      delete[] a; allocT.deallocate(front.lcol, len);
       delete[] b;
       delete[] front.perm;
       delete[] soln;

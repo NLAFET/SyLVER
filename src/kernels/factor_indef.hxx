@@ -1,4 +1,13 @@
+/// \file
+/// \copyright 2016- The Science and Technology Facilities Council (STFC)
+/// \author    Florent Lopez
 #pragma once
+
+// SpDLTL
+#include "NumericFront.hxx"
+
+// SSIDS
+#include "ssids/cpu/Workspace.hxx"
 
 namespace spldlt {
 
@@ -29,4 +38,62 @@ namespace spldlt {
             );
 
    }
-}
+
+   /// @brief Form cotribution blocks using the the columns nelim_from
+   /// to nelim_to in the factors
+   template <typename T, typename PoolAlloc>
+   void form_contrib(
+         NumericFront<T, PoolAlloc>& node,
+         spral::ssids::cpu::Workspace& work,
+         int nelim_from, // First column in factors 
+         int nelim_to // Last column in factors
+         ) {
+
+      int m = node.get_nrow();
+      int n = node.get_ncol();
+      size_t ldl = align_lda<T>(m);
+      T *lcol = node.lcol;
+      T *d = &lcol[n*ldl];
+      int blksz = node.blksz;
+
+      int fc = nelim_from/blksz; // First block-column
+      int lc = nelim_to/blksz; // Last block-column
+      int nr = node.get_nr();
+      int rsa = n/blksz;            
+      int ncontrib = nr-rsa;
+
+      for (int k = fc; k <= lc; ++k) {
+
+         int first_col = std::max(k*blksz, nelim_from); // first column in current block-column of L
+         int last_col = std::min((k+1)*blksz, nelim_to); // last column in current block-column of L
+         //int nelim_col = 0;
+         int nelim_col = last_col-first_col+1;
+         T *dk = &d[2*first_col];
+
+         for (int j = rsa; j < nr; ++j) {
+
+            int ljk_first_row = std::max(j*blksz, n);
+            T *ljk = &lcol[first_col*ldl+ljk_first_row];
+            //T *ljk = &lcol[k*blksz*ldl+j*blksz];
+
+            for (int i = j; i < nr; ++i) {
+                           
+               int lik_first_row = std::max(i*blksz, n);
+               T *lik = &lcol[first_col*ldl+lik_first_row];
+
+               Tile<T, PoolAlloc>& upd = node.contrib_blocks[(j-rsa)*ncontrib+(i-rsa)];
+                           
+               int ldld = spral::ssids::cpu::align_lda<T>(blksz);
+               T *ld = work.get_ptr<T>(blksz*ldld);
+
+               update_contrib_block(
+                     upd.m, upd.n, upd.a, upd.lda,  
+                     nelim_col, lik, ldl, ljk, ldl,
+                     (nelim_from==0), dk, ld, ldld);
+
+            }
+         }
+      }
+   }
+
+} // namespace spldlt
