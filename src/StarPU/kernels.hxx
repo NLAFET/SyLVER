@@ -1294,6 +1294,7 @@ namespace spldlt { namespace starpu {
                                   0);
          STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
 
+         delete[] descrs;
       }
 
       ////////////////////////////////////////////////////////////////////////////////
@@ -1369,6 +1370,7 @@ namespace spldlt { namespace starpu {
          // STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_submit");
          // end test/debug
 
+         delete[] descrs;
       }
 
       ////////////////////////////////////////////////////////////////////////////////
