@@ -735,9 +735,7 @@ namespace spldlt { namespace starpu {
 
       // CPU kernel      
       template <typename T, typename PoolAlloc>      
-      void factor_front_indef_secondpass_nocontrib_cpu_func(void *buffers[], void *cl_arg) {
-
-         // printf("[factor_front_indef_secondpass_nocontrib_cpu_func]\n");
+      void factor_front_indef_failed_cpu_func(void *buffers[], void *cl_arg) {
          
          NumericFront<T, PoolAlloc> *node = nullptr;
          std::vector<spral::ssids::cpu::Workspace> *workspaces;
@@ -749,64 +747,16 @@ namespace spldlt { namespace starpu {
          int workerid = starpu_worker_get_id();
          spral::ssids::cpu::Workspace &work = (*workspaces)[workerid];
 
-         int m = node->get_nrow();
-         int n = node->get_ncol();
-         size_t ldl = align_lda<T>(m);
-         T *lcol = node->lcol;
-         T *d = &lcol[n*ldl];
-         int *perm = node->perm;
-         int blksz = node->blksz;
-         
-         int nelim = 0;
+         factor_front_indef_failed(*node, work, *options);
 
-         // update number of columns eliminated during the first pass
-         node->nelim1 = node->nelim; 
-         // printf("[factor_front_indef_secondpass_nocontrib_cpu_func] first pass = %d out of %d\n", node->nelim, n);
-
-         // Try to eliminate the columns uneliminated at first pass
-         if (node->nelim < n) {
-            // printf("[factor_front_indef_secondpass_nocontrib_cpu_func] first pass = %d out of %d, node idx = %d\n", node->nelim, n, node->symb.idx+1);
-
-            // Use TPP factor to eliminate the remaining columns in the following cases:
-            // 1) options.pivot_method is set to tpp;
-            // 2) We are at a root node;
-            // 3) options.failed_pivot_method is set to tpp.
-            if (
-                  m==n ||
-                  options->pivot_method==PivotMethod::tpp ||
-                  options->failed_pivot_method==FailedPivotMethod::tpp
-                  ) {
-               nelim = node->nelim;
-
-               T *ld = work.get_ptr<T>(m-nelim);
-               node->nelim += ldlt_tpp_factor(
-                     m-nelim, n-nelim, &perm[nelim], &lcol[nelim*(ldl+1)], ldl, 
-                     &d[2*nelim], ld, m-nelim, options->action, options->u, options->small, 
-                     nelim, &lcol[nelim], ldl);
-
-               // printf("[factor_front_indef_secondpass_nocontrib_cpu_func] second pass = %d out of %d\n", node->nelim, n);
-
-               if (
-                     (m-n>0) && // We're not at a root node
-                     (node->nelim > nelim) // We've eliminated columns at second pass
-                     ) {
-                  
-                  // Compute contribution blocks
-                  form_contrib(*node, work, nelim, node->nelim-1);
-               }
-            }
-
-         }
-         // Update number of delayed columns
-         node->ndelay_out = n - node->nelim;         
       }
 
       // SarPU kernel
-      extern struct starpu_codelet cl_factor_front_indef_secondpass_nocontrib;
+      extern struct starpu_codelet cl_factor_front_indef_failed;
 
       template <typename T, typename PoolAlloc>
       void
-      insert_factor_front_indef_secondpass_nocontrib(
+      insert_factor_front_indef_failed(
             starpu_data_handle_t col_hdl,
             // starpu_data_handle_t node_hdl,
             NumericFront<T, PoolAlloc> *node,
@@ -817,7 +767,7 @@ namespace spldlt { namespace starpu {
          int ret;
          
          ret = starpu_insert_task(
-               &cl_factor_front_indef_secondpass_nocontrib,
+               &cl_factor_front_indef_failed,
                STARPU_RW, col_hdl,
                STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
                STARPU_VALUE, &workspaces, sizeof(std::vector<spral::ssids::cpu::Workspace>*),
@@ -942,12 +892,12 @@ namespace spldlt { namespace starpu {
          cl_permute_failed.name = "PERMUTE_FAILED";
          cl_permute_failed.cpu_funcs[0] = permute_failed_cpu_func<T, IntAlloc, Allocator>;
 
-         // Initialize factor_front_indef_secondpass_nocontrib StarPU codelet
-         starpu_codelet_init(&cl_factor_front_indef_secondpass_nocontrib);
-         cl_factor_front_indef_secondpass_nocontrib.where = STARPU_CPU;
-         cl_factor_front_indef_secondpass_nocontrib.nbuffers = STARPU_VARIABLE_NBUFFERS;
-         cl_factor_front_indef_secondpass_nocontrib.name = "FACTOR_FRONT_SECONDPASS_NOCONTRIB";
-         cl_factor_front_indef_secondpass_nocontrib.cpu_funcs[0] = factor_front_indef_secondpass_nocontrib_cpu_func<T, Allocator>;
+         // Initialize factor_front_indef_failed StarPU codelet
+         starpu_codelet_init(&cl_factor_front_indef_failed);
+         cl_factor_front_indef_failed.where = STARPU_CPU;
+         cl_factor_front_indef_failed.nbuffers = STARPU_VARIABLE_NBUFFERS;
+         cl_factor_front_indef_failed.name = "FACTOR_FRONT_FAILED";
+         cl_factor_front_indef_failed.cpu_funcs[0] = factor_front_indef_failed_cpu_func<T, Allocator>;
 
          // Initialize factor_sync StarPU codelet
          starpu_codelet_init(&cl_factor_sync);

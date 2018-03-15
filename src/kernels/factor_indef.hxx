@@ -96,4 +96,59 @@ namespace spldlt {
       }
    }
 
+   /// @brief Factor the failed pivots in a frontal matrix
+   template <typename T, typename PoolAlloc>
+   void factor_front_indef_failed(
+         NumericFront<T, PoolAlloc>& node,
+         spral::ssids::cpu::Workspace& work,
+         struct cpu_factor_options& options) {
+
+      int m = node.get_nrow();
+      int n = node.get_ncol();
+      size_t ldl = align_lda<T>(m);
+      T *lcol = node.lcol;
+      T *d = &lcol[n*ldl];
+      int *perm = node.perm;
+         
+      int nelim = 0;
+      
+      // Record the number of columns eliminated during the first pass
+      node.nelim1 = node.nelim; 
+
+      // Try to eliminate the columns uneliminated at first pass
+      if (node.nelim < n) {
+
+         // Use TPP factor to eliminate the remaining columns in the following cases:
+         // 1) options.pivot_method is set to tpp;
+         // 2) We are at a root node;
+         // 3) options.failed_pivot_method is set to tpp.
+         if (
+               m==n ||
+               options.pivot_method==PivotMethod::tpp ||
+               options.failed_pivot_method==FailedPivotMethod::tpp
+               ) {
+            nelim = node.nelim;
+
+            T *ld = work.get_ptr<T>(m-nelim);
+            node.nelim += ldlt_tpp_factor(
+                  m-nelim, n-nelim, &perm[nelim], &lcol[nelim*(ldl+1)], ldl, 
+                  &d[2*nelim], ld, m-nelim, options.action, options.u, options.small, 
+                  nelim, &lcol[nelim], ldl);
+
+            if (
+                  (m-n>0) && // We're not at a root node
+                  (node.nelim > nelim) // We've eliminated columns at second pass
+                  ) {
+                  
+               // Compute contribution blocks
+               form_contrib(node, work, nelim, node.nelim-1);
+            }
+         }
+
+      }
+      // Update number of delayed columns
+      node.ndelay_out = n - node.nelim;         
+      
+   }   
+   
 } // namespace spldlt

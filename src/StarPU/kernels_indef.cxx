@@ -30,7 +30,7 @@ namespace spldlt { namespace starpu {
       struct starpu_codelet cl_permute_failed;
 
       // factor_front_indef_secondpass_nocontrib StarPU codelet
-      struct starpu_codelet cl_factor_front_indef_secondpass_nocontrib;
+      struct starpu_codelet cl_factor_front_indef_failed;
 
       // factor_sync StarPU codelet
       struct starpu_codelet cl_factor_sync;

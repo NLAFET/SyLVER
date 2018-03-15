@@ -4,50 +4,32 @@
 
 #pragma once
 
-#include <vector>
-
-#include "ssids/cpu/cpu_iface.hxx"
-// #include "ssids/cpu/factor.hxx"
-// #include "ssids/cpu/BuddyAllocator.hxx"
-// #include "ssids/cpu/NumericNode.hxx"
-// #include "ssids/cpu/ThreadStats.hxx"
-#include "ssids/cpu/kernels/cholesky.hxx"
-#include "ssids/cpu/kernels/ldlt_app.hxx"
-// #include "ssids/cpu/kernels/assemble.hxx"
-#include "ssids/cpu/Workspace.hxx"
-
+// SpLDLT
 #include "kernels/ldlt_app.hxx"
 #include "BuddyAllocator.hxx"
-// #include "Workspace.hxx"
-// #include "SymbolicSNode.hxx"
 #include "SymbolicTree.hxx"
 #include "NumericFront.hxx"
-// #include "kernels/assemble.hxx"
-// #include "kernels/common.hxx"
 #include "tasks.hxx"
 #include "factor_indef.hxx"
 #include "tasks_factor_indef.hxx"
-
-
 #if defined(SPLDLT_USE_STARPU)
-#include <starpu.h>
 #include "StarPU/kernels.hxx"
 #include "StarPU/factor_indef.hxx"
 #endif
 
-// profiling
-// #include <chrono>
+#include <vector>
 
-// using namespace spral::ssids::cpu;
-// using namespace spldlt;
+// SSIDS
+#include "ssids/cpu/cpu_iface.hxx"
+#include "ssids/cpu/kernels/cholesky.hxx"
+#include "ssids/cpu/kernels/ldlt_app.hxx"
+#include "ssids/cpu/Workspace.hxx"
 
 #if defined(SPLDLT_USE_STARPU)
-// using namespace spldlt::starpu;
+#include <starpu.h>
 #endif
 
 namespace spldlt {
-
-   extern "C" void spldlt_print_debuginfo_c(void *akeep, void *fkeep, int p);
 
    template<typename T,
             size_t PAGE_SIZE,
@@ -208,27 +190,7 @@ namespace spldlt {
 //             starpu_task_wait_for_all();
 // #endif
 
-            // Compute factors and Schur complement
             // factor_front_posdef(sfront, fronts_[ni], options);
-
-            // Compute factors
-            // factor_front_indef_nocontrib(
-            //       sfront, fronts_[ni], workspaces,  pool_alloc_, options);
-            // factor_front_indef_nocontrib_task(
-            //       fronts_[ni], workspaces,  pool_alloc_, options);
-// #if defined(SPLDLT_USE_STARPU)
-//             starpu_task_wait_for_all();
-// #endif
-            // printf("[factor_mf_indef] nelim = %d\n", fronts_[ni].nelim);
-            // printf("[factor_mf_indef] ndelay_in = %d\n", fronts_[ni].ndelay_in);
-            // printf("[factor_mf_indef] ndelay_out = %d\n", fronts_[ni].ndelay_out);
-
-            // form contrib
-            // form_contrib_front(sfront, fronts_[ni], blksz);
-            // form_contrib_front_task(fronts_[ni], blksz);
-// #if defined(SPLDLT_USE_STARPU)
-//             starpu_task_wait_for_all();
-// #endif
 
             factor_front_indef_task(
                   fronts_[ni], workspaces,  pool_alloc_, options);
