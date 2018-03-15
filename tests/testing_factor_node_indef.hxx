@@ -33,21 +33,23 @@ namespace spldlt { namespace tests {
    template<typename T,
             int iblksz=INNER_BLOCK_SIZE,
             bool debug = false>
-   int factor_node_indef_test(T u, T small, bool delays, bool singular, int m, int n,
-                              int blksz=INNER_BLOCK_SIZE, int ncpu=1,
-                              int test=0, int seed=0) {
+   int factor_node_indef_test(T u, T small, bool posdef, bool delays, bool singular, int m, int n, 
+                              int blksz, int ncpu, int test=0, int seed=0) {
    
       bool failed = false;
 
-      if (debug) printf("[factor_node_indef_test] %d x %d\n", m, n);
+      printf("[factor_node_indef_test] %d x %d, posdef = %d, blksz = %d\n", m, n, posdef, blksz);
+      if (debug) printf("[factor_node_indef_test] %d x %d, posdef = %d\n", m, n, posdef);
 
       ASSERT_TRUE(m >= n);
          
       // Generate test matrix
       int lda = spral::ssids::cpu::align_lda<T>(m);
       T* a = new double[m*lda];
-      gen_sym_indef(m, a, lda);
-      // gen_posdef(m, a, lda);
+
+      if (posdef) gen_posdef(m, a, lda);
+      else gen_sym_indef(m, a, lda);
+
       modify_test_matrix(singular, delays, m, n, a, lda);
 
       // Generate a RHS based on x=1, b=Ax
