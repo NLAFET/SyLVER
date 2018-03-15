@@ -16,10 +16,10 @@ namespace spldlt {
          int m, int n,
          T *upd, int ldupd,
          int k,
-         T *lik, int ld_lik, 
-         T *ljk, int ld_ljk,
+         const T * const lik, int ld_lik, 
+         const T * const ljk, int ld_ljk,
          bool zero_upd,
-         T *dk, // Diagonal
+         const T * const dk, // Diagonal
          T *ld, int ldld // Workspace
          ) {
 
@@ -101,7 +101,7 @@ namespace spldlt {
    void factor_front_indef_failed(
          NumericFront<T, PoolAlloc>& node,
          spral::ssids::cpu::Workspace& work,
-         struct cpu_factor_options& options) {
+         const struct cpu_factor_options& options) {
 
       int m = node.get_nrow();
       int n = node.get_ncol();

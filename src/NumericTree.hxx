@@ -302,7 +302,7 @@ namespace spldlt {
             // Activate frontal matrix
             activate_front(
                   posdef, sfront, fronts_[ni], child_contrib, blksz, 
-                  factor_alloc_, pool_alloc_);
+                  factor_alloc_);
 
             // Initialize frontal matrix 
             // init_node(sfront, fronts_[ni], aval); // debug

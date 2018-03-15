@@ -1118,7 +1118,7 @@ namespace spldlt { namespace starpu {
                &factor_alloc, &pool_alloc);
 
          activate_front(posdef, *snode, *node, child_contrib, blksz, 
-                        *factor_alloc, *pool_alloc);
+                        *factor_alloc);
          
       }
 
@@ -1185,8 +1185,7 @@ namespace spldlt { namespace starpu {
 
          // Allocate data structures
          activate_front(
-               posdef, *snode, *node, child_contrib, blksz, *factor_alloc,
-               *pool_alloc);
+               posdef, *snode, *node, child_contrib, blksz, *factor_alloc);
       
          // Add coefficients from original matrix
          init_node(*snode, *node, aval);

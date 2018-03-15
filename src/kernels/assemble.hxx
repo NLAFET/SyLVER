@@ -265,12 +265,11 @@ namespace spldlt {
          NumericFront<T, PoolAlloc> &front,
          void** child_contrib,
          int blksz,
-         FactorAlloc& factor_alloc,
-         PoolAlloc& pool_alloc) {
+         FactorAlloc& factor_alloc) {
 
       // Allocate frontal matrix
-      if (posdef) alloc_front_posdef(front, factor_alloc, pool_alloc);
-      else        alloc_front_indef(front, child_contrib, factor_alloc, pool_alloc);
+      if (posdef) alloc_front_posdef(front, factor_alloc);
+      else        alloc_front_indef(front, child_contrib, factor_alloc);
 
 #if defined(SPLDLT_USE_STARPU)
       // Register symbolic handle for current node in StarPU
@@ -290,8 +289,7 @@ namespace spldlt {
             typename PoolAlloc>
    void alloc_front_posdef(
          NumericFront<T,PoolAlloc>& front,
-         FactorAlloc& factor_alloc,
-         PoolAlloc& pool_alloc) {
+         FactorAlloc& factor_alloc) {
 
       T *scaling = NULL;
 
@@ -331,8 +329,7 @@ namespace spldlt {
    void alloc_front_indef(
          NumericFront<T,PoolAlloc>& front,
          void** child_contrib,
-         FactorAlloc& factor_alloc,
-         PoolAlloc& pool_alloc) {
+         FactorAlloc& factor_alloc) {
 
       T *scaling = NULL;
 
@@ -410,9 +407,6 @@ namespace spldlt {
    void init_node(
          SymbolicFront const& sfront,
          NumericFront<T,PoolAlloc>& front,
-         // FactorAlloc& factor_alloc,
-         // PoolAlloc& pool_alloc,
-         //         Workspace *work,
          T const* aval) {
 
       // printf("[kernels] init node\n");
