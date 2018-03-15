@@ -217,8 +217,8 @@ namespace spldlt {
          int blksz = node.blksz;
          int m = node.get_nrow();
          int n = node.get_ncol();
-         int nr = (m-1) / blksz + 1; // number of block rows
-         int nc = (n-1) / blksz + 1; // number of block columns
+         int nr = node.get_nr(); // number of block rows
+         int nc = node.get_nc(); // number of block columns
          spldlt::ldlt_app_internal::ColumnData<T, IntAlloc>& cdata = *node.cdata;
 
          // Unregister block handles in the factors
@@ -229,6 +229,8 @@ namespace spldlt {
 
             for(int i = j; i < nr; ++i) {
                starpu_data_unregister_submit(snode.handles[i + j*nr]);
+               
+               if (i>=j) node.blocks[j*nr+i].unregister_handle_submit();
             }
          }
 
