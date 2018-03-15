@@ -409,24 +409,8 @@ namespace spldlt {
          NumericFront<T,PoolAlloc>& front,
          T const* aval) {
 
-      // printf("[kernels] init node\n");
       bool posdef = true;
       T *scaling = NULL;
-
-      // printf("[init_node] ndelay_in = %d\n", front.ndelay_in);
-
-      // /* Count incoming delays and determine size of node */
-      // node.ndelay_in = 0;
-      
-      // int nrow = snode.nrow + node.ndelay_in;
-      // int ncol = snode.ncol + node.ndelay_in;
-
-      // /* Get space for node now we know it size using Fortran allocator + zero it*/
-      // // NB L is  nrow x ncol and D is 2 x ncol (but no D if posdef)
-      // size_t ldl = align_lda<double>(nrow);
-      // size_t len = posdef ?  ldl    * ncol  // posdef
-      //    : (ldl+2) * ncol; // indef (includes D)
-      // node.lcol = FADoubleTraits::allocate(factor_alloc_double, len);
 
       /* Add A */
       // add_a_block<T, NumericNode<T,PoolAlloc>>(0, snode.num_a, node, aval, NULL);  
@@ -452,8 +436,8 @@ namespace spldlt {
 
    template <typename T, typename PoolAlloc>
    void assemble_block(NumericFront<T,PoolAlloc>& node, 
-                       NumericFront<T,PoolAlloc>& cnode, 
-                       int ii, int jj, int *cmap) {
+                       NumericFront<T,PoolAlloc> const& cnode, 
+                       int ii, int jj, int const* cmap) {
       
       SymbolicFront const& csnode = cnode.symb;
       int blksz = cnode.blksz;
@@ -468,7 +452,7 @@ namespace spldlt {
       int cnr = cnode.get_nr(); // number of block rows in child node
       int cncontrib = cnr-csa;
       // Source block
-      Tile<T, PoolAlloc> &blk = cnode.contrib_blocks[(ii-csa)+(jj-csa)*cncontrib];
+      Tile<T, PoolAlloc> const& blk = cnode.contrib_blocks[(ii-csa)+(jj-csa)*cncontrib];
       int blk_lda = blk.lda;
       int blk_m = blk.m;
       int blk_n = blk.n;
@@ -609,25 +593,25 @@ namespace spldlt {
    
    template <typename T, typename PoolAlloc>
    void assemble_contrib_block(NumericFront<T,PoolAlloc>& node, 
-                               NumericFront<T,PoolAlloc>& cnode, 
-                               int ii, int jj, int *cmap, int blksz) {
+                               NumericFront<T,PoolAlloc> const& cnode, 
+                               int ii, int jj, int const* cmap, int blksz) {
 
       // printf("[assemble_contrib_block]\n");
 
       SymbolicFront const& csnode = cnode.symb;
       
       int cm = csnode.nrow - csnode.ncol;
-      int ncol = node.symb.ncol + node.ndelay_in;
-      int nrow = node.symb.nrow + node.ndelay_in;
+      int ncol = node.get_ncol();
+      int nrow = node.get_nrow();
 
       // Source block
-      int cncol = csnode.ncol + cnode.ndelay_in;
-      int cnrow = csnode.nrow + cnode.ndelay_in;
+      int cncol = cnode.get_ncol();
+      int cnrow = cnode.get_nrow();
 
       int csa = cncol / blksz; // Index of first block in contrib
       int cnr = (cnrow-1) / blksz + 1; // number of block rows in child node
       int cncontrib = cnr-csa;
-      Tile<T, PoolAlloc> &src_blk = cnode.contrib_blocks[(ii-csa)+(jj-csa)*cncontrib];
+      Tile<T, PoolAlloc> const& src_blk = cnode.contrib_blocks[(ii-csa)+(jj-csa)*cncontrib];
       int src_blk_lda = src_blk.lda;
       int src_blk_m = src_blk.m;
       int src_blk_n = src_blk.n;
@@ -858,7 +842,7 @@ namespace spldlt {
          int n,
          NumericFront<T,PoolAlloc>& node,
          void** child_contrib,
-         PoolAlloc& pool_alloc,
+         PoolAlloc const& pool_alloc,
          int blksz
          ) {
 

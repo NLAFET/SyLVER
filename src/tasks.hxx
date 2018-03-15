@@ -27,8 +27,7 @@ namespace spldlt {
          NumericFront<T, PoolAlloc> &node,
          void** child_contrib,
          int blksz,
-         FactorAlloc& factor_alloc,
-         PoolAlloc& pool_alloc) {
+         FactorAlloc& factor_alloc) {
 
       // printf("[activate_front_task]\n");
 
@@ -48,15 +47,13 @@ namespace spldlt {
       
       spldlt::starpu::insert_activate_node(
             snode.hdl, cnode_hdls, nchild,
-            posdef, &snode, &node, child_contrib, blksz, &factor_alloc, 
-            &pool_alloc); 
+            posdef, &snode, &node, child_contrib, blksz, &factor_alloc); 
 
       delete[] cnode_hdls;
 
 #else
       activate_front_task(
-            posdef, sfront, front, child_contrib, blksz, factor_alloc, 
-            pool_alloc);
+            posdef, sfront, front, child_contrib, blksz, factor_alloc);
 #endif
       
    }

@@ -1109,13 +1109,12 @@ namespace spldlt { namespace starpu {
          void** child_contrib;
          int blksz;
          FactorAlloc *factor_alloc;
-         PoolAlloc *pool_alloc;
 
          // printf("[activate_node_cpu_func]\n");
 
          starpu_codelet_unpack_args(
                cl_arg, &posdef, &snode, &node, &child_contrib, &blksz,
-               &factor_alloc, &pool_alloc);
+               &factor_alloc);
 
          activate_front(posdef, *snode, *node, child_contrib, blksz, 
                         *factor_alloc);
@@ -1134,8 +1133,7 @@ namespace spldlt { namespace starpu {
             NumericFront<T, PoolAlloc> *node,
             void** child_contrib,
             int blksz,
-            FactorAlloc *factor_alloc,
-            PoolAlloc *pool_alloc
+            FactorAlloc *factor_alloc
             ) {
 
 
@@ -1159,7 +1157,6 @@ namespace spldlt { namespace starpu {
                                   STARPU_VALUE, &child_contrib, sizeof(void**),
                                   STARPU_VALUE, &blksz, sizeof(int),
                                   STARPU_VALUE, &factor_alloc, sizeof(FactorAlloc*),
-                                  STARPU_VALUE, &pool_alloc, sizeof(PoolAlloc*),
                                   0);
       }
 
