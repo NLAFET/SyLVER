@@ -48,8 +48,6 @@
 namespace spldlt {
 
    extern "C" void spldlt_print_debuginfo_c(void *akeep, void *fkeep, int p);
-   // extern "C" void spldlt_get_contrib_c(void *akeep, void *fkeep, int p, void **child_contrib);
-   // extern "C" void spldlt_get_contrib_c(void *akeep, void *fkeep, int p);
 
    template<typename T,
             size_t PAGE_SIZE,

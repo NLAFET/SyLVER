@@ -53,7 +53,7 @@ namespace spldlt {
 using namespace spral::ssids::cpu;
 
 template<typename T, typename Allocator>
-int ldlt_app_factor(int m, int n, int *perm, T *a, int lda, T *d, T beta, T* upd, int ldupd, struct cpu_factor_options const& options, std::vector<Workspace>& work, Allocator const& alloc);
+int ldlt_app_factor(int m, int n, int *perm, T *a, int lda, T *d, T beta, T* upd, int ldupd, struct cpu_factor_options const& options, std::vector<spral::ssids::cpu::Workspace>& work, Allocator const& alloc);
 
 template <typename T>
 void ldlt_app_solve_fwd(int m, int n, T const* l, int ldl, int nrhs, T* x, int ldx);
@@ -189,7 +189,7 @@ public:
 
 #if defined(SPLDLT_USE_STARPU)
    /* return StarPU handle on column */
-   starpu_data_handle_t get_hdl() { return hdl_; }
+   starpu_data_handle_t get_hdl() const { return hdl_; }
    /* register handle on column*/
    void register_handle() {
       starpu_void_data_register(&hdl_);
@@ -867,7 +867,7 @@ public:
    /** \brief Apply row permutation to block.
     *  \param work Thread-specific workspace.
     */
-   void apply_rperm(Workspace& work) {
+   void apply_rperm(spral::ssids::cpu::Workspace& work) {
       int ldl = align_lda<T>(block_size_);
       T* lwork = work.get_ptr<T>(ncol()*ldl);
       int* lperm = cdata_.get_lperm(i_);
@@ -888,7 +888,7 @@ public:
     *  \details Intended for recovery from failed Cholesky-like factorization.
     *  \param work Thread-specific workspace.
     */
-   void apply_inv_rperm(Workspace& work) {
+   void apply_inv_rperm(spral::ssids::cpu::Workspace& work) {
       int ldl = align_lda<T>(block_size_);
       T* lwork = work.get_ptr<T>(ncol()*ldl);
       int* lperm = cdata_.get_lperm(i_);
@@ -2327,224 +2327,9 @@ private:
    }
 
 public:
-   /** Factorize an entire matrix */
-//    static
-//    int factor(int m, int n, int *perm, T *a, int lda, T *d, Backup& backup, struct cpu_factor_options const& options, PivotMethod pivot_method, int block_size, T beta, T* upd, int ldupd, std::vector<Workspace>& work, Allocator const& alloc=Allocator()) {
-//       /* Sanity check arguments */
-//       if(m < n) return -1;
-//       if(lda < n) return -4;
 
-//       /* Initialize useful quantities: */
-//       int nblk = calc_nblk(n, block_size);
-//       int mblk = calc_nblk(m, block_size);
-
-//       /* Temporary workspaces */
-//       ColumnData<T, IntAlloc> cdata(n, block_size, IntAlloc(alloc));
-// #ifdef PROFILE
-//       Profile::setNullState();
-// #endif
-
-//       /* Main loop
-//        *    - Each pass leaves any failed pivots in place and keeps everything
-//        *      up-to-date.
-//        *    - If no pivots selected across matrix, perform swaps to get large
-//        *      entries into diagonal blocks
-//        */
-//       int num_elim;
-//       if(pivot_method == PivotMethod::app_aggressive) {
-//          if(beta!=0.0) {
-//             // We don't support backup of contribution block at present,
-//             // so we only work if we assume it is zero to begin with
-//             throw std::runtime_error(
-//                   "run_elim_unpivoted currently only supports beta=0.0"
-//                   );
-//          }
-//          // Take a copy of perm
-//          typedef std::allocator_traits<IntAlloc> IATraits;
-//          IntAlloc intAlloc(alloc);
-//          int* perm_copy = IATraits::allocate(intAlloc, n);
-//          for(int i=0; i<n; ++i)
-//             perm_copy[i] = perm[i];
-//          size_t num_blocks = (upd) ? ((size_t) mblk)*mblk
-//                                    : ((size_t) mblk)*nblk;
-//          int* up_to_date = IATraits::allocate(intAlloc, num_blocks);
-//          for(size_t i=0; i<num_blocks; ++i)
-//             up_to_date[i] = -1; // not even backed up yet
-//          // Run the elimination
-//          if(use_tasks && mblk>1) {
-//             num_elim = run_elim_unpivoted(
-//                   m, n, perm, a, lda, d, cdata, backup, up_to_date, options,
-//                   block_size, beta, upd, ldupd, work, alloc
-//                   );
-//          } else {
-//             num_elim = run_elim_unpivoted_notasks(
-//                   m, n, perm, a, lda, d, cdata, backup, up_to_date, options,
-//                   block_size, beta, upd, ldupd, work, alloc
-//                   );
-//          }
-//          if(num_elim < 0) return num_elim; // error
-//          if(num_elim < n) {
-// #ifdef PROFILE
-//             {
-//                char buffer[200];
-//                snprintf(buffer, 200, "tpp-aggressive failed at %d / %d\n",
-//                         num_elim, n);
-//                Profile::addEvent("EV_AGG_FAIL", buffer);
-//             }
-// #endif
-//             // Factorization ecountered a pivoting failure.
-//             int nelim_blk = num_elim/block_size;
-//             // Rollback to known good state
-//             restore(
-//                   nelim_blk, m, n, perm, a, lda, d, cdata, backup, perm_copy,
-//                   up_to_date, block_size, work, upd, ldupd
-//                   );
-//             // Factorize more carefully
-//             if(use_tasks && mblk>1) {
-//                num_elim = run_elim_pivoted(
-//                      m, n, perm, a, lda, d, cdata, backup, options, block_size,
-//                      beta, upd, ldupd, work, alloc, nelim_blk
-//                      );
-//             } else {
-//                num_elim = run_elim_pivoted_notasks(
-//                      m, n, perm, a, lda, d, cdata, backup, options, block_size,
-//                      beta, upd, ldupd, work, alloc, nelim_blk
-//                      );
-//             }
-//             if(num_elim < 0) return num_elim; // error
-//          }
-//          IATraits::deallocate(intAlloc, up_to_date, num_blocks);
-//          IATraits::deallocate(intAlloc, perm_copy, n);
-//       } else {
-//          if(use_tasks && mblk>1) {
-//             num_elim = run_elim_pivoted(
-//                   m, n, perm, a, lda, d, cdata, backup, options,
-//                   block_size, beta, upd, ldupd, work, alloc
-//                   );
-//          } else {
-//             num_elim = run_elim_pivoted_notasks(
-//                   m, n, perm, a, lda, d, cdata, backup, options,
-//                   block_size, beta, upd, ldupd, work, alloc
-//                   );
-//          }
-//          if(num_elim < 0) return num_elim; // error
-//          backup.release_all_memory(); // we're done with it now, but we want
-//                                       // the memory back for reuse before we
-//                                       // get it automatically when it goes out
-//                                       // of scope.
-//       }
-
-//       if(num_elim < n) {
-//          // Permute failed entries to end
-// #ifdef PROFILE
-//          Profile::Task task_post("TA_LDLT_POST");
-// #endif
-//          std::vector<int, IntAlloc> failed_perm(n-num_elim, alloc);
-//          for(int jblk=0, insert=0, fail_insert=0; jblk<nblk; jblk++) {
-//             cdata[jblk].move_back(
-//                   get_ncol(jblk, n, block_size), &perm[jblk*block_size],
-//                   &perm[insert], &failed_perm[fail_insert]
-//                   );
-//             insert += cdata[jblk].nelim;
-//             fail_insert += get_ncol(jblk, n, block_size) - cdata[jblk].nelim;
-//          }
-//          for(int i=0; i<n-num_elim; ++i)
-//             perm[num_elim+i] = failed_perm[i];
-
-//          // Extract failed entries of a
-//          int nfail = n-num_elim;
-//          std::vector<T, TAlloc> failed_diag(nfail*n, alloc);
-//          std::vector<T, TAlloc> failed_rect(nfail*(m-n), alloc);
-//          for(int jblk=0, jfail=0, jinsert=0; jblk<nblk; ++jblk) {
-//             // Diagonal part
-//             for(int iblk=jblk, ifail=jfail, iinsert=jinsert; iblk<nblk; ++iblk) {
-//                copy_failed_diag(
-//                      get_ncol(iblk, n, block_size), get_ncol(jblk, n, block_size),
-//                      cdata[iblk], cdata[jblk],
-//                      &failed_diag[jinsert*nfail+ifail],
-//                      &failed_diag[iinsert*nfail+jfail],
-//                      &failed_diag[num_elim*nfail+jfail*nfail+ifail],
-//                      nfail, &a[jblk*block_size*lda+iblk*block_size], lda
-//                      );
-//                iinsert += cdata[iblk].nelim;
-//                ifail += get_ncol(iblk, n, block_size) - cdata[iblk].nelim;
-//             }
-//             // Rectangular part
-//             // (be careful with blocks that contain both diag and rect parts)
-//             copy_failed_rect(
-//                   get_nrow(nblk-1, m, block_size), get_ncol(jblk, n, block_size),
-//                   get_ncol(nblk-1, n, block_size), cdata[jblk],
-//                   &failed_rect[jfail*(m-n)+(nblk-1)*block_size-n], m-n,
-//                   &a[jblk*block_size*lda+(nblk-1)*block_size], lda
-//                   );
-//             for(int iblk=nblk; iblk<mblk; ++iblk) {
-//                copy_failed_rect(
-//                      get_nrow(iblk, m, block_size),
-//                      get_ncol(jblk, n, block_size), 0, cdata[jblk],
-//                      &failed_rect[jfail*(m-n)+iblk*block_size-n], m-n,
-//                      &a[jblk*block_size*lda+iblk*block_size], lda
-//                      );
-//             }
-//             jinsert += cdata[jblk].nelim;
-//             jfail += get_ncol(jblk, n, block_size) - cdata[jblk].nelim;
-//          }
-
-//          // Move data up
-//          for(int jblk=0, jinsert=0; jblk<nblk; ++jblk) {
-//             // Diagonal part
-//             for(int iblk=jblk, iinsert=jinsert; iblk<nblk; ++iblk) {
-//                move_up_diag(
-//                      cdata[iblk], cdata[jblk], &a[jinsert*lda+iinsert],
-//                      &a[jblk*block_size*lda+iblk*block_size], lda
-//                      );
-//                iinsert += cdata[iblk].nelim;
-//             }
-//             // Rectangular part
-//             // (be careful with blocks that contain both diag and rect parts)
-//             move_up_rect(
-//                   get_nrow(nblk-1, m, block_size),
-//                   get_ncol(nblk-1, n, block_size), cdata[jblk],
-//                   &a[jinsert*lda+(nblk-1)*block_size],
-//                   &a[jblk*block_size*lda+(nblk-1)*block_size], lda
-//                   );
-//             for(int iblk=nblk; iblk<mblk; ++iblk)
-//                move_up_rect(
-//                      get_nrow(iblk, m, block_size), 0, cdata[jblk],
-//                      &a[jinsert*lda+iblk*block_size],
-//                      &a[jblk*block_size*lda+iblk*block_size], lda
-//                      );
-//             jinsert += cdata[jblk].nelim;
-//          }
-         
-//          // Store failed entries back to correct locations
-//          // Diagonal part
-//          for(int j=0; j<n; ++j)
-//          for(int i=std::max(j,num_elim), k=i-num_elim; i<n; ++i, ++k)
-//             a[j*lda+i] = failed_diag[j*nfail+k];
-//          // Rectangular part
-//          T* arect = &a[num_elim*lda+n];
-//          for(int j=0; j<nfail; ++j)
-//          for(int i=0; i<m-n; ++i)
-//             arect[j*lda+i] = failed_rect[j*(m-n)+i];
-// #ifdef PROFILE
-//          task_post.done();
-// #endif
-//       }
-
-//       if(debug) {
-//          std::vector<bool> eliminated(n);
-//          for(int i=0; i<num_elim; i++) eliminated[i] = true;
-//          for(int i=num_elim; i<n; i++) eliminated[i] = false;
-//          printf("FINAL:\n");
-//          print_mat(m, n, perm, eliminated, a, lda);
-//       }
-
-//       return num_elim;
-//    }
 };
 
-} /* namespace spral::ssids:cpu::ldlt_app_internal */
-
-// }}} /* namespaces spral::ssids::cpu */
+} /* namespace spldlt::ldlt_app_internal */
 
 } /* namespaces spldlt */

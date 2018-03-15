@@ -1,23 +1,20 @@
 #pragma once
 
-#include "ssids/cpu/cpu_iface.hxx"
-// #include "ssids/cpu/kernels/wrappers.hxx"
-
-// #include "Workspace.hxx"
+// SpLDLT
 #include "SymbolicFront.hxx"
 #include "kernels/assemble.hxx"
-// #include "NumericNode.hxx"
-// #include "kernels/factor.hxx"
-// #include "SymbolicTree.hxx"
-
 #if defined(SPLDLT_USE_STARPU)
-#include <starpu.h>
 #include "StarPU/kernels.hxx"
 #include "StarPU/kernels_indef.hxx"
-using namespace spldlt::starpu;
 #endif
 
-// using namespace spldlt;
+// SSIDS
+#include "ssids/cpu/cpu_iface.hxx"
+
+#if defined(SPLDLT_USE_STARPU)
+// StarPU
+#include <starpu.h>
+#endif
 
 namespace spldlt {
 
@@ -33,7 +30,7 @@ namespace spldlt {
          FactorAlloc& factor_alloc,
          PoolAlloc& pool_alloc) {
 
-      printf("[activate_front_task]\n");
+      // printf("[activate_front_task]\n");
 
 #if defined(SPLDLT_USE_STARPU)
 
@@ -49,7 +46,7 @@ namespace spldlt {
          ++i;
       }
       
-      insert_activate_node(
+      spldlt::starpu::insert_activate_node(
             snode.hdl, cnode_hdls, nchild,
             posdef, &snode, &node, child_contrib, blksz, &factor_alloc, 
             &pool_alloc); 
@@ -74,7 +71,7 @@ namespace spldlt {
 
 #if defined(SPLDLT_USE_STARPU)
       
-      insert_init_node(
+      spldlt::starpu::insert_init_node(
             &sfront, &front,
             sfront.hdl,
             aval, prio);
@@ -93,7 +90,7 @@ namespace spldlt {
                        int blksz, int prio) {
 
 #if defined(SPLDLT_USE_STARPU)
-      insert_fini_node(node.get_hdl(), &node, prio);
+      spldlt::starpu::insert_fini_node(node.get_hdl(), &node, prio);
 #else
       fini_node(node);
 #endif
@@ -128,7 +125,7 @@ namespace spldlt {
          ++i;
       }
       // printf("[activate_init_front_task] node = %d, nchild = %d\n", snode.idx+1, nchild);
-      insert_activate_init_node(
+      spldlt::starpu::insert_activate_init_node(
             snode.hdl, cnode_hdls, nchild,
             posdef, &snode, &node, child_contrib, blksz, &factor_alloc, 
             &pool_alloc, aval); 
@@ -237,7 +234,7 @@ namespace spldlt {
       
       if((blkn<blksz) && (ldcontrib>0)) {
 
-         insert_solve_block(
+         spldlt::starpu::insert_solve_block(
                k, blksz,
                snode.handles[k*nr + k], // diag block handle 
                snode.handles[k*nr + i], // subdiag block handle
@@ -248,7 +245,7 @@ namespace spldlt {
       }
       else {
 
-         insert_solve_block(
+         spldlt::starpu::insert_solve_block(
                snode.handles[k*nr + k], // diag block handle 
                snode.handles[k*nr + i], // subdiag block handle
                snode.hdl,
@@ -295,7 +292,7 @@ namespace spldlt {
 
          int rsa = n/blksz; // Row/Col index of first block in contrib 
 
-         insert_update_block(
+         spldlt::starpu::insert_update_block(
                k, blksz,
                snode.handles[j*nr + i], // A_ij block handle 
                snode.handles[k*nr + i], // A_ik block handle
@@ -306,7 +303,7 @@ namespace spldlt {
                prio);
       }
       else {
-         insert_update_block(
+         spldlt::starpu::insert_update_block(
                snode.handles[j*nr + i], // A_ij block handle 
                snode.handles[k*nr + i], // A_ik block handle
                snode.handles[k*nr + j],  // A_jk block handle
@@ -394,7 +391,7 @@ namespace spldlt {
       int rsa = n/blksz;
       int ncontrib = nr-rsa;
 
-      insert_update_contrib(k,
+      spldlt::starpu::insert_update_contrib(k,
                             // snode.contrib_handles[(i-rsa)+(j-rsa)*ncontrib],
                             node.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib].hdl,
                             snode.handles[k*nr + i],
@@ -512,7 +509,7 @@ namespace spldlt {
 
       // Insert assembly tasks if there are any contributions
       if (nh>0) {
-         insert_subtree_assemble(
+         spldlt::starpu::insert_subtree_assemble(
                &front, &csfront, sfront.hdl, csfront.hdl, hdls, nh, 
                child_contrib, contrib_idx);
       }
@@ -610,7 +607,7 @@ namespace spldlt {
       // printf("[assemble_contrib_subtree_task] nh = %d\n", nh);
       // Insert assembly tasks if there are any contributions
       if (nh > 0) {
-         insert_subtree_assemble_contrib(
+         spldlt::starpu::insert_subtree_assemble_contrib(
                &node, &csnode, snode.hdl, csnode.hdl, hdls, nh, child_contrib,
                contrib_idx, blksz, prio);
       }
@@ -724,7 +721,7 @@ namespace spldlt {
          int crsa = csnode.ncol/blksz;
          int cncontrib = cnr-crsa;
       
-         insert_assemble_block(&node, &cnode, ii, jj, cmap, 
+         spldlt::starpu::insert_assemble_block(&node, &cnode, ii, jj, cmap, 
                                // csnode.contrib_handles[(jj-crsa)*cncontrib+(ii-crsa)],
                                cnode.contrib_blocks[(jj-crsa)*cncontrib+(ii-crsa)].hdl,
                                hdls, nh, snode.hdl, csnode.hdl,
@@ -809,7 +806,7 @@ namespace spldlt {
          int crsa = csnode.ncol/blksz;
          int cncontrib = cnr-crsa;
 
-         insert_assemble_contrib_block(&node, &cnode, ii, jj, cmap, blksz, 
+         spldlt::starpu::insert_assemble_contrib_block(&node, &cnode, ii, jj, cmap, blksz, 
                                        // csnode.contrib_handles[(jj-crsa)*cncontrib+(ii-crsa)], 
                                        cnode.contrib_blocks[(jj-crsa)*cncontrib+(ii-crsa)].hdl,
                                        hdls, nh, snode.hdl, csnode.hdl,
@@ -1028,7 +1025,7 @@ namespace spldlt {
          ++i;
       }
       // printf("[assemble_task] node = %d, nchild = %d\n", snode.idx+1, nchild);
-      insert_assemble(
+      spldlt::starpu::insert_assemble(
             snode.hdl, cnode_hdls, nchild,
             n, &node, child_contrib, &pool_alloc, blksz);
 
@@ -1065,7 +1062,7 @@ namespace spldlt {
       }
       // printf("[assemble_contrib_task] node = %d, nchild = %d\n", node.symb.idx+1, nchild);
 
-      insert_assemble_contrib(
+      spldlt::starpu::insert_assemble_contrib(
             node.get_hdl(), cnode_hdls, nchild, //node.contrib_hdl,
             &node, child_contrib, blksz);
 

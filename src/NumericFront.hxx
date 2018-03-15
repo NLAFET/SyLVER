@@ -241,32 +241,32 @@ namespace spldlt {
       }
       
       /// @brief Return the number of rows in the node
-      inline int get_nrow() {
+      inline int get_nrow() const {
          return symb.nrow + ndelay_in;
       }
 
       /// @brief Return the number of columns in the node
-      inline int get_ncol() {
+      inline int get_ncol() const {
          return symb.ncol + ndelay_in;
       }
 
       /// @brief Return the number of block rows in the node
-      inline int get_nr() {
+      inline int get_nr() const {
          return (get_nrow()-1) / blksz + 1;
       }
 
       /// @brief Return the number of block rows in the node
-      inline int get_nc() {
+      inline int get_nc() const {
          return (get_ncol()-1) / blksz + 1;
       }
 
       /** \brief Return leading dimension of node's lcol member. */
-      size_t get_ldl() {
+      size_t get_ldl() const {
          return spral::ssids::cpu::align_lda<T>(symb.nrow + ndelay_in);
       }
 
 #if defined(SPLDLT_USE_STARPU)
-      starpu_data_handle_t get_hdl() {
+      starpu_data_handle_t get_hdl() const {
          return symb.hdl;
       }
 #endif

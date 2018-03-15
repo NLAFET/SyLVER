@@ -184,63 +184,10 @@ namespace spldlt { namespace tests {
       int nelim = front.nelim; // Number of eliminated columns
       int q1 = front.nelim1;
       int q2 = nelim - front.nelim1;
-      
-         //       // q1 = LDLT
-//       //    <T, iblksz, CopyBackup<T>, false, debug>
-//       //    ::factor(
-//       //          m, n, node.perm, node.lcol, lda, d, backup, options, options.pivot_method,
-//       //          blksz, 0.0, nullptr, 0, work
-//       //          );
-     
-//       // Factor node in sequential
-//       // q1 = FactorSymIndef
-//       //    <T, iblksz, CopyBackup<T>, debug, PoolAllocator>
-//       //    ::ldlt_app_notask(
-//       //          m, n, node.perm, node.lcol, lda, d, backup, options, 
-//       //          // options.pivot_method,
-//       //          blksz, 0.0, upd, 0, work[0], pool_alloc);
-
-//       // Factor node
-//       q1 = FactorSymIndef
-//          <T, iblksz, CopyBackup<T>, debug, PoolAllocator>
-//          ::ldlt_app(
-//                m, n, node.perm, node.lcol, lda, d, backup, options, 
-//                // options.pivot_method,
-//                blksz, 0.0, upd, 0, work, pool_alloc);
-      
-//       // q1 = spral::ssids::cpu::ldlt_app_factor(
-//       //       m, n, node.perm, node.lcol, lda, d, 0.0, upd, 0,
-//       //       options, work, pool_alloc);
-      
-// #if defined(SPLDLT_USE_STARPU)
-//       starpu_task_wait_for_all();
-// #endif
-      
+            
       std::cout << "FIRST FACTOR CALL ELIMINATED " << q1 << " of " << n << " pivots" << std::endl;
       std::cout << "SECOND FACTOR CALL ELIMINATED " << q2 << " of " << n << " pivots" << std::endl;
       
-//       if(debug) {
-//          std::cout << "L after first elim:" << std::endl;
-//          print_mat("%10.2e", m, node.lcol, lda, node.perm);
-//          std::cout << "D:" << std::endl;
-//          print_d<T>(q1, d);
-//       }
-//       int q2 = 0;
-//       if(q1 < n) {
-//          // Finish off with simplistic kernel
-// #if defined(SPLDLT_USE_STARPU)
-//          starpu_fxt_trace_user_event(0);
-// #endif         
-//          T *ld = new T[2*m];
-//          q1 += ldlt_tpp_factor(m-q1, n-q1, &node.perm[q1], &node.lcol[(q1)*(lda+1)], lda,
-//                                &d[2*(q1)], ld, m, options.action, u, small, q1, &node.lcol[q1], lda);
-//          delete[] ld;
-// #if defined(SPLDLT_USE_STARPU)
-//          starpu_fxt_trace_user_event(0);
-// #endif         
-//       }
-//       EXPECT_EQ(m, q1+q2) << "(test " << test << " seed " << seed << ")" << std::endl;
-
       auto end = std::chrono::high_resolution_clock::now();
       long ttotal = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count();
       printf("[testing_factor_node_indef] factor time: %e\n", 1e-9*ttotal);
@@ -256,17 +203,6 @@ namespace spldlt { namespace tests {
 #if defined(SPLDLT_USE_STARPU)
       starpu_shutdown();
 #endif
-
-//       std::cout << "q1=" << q1 << " q2=" << q2 << std::endl;
-      
-//       // Print out matrices if requested
-//       if(debug) {
-//          std::cout << "L:" << std::endl;
-//          print_mat("%10.2e", m, node.lcol, lda, node.perm);
-//          std::cout << "D:" << std::endl;
-//          print_d<T>(m, d);
-//       }
-
 
       if (debug) {
          std::cout << "CB:" << std::endl;

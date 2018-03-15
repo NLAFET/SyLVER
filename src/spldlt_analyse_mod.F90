@@ -1329,28 +1329,28 @@ contains
     do i=1, nlz
        n = lzero(i)
 
-       small(nodes(n)%least_desc:n) = -n
-       small(n) = 1
-       nsubtrees = nsubtrees + 1 ! add new partition                 
-       contrib_dest(nsubtrees) = 0
-       if (n .lt. nnodes) then
-          j = sparent(n) ! get parent node
-          if (j .lt. nnodes) contrib_dest(nsubtrees) = j
-       end if
-       subtree_sa(nsubtrees) = nodes(n)%least_desc
-       subtree_en(nsubtrees) = n
+       ! small(nodes(n)%least_desc:n) = -n
+       ! small(n) = 1
+       ! nsubtrees = nsubtrees + 1 ! add new partition                 
+       ! contrib_dest(nsubtrees) = 0
+       ! if (n .lt. nnodes) then
+       !    j = sparent(n) ! get parent node
+       !    if (j .lt. nnodes) contrib_dest(nsubtrees) = j
+       ! end if
+       ! subtree_sa(nsubtrees) = nodes(n)%least_desc
+       ! subtree_en(nsubtrees) = n
        
-       ! do j=1, size(nodes(n)%child) ! fkeep%nodes(n)%nchild
-       !    c = nodes(n)%child(j)
-       !    ! print *, "c: ", c
-       !    ! write(*,*)'desc: ', fkeep%nodes(c)%least_desc
-       !    small(nodes(c)%least_desc:c) = -c
-       !    small(c) = 1
-       !    nsubtrees = nsubtrees + 1 ! add new partition                 
-       !    contrib_dest(nsubtrees) = n
-       !    subtree_sa(nsubtrees) = nodes(c)%least_desc
-       !    subtree_en(nsubtrees) = c
-       ! end do
+       do j=1, size(nodes(n)%child) ! fkeep%nodes(n)%nchild
+          c = nodes(n)%child(j)
+          ! print *, "c: ", c
+          ! write(*,*)'desc: ', fkeep%nodes(c)%least_desc
+          small(nodes(c)%least_desc:c) = -c
+          small(c) = 1
+          nsubtrees = nsubtrees + 1 ! add new partition                 
+          contrib_dest(nsubtrees) = n
+          subtree_sa(nsubtrees) = nodes(c)%least_desc
+          subtree_en(nsubtrees) = c
+       end do
     end do
     
     deallocate(lzero_w)
