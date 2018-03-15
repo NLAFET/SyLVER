@@ -263,20 +263,20 @@ target_link_libraries(spldlt_test spldlt)
 # target_link_libraries(spldlt_test_debug spldlt)
 
 # Kernel test driver
-if (${KERNEL_TESTS} MATCHES "ON")
+# if (${KERNEL_TESTS} MATCHES "ON")
 
-  file(
-    GLOB_RECURSE
-    test_src
-    tests/*.cxx
-    tests/*.hxx)
+#   file(
+#     GLOB_RECURSE
+#     test_src
+#     tests/*.cxx
+#     tests/*.hxx)
   
-  # add_executable(spldlt_kernel_test tests/kernel_test.cxx)  
-  add_executable(spldlt_kernel_test ${test_src})
-  target_link_libraries(spldlt_kernel_test ${obj})
-  target_link_libraries(spldlt_kernel_test spldlt)
+#   # add_executable(spldlt_kernel_test tests/kernel_test.cxx)  
+#   add_executable(spldlt_kernel_test ${test_src})
+#   target_link_libraries(spldlt_kernel_test ${obj})
+#   target_link_libraries(spldlt_kernel_test spldlt)
 
-endif()
+# endif()
 
 ## spral
 target_include_directories(spldlt_test PUBLIC ${SPRAL_DIR})
@@ -285,28 +285,48 @@ find_library(SPRAL_LIBRARY spral PATHS ${SPRAL_DIR} ${SPRAL_DIR})
 target_link_libraries(spldlt_test ${SPRAL_LIBRARY})
 # target_link_libraries(spldlt_test_debug ${SPRAL_LIBRARY})
 
-if (${KERNEL_TESTS} MATCHES "ON")
-  # MESSAGE( STATUS "spral directory:         " ${SPRAL_DIR})
-
-  target_include_directories(spldlt_kernel_test PUBLIC ${SPRAL_DIR})
-  target_link_libraries(spldlt_kernel_test ${SPRAL_LIBRARY})
-endif()
-
 ################################################################################
 # Test drivers
+
+########################################
+# Kernel test drivers
+if (${KERNEL_TESTS} MATCHES "ON")
+
+  file(
+    GLOB
+    test_src
+    tests/*.cxx
+    tests/*.hxx)
+  add_library(spldlt_tests ${test_src})
+
+  add_executable(spldlt_tests_factor_node tests/drivers/factor_node_test.cxx)
+  add_executable(spldlt_tests_kernels tests/drivers/kernel_test.cxx)
+
+  # MESSAGE( STATUS "SpLDLT SRC DIR: " ${SpLDLT_SOURCE_DIR}/tests )
+  
+  target_include_directories(spldlt_tests_factor_node PUBLIC "${SpLDLT_SOURCE_DIR}/tests")
+  target_include_directories(spldlt_tests_factor_node PUBLIC ${SPRAL_DIR})
+  target_link_libraries(spldlt_tests_factor_node spldlt)
+  target_link_libraries(spldlt_tests_factor_node ${obj})
+  target_link_libraries(spldlt_tests_factor_node ${SPRAL_LIBRARY})
+  target_link_libraries(spldlt_tests_factor_node ${LIBS})
+  target_link_libraries(spldlt_tests_factor_node spldlt_tests)
+
+  target_include_directories(spldlt_tests_kernels PUBLIC ${SpLDLT_SOURCE_DIR}/tests)
+  target_include_directories(spldlt_tests_kernels PUBLIC ${SPRAL_DIR})
+  target_link_libraries(spldlt_tests_kernels spldlt_tests)
+  target_link_libraries(spldlt_tests_kernels spldlt)
+  target_link_libraries(spldlt_tests_kernels ${obj})
+  target_link_libraries(spldlt_tests_kernels ${SPRAL_LIBRARY})
+  target_link_libraries(spldlt_tests_kernels ${LIBS})
+
+endif()
 
 ########################################
 # Setup list of test drivers
 set(test_drivers)
 
 list(APPEND test_drivers "drivers/spldlt_test.F90")
-# list(APPEND test_drivers "drivers/spldlt_test_debug.F90")
-
-if (${KERNEL_TESTS} MATCHES "ON")
-
-  list(APPEND test_drivers "drivers/spldlt_kernel_test.F90")
-
-endif()
 
 foreach(test_driver ${test_drivers})
   
@@ -321,7 +341,7 @@ endforeach()
 ################################################################################
 # Print summary
 
-message("-----------------------------------------")
+message("--------------------------------------------------------------------------------")
 message("Configuration of SpLDLT done.")
 message(" ")
 message(
@@ -340,4 +360,4 @@ if(${RUNTIME} MATCHES "StarPU")
   message("Runtime system: StarPU")
   message("StarPU libraries: ${STARPU_LIBRARIES}")
 endif()
-message("-----------------------------------------")
+message("--------------------------------------------------------------------------------")

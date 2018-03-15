@@ -1,17 +1,13 @@
+// SpLDLT
 #include "testing.hxx"
-
-#include <cstdio>
-// #include "ssids/cpu/kernels/ldlt_app.cxx" // .cxx as we need internal namespace
-
-#include "tests/ssids/kernels/framework.hxx"
-#include "ssids/cpu/kernels/wrappers.hxx"
-// #include "ldlt_tpp.hxx"
-// #include "ldlt_app.hxx"
-// #include "testing_factor_indef.hxx"
-// #include "testing_factor_node_indef_app.hxx"
 #include "testing_factor_node_indef.hxx"
 
-// using namespace spral::ssids::cpu;
+#include <cstdio>
+
+// SSIDS
+#include "tests/ssids/kernels/framework.hxx"
+#include "ssids/cpu/kernels/wrappers.hxx"
+
 using namespace spldlt;
 using namespace spldlt::tests;
 
