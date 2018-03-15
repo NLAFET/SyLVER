@@ -663,10 +663,6 @@ namespace spldlt {
                int rr = r / blksz;
                // First row index in CB of destination block
                int dest_row_sa = (ncol > rr*blksz) ? 0 : (rr*blksz-ncol);
-               // printf("[assemble_contrib_block] csa: %d\n", csa);
-               // printf("[assemble_contrib_block] rr: %d, cc: %d\n", rr, cc);
-               // printf("[assemble_contrib_block] r: %d, c: %d\n", r, c);
-               // printf("[assemble_contrib_block] dest_row_sa: %d, dest_col_sa: %d\n", dest_row_sa, dest_col_sa);
                Tile<T, PoolAlloc> &dest_blk = node.contrib_blocks[(rr-sa)+(cc-sa)*ncontrib];
                int dest_blk_lda = dest_blk.lda;
                T *dest = &dest_blk.a[ (c - ncol - dest_col_sa)*dest_blk_lda ];
@@ -1002,7 +998,7 @@ namespace spldlt {
       // Assemble front: non fully-summed columns i.e. contribution block 
       for (auto* child=node.first_child; child!=NULL; child=child->next_child) {
 
-         SymbolicFront &child_sfront = child->symb;
+         SymbolicFront const& child_sfront = child->symb;
          // SymbolicFront &child_sfront = symb_[child->symb.idx];
 
          int ldcontrib = child_sfront.nrow - child_sfront.ncol;
