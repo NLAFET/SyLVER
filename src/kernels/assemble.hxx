@@ -362,11 +362,6 @@ namespace spldlt {
             front.ndelay_in += ndelay;
          }
       }
-      // for(int contrib_idx : sfront.contrib) {
-      // }
-
-      // printf("[alloc_front] ndelay_in = %d\n", front.ndelay_in);
-      // front.ndelay_in = 0; // debug
 
       int nrow = front.get_nrow();
       int ncol = front.get_ncol();
@@ -400,7 +395,6 @@ namespace spldlt {
 
    ////////////////////////////////////////////////////////////////////////////////
    template <typename T,
-             // typename FactorAlloc,
              typename PoolAlloc>
    void init_node(
          SymbolicFront const& sfront,
@@ -420,12 +414,7 @@ namespace spldlt {
    template <typename T, typename PoolAlloc>
    void fini_node(NumericFront<T,PoolAlloc>& node) {
 
-      // printf("[fini_node]\n");
-      
-      // deallocate contribution block
-      // node.free_contrib();
-
-      // deallocate contribution block
+      // Cleanup memory
       node.free_contrib_blocks();
       node.free_cdata();
       node.free_backup();
@@ -441,7 +430,6 @@ namespace spldlt {
       
       SymbolicFront const& csnode = cnode.symb;
       int blksz = cnode.blksz;
-      // printf("[assemble_block] ii: %d, jj: %d\n", ii, jj);
       
       // Source node
       int cnrow = cnode.get_nrow(); // Number of rows (including delays) 
@@ -456,10 +444,6 @@ namespace spldlt {
       int blk_lda = blk.lda;
       int blk_m = blk.m;
       int blk_n = blk.n;
-
-      // printf("[assemble_block] csa: %d\n", csa);
-      // printf("[assemble_block] blk_m: %d, blk_n: %d, blk_lda: %d\n", 
-      //        blk_m, blk_n, blk_lda);
 
       // index of first column in CB
       int col_sa = (cncol > jj*blksz) ? 0 : (jj*blksz-cncol);
@@ -744,7 +728,7 @@ namespace spldlt {
             child_contrib[contrib_idx], &cn, &cval, &ldcontrib, &crlist,
             &ndelay, &delay_perm, &delay_val, &lddelay
             );
-      // printf("[assemble_subtree] ndelay = %d\n", ndelay);
+
       /* Handle delays - go to back of node
        * (i.e. become the last rows as in lower triangular format) */
 
@@ -1032,10 +1016,6 @@ namespace spldlt {
                }
             }
          }
-         // #if defined(SPLDLT_USE_STARPU)
-         //                      starpu_task_wait_for_all();
-         // #endif
-
       } // Loop over child nodes
 
    } // assemble_contrib

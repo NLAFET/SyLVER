@@ -1,15 +1,12 @@
 #pragma once
 
+// SpLDLT
+#include "kernels/assemble.hxx"
+#include "kernels/factor.hxx"
+
 // SSIDS
-// #include <vector>
 #include "ssids/cpu/cpu_iface.hxx"
 #include "ssids/contrib.h"
-
-// SpLDLT
-// #include "SymbolicSNode.hxx"
-// #include "NumericNode.hxx"
-#include "kernels/factor.hxx"
-#include "kernels/assemble.hxx"
 
 #include <starpu.h>
 
@@ -628,10 +625,6 @@ namespace spldlt { namespace starpu {
       ////////////////////////////////////////////////////////////////////////////////
       // Factor subtree task
 
-      extern "C" void spldlt_factor_subtree_c(
-            void *akeep, void *fkeep, int p, double *aval, 
-            void **child_contrib, struct spral::ssids::cpu::cpu_factor_options *options);
-
       // CPU kernel
       template <typename T>
       void factor_subtree_cpu_func(void *buffers[], void *cl_arg) {
@@ -640,7 +633,7 @@ namespace spldlt { namespace starpu {
          void *akeep;
          void *fkeep;
          int p;
-         T *aval;
+         const T *aval;
          void **child_contrib;
          struct spral::ssids::cpu::cpu_factor_options *options;
 
@@ -667,17 +660,14 @@ namespace spldlt { namespace starpu {
       template <typename T>
       void insert_factor_subtree(
             starpu_data_handle_t root_hdl, // Symbolic handle on root node
-            void *akeep, 
+            const void *akeep,
             void *fkeep,
             int p,
-            T *aval,
+            const T *aval,
             void **child_contrib,
-            struct spral::ssids::cpu::cpu_factor_options *options) {
+            const struct spral::ssids::cpu::cpu_factor_options *options) {
 
          int ret;
-
-         // printf("[insert_factor_subtree] akeep = %p, akeep = %p\n", akeep, fkeep);
-         // printf("[insert_factor_subtree] root_hdl = %p, p = %d\n", root_hdl, p);
 
          ret = starpu_task_insert(&cl_factor_subtree,
                                   STARPU_RW, root_hdl,

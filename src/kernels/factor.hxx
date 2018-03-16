@@ -1,14 +1,21 @@
 #pragma once
 
 // SSIDS
-// #include "ssids/cpu/cpu_iface.hxx"
-// #include "ssids/cpu/NumericNode.hxx"
 #include "ssids/cpu/kernels/common.hxx"
 #include "ssids/cpu/kernels/wrappers.hxx"
 
 using namespace spral::ssids::cpu;
 
 namespace spldlt {
+
+   // Factor subtree kernel
+   extern "C" void spldlt_factor_subtree_c(
+         const void *akeep, 
+         void *fkeep, 
+         int p, 
+         const double *aval, 
+         void **child_contrib, 
+         const struct spral::ssids::cpu::cpu_factor_options *options);
    
    /*
      m: number of row in block

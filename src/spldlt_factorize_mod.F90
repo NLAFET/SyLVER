@@ -301,7 +301,6 @@ contains
 
   end function spldlt_factor_subtree_cpu
   
-  ! TODO Get posdef as input
   subroutine spldlt_factor_subtree_c( &
        cakeep, cfkeep, p, val, child_contrib_c, coptions) &
        bind(C, name="spldlt_factor_subtree_c")
@@ -313,8 +312,8 @@ contains
     use spral_ssids_contrib, only : contrib_type
     implicit none
 
-    type(c_ptr), value :: cakeep
-    type(c_ptr), value :: cfkeep
+    type(c_ptr), intent(in), value :: cakeep
+    type(c_ptr), intent(in), value :: cfkeep
     integer(c_int), value :: p ! Partition number, C-indexed
     real(c_double), dimension(*), intent(in) :: val
     type(c_ptr), dimension(*), intent(inout) :: child_contrib_c

@@ -3,6 +3,7 @@
 // SpLDLT
 #include "SymbolicFront.hxx"
 #include "kernels/assemble.hxx"
+#include "kernels/factor.hxx"
 #if defined(SPLDLT_USE_STARPU)
 #include "StarPU/kernels.hxx"
 #include "StarPU/kernels_indef.hxx"
@@ -83,8 +84,10 @@ namespace spldlt {
    ////////////////////////////////////////////////////////////////////////////////
    // Terminate node
    template <typename T, typename PoolAlloc>
-   void fini_node_task(NumericFront<T, PoolAlloc> &node, 
-                       int blksz, int prio) {
+   void fini_node_task(
+         NumericFront<T, PoolAlloc> &node, 
+         int blksz, 
+         int prio) {
 
 #if defined(SPLDLT_USE_STARPU)
       spldlt::starpu::insert_fini_node(node.get_hdl(), &node, prio);
@@ -418,15 +421,18 @@ namespace spldlt {
    ////////////////////////////////////////////////////////////////////////////////
    // Factor subtree task
 
-   extern "C" void spldlt_factor_subtree_c(
-         void *akeep, void *fkeep, int p, double *aval, 
-         void **child_contrib, struct spral::ssids::cpu::cpu_factor_options *options);
+   // extern "C" void spldlt_factor_subtree_c(
+   //       void *akeep, void *fkeep, int p, double *aval, 
+   //       void **child_contrib, struct spral::ssids::cpu::cpu_factor_options *options);
 
    template <typename T>
    void factor_subtree_task(
-         void *akeep, void *fkeep, SymbolicFront const& root, /*bool posdef,*/ T *aval, 
+         const void *akeep,  
+         void *fkeep, 
+         SymbolicFront const& root, 
+         const T *aval, 
          int p, void **child_contrib, 
-         struct spral::ssids::cpu::cpu_factor_options *options) {
+         const struct spral::ssids::cpu::cpu_factor_options *options) {
 
 #if defined(SPLDLT_USE_STARPU)
 
