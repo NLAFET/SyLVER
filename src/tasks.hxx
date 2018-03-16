@@ -554,7 +554,7 @@ namespace spldlt {
    void assemble_contrib_subtree_task(
          SymbolicFront const& snode, // Destination node (Symbolic)
          NumericFront<T,PoolAlloc>& node, // Destination node (Numeric) 
-         SymbolicFront &csnode, // Root of the subtree
+         SymbolicFront& csnode, // Root of the subtree
          void** child_contrib, 
          int contrib_idx, // Index of subtree to assemble
          int *cmap, // row/column mapping array 

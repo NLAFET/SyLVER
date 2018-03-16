@@ -25,7 +25,7 @@ namespace spldlt {
       // Register handles for a node in StarPU
       template <typename T, typename PoolAlloc>
       void register_node(
-            SymbolicFront &sfront,
+            SymbolicFront& sfront,
             NumericFront<T, PoolAlloc> &front,
             int blksz) {
 

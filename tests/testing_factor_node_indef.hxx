@@ -286,11 +286,6 @@ namespace spldlt { namespace tests {
       EXPECT_LE(bwderr, 5e-14) << "(test " << test << " seed " << seed << ")" << std::endl;
 
       // Cleanup memory
-
-      // Free contribution blocks
-      delete front.cdata;
-      delete front.backup;
-
       allocT.deallocate(l, m*lda);
       delete[] a; allocT.deallocate(front.lcol, len);
       delete[] b;

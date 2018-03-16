@@ -110,7 +110,7 @@ namespace spldlt {
        * \param pool_alloc Pool Allocator to use for contrib allocation.
        */
       NumericFront(
-            SymbolicFront &symb,
+            SymbolicFront& symb,
             PoolAllocator const& pool_alloc, int blksz)
          : symb(symb), contrib(nullptr), pool_alloc_(pool_alloc), blksz(blksz),
            backup(nullptr), cdata(nullptr), ndelay_in(0), ndelay_out(0),
@@ -287,8 +287,7 @@ namespace spldlt {
       
    public:
       /* Symbolic node associate with this one */
-      // spral::ssids::cpu::SymbolicNode const& symb;
-      SymbolicFront &symb;
+      SymbolicFront& symb;
 
       /* Fixed data from analyse */
       NumericFront<T, PoolAllocator>* first_child; // Pointer to our first child

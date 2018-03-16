@@ -212,7 +212,7 @@ namespace spldlt {
             // Deactivate children fronts
             for (auto* child=fronts_[ni].first_child; child!=NULL; child=child->next_child) {
 
-               SymbolicFront &csnode = child->symb;
+               SymbolicFront const& csnode = child->symb;
 
                if (csnode.exec_loc == -1) {
                   // fini_node(*child);
@@ -322,7 +322,7 @@ namespace spldlt {
             // Assemble front: fully-summed columns 
             for (auto* child=fronts_[ni].first_child; child!=NULL; child=child->next_child) {
            
-               SymbolicFront &child_sfront = symb_[child->symb.idx]; // Children symbolic node
+               SymbolicFront& child_sfront = symb_[child->symb.idx]; // Children symbolic node
 
                int ldcontrib = child_sfront.nrow - child_sfront.ncol;
                // Handle expected contributions (only if something there)
@@ -382,7 +382,7 @@ namespace spldlt {
             for (auto* child=fronts_[ni].first_child; child!=NULL; child=child->next_child) {
                
                // SymbolicNode const& csnode = child->symb;
-               SymbolicFront &child_sfront = symb_[child->symb.idx];
+               SymbolicFront& child_sfront = symb_[child->symb.idx];
                
                int ldcontrib = child_sfront.nrow - child_sfront.ncol;
                // Handle expected contributions (only if something there)
