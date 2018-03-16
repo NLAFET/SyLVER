@@ -123,6 +123,8 @@ namespace spldlt {
       ~NumericFront() {
          free_contrib();
          free_contrib_blocks();
+         delete backup;
+         delete cdata;
       }
 
       /// \brief Allocate block structures and memory space for
