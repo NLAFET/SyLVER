@@ -421,10 +421,6 @@ namespace spldlt {
    ////////////////////////////////////////////////////////////////////////////////
    // Factor subtree task
 
-   // extern "C" void spldlt_factor_subtree_c(
-   //       void *akeep, void *fkeep, int p, double *aval, 
-   //       void **child_contrib, struct spral::ssids::cpu::cpu_factor_options *options);
-
    template <typename T>
    inline 
    void factor_subtree_task(
