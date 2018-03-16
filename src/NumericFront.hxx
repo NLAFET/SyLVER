@@ -123,8 +123,8 @@ namespace spldlt {
       ~NumericFront() {
          free_contrib();
          free_contrib_blocks();
-         delete backup;
-         delete cdata;
+         free_backup();
+         free_cdata();
       }
 
       /// \brief Allocate block structures and memory space for
@@ -209,10 +209,22 @@ namespace spldlt {
                   get_nrow(), get_ncol(), blksz, pool_alloc_);
       }
       
+      void free_backup() {
+         if(!backup) return;
+         delete backup;
+         backup = nullptr;
+      }
+      
       void alloc_cdata() {
          cdata = 
             new spldlt::ldlt_app_internal::ColumnData<T, IntAlloc> (
                   get_ncol(), blksz, IntAlloc(pool_alloc_));
+      }
+      
+      void free_cdata() {
+         if (!cdata) return;
+         delete cdata;
+         cdata = nullptr;
       }
 
       /// @brief Allocate blocks (structre only)

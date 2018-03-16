@@ -391,11 +391,9 @@ namespace spldlt {
 
       // TODO: Only if pivot_method is APP
       // Allocate backups
-      front.alloc_backup();
-      
+      front.alloc_backup();      
       // Allocate cdata
       front.alloc_cdata();
-
       // Allocate block structure
       front.alloc_blocks();
    }
@@ -429,6 +427,8 @@ namespace spldlt {
 
       // deallocate contribution block
       node.free_contrib_blocks();
+      node.free_cdata();
+      node.free_backup();
    }
 
    ////////////////////////////////////////////////////////////////////////////////   
