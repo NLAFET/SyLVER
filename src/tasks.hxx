@@ -426,6 +426,7 @@ namespace spldlt {
    //       void **child_contrib, struct spral::ssids::cpu::cpu_factor_options *options);
 
    template <typename T>
+   inline 
    void factor_subtree_task(
          const void *akeep,  
          void *fkeep, 
