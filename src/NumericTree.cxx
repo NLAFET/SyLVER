@@ -23,7 +23,8 @@ void *spldlt_create_numeric_tree_dbl(
       void *symbolic_tree_ptr,
       double *aval, // Values of A
       void** child_contrib, // Contributions from child subtrees
-      struct spral::ssids::cpu::cpu_factor_options *options // Options in
+      struct spral::ssids::cpu::cpu_factor_options *options, // Options in
+      ThreadStats* stats // Info out
       ) {
 
    // Retreive SymbolicTree object from pointer
@@ -31,12 +32,12 @@ void *spldlt_create_numeric_tree_dbl(
 
    if (posdef) {
       auto* tree = new NumericTreePosdefDbl
-         (fkeep, symbolic_tree, aval, child_contrib, *options);
+         (fkeep, symbolic_tree, aval, child_contrib, *options, *stats);
       return (void *) tree;
    }
    else {
       auto* tree = new NumericTreeIndefDbl
-         (fkeep, symbolic_tree, aval, child_contrib, *options);
+         (fkeep, symbolic_tree, aval, child_contrib, *options, *stats);
       return (void *) tree;
    }
 }

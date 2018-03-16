@@ -29,10 +29,10 @@ module spldlt_factorize_mod
   ! return a C ptr on the tree structure
   interface spldlt_create_numeric_tree_c
      type(c_ptr) function spldlt_create_numeric_tree_dlb( &
-          posdef, fkeep, symbolic_tree, aval, child_contrib, options) &
+          posdef, fkeep, symbolic_tree, aval, child_contrib, options, stats) &
           bind(C, name="spldlt_create_numeric_tree_dbl")
        use, intrinsic :: iso_c_binding
-       use spral_ssids_cpu_iface, only : cpu_factor_options
+       use spral_ssids_cpu_iface, only : cpu_factor_options, cpu_factor_stats
        implicit none
        logical(c_bool), value :: posdef
        type(c_ptr), value :: fkeep
@@ -40,6 +40,7 @@ module spldlt_factorize_mod
        real(c_double), dimension(*), intent(in) :: aval
        type(c_ptr), dimension(*), intent(inout) :: child_contrib
        type(cpu_factor_options), intent(in) :: options ! SSIDS options
+       type(cpu_factor_stats), intent(out) :: stats
      end function spldlt_create_numeric_tree_dlb
   end interface spldlt_create_numeric_tree_c
 
@@ -472,12 +473,13 @@ contains
 !     return
 !   end subroutine spldlt_factor_subtree_c
 
-  subroutine factor_core(spldlt_akeep, spldlt_fkeep, val, options)
+  subroutine factor_core(spldlt_akeep, spldlt_fkeep, val, options, inform)
     use spral_ssids_datatypes
     use spral_ssids_cpu_iface 
     use spral_ssids_akeep, only : ssids_akeep
     use spral_ssids_fkeep, only : ssids_fkeep
     use spral_ssids_contrib, only : contrib_type
+    use spral_ssids_inform, only : ssids_inform
     use spldlt_analyse_mod, only : spldlt_akeep_type
     implicit none
 
@@ -485,6 +487,7 @@ contains
     type(spldlt_fkeep_type), target, intent(inout) :: spldlt_fkeep
     real(wp), dimension(*), target, intent(in) :: val ! A values (lwr triangle)
     type(ssids_options), intent(in) :: options
+    type(ssids_inform), intent(inout) :: inform
 
     type(ssids_akeep), pointer :: akeep => null()
     type(ssids_fkeep), pointer :: fkeep => null()
@@ -495,6 +498,7 @@ contains
     type(c_ptr) :: cfkeep
     type(cpu_factor_options) :: coptions
     logical(c_bool) :: posdef
+    type(cpu_factor_stats) :: cstats
     ! Error management    
     character(50)  :: context      ! Procedure name (used when printing).
     integer :: st
@@ -553,9 +557,9 @@ contains
     call cpu_copy_options_in(options, coptions)
     spldlt_fkeep%numeric_tree%ctree = spldlt_create_numeric_tree_c( &
          posdef, cfkeep, spldlt_akeep%symbolic_tree_c, val, &
-         child_contrib_c, coptions)
+         child_contrib_c, coptions, cstats)
 
-    ! Free space
+    ! Cleanup Memory
     deallocate(child_contrib_c)
     ! deallocate(exec_loc_aux)
     deallocate(child_contrib)
@@ -631,7 +635,7 @@ contains
     end if
 
     ! Call main factorization routine
-    call factor_core(spldlt_akeep, spldlt_fkeep, val, options)
+    call factor_core(spldlt_akeep, spldlt_fkeep, val, options, inform)
 
     return
 100 continue

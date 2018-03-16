@@ -50,7 +50,8 @@ namespace spldlt {
             SymbolicTree& symbolic_tree, 
             T *aval,
             void** child_contrib,
-            struct spral::ssids::cpu::cpu_factor_options& options)
+            struct spral::ssids::cpu::cpu_factor_options& options,
+            ThreadStats& stats)
          : fkeep_(fkeep), symb_(symbolic_tree),
            factor_alloc_(symbolic_tree.get_factor_mem_est(1.0)),
            pool_alloc_(symbolic_tree.get_pool_size<T>())
@@ -68,30 +69,26 @@ namespace spldlt {
             fronts_[ni].next_child = nc ? &fronts_[nc->idx] :  nullptr;
          }
          
-         std::vector<spral::ssids::cpu::Workspace> workspaces;
-
          int nworkers = 0;
 #if defined(SPLDLT_USE_STARPU)
          nworkers = starpu_cpu_worker_get_count();
 #endif
-         printf("[NumericTree] blksz = %d, nworkers = %d\n", blksz, nworkers);
-         
+         printf("[NumericTree] blksz = %d, nworkers = %d\n", blksz, nworkers);         
+
+         std::vector<ThreadStats> worker_stats(nworkers);
+         std::vector<spral::ssids::cpu::Workspace> workspaces;
+         // Prepare workspaces
+         workspaces.reserve(nworkers);
+         for(int i = 0; i < nworkers; ++i)
+            workspaces.emplace_back(PAGE_SIZE);
 
          if (posdef) {
             spldlt::starpu::codelet_init<T, FactorAllocator, PoolAllocator>();
          } else {
-
-            static const int INNER_BLOCK_SIZE = 32;
-
             // Init StarPU codelets
             spldlt::starpu::codelet_init<T, FactorAllocator, PoolAllocator>();
             spldlt::starpu::codelet_init_indef<T, INNER_BLOCK_SIZE, Backup, PoolAllocator>();
             spldlt::starpu::codelet_init_factor_indef<T, PoolAllocator>();
-            
-            // Prepare workspaces
-            workspaces.reserve(nworkers);
-            for(int i = 0; i < nworkers; ++i)
-               workspaces.emplace_back(PAGE_SIZE);
          }
 
          auto start = std::chrono::high_resolution_clock::now();
@@ -105,7 +102,14 @@ namespace spldlt {
 
 #if defined(SPLDLT_USE_STARPU)
          starpu_task_wait_for_all();
-#endif         
+#endif
+
+         // Reduce thread_stats
+         stats = ThreadStats(); // initialise
+         for(auto tstats : worker_stats)
+            stats += tstats;
+         if(stats.flag < 0) return;
+        
       }
 
       ////////////////////////////////////////////////////////////////////////////////   
