@@ -271,7 +271,7 @@ contains
 
     type(cpu_numeric_subtree), pointer :: cpu_factor
     type(C_PTR) :: cscaling
-    ! type(c_ptr) :: ptr
+    integer :: st
 
     ! Leave output as null until successful exit
     nullify(spldlt_factor_subtree_cpu)
@@ -291,13 +291,13 @@ contains
     cpu_factor%csubtree = &
          c_create_numeric_subtree(posdef, cpu_factor%symbolic%csubtree, &
          val, cscaling, child_contrib_c, coptions, cstats)
-         
+    if (cstats%flag .lt. 0) then
+       call c_destroy_numeric_subtree(cpu_factor%posdef, cpu_factor%csubtree)
+       deallocate(cpu_factor, stat=st)
+       return
+    end if
     ! Success, set result and return
     spldlt_factor_subtree_cpu => cpu_factor
-
-    ! TODO
-    ! Extract to Fortran data structures
-    ! call cpu_copy_stats_out(cstats, inform)
 
     return
 

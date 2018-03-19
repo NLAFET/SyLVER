@@ -127,9 +127,9 @@ namespace spldlt {
          // 1) options.pivot_method is set to tpp;
          // 2) We are at a root node;
          // 3) options.failed_pivot_method is set to tpp.
-         if (m==n ||
-             options.pivot_method==PivotMethod::tpp ||
-             options.failed_pivot_method==FailedPivotMethod::tpp
+         if(m==n ||
+            options.pivot_method==PivotMethod::tpp ||
+            options.failed_pivot_method==FailedPivotMethod::tpp
                ) {
 
             T *ld = work.get_ptr<T>(m-nelim);
@@ -138,7 +138,7 @@ namespace spldlt {
                   &d[2*nelim], ld, m-nelim, options.action, options.u, options.small, 
                   nelim, &lcol[nelim], ldl);
 
-            if (
+            if(
                   (m-n>0) && // We're not at a root node
                   (node.nelim > nelim) // We've eliminated columns at second pass
                   ) {
@@ -149,6 +149,7 @@ namespace spldlt {
             if(options.pivot_method==PivotMethod::tpp) {
                stats.not_first_pass += n - node.nelim;
             } else {
+               // printf("[factor_front_indef_failed] Not second pass = %d\n", n-node.nelim);
                stats.not_second_pass += n - node.nelim;
             }
 
@@ -158,6 +159,10 @@ namespace spldlt {
       // Update number of delayed columns
       node.ndelay_out = n - node.nelim;         
       stats.num_delay += node.ndelay_out;
-   }   
+
+      // if (node.nelim == 0) {
+      //    printf("[factor_front_indef_failed]\n");
+      // }
+   }
    
-} // namespace spldlt
+} // end of namespace spldlt

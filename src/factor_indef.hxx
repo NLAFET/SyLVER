@@ -111,6 +111,10 @@ namespace spldlt {
       factor_front_indef_failed_task(
             node, workspaces, options, worker_stats);
 
+// #if defined(SPLDLT_USE_STARPU)
+//          starpu_task_wait_for_all();
+// #endif
+
 #if defined(SPLDLT_USE_STARPU)
       ColumnData<T, IntAlloc> &cdata = *node.cdata;
       int const nblk = calc_nblk(n, blksz);
@@ -1441,9 +1445,9 @@ namespace spldlt {
                            node,
                            blk, iblk, jblk, workspaces, block_size, UPDATE_PRIO);
 
-                     // #if defined(SPLDLT_USE_STARPU)
-                     //                      starpu_task_wait_for_all();
-                     // #endif
+// #if defined(SPLDLT_USE_STARPU)
+//                      starpu_task_wait_for_all();
+// #endif
 
                   }    
                }
