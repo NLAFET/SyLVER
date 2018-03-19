@@ -16,14 +16,14 @@ namespace spldlt {
    ////////////////////////////////////////////////////////////////////////////////
    // factor_front_indef
    //
-   /// @brief Perform the LDLT factorization of front without forming
-   /// the contribution block
+   /// @brief Perform the LDLT factorization of front
    template <typename T, typename PoolAlloc>
    void factor_front_indef(
          NumericFront<T, PoolAlloc> &node,
          std::vector<spral::ssids::cpu::Workspace> &workspaces,
          PoolAlloc& pool_alloc,
-         struct cpu_factor_options& options) {
+         struct cpu_factor_options& options,
+         std::vector<ThreadStats>& worker_stats) {
 
       typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
 
@@ -109,7 +109,7 @@ namespace spldlt {
 
       // Process uneliminated columns 
       factor_front_indef_failed_task(
-            node, workspaces,options);
+            node, workspaces, options, worker_stats);
 
 #if defined(SPLDLT_USE_STARPU)
       ColumnData<T, IntAlloc> &cdata = *node.cdata;

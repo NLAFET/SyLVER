@@ -233,6 +233,14 @@ program spldlt_test
    !    deallocate(spldlt_fkeep%fkeep%subtree)
    ! end if
 
+   print "(a6, es10.2)", "nfact:", real(inform%num_factor)
+   print "(a6, es10.2)", "nflop:", real(inform%num_flops)
+   print "(a6, i10)", "delay:", inform%num_delay
+   print "(a6, i10)", "2x2piv:", inform%num_two
+   ! print "(a6, i10)", "maxfront:", inform%maxfront
+   print "(a6, i10)", "not_first_pass:", inform%not_first_pass
+   print "(a6, i10)", "not_second_pass:", inform%not_second_pass
+
    stop
    
  contains

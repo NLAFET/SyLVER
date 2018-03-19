@@ -636,6 +636,7 @@ namespace spldlt { namespace starpu {
          const T *aval;
          void **child_contrib;
          struct spral::ssids::cpu::cpu_factor_options *options;
+         std::vector<ThreadStats>* worker_stats;
 
          starpu_codelet_unpack_args(
                cl_arg,
@@ -644,13 +645,16 @@ namespace spldlt { namespace starpu {
                &p,
                &aval,
                &child_contrib,
-               &options);
+               &options,
+               &worker_stats);
+
+         int workerid = starpu_worker_get_id();
+         ThreadStats& stats = (*worker_stats)[workerid];
 
          // printf("[factor_subtree_cpu_func]\n");
          // printf("[factor_subtree_cpu_func] akeep = %p, fkeep = %p\n", akeep, fkeep);
          // printf("[factor_subtree_cpu_func] subtree: %d, child_contrib: %p\n", p+1, child_contrib);
-         spldlt_factor_subtree_c(akeep, fkeep, p, aval, child_contrib, options);
-
+            spldlt_factor_subtree_c(akeep, fkeep, p, aval, child_contrib, options, &stats);
       }
 
       // factor_subtree StarPU codelet
@@ -665,19 +669,22 @@ namespace spldlt { namespace starpu {
             int p,
             const T *aval,
             void **child_contrib,
-            const struct spral::ssids::cpu::cpu_factor_options *options) {
+            const struct spral::ssids::cpu::cpu_factor_options *options,
+            std::vector<ThreadStats> *worker_stats) {
 
          int ret;
 
-         ret = starpu_task_insert(&cl_factor_subtree,
-                                  STARPU_RW, root_hdl,
-                                  STARPU_VALUE, &akeep, sizeof(void*),
-                                  STARPU_VALUE, &fkeep, sizeof(void*),
-                                  STARPU_VALUE, &p, sizeof(int),
-                                  STARPU_VALUE, &aval, sizeof(T*),
-                                  STARPU_VALUE, &child_contrib, sizeof(void**),
-                                  STARPU_VALUE, &options, sizeof(struct spral::ssids::cpu::cpu_factor_options *),
-                                  0);
+         ret = starpu_task_insert(
+               &cl_factor_subtree,
+               STARPU_RW, root_hdl,
+               STARPU_VALUE, &akeep, sizeof(void*),
+               STARPU_VALUE, &fkeep, sizeof(void*),
+               STARPU_VALUE, &p, sizeof(int),
+               STARPU_VALUE, &aval, sizeof(T*),
+               STARPU_VALUE, &child_contrib, sizeof(void**),
+               STARPU_VALUE, &options, sizeof(struct spral::ssids::cpu::cpu_factor_options*),
+               STARPU_VALUE, &worker_stats, sizeof(std::vector<ThreadStats>*),
+               0);
 
          STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
       }

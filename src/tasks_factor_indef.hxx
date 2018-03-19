@@ -1,7 +1,9 @@
 #pragma once
 
 #include "factor_indef.hxx"
+#if defined(SPLDLT_USE_STARPU)
 #include "StarPU/factor_indef.hxx"
+#endif
 
 namespace spldlt {
 
@@ -9,17 +11,19 @@ namespace spldlt {
    // factor_front_indef_nocontrib_task
 
    template <typename T, typename PoolAlloc>
-   void factor_front_indef_task(
+   inline void factor_front_indef_task(
          NumericFront<T, PoolAlloc>& node,
          std::vector<spral::ssids::cpu::Workspace>& workspaces,
          PoolAlloc& pool_alloc,
-         struct cpu_factor_options& options
+         struct cpu_factor_options& options,
+         std::vector<ThreadStats>& worker_stats
          ) {
 
 #if defined(SPLDLT_USE_STARPU)
 
-      insert_factor_front_indef(
-            node.get_hdl(), &node, &workspaces, &pool_alloc, &options);      
+      spldlt::starpu::insert_factor_front_indef(
+            node.get_hdl(), &node, &workspaces, &pool_alloc, &options, 
+            &worker_stats);
 
 #else
 

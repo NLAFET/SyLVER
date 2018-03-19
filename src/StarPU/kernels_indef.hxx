@@ -738,16 +738,18 @@ namespace spldlt { namespace starpu {
       void factor_front_indef_failed_cpu_func(void *buffers[], void *cl_arg) {
          
          NumericFront<T, PoolAlloc> *node = nullptr;
-         std::vector<spral::ssids::cpu::Workspace> *workspaces;
+         std::vector<spral::ssids::cpu::Workspace> *workspaces = nullptr;
          struct cpu_factor_options *options = nullptr;
+         std::vector<ThreadStats> *worker_stats = nullptr;
 
          starpu_codelet_unpack_args(
-               cl_arg, &node, &workspaces, &options);
+               cl_arg, &node, &workspaces, &options, &worker_stats);
 
          int workerid = starpu_worker_get_id();
-         spral::ssids::cpu::Workspace &work = (*workspaces)[workerid];
+         spral::ssids::cpu::Workspace& work = (*workspaces)[workerid];
+         spral::ssids::cpu::ThreadStats& stats = (*worker_stats)[workerid];
 
-         factor_front_indef_failed(*node, work, *options);
+         factor_front_indef_failed(*node, work, *options, stats);
 
       }
 
@@ -761,7 +763,8 @@ namespace spldlt { namespace starpu {
             // starpu_data_handle_t node_hdl,
             NumericFront<T, PoolAlloc> *node,
             std::vector<spral::ssids::cpu::Workspace> *workspaces,
-            struct cpu_factor_options *options
+            struct cpu_factor_options *options,
+            std::vector<ThreadStats> *worker_stats
             ) {
 
          int ret;
@@ -772,6 +775,7 @@ namespace spldlt { namespace starpu {
                STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
                STARPU_VALUE, &workspaces, sizeof(std::vector<spral::ssids::cpu::Workspace>*),
                STARPU_VALUE, &options, sizeof(struct cpu_factor_options*),
+               STARPU_VALUE, &worker_stats, sizeof(std::vector<ThreadStats>*),
                0);
          STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
                

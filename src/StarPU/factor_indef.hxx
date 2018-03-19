@@ -17,12 +17,14 @@ namespace spldlt { namespace starpu {
          std::vector<spral::ssids::cpu::Workspace> *workspaces;
          PoolAlloc *pool_alloc;
          struct cpu_factor_options *options;
+         std::vector<ThreadStats> *worker_stats;
       
          starpu_codelet_unpack_args (
-               cl_arg, &node, &workspaces, &pool_alloc, &options);
+               cl_arg, &node, &workspaces, &pool_alloc, &options, 
+               &worker_stats);
 
          factor_front_indef(
-               *node, *workspaces, *pool_alloc, *options);
+               *node, *workspaces, *pool_alloc, *options, *worker_stats);
       }      
 
       // SarPU codelet
@@ -34,7 +36,8 @@ namespace spldlt { namespace starpu {
             NumericFront<T, PoolAlloc> *node,
             std::vector<spral::ssids::cpu::Workspace> *workspaces,
             PoolAlloc *pool_alloc,
-            struct cpu_factor_options *options
+            struct cpu_factor_options *options,
+            std::vector<ThreadStats> *worker_stats
             ) {
 
          int ret;
@@ -46,9 +49,9 @@ namespace spldlt { namespace starpu {
                STARPU_VALUE, &workspaces, sizeof(std::vector<spral::ssids::cpu::Workspace>*),
                STARPU_VALUE, &pool_alloc, sizeof(PoolAlloc*),
                STARPU_VALUE, &options, sizeof(struct cpu_factor_options *),
+               STARPU_VALUE, &worker_stats, sizeof(std::vector<ThreadStats> *),
                0);
-         STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");         
-         
+         STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
       }
       
       ////////////////////////////////////////////////////////////////////////////////

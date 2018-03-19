@@ -92,10 +92,9 @@ namespace spldlt {
          }
 
          auto start = std::chrono::high_resolution_clock::now();
-         if (posdef) factor_mf_posdef(aval, child_contrib, options);
-         else        factor_mf_indef(aval, child_contrib, workspaces, options);
-         // factor_mf_posdef(aval, child_contrib, options);
-         // factor_mf_indef(aval, child_contrib, options);
+         if (posdef) factor_mf_posdef(aval, child_contrib, options, worker_stats);
+         else        factor_mf_indef(aval, child_contrib, workspaces, options,
+                                     worker_stats);
          auto end = std::chrono::high_resolution_clock::now();
          long ttotal = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count();
          printf("[NumericTree] Task submission: %e\n", 1e-9*ttotal);
@@ -117,7 +116,8 @@ namespace spldlt {
       void factor_mf_indef(
             T *aval, void** child_contrib, 
             std::vector<spral::ssids::cpu::Workspace> &workspaces,
-            struct spral::ssids::cpu::cpu_factor_options& options) {
+            struct spral::ssids::cpu::cpu_factor_options& options,
+            std::vector<ThreadStats>& worker_stats) {
 
          printf("[factor_mf_indef] posdef = %d\n", posdef);
          // printf("[factor_mf_indef] nparts = %d\n", symb_.nparts_);
@@ -151,7 +151,7 @@ namespace spldlt {
             int root = symb_.subtrees_[p]-1; // subtrees is 1-indexed
             factor_subtree_task(
                   symb_.akeep_, fkeep_, symb_[root], aval, p, child_contrib, 
-                  &options);
+                  &options, worker_stats);
 // #if defined(SPLDLT_USE_STARPU)
 //             starpu_task_wait_for_all();
 // #endif
@@ -174,7 +174,7 @@ namespace spldlt {
 
 // #if defined(SPLDLT_USE_STARPU)
 //             starpu_task_wait_for_all();
-// #endif            
+// #endif
             // Activate and init frontal matrix
             // Allocate data structures
             // activate_front(
@@ -197,7 +197,8 @@ namespace spldlt {
             // factor_front_posdef(sfront, fronts_[ni], options);
 
             factor_front_indef_task(
-                  fronts_[ni], workspaces,  pool_alloc_, options);
+                  fronts_[ni], workspaces,  pool_alloc_, options, 
+                  worker_stats);
 // #if defined(SPLDLT_USE_STARPU)
 //             starpu_task_wait_for_all();
 // #endif
@@ -224,11 +225,6 @@ namespace spldlt {
 // #if defined(SPLDLT_USE_STARPU)
 //             starpu_task_wait_for_all();
 // #endif
-
-                  //#if defined(SPLDLT_USE_STARPU)
-                  // TODO put in fini_node kernel
-                  // unregister_node_submit(csnode, *child, blksz);
-                  //#endif
                }
 #if defined(SPLDLT_USE_STARPU)
                // Unregister symbolic handle on child node
@@ -247,7 +243,8 @@ namespace spldlt {
       // factor_mf_posdef
       void factor_mf_posdef(
             T *aval, void** child_contrib, 
-            struct spral::ssids::cpu::cpu_factor_options& options) {
+            struct spral::ssids::cpu::cpu_factor_options& options,
+            std::vector<ThreadStats>& worker_stats) {
 
          // printf("[factor_mf_posdef] nparts = %d\n", symb_.nparts_);
          int INIT_PRIO = 4;
@@ -279,8 +276,8 @@ namespace spldlt {
             int root = symb_.subtrees_[p]-1; // subtrees is 1-indexed
             // printf("[factor_mf] nsubtrees = %d, p = %d, root = %d\n", symb_.nsubtrees_, p, root);
             factor_subtree_task(
-                  symb_.akeep_, fkeep_, symb_[root], aval, p, child_contrib, 
-                  &options);
+                  symb_.akeep_, fkeep_, symb_[root], aval, p, child_contrib,
+                  &options, worker_stats);
          }
 
          

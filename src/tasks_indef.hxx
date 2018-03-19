@@ -89,7 +89,8 @@ namespace spldlt {
    void factor_front_indef_failed_task(
          NumericFront<T, PoolAlloc> &node,
          std::vector<spral::ssids::cpu::Workspace> &workspaces,
-         struct cpu_factor_options& options
+         struct cpu_factor_options& options,
+         std::vector<ThreadStats>& worker_stats
          ) {
 
 #if defined(SPLDLT_USE_STARPU)
@@ -103,13 +104,12 @@ namespace spldlt {
       
       spldlt::starpu::insert_factor_front_indef_failed(
             cdata[nblk-1].get_hdl(), // node.get_hdl(),
-            &node, &workspaces, &options
+            &node, &workspaces, &options, &worker_stats
             );
 
 #else
-      
-      factor_front_indef_failed(node, work, options);
-      
+      ThreadStats& stats = worker_stats[0];
+      factor_front_indef_failed(node, work, options, stats);
 #endif
       
    }

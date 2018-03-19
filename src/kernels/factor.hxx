@@ -11,11 +11,12 @@ namespace spldlt {
    // Factor subtree kernel
    extern "C" void spldlt_factor_subtree_c(
          const void *akeep, 
-         void *fkeep, 
-         int p, 
+         void *fkeep,
+         int p,
          const double *aval, 
          void **child_contrib, 
-         const struct spral::ssids::cpu::cpu_factor_options *options);
+         const struct spral::ssids::cpu::cpu_factor_options *options,
+         ThreadStats *stats);
    
    /*
      m: number of row in block

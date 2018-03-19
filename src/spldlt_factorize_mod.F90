@@ -255,7 +255,8 @@ contains
     
   end subroutine spldlt_get_contrib_c
 
-  function spldlt_factor_subtree_cpu(cpu_symb, posdef, val, child_contrib_c, coptions)
+  function spldlt_factor_subtree_cpu(&
+       cpu_symb, posdef, val, child_contrib_c, coptions, cstats)
     use, intrinsic :: iso_c_binding
     use spral_ssids_subtree, only: numeric_subtree_base
     use spral_ssids_cpu_subtree, only : cpu_numeric_subtree, cpu_symbolic_subtree
@@ -266,11 +267,11 @@ contains
     real(c_double), dimension(*), intent(in) :: val
     type(c_ptr), dimension(*), intent(inout) :: child_contrib_c
     type(cpu_factor_options), intent(in) :: coptions ! SSIDS options
+    type(cpu_factor_stats), intent(out) :: cstats
 
     type(cpu_numeric_subtree), pointer :: cpu_factor
     type(C_PTR) :: cscaling
     ! type(c_ptr) :: ptr
-    type(cpu_factor_stats) :: cstats
 
     ! Leave output as null until successful exit
     nullify(spldlt_factor_subtree_cpu)
@@ -303,7 +304,7 @@ contains
   end function spldlt_factor_subtree_cpu
   
   subroutine spldlt_factor_subtree_c( &
-       cakeep, cfkeep, p, val, child_contrib_c, coptions) &
+       cakeep, cfkeep, p, val, child_contrib_c, coptions, cstats) &
        bind(C, name="spldlt_factor_subtree_c")
     use spral_ssids_akeep, only : ssids_akeep
     use spral_ssids_fkeep, only : ssids_fkeep
@@ -319,6 +320,7 @@ contains
     real(c_double), dimension(*), intent(in) :: val
     type(c_ptr), dimension(*), intent(inout) :: child_contrib_c
     type(cpu_factor_options), intent(in) :: coptions ! SSIDS options
+    type(cpu_factor_stats), intent(out) :: cstats ! Worker stats
 
     type(ssids_akeep), pointer :: akeep => null()
     type(ssids_fkeep), pointer :: fkeep => null()
@@ -341,7 +343,7 @@ contains
     select type(subtree_ptr => akeep%subtree(part)%ptr)
     type is (cpu_symbolic_subtree)
        fkeep%subtree(part)%ptr => spldlt_factor_subtree_cpu( &
-            subtree_ptr, posdef, val, child_contrib_c, coptions)
+            subtree_ptr, posdef, val, child_contrib_c, coptions, cstats)
     end select
 
     !if (akeep%contrib_idx(part) .le. akeep%nparts) then
@@ -558,6 +560,9 @@ contains
     spldlt_fkeep%numeric_tree%ctree = spldlt_create_numeric_tree_c( &
          posdef, cfkeep, spldlt_akeep%symbolic_tree_c, val, &
          child_contrib_c, coptions, cstats)
+
+    ! Extract to Fortran data structures
+    call cpu_copy_stats_out(cstats, inform)
 
     ! Cleanup Memory
     deallocate(child_contrib_c)

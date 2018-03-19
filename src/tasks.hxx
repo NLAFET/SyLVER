@@ -421,23 +421,25 @@ namespace spldlt {
    ////////////////////////////////////////////////////////////////////////////////
    // Factor subtree task
 
-   template <typename T>
-   inline 
-   void factor_subtree_task(
-         const void *akeep,  
-         void *fkeep, 
-         SymbolicFront const& root, 
-         const T *aval, 
-         int p, void **child_contrib, 
-         const struct spral::ssids::cpu::cpu_factor_options *options) {
+   template <typename T> 
+   inline void factor_subtree_task(
+         const void *akeep,
+         void *fkeep,
+         SymbolicFront const& root,
+         const T *aval,
+         int p, void **child_contrib,
+         const struct spral::ssids::cpu::cpu_factor_options *options,
+         std::vector<ThreadStats>& worker_stats) {
 
 #if defined(SPLDLT_USE_STARPU)
 
       spldlt::starpu::insert_factor_subtree(
-            root.hdl, akeep, fkeep, p, aval, child_contrib, options);
+            root.hdl, akeep, fkeep, p, aval, child_contrib, options, &worker_stats);
 
 #else
-      spldlt_factor_subtree_c(akeep, fkeep, p, aval, child_contrib, options);
+      ThreadStats& stats = worker_stats[0];
+      spldlt_factor_subtree_c(
+            akeep, fkeep, p, aval, child_contrib, options, &stats);
 #endif
    }
 

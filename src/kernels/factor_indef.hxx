@@ -101,7 +101,8 @@ namespace spldlt {
    void factor_front_indef_failed(
          NumericFront<T, PoolAlloc>& node,
          spral::ssids::cpu::Workspace& work,
-         const struct cpu_factor_options& options) {
+         const struct cpu_factor_options& options,
+         spral::ssids::cpu::ThreadStats& stats) {
 
       int m = node.get_nrow();
       int n = node.get_ncol();
@@ -118,16 +119,18 @@ namespace spldlt {
       // Try to eliminate the columns uneliminated at first pass
       if (node.nelim < n) {
 
+         nelim = node.nelim;
+         if(options.pivot_method!=PivotMethod::tpp)
+            stats.not_first_pass += n-nelim;
+
          // Use TPP factor to eliminate the remaining columns in the following cases:
          // 1) options.pivot_method is set to tpp;
          // 2) We are at a root node;
          // 3) options.failed_pivot_method is set to tpp.
-         if (
-               m==n ||
-               options.pivot_method==PivotMethod::tpp ||
-               options.failed_pivot_method==FailedPivotMethod::tpp
+         if (m==n ||
+             options.pivot_method==PivotMethod::tpp ||
+             options.failed_pivot_method==FailedPivotMethod::tpp
                ) {
-            nelim = node.nelim;
 
             T *ld = work.get_ptr<T>(m-nelim);
             node.nelim += ldlt_tpp_factor(
@@ -143,12 +146,18 @@ namespace spldlt {
                // Compute contribution blocks
                form_contrib(node, work, nelim, node.nelim-1);
             }
+            if(options.pivot_method==PivotMethod::tpp) {
+               stats.not_first_pass += n - node.nelim;
+            } else {
+               stats.not_second_pass += n - node.nelim;
+            }
+
          }
 
       }
       // Update number of delayed columns
       node.ndelay_out = n - node.nelim;         
-      
+      stats.num_delay += node.ndelay_out;
    }   
    
 } // namespace spldlt
