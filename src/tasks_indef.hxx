@@ -18,9 +18,9 @@ namespace spldlt {
    void update_contrib_block_app_task(
          BlockSpec isrc, BlockSpec jsrc,
          Tile<T, PoolAlloc>& upd, 
-         NumericFront<T, PoolAlloc> &node,
+         NumericFront<T, PoolAlloc>& node,
          int blk, int iblk, int jblk,
-         std::vector<spral::ssids::cpu::Workspace> &workspaces,
+         std::vector<spral::ssids::cpu::Workspace>& workspaces,
          int blksz, int prio
          ) {
       
@@ -48,36 +48,14 @@ namespace spldlt {
 
 #else
 
-      int nrow = node.get_nrow();
-      int ncol = node.get_ncol();
-      int rsa = ncol / blksz; // index of first block in contribution blocks
-      T *lcol = node.lcol;
-      int ldl = align_lda<T>(nrow);
-      T *d = &lcol[ncol*ldl];
-      T *dk = &d[2*blk*blksz];
-      int nelim = std::min(blksz, node.nelim - blk*blksz);
-      int nr = (nrow-1) / blksz + 1; // number of block rows
-      int ncontrib = nr-rsa;
+      spral::ssids::cpu::Workspace& work = workspaces[0];
 
-      spldlt::Block<T, PoolAlloc>& upd =
-         node.contrib_blocks[(jblk-rsa)*ncontrib+(iblk-rsa)];
-
-      int ljk_first_row = std::max(jblk*blksz, ncol);
-      T *ljk = &lcol[(blk*blksz)*ldl+ljk_first_row];
-      
-      int lik_first_row = std::max(iblk*blksz, ncol);
-      T *lik = &lcol[(blk*blksz)*ldl+lik_first_row];
-
-      int ldld = spral::ssids::cpu::align_lda<T>(blksz);
-      T *ld = new T[blksz*ldld]; // TODO: Use workspaces
-
-      update_contrib_block(
-            upd.m, upd.n, upd.a, upd.lda,  
-            nelim, lik, ldl, ljk, ldl,
-            (blk == 0), dk, ld, ldld);
-
-      delete[] ld;
-
+      update_contrib_block_app(
+            node, blk, iblk, jblk,
+            isrc.a, isrc.lda,
+            jsrc.a, jsrc.lda,
+            upd.m, upd.n, upd.a, upd.lda, 
+            work);
 #endif
    }
 
@@ -108,6 +86,7 @@ namespace spldlt {
             );
 
 #else
+      spral::ssids::cpu::Workspace& work = workspaces[0];
       ThreadStats& stats = worker_stats[0];
       factor_front_indef_failed(node, work, options, stats);
 #endif

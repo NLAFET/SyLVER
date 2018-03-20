@@ -1,11 +1,12 @@
 #pragma once
 
+// SSIDS
 #include "ssids/cpu/kernels/ldlt_nopiv.hxx"
 
+// SpLDLT
 #include "kernels/ldlt_app.hxx"
 #include "kernels/factor_indef.hxx"
 #include "tasks_indef.hxx"
-
 #if defined(SPLDLT_USE_STARPU)
 #include "StarPU/kernels_indef.hxx"
 using namespace spldlt::starpu;
@@ -51,10 +52,13 @@ namespace spldlt {
       node.nelim = 0; // TODO add parameter from;
 
       if (options.pivot_method==PivotMethod::app_block) {
+
+         typedef spldlt::ldlt_app_internal::CopyBackup<T, PoolAlloc> Backup;
+         typedef FactorSymIndef<T, INNER_BLOCK_SIZE, Backup, debug, PoolAlloc> FactorSymIndefSpec;
          
-         CopyBackup<T, PoolAlloc> &backup = *node.backup;
+         // Backup &backup = *node.backup;
          // CopyBackup<T, PoolAlloc> backup(m, n, blksz, pool_alloc);
-         ColumnData<T, IntAlloc> &cdata = *node.cdata;
+         // spldlt::ldlt_app_internal::ColumnData<T, IntAlloc> &cdata = *node.cdata;
          //ColumnData<T, IntAlloc> cdata(n, blksz, IntAlloc(pool_alloc));
 
          // int const mblk = calc_nblk(m, blksz);
@@ -70,11 +74,9 @@ namespace spldlt {
          //                             options, blksz, 0.0, upd, 0, workspaces,
          //                             pool_alloc, node.nelim);
 
-         FactorSymIndef
-            <T, INNER_BLOCK_SIZE, CopyBackup<T, PoolAlloc>, debug, PoolAlloc>
-            ::factor_front_indef_app(
-                  node, options, 0.0, upd, 0, workspaces, pool_alloc,
-                  node.nelim);
+         FactorSymIndefSpec::factor_front_indef_app(
+               node, options, 0.0, upd, 0, workspaces, pool_alloc,
+               node.nelim);
          
 // #if defined(SPLDLT_USE_STARPU)
 //          starpu_task_wait_for_all();
@@ -95,10 +97,8 @@ namespace spldlt {
          //             cdata, blksz,
          //             pool_alloc);
 
-         FactorSymIndef
-            <T, INNER_BLOCK_SIZE, CopyBackup<T, PoolAlloc>, debug, PoolAlloc>
-            ::release_permute_failed_task (
-                  node, pool_alloc);
+         FactorSymIndefSpec::release_permute_failed_task (
+               node, pool_alloc);
 
 // #if defined(SPLDLT_USE_STARPU)
 //          starpu_task_wait_for_all();
@@ -1185,6 +1185,7 @@ namespace spldlt {
          T *lcol = node.lcol;
          int *perm = node.perm;
          int num_elim = node.nelim;
+         int blksz = node.blksz;
 
          CopyBackup<T, Allocator> &backup = *node.backup; 
          ColumnData<T, IntAlloc> &cdata = *node.cdata;

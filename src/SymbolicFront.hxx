@@ -18,8 +18,8 @@ namespace spldlt {
       starpu_data_handle_t hdl; // symbolic handle representing the node
       std::vector<starpu_data_handle_t> handles; // array containing the block handles
       // std::vector<starpu_data_handle_t> contrib_handles; // array containing the block handles in the contribution block
-      int *map;
 #endif 
+      int *map; // Array mapping rows and columns index with the parent front  
       int part; // Partition info
       int exec_loc; // Execution location info
       int contrib_idx; // Index of contribution

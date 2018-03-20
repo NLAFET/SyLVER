@@ -18,6 +18,7 @@
 #endif
 
 #include <vector>
+#include <chrono>
 
 // SSIDS
 #include "ssids/cpu/cpu_iface.hxx"
@@ -69,7 +70,7 @@ namespace spldlt {
             fronts_[ni].next_child = nc ? &fronts_[nc->idx] :  nullptr;
          }
          
-         int nworkers = 0;
+         int nworkers = 1;
 #if defined(SPLDLT_USE_STARPU)
          nworkers = starpu_cpu_worker_get_count();
 #endif
@@ -82,6 +83,7 @@ namespace spldlt {
          for(int i = 0; i < nworkers; ++i)
             workspaces.emplace_back(PAGE_SIZE);
 
+#if defined(SPLDLT_USE_STARPU)
          if (posdef) {
             spldlt::starpu::codelet_init<T, FactorAllocator, PoolAllocator>();
          } else {
@@ -90,7 +92,7 @@ namespace spldlt {
             spldlt::starpu::codelet_init_indef<T, INNER_BLOCK_SIZE, Backup, PoolAllocator>();
             spldlt::starpu::codelet_init_factor_indef<T, PoolAllocator>();
          }
-
+#endif
          auto start = std::chrono::high_resolution_clock::now();
          if (posdef) factor_mf_posdef(aval, child_contrib, options, worker_stats);
          else        factor_mf_indef(aval, child_contrib, workspaces, options,
@@ -127,12 +129,14 @@ namespace spldlt {
          // Blocking size
          int blksz = options.cpu_block_size;
 
+#if defined(SPLDLT_USE_STARPU)
+         // TODO move hdl registration to activate task
          // Register symbolic handles.
          for(int ni = 0; ni < symb_.nnodes_; ++ni) {
-            // TODO move hdl registration to activate task
             starpu_void_data_register(&(symb_[ni].hdl)); // Node's symbolic handle
             starpu_void_data_register(&(fronts_[ni].contrib_hdl)); // Node's symbolic handle
          }
+#endif
 
          // for(int p = 0; p < symb_.nparts_; ++p) {
 
@@ -152,11 +156,13 @@ namespace spldlt {
             factor_subtree_task(
                   symb_.akeep_, fkeep_, symb_[root], aval, p, child_contrib, 
                   &options, worker_stats);
-#if defined(SPLDLT_USE_STARPU)
-            starpu_task_wait_for_all();
-#endif
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
+            // spldlt_factor_subtree_c(
+            //       symb_.akeep_, fkeep_, p, aval, child_contrib, &options, 
+            //       &worker_stats[0]);
          }
-
 // #if defined(SPLDLT_USE_STARPU)
 //          starpu_task_wait_for_all();
 // #endif         
@@ -183,36 +189,36 @@ namespace spldlt {
             activate_init_front_task(
                   false, sfront, fronts_[ni], child_contrib, blksz, 
                   factor_alloc_, pool_alloc_, aval);
-#if defined(SPLDLT_USE_STARPU)
-            starpu_task_wait_for_all();
-#endif
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
             
             // assemble contributions from children fronts and subtreess
             // assemble(symb_.n, fronts_[ni], child_contrib, pool_alloc_, blksz);
             assemble_task(symb_.n, sfront, fronts_[ni], child_contrib, pool_alloc_, blksz);
-#if defined(SPLDLT_USE_STARPU)
-            starpu_task_wait_for_all();
-#endif
-
-            // factor_front_posdef(sfront, fronts_[ni], options);
-
-//             factor_front_indef_task(
-//                   fronts_[ni], workspaces,  pool_alloc_, options, 
-//                   worker_stats);
 // #if defined(SPLDLT_USE_STARPU)
 //             starpu_task_wait_for_all();
 // #endif
-            factor_front_indef(
-                  fronts_[ni], workspaces, pool_alloc_, options, worker_stats);
 
+            // factor_front_posdef(sfront, fronts_[ni], options);
+
+            factor_front_indef_task(
+                  fronts_[ni], workspaces,  pool_alloc_, options, 
+                  worker_stats);
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
+            // factor_front_indef(
+            //       fronts_[ni], workspaces, pool_alloc_, options, 
+            //       worker_stats);
 
             // Assemble contributions from children nodes into non
             // fully-summed columns
             // assemble_contrib(fronts_[ni], child_contrib, blksz);
             assemble_contrib_task(fronts_[ni], child_contrib, blksz);
-#if defined(SPLDLT_USE_STARPU)
-            starpu_task_wait_for_all();
-#endif
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
             
             // Deactivate children fronts
             for (auto* child=fronts_[ni].first_child; child!=NULL; child=child->next_child) {
@@ -222,9 +228,9 @@ namespace spldlt {
                if (csnode.exec_loc == -1) {
                   // fini_node(*child);
                   fini_node_task(*child, blksz, INIT_PRIO);
-#if defined(SPLDLT_USE_STARPU)
-            starpu_task_wait_for_all();
-#endif
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
                }
 #if defined(SPLDLT_USE_STARPU)
                // Unregister symbolic handle on child node
@@ -253,11 +259,13 @@ namespace spldlt {
          // Blocking size
          int blksz = options.cpu_block_size;
 
+#if defined(SPLDLT_USE_STARPU)
+         // TODO move hdl registration to activate task
          // Register symbolic handles on nodes
          for(int ni = 0; ni < symb_.nnodes_; ++ni) {
-            // TODO move hdl registration to activate task
             starpu_void_data_register(&(symb_[ni].hdl));
          }
+#endif
          
          // for(int p = 0; p < symb_.nparts_; ++p) {
 

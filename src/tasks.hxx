@@ -24,8 +24,8 @@ namespace spldlt {
    template <typename T, typename FactorAlloc, typename PoolAlloc>
    void activate_front_task(
          bool posdef,
-         SymbolicFront &snode,
-         NumericFront<T, PoolAlloc> &node,
+         SymbolicFront& snode,
+         NumericFront<T, PoolAlloc>& node,
          void** child_contrib,
          int blksz,
          FactorAlloc& factor_alloc) {
@@ -53,8 +53,8 @@ namespace spldlt {
       delete[] cnode_hdls;
 
 #else
-      activate_front_task(
-            posdef, sfront, front, child_contrib, blksz, factor_alloc);
+      activate_front(
+            posdef, snode, node, child_contrib, blksz, factor_alloc);
 #endif
       
    }
@@ -615,46 +615,7 @@ namespace spldlt {
       }
       
 #else
-
-      int cn, ldcontrib, ndelay, lddelay;
-      double const *cval, *delay_val;
-      int const *crlist, *delay_perm;
-      spral_ssids_contrib_get_data(
-            child_contrib[contrib_idx], &cn, &cval, &ldcontrib, &crlist,
-            &ndelay, &delay_perm, &delay_val, &lddelay
-            );
-
-      if(!cval) return; // child was all delays, nothing more to do
-
-      int sa = snode.ncol / blksz; // Index of first block in contrib
-      int nr = (snode.nrow-1) / blksz + 1;
-      int ncontrib = nr-sa;
-      for(int j = 0; j < cn; ++j) {
-
-         int c = cmap[ j ]; // Destination column
-
-         T const* src = &cval[j*ldcontrib];
-
-         if (c >= snode.ncol) {
-
-
-            int cc = c / blksz; // Destination block column
-            int dest_col_sa = (snode.ncol > cc*blksz) ? 0 : (cc*blksz-snode.ncol); // First col in block
-
-            for (int i = j; i < cn; ++i) {
-               int r = cmap[ i ]; // Destination row in parent front
-               int rr = r / blksz; // Destination block row
-               // First row index in CB of destination block
-               int dest_row_sa = (snode.ncol > rr*blksz) ? 0 : (rr*blksz-snode.ncol);
-               Block<T, PoolAlloc> &dest_blk = node.contrib_blocks[(rr-sa)+(cc-sa)*ncontrib];
-               int dest_blk_lda = dest_blk.lda;
-               T *dest = &dest_blk.a[ (c - snode.ncol - dest_col_sa)*dest_blk_lda ];
-               // Assemble destination block
-               dest[ r - snode.ncol - dest_row_sa ] += src[i];
-            }
-         }
-      }
-
+      assemble_contrib_subtree(node, csnode, child_contrib,contrib_idx, blksz);
 #endif
    }
 

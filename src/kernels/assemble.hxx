@@ -754,7 +754,6 @@ namespace spldlt {
 
    }
 
-
    ////////////////////////////////////////////////////////////////////////////////   
    // Assemble contrib subtree
    template <typename T, typename PoolAlloc>

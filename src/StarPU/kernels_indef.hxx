@@ -566,15 +566,15 @@ namespace spldlt { namespace starpu {
       template <typename T, typename IntAlloc, typename PoolAlloc>
       void update_contrib_block_app_cpu_func(void *buffers[], void *cl_arg) {
 
-         T *upd = (T *)STARPU_MATRIX_GET_PTR(buffers[0]); 
+         T *upd = (T *)STARPU_MATRIX_GET_PTR(buffers[0]);
          unsigned ldupd = STARPU_MATRIX_GET_LD(buffers[0]); // Get leading dimensions
          unsigned updm = STARPU_MATRIX_GET_NX(buffers[0]);
          unsigned updn = STARPU_MATRIX_GET_NY(buffers[0]);
 
-         T *lik = (T *)STARPU_MATRIX_GET_PTR(buffers[1]);
+         const T *lik = (T *)STARPU_MATRIX_GET_PTR(buffers[1]);
          unsigned ld_lik = STARPU_MATRIX_GET_LD(buffers[1]); // Get leading dimensions
 
-         T *ljk = (T *)STARPU_MATRIX_GET_PTR(buffers[2]);
+         const T *ljk = (T *)STARPU_MATRIX_GET_PTR(buffers[2]);
          unsigned ld_ljk = STARPU_MATRIX_GET_LD(buffers[2]); // Get leading dimensions
                   
          NumericFront<T, PoolAlloc> *node = nullptr;
@@ -588,36 +588,11 @@ namespace spldlt { namespace starpu {
          int workerid = starpu_worker_get_id();
          spral::ssids::cpu::Workspace &work = (*workspaces)[workerid];
 
-         int nrow = node->get_nrow();
-         int ncol = node->get_ncol();
-         int ldl = align_lda<T>(nrow);
-
-         T *lcol = node->lcol;
-         T *d = &lcol[ncol*ldl];
-
-         int ljk_first_row = std::max(0, ncol-j*blksz);
-         int lik_first_row = std::max(0, ncol-i*blksz);
-         // printf("[udpate_contrib_block_app_cpu_func] lik_first_row = %d, ljk_first_row = %d\n", lik_first_row, ljk_first_row);
-
-         ColumnData<T,IntAlloc> *cdata = node->cdata;
-         int cnelim = (*cdata)[k].nelim;
-         bool first_elim = (*cdata)[k].first_elim;
-         T *dk = (*cdata)[k].d;
-         
-         // printf("[udpate_contrib_block_app_cpu_func] k = %d, i = %d, j = %d, cnelim = %d, first_elim = %d\n", k, i, j, cnelim, first_elim);
-
-         if (cnelim <= 0) return; // No factors to update in current block-column
-
-         int ldld = spral::ssids::cpu::align_lda<T>(blksz);
-         // T *ld = new T[blksz*ldld];
-         T *ld = work.get_ptr<T>(blksz*ldld);
-
-         update_contrib_block(
+         update_contrib_block_app<T, IntAlloc, PoolAlloc>(
+               *node, k, i, j,
+               lik, ld_lik, ljk, ld_ljk,
                updm, updn, upd, ldupd,
-               cnelim, &lik[lik_first_row], ld_lik, &ljk[ljk_first_row], ld_ljk,
-               first_elim, dk, ld, ldld);
-
-         //delete[] ld;
+               work);
       }
 
       extern struct starpu_codelet cl_update_contrib_block_app;
