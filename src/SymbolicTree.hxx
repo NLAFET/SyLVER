@@ -24,7 +24,7 @@ namespace spldlt {
            nsubtrees_(nsubtrees), subtrees_(subtrees)
            // nparts_(nparts), part_(part)
       {
-         printf("[SymbolicTree]\n");
+         printf("[SymbolicTree] nsubtrees = %d\n", nsubtrees);
 
          // for(int ni=0; ni<nnodes_; ++ni) 
          //    fronts_[ni].least_desc = ni;

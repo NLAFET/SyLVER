@@ -23,10 +23,10 @@ namespace spldlt {
          std::vector<spral::ssids::cpu::Workspace>& workspaces,
          int blksz, int prio
          ) {
-      
-#if defined(SPLDLT_USE_STARPU)
 
       typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
+      
+#if defined(SPLDLT_USE_STARPU)
 
       int ncol = node.get_ncol();
       int rsa = ncol / blksz; // index of first block in contribution blocks
@@ -49,13 +49,14 @@ namespace spldlt {
 #else
 
       spral::ssids::cpu::Workspace& work = workspaces[0];
-
-      update_contrib_block_app(
+      
+      update_contrib_block_app<T, IntAlloc, PoolAlloc>(
             node, blk, iblk, jblk,
-            isrc.a, isrc.lda,
-            jsrc.a, jsrc.lda,
+            isrc.get_a(), isrc.get_lda(),
+            jsrc.get_a(), jsrc.get_lda(),
             upd.m, upd.n, upd.a, upd.lda, 
             work);
+
 #endif
    }
 

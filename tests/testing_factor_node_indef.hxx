@@ -1,14 +1,15 @@
 #pragma once
 
-// STD
-#include <vector>
-#include <cstdio>
-
 // SpLDLT
 #include "SymbolicFront.hxx"
 #include "factor_indef.hxx"
 // SpLDLT tests
 #include "common.hxx"
+
+// STD
+#include <vector>
+#include <cstdio>
+#include <chrono>
 
 // SSIDS
 #include "ssids/cpu/cpu_iface.hxx"
@@ -110,22 +111,19 @@ namespace spldlt { namespace tests {
          print_mat("%10.2e", m, front.lcol, lda);
       }
       
-      // Allocate block structure
-      front.alloc_blocks();
-
       // Setup permutation vector
       front.perm = new int[m];
       for(int i=0; i<m; i++) front.perm[i] = i;
       T *d = &front.lcol[lda*n];
-      // T *d = new T[2*m];      
-//       T* upd = nullptr;
+
       // Setup backup
       typedef spldlt::ldlt_app_internal::CopyBackup<T, PoolAllocator> Backup;
       // CopyBackup<T, PoolAllocator> backup(m, n, blksz);
       front.alloc_backup();
       // Setup cdata
       front.alloc_cdata();
-
+      // Allocate block structure
+      front.alloc_blocks();
       // Allocate contribution blocks
       front.alloc_contrib_blocks();
 
@@ -139,15 +137,18 @@ namespace spldlt { namespace tests {
       delete conf;
 #endif
 
-      // Setup workspaces
-      std::vector<spral::ssids::cpu::Workspace> workspaces;
-      const int PAGE_SIZE = 8*1024*1024; // 8 MB
-      int nworkers;
+      int nworkers = 1;
 #if defined(SPLDLT_USE_STARPU)
       nworkers = starpu_cpu_worker_get_count();
-#else
-      nworkers = omp_get_num_threads();
+// #else
+//       nworkers = omp_get_num_threads();
 #endif
+
+      // Setup workspaces and thread stats
+      std::vector<ThreadStats> worker_stats(nworkers);
+      std::vector<spral::ssids::cpu::Workspace> workspaces;
+      const int PAGE_SIZE = 8*1024*1024; // 8 MB
+
       workspaces.reserve(nworkers);
       for(int i = 0; i < nworkers; ++i)
          workspaces.emplace_back(PAGE_SIZE);
@@ -173,7 +174,7 @@ namespace spldlt { namespace tests {
       auto start = std::chrono::high_resolution_clock::now();
       
       // Factor front (first and second pass) and from contrib blocks
-      factor_front_indef(front, workspaces, pool_alloc, options);
+      factor_front_indef(front, workspaces, pool_alloc, options, worker_stats);
 
       // By default function calls are asynchronous, so we put a
       // barrier and wait for the DAG to be executed

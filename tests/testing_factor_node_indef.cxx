@@ -43,6 +43,8 @@ namespace spldlt { namespace tests {
       TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 128, 64, 32, 1) )); // Outer blocking
       TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 1000, 500, 250, 1) )); // Outer blocking
       TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 1092, 451, 123, 1) )); // Outer blocking
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 1061, 419, 100, 1) )); // Outer blocking
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 1061, 419, 400, 1) )); // Outer blocking
       TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 2000, 500, 128, 1) )); // Outer blocking
       TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 3000, 500, 256, 1) )); // Outer blocking
 

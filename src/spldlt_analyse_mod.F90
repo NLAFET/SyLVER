@@ -300,7 +300,8 @@ contains
     ! print *, " contrib_dest = ", contrib_dest(1:akeep%nparts)
 
     nth = size(akeep%topology)
-    ! nth = 2
+    ! nth = 2 ! debug
+
     call prune_tree(akeep%nnodes, akeep%sptr, akeep%sparent, akeep%rptr, nth, &
          spldlt_akeep%nsubtrees, small, contrib_dest, subtree_sa, spldlt_akeep%subtree_en)
 
@@ -1113,7 +1114,7 @@ contains
     end do
   end subroutine create_size_order
 
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Tree pruning method. Inspired by the strategy employed in qr_mumps
   ! for pruning the atree.
   subroutine prune_tree(nnodes, sptr, sparent, rptr, nth, nsubtrees, small, &
@@ -1324,6 +1325,10 @@ contains
     ! write(*,*)'nlz: ', nlz
     ! write(*,*)'final lzero: ', lzero(1:nlz)
 
+    ! ! debug
+    ! nlz = 1
+    ! lzero(1) = 1381
+
     ! mark all the children of nodes in l0
     print *, "lzero = ", lzero(1:nlz)
     do i=1, nlz
@@ -1352,6 +1357,74 @@ contains
           subtree_en(nsubtrees) = c
        end do
     end do
+    
+    ! debug
+    ! nsubtrees = 0
+
+    ! n = 332
+
+    ! small(nodes(n)%least_desc:n) = -n
+    ! small(n) = 1
+    ! nsubtrees = nsubtrees + 1 ! add new partition                 
+    ! contrib_dest(nsubtrees) = 0
+    ! if (n .lt. nnodes) then
+    !    j = sparent(n) ! get parent node
+    !    if (j .lt. nnodes) contrib_dest(nsubtrees) = j
+    ! end if
+    ! subtree_sa(nsubtrees) = nodes(n)%least_desc
+    ! subtree_en(nsubtrees) = n
+
+    ! n = 159
+
+    ! small(nodes(n)%least_desc:n) = -n
+    ! small(n) = 1
+    ! nsubtrees = nsubtrees + 1 ! add new partition                 
+    ! contrib_dest(nsubtrees) = 0
+    ! if (n .lt. nnodes) then
+    !    j = sparent(n) ! get parent node
+    !    if (j .lt. nnodes) contrib_dest(nsubtrees) = j
+    ! end if
+    ! subtree_sa(nsubtrees) = nodes(n)%least_desc
+    ! subtree_en(nsubtrees) = n
+ 
+    ! n = 331
+
+    ! small(nodes(n)%least_desc:n) = -n
+    ! small(n) = 1
+    ! nsubtrees = nsubtrees + 1 ! add new partition                 
+    ! contrib_dest(nsubtrees) = 0
+    ! if (n .lt. nnodes) then
+    !    j = sparent(n) ! get parent node
+    !    if (j .lt. nnodes) contrib_dest(nsubtrees) = j
+    ! end if
+    ! subtree_sa(nsubtrees) = nodes(n)%least_desc
+    ! subtree_en(nsubtrees) = n
+    
+    ! n = 709
+
+    ! small(nodes(n)%least_desc:n) = -n
+    ! small(n) = 1
+    ! nsubtrees = nsubtrees + 1 ! add new partition                 
+    ! contrib_dest(nsubtrees) = 0
+    ! if (n .lt. nnodes) then
+    !    j = sparent(n) ! get parent node
+    !    if (j .lt. nnodes) contrib_dest(nsubtrees) = j
+    ! end if
+    ! subtree_sa(nsubtrees) = nodes(n)%least_desc
+    ! subtree_en(nsubtrees) = n
+
+    ! n = 1380
+
+    ! small(nodes(n)%least_desc:n) = -n
+    ! small(n) = 1
+    ! nsubtrees = nsubtrees + 1 ! add new partition                 
+    ! contrib_dest(nsubtrees) = 0
+    ! if (n .lt. nnodes) then
+    !    j = sparent(n) ! get parent node
+    !    if (j .lt. nnodes) contrib_dest(nsubtrees) = j
+    ! end if
+    ! subtree_sa(nsubtrees) = nodes(n)%least_desc
+    ! subtree_en(nsubtrees) = n
     
     deallocate(lzero_w)
     deallocate(lzero)

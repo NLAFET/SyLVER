@@ -27,7 +27,6 @@ namespace spldlt {
          std::vector<ThreadStats>& worker_stats) {
 
       typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
-
       
       /* Extract useful information about node */
       int m = node.get_nrow();

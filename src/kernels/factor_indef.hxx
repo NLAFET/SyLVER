@@ -106,14 +106,16 @@ namespace spldlt {
       int nr = node.get_nr();
       int rsa = n/blksz;            
       int ncontrib = nr-rsa;
-
+      
       for (int k = fc; k <= lc; ++k) {
 
          int first_col = std::max(k*blksz, nelim_from); // first column in current block-column of L
-         int last_col = std::min((k+1)*blksz, nelim_to); // last column in current block-column of L
+         int last_col = std::min((k+1)*blksz-1, nelim_to); // last column in current block-column of L
          //int nelim_col = 0;
          int nelim_col = last_col-first_col+1;
          T *dk = &d[2*first_col];
+
+         // printf("k = %d, first_col = %d, last_col = %d\n", k, first_col, last_col);
 
          for (int j = rsa; j < nr; ++j) {
 
@@ -130,6 +132,8 @@ namespace spldlt {
                            
                int ldld = spral::ssids::cpu::align_lda<T>(blksz);
                T *ld = work.get_ptr<T>(blksz*ldld);
+
+               // printf("[form_contrib] updm = %d, updn = %d\n", upd.m, upd.n);
 
                update_contrib_block(
                      upd.m, upd.n, upd.a, upd.lda,  
@@ -197,7 +201,6 @@ namespace spldlt {
                // printf("[factor_front_indef_failed] Not second pass = %d\n", n-node.nelim);
                stats.not_second_pass += n - node.nelim;
             }
-
          }
 
       }

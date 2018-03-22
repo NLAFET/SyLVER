@@ -26,9 +26,9 @@ namespace spldlt {
             &worker_stats);
 
 #else
-
+      
       factor_front_indef(
-            node.symb, node, workspaces, pool_alloc, options);
+            node, workspaces, pool_alloc, options, worker_stats);
 
 #endif
    }

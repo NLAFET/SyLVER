@@ -1313,6 +1313,12 @@ public:
    int get_n() const { return n_; }
    /* return the block size */
    int get_blksz() const { return block_size_; }
+   /* return a pointer on the data */
+   // T* const get_a() const { return aval_; }
+   //T* get_a() const { return aval_; }
+   const T* get_a() const { return aval_; }
+   /// @brief return leading dimension of block
+   int get_lda() const {return lda_; }
 
 #if defined(SPLDLT_USE_STARPU)
    /* return StarPU on block */

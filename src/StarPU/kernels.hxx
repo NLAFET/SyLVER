@@ -968,7 +968,7 @@ namespace spldlt { namespace starpu {
       template <typename T, typename PoolAlloc>
       void insert_assemble_block(
             NumericFront<T, PoolAlloc> *node,
-            NumericFront<T, PoolAlloc> *cnode,
+            NumericFront<T, PoolAlloc> const* cnode,
             int ii, int jj,
             int *cmap,
             starpu_data_handle_t bc_hdl,

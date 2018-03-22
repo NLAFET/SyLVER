@@ -926,6 +926,8 @@ namespace spldlt {
             // for(int j=0; j<cn; ++j)
             //    cache[j] = map[ crlist[j] ];
 
+            printf("[assemble] contrib_idx = %d, ndelay = %d\n", csnode.contrib_idx, ndelay);
+
             /* Handle delays - go to back of node
              * (i.e. become the last rows as in lower triangular format) */
             for(int i=0; i<ndelay; i++) {

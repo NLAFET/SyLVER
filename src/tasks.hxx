@@ -128,15 +128,14 @@ namespace spldlt {
       spldlt::starpu::insert_activate_init_node(
             snode.hdl, cnode_hdls, nchild,
             posdef, &snode, &node, child_contrib, blksz, &factor_alloc, 
-            &pool_alloc, aval); 
+            &pool_alloc, aval);
       
       delete[] cnode_hdls;
       
 #else
       // Allocate data structures
       activate_front(
-            posdef, snode, node, child_contrib, blksz, factor_alloc,
-            pool_alloc); 
+            posdef, snode, node, child_contrib, blksz, factor_alloc); 
 
       // Add coefficients from original matrix
       init_node(snode, node, aval);
@@ -626,7 +625,7 @@ namespace spldlt {
    template <typename T, typename PoolAlloc>   
    void assemble_block_task(
          SymbolicFront const& snode, NumericFront<T,PoolAlloc>& node, 
-         SymbolicFront const& csnode, NumericFront<T,PoolAlloc>& cnode, 
+         SymbolicFront const& csnode, NumericFront<T,PoolAlloc> const& cnode, 
          int ii, int jj, int *cmap, int blksz, int prio) {
 
 #if defined(SPLDLT_USE_STARPU)
@@ -696,7 +695,7 @@ namespace spldlt {
       // assemble_block(node, cnode, ii, jj, cmap, blksz);
 #else
 
-      assemble_block(node, cnode, ii, jj, cmap, blksz);
+      assemble_block(node, cnode, ii, jj, cmap);
 #endif
    }
 
