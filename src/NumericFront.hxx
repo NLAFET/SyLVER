@@ -275,7 +275,7 @@ namespace spldlt {
       }
 
       /** \brief Return leading dimension of node's lcol member. */
-      size_t get_ldl() const {
+      inline size_t get_ldl() const {
          return spral::ssids::cpu::align_lda<T>(symb.nrow + ndelay_in);
       }
 

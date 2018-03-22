@@ -33,7 +33,7 @@ namespace spldlt {
       // Compute U = U - W L^{T}
       host_gemm(
             OP_N, OP_T, m, n, k,
-            // -1.0, ljk, ldl, ld, ldld,
+            // -1.0, ljk, ld_ljk, ld, ldld,
             -1.0, ld, ldld, ljk, ld_ljk,
             rbeta, upd, ldupd
             );
@@ -90,13 +90,13 @@ namespace spldlt {
    void form_contrib(
          NumericFront<T, PoolAlloc>& node,
          spral::ssids::cpu::Workspace& work,
-         int nelim_from, // First column in factors 
+         int nelim_from, // First column in factors
          int nelim_to // Last column in factors
          ) {
 
       int m = node.get_nrow();
       int n = node.get_ncol();
-      size_t ldl = align_lda<T>(m);
+      size_t ldl = node.get_ldl();
       T *lcol = node.lcol;
       T *d = &lcol[n*ldl];
       int blksz = node.blksz;
@@ -104,17 +104,28 @@ namespace spldlt {
       int fc = nelim_from/blksz; // First block-column
       int lc = nelim_to/blksz; // Last block-column
       int nr = node.get_nr();
-      int rsa = n/blksz;            
+      int rsa = n/blksz;
       int ncontrib = nr-rsa;
       
-      for (int k = fc; k <= lc; ++k) {
+      // printf("[form_contrib] fc = %d, lc = %d\n", fc, lc);
 
-         int first_col = std::max(k*blksz, nelim_from); // first column in current block-column of L
-         int last_col = std::min((k+1)*blksz-1, nelim_to); // last column in current block-column of L
+      // for (int k = fc; k <= lc; ++k) {
+
+      // int first_col = std::max(k*blksz, nelim_from); // first column in current block-column of L
+      // int last_col = std::min(((k+1)*blksz)-1, nelim_to); // last column in current block-column of L
+
+      int first_col = nelim_from; 
+      int last_col = nelim_to;
+
          //int nelim_col = 0;
          int nelim_col = last_col-first_col+1;
+         // if (k==fc) nelim_col = nelim_col+1; // debug
          T *dk = &d[2*first_col];
-
+         // printf("[form_contrib] first_col = %d, last_col = %d, nelim_from = %d, nelim_to = %d, nelim_col = %d\n",
+                // first_col, last_col, nelim_from, nelim_to, nelim_col);
+         // printf("[form_contrib] k = %d, first_col = %d, last_col = %d, nelim_from = %d, nelim_to = %d, nelim_col = %d\n",
+         //        k, first_col, last_col, nelim_from, nelim_to, nelim_col);
+         
          // printf("k = %d, first_col = %d, last_col = %d\n", k, first_col, last_col);
 
          for (int j = rsa; j < nr; ++j) {
@@ -136,13 +147,24 @@ namespace spldlt {
                // printf("[form_contrib] updm = %d, updn = %d\n", upd.m, upd.n);
 
                update_contrib_block(
-                     upd.m, upd.n, upd.a, upd.lda,  
+                     upd.m, upd.n, upd.a, upd.lda,
                      nelim_col, lik, ldl, ljk, ldl,
                      (nelim_from==0), dk, ld, ldld);
+               
+               // spral::ssids::cpu::calcLD<OP_N>(
+               //       upd.m, (k==fc) ? nelim_col+1 : nelim_col, lik, ldl, dk, ld, ldld);
+      
+               // // Compute U = U - W L^{T}
+               // host_gemm(
+               //       OP_N, OP_T, upd.m, upd.n, (k==fc) ? nelim_col+1 : nelim_col,
+               //       // -1.0, ljk, ld_ljk, ld, ldld,
+               //       -1.0, ld, ldld, ljk, ldl,
+               //       1.0, upd.a, upd.lda
+               //       );
 
             }
          }
-      }
+      // }
    }
 
    /// @brief Factor the failed pivots in a frontal matrix

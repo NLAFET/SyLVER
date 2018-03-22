@@ -1360,38 +1360,12 @@ contains
     
     ! debug
     ! nsubtrees = 0
-
+ 
     ! n = 332
 
     ! small(nodes(n)%least_desc:n) = -n
     ! small(n) = 1
-    ! nsubtrees = nsubtrees + 1 ! add new partition                 
-    ! contrib_dest(nsubtrees) = 0
-    ! if (n .lt. nnodes) then
-    !    j = sparent(n) ! get parent node
-    !    if (j .lt. nnodes) contrib_dest(nsubtrees) = j
-    ! end if
-    ! subtree_sa(nsubtrees) = nodes(n)%least_desc
-    ! subtree_en(nsubtrees) = n
-
-    ! n = 159
-
-    ! small(nodes(n)%least_desc:n) = -n
-    ! small(n) = 1
-    ! nsubtrees = nsubtrees + 1 ! add new partition                 
-    ! contrib_dest(nsubtrees) = 0
-    ! if (n .lt. nnodes) then
-    !    j = sparent(n) ! get parent node
-    !    if (j .lt. nnodes) contrib_dest(nsubtrees) = j
-    ! end if
-    ! subtree_sa(nsubtrees) = nodes(n)%least_desc
-    ! subtree_en(nsubtrees) = n
- 
-    ! n = 331
-
-    ! small(nodes(n)%least_desc:n) = -n
-    ! small(n) = 1
-    ! nsubtrees = nsubtrees + 1 ! add new partition                 
+    ! nsubtrees = nsubtrees + 1 ! add new partition             
     ! contrib_dest(nsubtrees) = 0
     ! if (n .lt. nnodes) then
     !    j = sparent(n) ! get parent node
@@ -1413,7 +1387,33 @@ contains
     ! subtree_sa(nsubtrees) = nodes(n)%least_desc
     ! subtree_en(nsubtrees) = n
 
-    ! n = 1380
+    ! n = 1039
+
+    ! small(nodes(n)%least_desc:n) = -n
+    ! small(n) = 1
+    ! nsubtrees = nsubtrees + 1 ! add new partition                 
+    ! contrib_dest(nsubtrees) = 0
+    ! if (n .lt. nnodes) then
+    !    j = sparent(n) ! get parent node
+    !    if (j .lt. nnodes) contrib_dest(nsubtrees) = j
+    ! end if
+    ! subtree_sa(nsubtrees) = nodes(n)%least_desc
+    ! subtree_en(nsubtrees) = n
+
+    ! n = 1378
+
+    ! small(nodes(n)%least_desc:n) = -n
+    ! small(n) = 1
+    ! nsubtrees = nsubtrees + 1 ! add new partition                 
+    ! contrib_dest(nsubtrees) = 0
+    ! if (n .lt. nnodes) then
+    !    j = sparent(n) ! get parent node
+    !    if (j .lt. nnodes) contrib_dest(nsubtrees) = j
+    ! end if
+    ! subtree_sa(nsubtrees) = nodes(n)%least_desc
+    ! subtree_en(nsubtrees) = n
+
+    ! n = 1379
 
     ! small(nodes(n)%least_desc:n) = -n
     ! small(n) = 1
