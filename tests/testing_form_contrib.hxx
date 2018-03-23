@@ -88,10 +88,12 @@ namespace spldlt { namespace tests {
       
       T *ld = new T[2*m];
       nelim += ldlt_tpp_factor(
-            m, n-from, perm, l, lda,
+            m, from, perm, l, lda,
             d, ld, m, true, u, small, 0, l, lda);
 
-
+      nelim += ldlt_tpp_factor(
+            m-nelim, n-nelim, &perm[nelim], &l[nelim*(lda+1)], lda,
+            &d[2*nelim], ld, m, true, u, small, nelim, &l[nelim], lda);
 
       printf("[form_contrib_test] first pass nelim = %d\n", nelim);
 
