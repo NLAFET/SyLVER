@@ -1,6 +1,7 @@
 // SpLDLT
 #include "testing.hxx"
 #include "testing_factor_node_indef.hxx"
+#include "testing_form_contrib.hxx"
 
 #include <cstdio>
 
@@ -57,7 +58,8 @@ int main(int argc, char** argv) {
    // factor_node_indef_test<double, 32, false>(0.01, 1e-20, true, false, 64, 64, 32, 1);
    int nerr = 0;
    
-   nerr += run_factor_node_indef_tests();
+   // nerr += run_factor_node_indef_tests();
+   nerr += run_form_contrib_tests();
 
    if(nerr==0) {
       printf(ANSI_COLOR_BLUE "\n====================================\n"

@@ -26,8 +26,6 @@
 #include "StarPU/kernels_indef.hxx"
 #endif
 
-// using namespace spral::ssids::cpu;
-
 namespace spldlt { namespace tests {
 
    
