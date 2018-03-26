@@ -34,6 +34,8 @@ namespace spldlt { namespace tests {
       ////////////////////////////////////////
       // Check input param
 
+      printf("[form_contrib_test] from = %d\n", from);
+
       ASSERT_TRUE(m >= n);
       ASSERT_TRUE(to >= from);
       ASSERT_TRUE(from >= 0);
@@ -79,7 +81,7 @@ namespace spldlt { namespace tests {
 
       ////////////////////////////////////////
       
-      int nelim = 0;
+      int nelim = 0, nelim1 = 0;
       int* perm = new int[m];
       for(int i=0; i<m; i++) perm[i] = i;
       T *d = &front.lcol[lda*n];
@@ -87,42 +89,36 @@ namespace spldlt { namespace tests {
       spral::ssids::cpu::Workspace work(PAGE_SIZE);
       
       T *ld = new T[2*m];
+      // nelim += ldlt_tpp_factor(
+      //       m-nelim, from, &perm[nelim], &l[nelim*(lda+1)], lda,
+      //       &d[2*nelim], ld, m, true, u, small, nelim, &l[nelim], lda);
       nelim += ldlt_tpp_factor(
-            m, from, perm, l, lda,
-            d, ld, m, true, u, small, 0, l, lda);
-
-      nelim += ldlt_tpp_factor(
-            m-nelim, n-nelim, &perm[nelim], &l[nelim*(lda+1)], lda,
+            m-nelim, from, &perm[nelim], &l[nelim*(lda+1)], lda,
             &d[2*nelim], ld, m, true, u, small, nelim, &l[nelim], lda);
+      nelim1 = nelim;
 
       printf("[form_contrib_test] first pass nelim = %d\n", nelim);
+      do_update<T>(m-nelim, nelim, &l[nelim*(lda+1)], &l[nelim], lda, d);
 
-      if (nelim > 0) {
-         memcpy(front.lcol, l, lda*n*sizeof(T)); // Copy l to front.lcol
-         
-         if (from>0)
-            do_update<T>(m-n, from, &l[n*(lda+1)], &l[n], lda, d);
+      // nelim += ldlt_tpp_factor(
+      //       m-nelim, n-nelim, &perm[nelim], &l[nelim*(lda+1)], lda,
+      //       &d[2*nelim], ld, m, true, u, small, nelim, &l[nelim], lda);
 
-         // form_contrib(front, work, from, to);
-         // add_cb_to_a(front, l, lda);
+      // printf("[form_contrib_test] first pass nelim = %d\n", nelim);
 
-         // do_update<T>(m-n, to-from, &l[n*(lda+1)], &l[n+lda*(from+1)], lda, &d[2*(from+1)]);
-         do_update<T>(m-n, nelim-from, &l[n*(lda+1)], &l[n+lda*(from+1)], lda, &d[2*(from+1)]);
+      // memcpy(front.lcol, l, lda*n*sizeof(T)); // Copy l to front.lcol
+      
+      // // form_contrib(front, work, from, to);
+      // // add_cb_to_a(front, l, lda);
 
-         // if (to<nelim)
-            // do_update<T>(m-n, nelim-to, &l[n*(lda+1)], &l[n+lda*(to+1)], lda, &d[2*(to+1)]);
-
-      }
-      // do_update<T>(m-n, nelim, &l[n*(lda+1)], &l[n], lda, d);
+      // do_update<T>(m-nelim, nelim-nelim1, &l[nelim*(lda+1)], &l[nelim+lda*nelim1], lda, d);
 
       nelim += ldlt_tpp_factor(
             m-nelim, m-nelim, &perm[nelim], &l[nelim*(lda+1)], lda,
             &d[2*nelim], ld, m, true, u, small, nelim, &l[nelim], lda);
       delete[] ld;
 
-
       printf("[form_contrib_test] nelim = %d\n", nelim);
-
 
       ////////////////////////////////////////
       
