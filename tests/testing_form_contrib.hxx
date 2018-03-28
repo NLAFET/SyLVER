@@ -100,9 +100,9 @@ namespace spldlt { namespace tests {
       printf("[form_contrib_test] first pass nelim = %d\n", nelim);
       do_update<T>(m-nelim, nelim, &l[nelim*(lda+1)], &l[nelim], lda, d);
 
-      // nelim += ldlt_tpp_factor(
-      //       m-nelim, n-nelim, &perm[nelim], &l[nelim*(lda+1)], lda,
-      //       &d[2*nelim], ld, m, true, u, small, nelim, &l[nelim], lda);
+      nelim += ldlt_tpp_factor(
+            m-nelim, n-nelim, &perm[nelim], &l[nelim*(lda+1)], lda,
+            &d[2*nelim], ld, m, true, u, small, nelim, &l[nelim], lda);
 
       // printf("[form_contrib_test] first pass nelim = %d\n", nelim);
 
@@ -111,7 +111,7 @@ namespace spldlt { namespace tests {
       // // form_contrib(front, work, from, to);
       // // add_cb_to_a(front, l, lda);
 
-      // do_update<T>(m-nelim, nelim-nelim1, &l[nelim*(lda+1)], &l[nelim+lda*nelim1], lda, d);
+      do_update<T>(m-nelim, nelim-nelim1, &l[nelim*(lda+1)], &l[nelim1*lda+nelim], lda, &d[2*nelim1]);
 
       nelim += ldlt_tpp_factor(
             m-nelim, m-nelim, &perm[nelim], &l[nelim*(lda+1)], lda,
