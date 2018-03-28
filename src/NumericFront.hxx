@@ -66,6 +66,16 @@ namespace spldlt {
          a = nullptr;
       }
 
+      /// @brief Zero block
+      void zero() {
+         if(!a) return;
+         for (int j = 0; j < n; j++) {
+            for (int i = 0; i < m; i++) {
+               a[j*lda+i] = 0.0;
+            }
+         }
+      }
+
 #if defined(SPLDLT_USE_STARPU)
       // Register handle on block
       void register_handle() {
@@ -176,6 +186,27 @@ namespace spldlt {
                   contrib_blocks[j*ncontrib+i].free();
                }
             }
+         }
+      }
+
+      /// @breif zero contribution blocks
+      /// 
+      /// Note: Mainly used for testing purpose as we avoid explictily
+      /// zeroing
+      void zero_contrib_blocks() {
+
+         int m = get_nrow();
+         int n = get_ncol();            
+         size_t contrib_dimn = m-n; // Dimension of contribution block
+         if (contrib_dimn>0 && contrib_blocks.size()>0) {
+            int nr = get_nr(); // number of block rows in front amtrix
+            int rsa = n / blksz; // index of first block in contribution blocks  
+            int ncontrib = nr-rsa;
+            for(int j = 0; j < ncontrib; j++) {
+               for(int i = j; i < ncontrib; i++) {
+                  contrib_blocks[j*ncontrib+i].zero();
+               }
+            }            
          }
       }
 

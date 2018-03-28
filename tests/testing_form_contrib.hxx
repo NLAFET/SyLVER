@@ -95,23 +95,25 @@ namespace spldlt { namespace tests {
       nelim += ldlt_tpp_factor(
             m-nelim, from, &perm[nelim], &l[nelim*(lda+1)], lda,
             &d[2*nelim], ld, m, true, u, small, nelim, &l[nelim], lda);
+
       nelim1 = nelim;
 
       printf("[form_contrib_test] first pass nelim = %d\n", nelim);
       do_update<T>(m-nelim, nelim, &l[nelim*(lda+1)], &l[nelim], lda, d);
 
       nelim += ldlt_tpp_factor(
-            m-nelim, n-nelim, &perm[nelim], &l[nelim*(lda+1)], lda,
+            m-nelim, to-nelim+1, &perm[nelim], &l[nelim*(lda+1)], lda,
             &d[2*nelim], ld, m, true, u, small, nelim, &l[nelim], lda);
+
+      printf("[form_contrib_test] second pass nelim = %d\n", nelim);
 
       // printf("[form_contrib_test] first pass nelim = %d\n", nelim);
 
-      // memcpy(front.lcol, l, lda*n*sizeof(T)); // Copy l to front.lcol
-      
-      // // form_contrib(front, work, from, to);
-      // // add_cb_to_a(front, l, lda);
-
-      do_update<T>(m-nelim, nelim-nelim1, &l[nelim*(lda+1)], &l[nelim1*lda+nelim], lda, &d[2*nelim1]);
+      memcpy(front.lcol, l, lda*n*sizeof(T)); // Copy factors into front
+      copy_a_to_cb(l, lda, front); // Copy constribution blocks into front      
+      form_contrib(front, work, nelim1, nelim-1);
+      add_cb_to_a(front, l, lda); // Copy constribution blocks back into l
+      // do_update<T>(m-nelim, nelim-nelim1, &l[nelim*(lda+1)], &l[nelim1*lda+nelim], lda, &d[2*nelim1]);
 
       nelim += ldlt_tpp_factor(
             m-nelim, m-nelim, &perm[nelim], &l[nelim*(lda+1)], lda,

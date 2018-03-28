@@ -8,7 +8,7 @@ namespace spldlt { namespace tests {
       
       // TEST(( form_contrib_test<double>(0.01, 1e-20, true, 64, 32, 0, 31, 32) ));
       // TEST(( form_contrib_test<double>(0.01, 1e-20, true, 64, 32, 10, 20, 32) ));
-      TEST(( form_contrib_test<double>(0.01, 1e-20, true, 64, 32, 10, 31, 32) ));
+      TEST(( form_contrib_test<double>(0.01, 1e-20, true, 64, 32, 10, 19, 32) ));
       
       return nerr;
    }
