@@ -34,6 +34,7 @@ namespace spldlt { namespace tests {
       ////////////////////////////////////////
       // Check input param
 
+      printf("[form_contrib_test] m = %d, n = %d\n", m, n);
       printf("[form_contrib_test] from = %d\n", from);
 
       ASSERT_TRUE(m >= n);
@@ -109,6 +110,7 @@ namespace spldlt { namespace tests {
 
       do_update<T>(n-nelim, nelim-nelim1, &l[nelim*(lda+1)], &l[nelim1*lda+nelim], lda, &d[2*nelim1]);
       do_update<T>(m-n, nelim-nelim1, &l[n*(lda+1)], &l[nelim1*lda+nelim], lda, &d[2*nelim1]);
+      // do_update<T>(m-nelim, nelim-nelim1, &l[nelim*(lda+1)], &l[nelim1*lda+nelim], lda, &d[2*nelim1]);
 
       // printf("[form_contrib_test] first pass nelim = %d\n", nelim);
 
