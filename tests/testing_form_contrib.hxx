@@ -107,12 +107,17 @@ namespace spldlt { namespace tests {
 
       printf("[form_contrib_test] second pass nelim = %d\n", nelim);
 
+      do_update<T>(n-nelim, nelim-nelim1, &l[nelim*(lda+1)], &l[nelim1*lda+nelim], lda, &d[2*nelim1]);
+      do_update<T>(m-n, nelim-nelim1, &l[n*(lda+1)], &l[nelim1*lda+nelim], lda, &d[2*nelim1]);
+
       // printf("[form_contrib_test] first pass nelim = %d\n", nelim);
 
-      memcpy(front.lcol, l, lda*n*sizeof(T)); // Copy factors into front
-      copy_a_to_cb(l, lda, front); // Copy constribution blocks into front      
-      form_contrib(front, work, nelim1, nelim-1);
-      add_cb_to_a(front, l, lda); // Copy constribution blocks back into l
+      // memcpy(front.lcol, l, lda*n*sizeof(T)); // Copy factors into front
+      // copy_a_to_cb(l, lda, front); // Copy constribution blocks into front      
+      // form_contrib(front, work, nelim1, nelim-1);
+      // form_contrib(front, work, 0, nelim-1);
+      // add_cb_to_a(front, l, lda); // Copy constribution blocks back into l
+      // copy_cb_to_a(front, l, lda); // Copy constribution blocks back into l
       // do_update<T>(m-nelim, nelim-nelim1, &l[nelim*(lda+1)], &l[nelim1*lda+nelim], lda, &d[2*nelim1]);
 
       nelim += ldlt_tpp_factor(
