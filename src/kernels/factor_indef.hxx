@@ -7,6 +7,8 @@
 #include "NumericFront.hxx"
 #include "kernels/ldlt_app.hxx"
 
+#include <assert.h>
+
 // SSIDS
 #include "ssids/cpu/Workspace.hxx"
 
@@ -94,8 +96,14 @@ namespace spldlt {
          int nelim_to // Last column in factors
          ) {
 
+      assert(nelim_to >= nelim_from);
+      assert(nelim_from >= 0);
+
       int m = node.get_nrow();
       int n = node.get_ncol();
+      
+      assert(nelim_to < n);
+      
       size_t ldl = node.get_ldl();
       T *lcol = node.lcol;
       T *d = &lcol[n*ldl];
