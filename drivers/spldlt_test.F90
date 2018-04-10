@@ -2,7 +2,7 @@ program spldlt_test
    use, intrinsic :: iso_c_binding
    use spral_ssids
    use spral_rutherford_boeing
-   use spral_matrix_util, only : cscl_verify, SPRAL_MATRIX_REAL_SYM_INDEF
+   ! use spral_matrix_util, only : cscl_verify, SPRAL_MATRIX_REAL_SYM_INDEF
    use spldlt_analyse_mod
    use spldlt_factorize_mod
    use spldlt_mod
@@ -33,18 +33,19 @@ program spldlt_test
    ! right-hand side and solution
    integer :: nrhs
    double precision, dimension(:, :), allocatable :: rhs, soln 
-   double precision, dimension(:), allocatable :: scaling
+   ! double precision, dimension(:), allocatable :: scaling
    double precision, dimension(:), allocatable :: res
 
    ! indexes
-   integer :: r, i, j
+   integer :: r, i
    integer :: k
+   integer(long) :: j
 
    ! timing
    integer :: start_t, stop_t, rate_t
    ! flags
-   integer :: flag, more
-
+   ! integer :: flag, more
+   
    ! ssids structures
    type(ssids_inform) :: inform ! stats
    ! type(ssids_akeep) :: akeep   ! analysis data
@@ -54,17 +55,18 @@ program spldlt_test
    type(spldlt_fkeep_type) :: spldlt_fkeep
 
    ! stats
-   real :: smanal, smfact, smaflop, smafact
+   real :: smfact
+   ! real :: smanal, smaflop, smafact
 
-   integer, parameter :: nfact = 1
+   !integer, parameter :: nfact = 1
    !integer, parameter :: nfact = 50
    !integer, parameter :: nfact = 100
 
-   integer, parameter :: nslv = 1
+   !integer, parameter :: nslv = 1
    !integer, parameter :: nslv = 10
    !integer, parameter :: nslv = 100
 
-   integer :: cuda_error ! DEBUG not useful for now 
+   ! integer :: cuda_error ! DEBUG not useful for now 
 
    pos_def = .false. ! Matrix assumed indef by default
    
@@ -320,7 +322,8 @@ program spldlt_test
      real(wp), dimension(nrhs*n), intent(in) :: b_vec
      real(wp), dimension(nrhs), intent(out) :: res
 
-     integer :: i, j, k, r
+     integer :: i, k, r
+     integer(long) :: j
      double precision, allocatable, dimension(:) :: x_norm
      real(wp), dimension(:), allocatable :: res_vec
      double precision :: temp
@@ -364,7 +367,7 @@ program spldlt_test
      do i = 1, nrhs
         temp = normA * x_norm(i) + &
              maxval(abs(b_vec((i-1)*n+1:i*n)))
-        if(temp .eq. 0) then
+        if(temp <= 0.d0) then
            res(i) = maxval(abs(res_vec((i-1)*n+1:i*n)))
         else
            res(i) = maxval(abs(res_vec((i-1)*n+1:i*n))) / temp
@@ -380,7 +383,7 @@ program spldlt_test
      real(wp), intent(out) :: norm
 
      real(wp), allocatable, dimension(:) :: row_norm
-     integer :: i
+     integer(long) :: i
 
      allocate(row_norm(n))
 
