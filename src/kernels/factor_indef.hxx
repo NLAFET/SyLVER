@@ -27,6 +27,8 @@ namespace spldlt {
          ) {
 
       T rbeta = zero_upd ? 0.0 : 1.0;
+
+      // printf("[update_contrib_block] m = %d, n = %d, k = %d\n", m, n, k);
       
       // Compute Lik Dk in workspace W
       spral::ssids::cpu::calcLD<OP_N>(

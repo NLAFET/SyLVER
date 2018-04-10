@@ -22,7 +22,8 @@
 
 namespace spldlt { namespace tests {
 
-      template<typename T>
+      template<typename T,
+               bool debug = false>
       int form_contrib_test(
             T u, T small, bool posdef,
             int m, int n, int from, int to,
@@ -35,6 +36,7 @@ namespace spldlt { namespace tests {
       // Check input param
 
       printf("[form_contrib_test] m = %d, n = %d\n", m, n);
+      printf("[form_contrib_test] blksz = %d\n", blksz);
       printf("[form_contrib_test] from = %d\n", from);
 
       ASSERT_TRUE(m >= n);
@@ -108,21 +110,29 @@ namespace spldlt { namespace tests {
 
       printf("[form_contrib_test] second pass nelim = %d\n", nelim);
 
+      // Update fully-summed
       do_update<T>(m-nelim, n-nelim, nelim-nelim1, &l[nelim*(lda+1)], &l[nelim1*lda+nelim], lda, &d[2*nelim1]);
-      do_update<T>(    m-n,     m-n, nelim-nelim1, &l[n*(lda+1)],     &l[nelim1*lda+n], lda, &d[2*nelim1]);
 
+      if(debug) {
+         std::cout << "A:" << std::endl;
+         print_mat("%10.2e", m, l, lda);
+      }
+
+      // Update contribution blocks
+      // do_update<T>(    m-n,     m-n, nelim-nelim1, &l[n*(lda+1)],     &l[nelim1*lda+n], lda, &d[2*nelim1]);
+
+      memcpy(front.lcol, l, lda*n*sizeof(T)); // Copy factors into front
+      copy_a_to_cb(l, lda, front); // Copy constribution blocks into front      
+      form_contrib(front, work, nelim1, nelim-1);
+      copy_cb_to_a(front, l, lda); // Copy constribution blocks back into l
+      
+      // Update trailing sub-matrix
       // do_update<T>(m-nelim, nelim-nelim1, &l[nelim*(lda+1)], &l[nelim1*lda+nelim], lda, &d[2*nelim1]);
-      // do_update<T>(m-nelim, m-nelim, nelim-nelim1, &l[nelim*(lda+1)], &l[nelim1*lda+nelim], lda, &d[2*nelim1]);
 
-      // printf("[form_contrib_test] first pass nelim = %d\n", nelim);
-
-      // memcpy(front.lcol, l, lda*n*sizeof(T)); // Copy factors into front
-      // copy_a_to_cb(l, lda, front); // Copy constribution blocks into front      
-      // form_contrib(front, work, nelim1, nelim-1);
-      // form_contrib(front, work, 0, nelim-1);
-      // add_cb_to_a(front, l, lda); // Copy constribution blocks back into l
-      // copy_cb_to_a(front, l, lda); // Copy constribution blocks back into l
-      // do_update<T>(m-nelim, nelim-nelim1, &l[nelim*(lda+1)], &l[nelim1*lda+nelim], lda, &d[2*nelim1]);
+      if(debug) {
+         std::cout << "A:" << std::endl;
+         print_mat("%10.2e", m, l, lda);
+      }
 
       nelim += ldlt_tpp_factor(
             m-nelim, m-nelim, &perm[nelim], &l[nelim*(lda+1)], lda,
