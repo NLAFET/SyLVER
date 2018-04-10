@@ -1325,12 +1325,28 @@ contains
     ! write(*,*)'nlz: ', nlz
     ! write(*,*)'final lzero: ', lzero(1:nlz)
 
-    ! ! debug
-    ! nlz = 1
-    ! lzero(1) = 1381
-
+    ! debug
+    ! small = 0
+    ! nsubtrees = 0
+    ! nlz = 57
+    ! lzero = (/  727,   525,  1301,  1321,   846,  1136,  1256,   945,   481,   446,  1219,  1070,   969,   504,   389,   867,  1237,  1087,   784,  1191,   668,   766,  1174,   822,   420,   889,   580,   923,   547,  1055,   807,  1357,   689,   492,   646,   988,  1278,   602,   738,  1018,  1147,  1006,   359,  1105,   565,   998,   536,  1158,  1029,  1336,   704,   746,  1345,   623,   895,  1363, 332 /)
+    
     ! mark all the children of nodes in l0
-    print *, "lzero = ", lzero(1:nlz)
+    print *, "nlz = ", nlz
+    ! print *, "lzero = ", lzero(1:nlz)
+        
+    j = 0
+    write(*,'(a)', advance = "no") "lzero = (/"
+    do i=1, nlz
+       write(*,'(i5)', advance = "no") lzero(i)
+       if (i .lt. nlz) write(*,'(a)', advance = "no") ", "
+       j = j+1
+    end do
+    write(*,'(a)', advance = "no") "/)"
+    write(*,'(a)') " "
+
+    write(*,'(i5)') j
+              
     do i=1, nlz
        n = lzero(i)
 
