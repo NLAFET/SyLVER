@@ -108,9 +108,11 @@ namespace spldlt { namespace tests {
 
       printf("[form_contrib_test] second pass nelim = %d\n", nelim);
 
-      do_update<T>(n-nelim, nelim-nelim1, &l[nelim*(lda+1)], &l[nelim1*lda+nelim], lda, &d[2*nelim1]);
-      do_update<T>(m-n, nelim-nelim1, &l[n*(lda+1)], &l[nelim1*lda+nelim], lda, &d[2*nelim1]);
+      do_update<T>(m-nelim, n-nelim, nelim-nelim1, &l[nelim*(lda+1)], &l[nelim1*lda+nelim], lda, &d[2*nelim1]);
+      do_update<T>(    m-n,     m-n, nelim-nelim1, &l[n*(lda+1)],     &l[nelim1*lda+n], lda, &d[2*nelim1]);
+
       // do_update<T>(m-nelim, nelim-nelim1, &l[nelim*(lda+1)], &l[nelim1*lda+nelim], lda, &d[2*nelim1]);
+      // do_update<T>(m-nelim, m-nelim, nelim-nelim1, &l[nelim*(lda+1)], &l[nelim1*lda+nelim], lda, &d[2*nelim1]);
 
       // printf("[form_contrib_test] first pass nelim = %d\n", nelim);
 

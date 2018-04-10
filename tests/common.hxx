@@ -18,7 +18,7 @@
 
 namespace spldlt { namespace tests {
 
-    //using namespace spldlt::ldlt_app_internal;
+   //using namespace spldlt::ldlt_app_internal;
 
    /// @brief Sovle Ax = b whre A = PLDL^{T}P^{T}
    template<typename T>
@@ -301,6 +301,72 @@ namespace spldlt { namespace tests {
 
       // Free memory
       delete[] ad21;
+   }
+      
+   // Update A22 -= A_21 D_11 A_21^T
+   template <typename T>
+   void do_update(int m, int n, int k, T *a22, const T *a21, int lda, const T* d) {
+         // Form A_21 D_11
+         T *ad21 = new T[m*k];
+         for(int j=0; j<k;) {
+            if(j+1<k && std::isinf(d[2*j+2])) {
+               // 2x2 pivot
+               // (Actually stored as D^-1 so need to invert it again)
+               T di11 = d[2*j]; T di21 = d[2*j+1]; T di22 = d[2*j+3];
+               T det = di11*di22 - di21*di21;
+               T d11 = di22 / det; T d21 = -di21 / det; T d22 = di11 / det;
+               // And calulate ad21
+               for(int i=0; i<m; i++) {
+                  ad21[j*m+i]     = d11*a21[j*lda+i] + d21*a21[(j+1)*lda+i];
+                  ad21[(j+1)*m+i] = d21*a21[j*lda+i] + d22*a21[(j+1)*lda+i];
+               }
+               // Increment j
+               j += 2;
+            } else {
+               // 1x1 pivot
+               // (Actually stored as D^-1 so need to invert it again)
+               if(d[2*j] == 0.0) {
+                  // Handle zero pivots with care
+                  for(int i=0; i<m; i++) {
+                     ad21[j*m+i] = 0.0;
+                  }
+               } else {
+                  // Standard 1x1 pivot
+                  T d11 = 1/d[2*j];
+                  // And calulate ad21
+                  for(int i=0; i<m; i++) {
+                     ad21[j*m+i] = d11*a21[j*lda+i];
+                  }
+               }
+               // Increment j
+               j++;
+            }
+         }
+
+         /*printf("a21:\n");
+           for(int i=0; i<n; i++) {
+           for(int j=0; j<k; j++)
+           printf(" %le", a21[j*lda+i]);
+           printf("\n");
+           }
+           printf("ad21:\n");
+           for(int i=0; i<n; i++) {
+           for(int j=0; j<k; j++)
+           printf(" %le", ad21[j*n+i]);
+           printf("\n");
+           }
+           printf("a22:\n");
+           for(int i=0; i<n; i++) {
+           for(int j=0; j<n; j++)
+           printf(" %le", a22[j*lda+i]);
+           printf("\n");
+           }*/
+
+         // Perform actual update
+         host_gemm<T>(OP_N, OP_T, m, n, k, -1.0, ad21, m, a21, lda, 1.0, a22, lda);
+
+         // Free memory
+         delete[] ad21;
    }
 
    /// @brief Copy the array a into the contribution blocks
