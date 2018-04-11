@@ -1303,7 +1303,7 @@ contains
                 small(c) = 1 ! node is too smal; mark it
                 nsubtrees = nsubtrees + 1 ! add new partition
                 contrib_dest(nsubtrees) = 0
-                if (j .lt. nnodes) contrib_dest(nsubtrees) = n
+                if (n .le. nnodes) contrib_dest(nsubtrees) = n
                 subtree_sa(nsubtrees) = nodes(c)%least_desc
                 subtree_en(nsubtrees) = c
              end if
@@ -1367,8 +1367,9 @@ contains
           ! write(*,*)'desc: ', fkeep%nodes(c)%least_desc
           small(nodes(c)%least_desc:c) = -c
           small(c) = 1
-          nsubtrees = nsubtrees + 1 ! add new partition                 
-          contrib_dest(nsubtrees) = n
+          nsubtrees = nsubtrees + 1 ! add new partition
+          contrib_dest(nsubtrees) = 0
+          if (n .le. nnodes) contrib_dest(nsubtrees) = n
           subtree_sa(nsubtrees) = nodes(c)%least_desc
           subtree_en(nsubtrees) = c
        end do
