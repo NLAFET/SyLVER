@@ -302,8 +302,20 @@ contains
     nth = size(akeep%topology)
     ! nth = 2 ! debug
 
-    call prune_tree(akeep%nnodes, akeep%sptr, akeep%sparent, akeep%rptr, nth, &
-         spldlt_akeep%nsubtrees, small, contrib_dest, subtree_sa, spldlt_akeep%subtree_en)
+    ! Allocate structures and init for tree prunning
+    allocate(small(akeep%nnodes+1))
+    allocate(contrib_dest(akeep%nnodes+1))
+    allocate(subtree_sa(akeep%nnodes+1))
+    allocate(spldlt_akeep%subtree_en(akeep%nnodes+1))
+
+    spldlt_akeep%nsubtrees = 0
+    small = 0
+    contrib_dest = 0
+    subtree_sa = 0
+    spldlt_akeep%subtree_en = 0
+
+    ! call prune_tree(akeep%nnodes, akeep%sptr, akeep%sparent, akeep%rptr, nth, &
+    !      spldlt_akeep%nsubtrees, small, contrib_dest, subtree_sa, spldlt_akeep%subtree_en)
 
     print *, " nsubtrees = ", spldlt_akeep%nsubtrees
     print *, " contrib_dest = ", contrib_dest(1:spldlt_akeep%nsubtrees)
@@ -343,6 +355,10 @@ contains
          akeep%sptr, akeep%sparent, akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist, &
          spldlt_akeep%nsubtrees, spldlt_akeep%subtree_en, small, contrib_dest)
          !akeep%nparts, akeep%part, akeep%contrib_idx, exec_loc, contrib_dest)
+
+    deallocate(small)
+    deallocate(contrib_dest)
+    deallocate(subtree_sa)
 
     return
     
@@ -1133,10 +1149,10 @@ contains
     integer(long), dimension(nnodes+1), intent(in) :: rptr
     integer, intent(in) :: nth ! number of workers
     integer, intent(out) :: nsubtrees ! number of partititons: top part plus subtrees
-    integer, dimension(:), allocatable, intent(out) :: small ! nodes below the lzero layer  
-    integer, dimension(:), allocatable, intent(out) :: contrib_dest ! node to which each partition contrirbute
-    integer, dimension(:), allocatable, intent(out) :: subtree_sa ! subtree_sa(i) is the first node in subtree i
-    integer, dimension(:), allocatable, intent(out) :: subtree_en ! subtree_sa(i) is the root node in subtree i
+    integer, dimension(:), allocatable, intent(inout) :: small ! nodes below the lzero layer  
+    integer, dimension(:), allocatable, intent(inout) :: contrib_dest ! node to which each partition contrirbute
+    integer, dimension(:), allocatable, intent(inout) :: subtree_sa ! subtree_sa(i) is the first node in subtree i
+    integer, dimension(:), allocatable, intent(inout) :: subtree_en ! subtree_sa(i) is the root node in subtree i
     
     integer(long), allocatable :: weight(:) ! weight(i) contains weight below node i 
     integer :: j
@@ -1158,12 +1174,7 @@ contains
     type(node_type), allocatable :: nodes(:)
 
     print *, "[prune_tree] nth = ", nth
-    
-    allocate(small(nnodes+1))
-    allocate(contrib_dest(nnodes+1))
-    allocate(subtree_sa(nnodes+1))
-    allocate(subtree_en(nnodes+1))
-    
+
     ! Count flops below each node
     allocate(weight(nnodes+1))
     weight(:) = 0
@@ -1333,19 +1344,19 @@ contains
     
     ! mark all the children of nodes in l0
     print *, "nlz = ", nlz
-    ! print *, "lzero = ", lzero(1:nlz)
+    print *, "lzero = ", lzero(1:nlz)
         
-    j = 0
-    write(*,'(a)', advance = "no") "lzero = (/"
-    do i=1, nlz
-       write(*,'(i5)', advance = "no") lzero(i)
-       if (i .lt. nlz) write(*,'(a)', advance = "no") ", "
-       j = j+1
-    end do
-    write(*,'(a)', advance = "no") "/)"
-    write(*,'(a)') " "
+    ! j = 0
+    ! write(*,'(a)', advance = "no") "lzero = (/"
+    ! do i=1, nlz
+    !    write(*,'(i5)', advance = "no") lzero(i)
+    !    if (i .lt. nlz) write(*,'(a)', advance = "no") ", "
+    !    j = j+1
+    ! end do
+    ! write(*,'(a)', advance = "no") "/)"
+    ! write(*,'(a)') " "
 
-    write(*,'(i5)') j
+    ! write(*,'(i5)') j
               
     do i=1, nlz
        n = lzero(i)
