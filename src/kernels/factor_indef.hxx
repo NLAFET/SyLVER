@@ -240,9 +240,10 @@ namespace spldlt {
       node.ndelay_out = n - node.nelim;         
       stats.num_delay += node.ndelay_out;
 
-      // if (node.nelim == 0) {
-      //    printf("[factor_front_indef_failed]\n");
-      // }
+      if (node.nelim == 0) {
+         // printf("[factor_front_indef_failed]\n");
+         node.zero_contrib_blocks();
+      }
    }
    
 } // end of namespace spldlt

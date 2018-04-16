@@ -314,8 +314,8 @@ contains
     subtree_sa = 0
     spldlt_akeep%subtree_en = 0
 
-    ! call prune_tree(akeep%nnodes, akeep%sptr, akeep%sparent, akeep%rptr, nth, &
-    !      spldlt_akeep%nsubtrees, small, contrib_dest, subtree_sa, spldlt_akeep%subtree_en)
+    call prune_tree(akeep%nnodes, akeep%sptr, akeep%sparent, akeep%rptr, nth, &
+         spldlt_akeep%nsubtrees, small, contrib_dest, subtree_sa, spldlt_akeep%subtree_en)
 
     print *, " nsubtrees = ", spldlt_akeep%nsubtrees
     print *, " contrib_dest = ", contrib_dest(1:spldlt_akeep%nsubtrees)
@@ -1310,6 +1310,7 @@ contains
                 lzero  (nlz) = c
                 lzero_w(nlz) = -weight(c)
              else
+                print *, "small subtree"
                 small(nodes(c)%least_desc:c) = -c
                 small(c) = 1 ! node is too smal; mark it
                 nsubtrees = nsubtrees + 1 ! add new partition
