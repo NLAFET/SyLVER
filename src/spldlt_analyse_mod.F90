@@ -1310,7 +1310,7 @@ contains
                 lzero  (nlz) = c
                 lzero_w(nlz) = -weight(c)
              else
-                print *, "small subtree"
+                ! print *, "small subtree"
                 small(nodes(c)%least_desc:c) = -c
                 small(c) = 1 ! node is too smal; mark it
                 nsubtrees = nsubtrees + 1 ! add new partition
