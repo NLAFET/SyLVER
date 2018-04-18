@@ -214,9 +214,6 @@ contains
 
     type(spldlt_akeep_type), target, intent(inout) :: spldlt_akeep ! spldlt akeep structure 
     integer, intent(in) :: n ! order of system
-
-    type(ssids_options), intent(in) :: options
-    type(ssids_inform), intent(inout) :: inform
     integer(long), intent(in) :: ptr(n+1) ! col pointers (lower triangle) 
     integer, intent(in) :: row(ptr(n+1)-1) ! row indices (lower triangle)
     integer(long), intent(in) :: ptr2(n+1) ! col pointers (whole matrix)
@@ -226,6 +223,8 @@ contains
     integer, dimension(n), intent(out) :: invp 
       ! Work array. Used to hold inverse of order but
       ! is NOT set to inverse for the final order that is returned.
+    type(ssids_options), intent(in) :: options
+    type(ssids_inform), intent(inout) :: inform
 
     character(50)  :: context ! Procedure name (used when printing).
     type(ssids_akeep), pointer :: akeep ! SSIDS akeep structure
