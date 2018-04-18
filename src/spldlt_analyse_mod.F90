@@ -1311,7 +1311,7 @@ contains
                 lzero  (nlz) = c
                 lzero_w(nlz) = -weight(c)
              else !if (small(c) .eq. 0) then ! make sure this node has not been marked already
-                print *, "small subtree, c = ", c, ", smallth = ", smallth
+                ! print *, "small subtree, c = ", c, ", smallth = ", smallth
                 small(nodes(c)%least_desc:c) = -c
                 small(c) = 1 ! node is too smal; mark it
                 nsubtrees = nsubtrees + 1 ! add new partition
@@ -1398,7 +1398,7 @@ contains
        end if
     end do
 
-    print *, "[prune_tree] nubtrees 2 = ", j
+    ! print *, "[prune_tree] nubtrees 2 = ", j
 
     ! nsubtrees = 0
  
