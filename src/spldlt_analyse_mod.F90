@@ -317,9 +317,9 @@ contains
     call prune_tree(akeep%nnodes, akeep%sptr, akeep%sparent, akeep%rptr, nth, &
          spldlt_akeep%nsubtrees, small, contrib_dest, subtree_sa, spldlt_akeep%subtree_en)
 
-    print *, " nsubtrees = ", spldlt_akeep%nsubtrees
-    print *, " contrib_dest = ", contrib_dest(1:spldlt_akeep%nsubtrees)
-    print *, " subtrees = ", spldlt_akeep%subtree_en(1:spldlt_akeep%nsubtrees)
+    print *, "[analyse_core] nsubtrees = ", spldlt_akeep%nsubtrees
+    print *, "[analyse_core] contrib_dest = ", contrib_dest(1:spldlt_akeep%nsubtrees)
+    print *, "[analyse_core] subtrees = ", spldlt_akeep%subtree_en(1:spldlt_akeep%nsubtrees)
 
     ! dump atree in a dot file
     call spldlt_print_atree(akeep%nnodes, akeep%sptr, akeep%sparent, akeep%rptr, small)
@@ -1292,6 +1292,7 @@ contains
                 if(smallth .lt. 1e-4) then
                    exit godown
                 else
+                   ! print *, "[prune_tree] restart pruning"
                    goto 10
                 end if
              end if
@@ -1309,8 +1310,8 @@ contains
                 nlz = nlz+1
                 lzero  (nlz) = c
                 lzero_w(nlz) = -weight(c)
-             else
-                ! print *, "small subtree"
+             else !if (small(c) .eq. 0) then ! make sure this node has not been marked already
+                print *, "small subtree, c = ", c, ", smallth = ", smallth
                 small(nodes(c)%least_desc:c) = -c
                 small(c) = 1 ! node is too smal; mark it
                 nsubtrees = nsubtrees + 1 ! add new partition
@@ -1344,8 +1345,8 @@ contains
     ! lzero = (/  727,   525,  1301,  1321,   846,  1136,  1256,   945,   481,   446,  1219,  1070,   969,   504,   389,   867,  1237,  1087,   784,  1191,   668,   766,  1174,   822,   420,   889,   580,   923,   547,  1055,   807,  1357,   689,   492,   646,   988,  1278,   602,   738,  1018,  1147,  1006,   359,  1105,   565,   998,   536,  1158,  1029,  1336,   704,   746,  1345,   623,   895,  1363, 332 /)
     
     ! mark all the children of nodes in l0
-    print *, "nlz = ", nlz
-    print *, "lzero = ", lzero(1:nlz)
+    ! print *, "nlz = ", nlz
+    ! print *, "lzero = ", lzero(1:nlz)
         
     ! j = 0
     ! write(*,'(a)', advance = "no") "lzero = (/"
@@ -1377,17 +1378,28 @@ contains
           c = nodes(n)%child(j)
           ! print *, "c: ", c
           ! write(*,*)'desc: ', fkeep%nodes(c)%least_desc
-          small(nodes(c)%least_desc:c) = -c
-          small(c) = 1
-          nsubtrees = nsubtrees + 1 ! add new partition
-          contrib_dest(nsubtrees) = 0
-          if (n .le. nnodes) contrib_dest(nsubtrees) = n
-          subtree_sa(nsubtrees) = nodes(c)%least_desc
-          subtree_en(nsubtrees) = c
+          if (small(c) .eq. 0) then
+             small(nodes(c)%least_desc:c) = -c
+             small(c) = 1
+             nsubtrees = nsubtrees + 1 ! add new partition
+             contrib_dest(nsubtrees) = 0
+             if (n .le. nnodes) contrib_dest(nsubtrees) = n
+             subtree_sa(nsubtrees) = nodes(c)%least_desc
+             subtree_en(nsubtrees) = c
+          end if
        end do
     end do
     
     ! debug
+    j = 0
+    do i = 1, nnodes
+       if (small(i) .eq. 1) then
+          j = j+1
+       end if
+    end do
+
+    print *, "[prune_tree] nubtrees 2 = ", j
+
     ! nsubtrees = 0
  
     ! n = 332
