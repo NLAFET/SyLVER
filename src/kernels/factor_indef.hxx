@@ -8,6 +8,7 @@
 #include "kernels/ldlt_app.hxx"
 
 #include <assert.h>
+#include <chrono>
 
 // SSIDS
 #include "ssids/cpu/Workspace.hxx"
@@ -214,19 +215,28 @@ namespace spldlt {
                ) {
 
             T *ld = work.get_ptr<T>(m-nelim);
+            // auto start = std::chrono::high_resolution_clock::now();
             node.nelim += ldlt_tpp_factor(
                   m-nelim, n-nelim, &perm[nelim], &lcol[nelim*(ldl+1)], ldl, 
                   &d[2*nelim], ld, m-nelim, options.action, options.u, options.small, 
                   nelim, &lcol[nelim], ldl);
-
+            // auto end = std::chrono::high_resolution_clock::now();
+            // long t_factor = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count();
+            // long t_form_contrib = 0;
             if(
                   (m-n>0) && // We're not at a root node
                   (node.nelim > nelim) // We've eliminated columns at second pass
                   ) {
                   
                // Compute contribution blocks
+               // auto start = std::chrono::high_resolution_clock::now();
                form_contrib(node, work, nelim, node.nelim-1);
+               // auto end = std::chrono::high_resolution_clock::now();
+               // t_form_contrib = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count();
             }
+
+            // printf("[factor_front_indef_failed] m = %d, n = %d, LDLT TPP = %e, form contrib = %e\n", m-nelim, n-nelim, 1e-9*t_factor, 1e-9*t_form_contrib);
+
             if(options.pivot_method==PivotMethod::tpp) {
                stats.not_first_pass += n - node.nelim;
             } else {
