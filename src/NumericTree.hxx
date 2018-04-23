@@ -116,6 +116,7 @@ namespace spldlt {
          } else { // indefinite
             for(int ni=0; ni<symb_.nnodes_; ni++) {
                int m = symb_[ni].nrow + fronts_[ni].ndelay_in;
+               stats.maxfront = std::max(stats.maxfront, m);
                int n = symb_[ni].ncol + fronts_[ni].ndelay_in;
                int ldl = align_lda<T>(m);
                T *d = fronts_[ni].lcol + n*ldl;

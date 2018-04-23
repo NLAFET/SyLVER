@@ -319,7 +319,7 @@ contains
     ! print *, "[analyse_core] nsubtrees = ", spldlt_akeep%nsubtrees
     ! print *, "[analyse_core] contrib_dest = ", contrib_dest(1:spldlt_akeep%nsubtrees)
     ! print *, "[analyse_core] subtrees = ", spldlt_akeep%subtree_en(1:spldlt_akeep%nsubtrees)
-
+    
     ! dump atree in a dot file
     call spldlt_print_atree(akeep%nnodes, akeep%sptr, akeep%sparent, akeep%rptr, small)
     
