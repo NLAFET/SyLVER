@@ -200,7 +200,7 @@ namespace spldlt {
 
       // Try to eliminate the columns uneliminated at first pass
       if (node.nelim < n) {
-
+         // printf("[factor_front_indef_failed] nelim = %d\n", node.nelim);
          nelim = node.nelim;
          if(options.pivot_method!=PivotMethod::tpp)
             stats.not_first_pass += n-nelim;

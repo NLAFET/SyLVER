@@ -1073,6 +1073,7 @@ public:
       } else { /* block_size == INNER_BLOCK_SIZE */
          // Call another routine for small block factorization
          if(ncol() < INNER_BLOCK_SIZE || !is_aligned(aval_)) {
+            // printf("[factor] ncol = %d, is_aligned = %d\n", ncol(), is_aligned(aval_));
             // printf("[Block::factor] nrow = %d, ncol = %d\n", nrow(), ncol());
          // if(ncol() < INNER_BLOCK_SIZE || !(reinterpret_cast<uintptr_t>(aval_) % 32 == 0)) {
             T* ld = work.get_ptr<T>(2*INNER_BLOCK_SIZE);
@@ -1349,9 +1350,20 @@ private:
    inline int get_nrow(int blk) const {
       return calc_blkn(blk, m_, block_size_);
    }
+
    bool is_aligned(void* ptr) {
+#if defined(__AVX512F__)
+      const int align = 64;
+#elif defined(__AVX__)
       const int align = 32;
+#else
+      const int align = 16;
+#endif
+      // printf("[is_aligned] align = %d\n", align);
       return (reinterpret_cast<uintptr_t>(ptr) % align == 0);
+
+      // const int align = 32;
+      // return (reinterpret_cast<uintptr_t>(ptr) % align == 0);
    }
 
    int const i_; ///< block's row
