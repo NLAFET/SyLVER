@@ -1183,8 +1183,8 @@ contains
        weight(j) = weight(j) + weight(node)
     end do
     
-    allocate(lzero_w (nnodes))
-    allocate(lzero   (nnodes))
+    allocate(lzero_w (nnodes+1))
+    allocate(lzero   (nnodes+1))
     allocate(proc_w  (nth))
 
     ! count number of children per node
@@ -1282,7 +1282,7 @@ contains
        found = .false.
        findn: do
           if(leaves .eq. totleaves) exit godown ! reached the bottom of the tree
-        
+
           if(leaves .eq. nlz) then
              if(nlz .ge. nth*max(2.d0,(log(real(nth,kind(1.d0)))/log(2.d0))**2)) then 
                 exit godown ! all the nodes in l0 are leaves. nothing to do
@@ -1302,7 +1302,7 @@ contains
           ! append children of n
           do i=1, size(nodes(n)%child) ! nchild(n)
              c = nodes(n)%child(i)
-             ! print *, "c:", c
+             print *, "c =", c
              if(real(weight(c), kind(1.d0)) .gt. smallth*real(totflops, kind(1.d0))) then
                 ! this child is big enough, add it
                 found = .true.
