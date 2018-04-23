@@ -1302,7 +1302,7 @@ contains
           ! append children of n
           do i=1, size(nodes(n)%child) ! nchild(n)
              c = nodes(n)%child(i)
-             print *, "c =", c
+             ! print *, "c =", c
              if(real(weight(c), kind(1.d0)) .gt. smallth*real(totflops, kind(1.d0))) then
                 ! this child is big enough, add it
                 found = .true.
