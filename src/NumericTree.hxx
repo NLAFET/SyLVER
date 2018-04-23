@@ -110,9 +110,42 @@ namespace spldlt {
          for(auto tstats : worker_stats)
             stats += tstats;
          if(stats.flag < 0) return;
-        
-      }
 
+         if(posdef) {
+            // all stats remain zero
+         } else { // indefinite
+            for(int ni=0; ni<symb_.nnodes_; ni++) {
+               int m = symb_[ni].nrow + fronts_[ni].ndelay_in;
+               int n = symb_[ni].ncol + fronts_[ni].ndelay_in;
+               int ldl = align_lda<T>(m);
+               T *d = fronts_[ni].lcol + n*ldl;
+               for(int i=0; i<fronts_[ni].nelim; ) {
+                  T a11 = d[2*i];
+                  T a21 = d[2*i+1];
+                  if(i+1==fronts_[ni].nelim || std::isfinite(d[2*i+2])) {
+                     // 1x1 pivot (or zero)
+                     if(a11 == 0.0) {
+                        // NB: If we reach this stage, options.action must be true.
+                        stats.flag = Flag::WARNING_FACT_SINGULAR;
+                        stats.num_zero++;
+                     }
+                     if(a11 < 0.0) stats.num_neg++;
+                     i++;
+                  } else {
+                     // 2x2 pivot
+                     T a22 = d[2*i+3];
+                     stats.num_two++;
+                     T det = a11*a22 - a21*a21; // product of evals
+                     T trace = a11 + a22; // sum of evals
+                     if(det < 0) stats.num_neg++;
+                     else if(trace < 0) stats.num_neg+=2;
+                     i+=2;
+                  }
+               }
+            }
+         }
+      }
+      
       ////////////////////////////////////////////////////////////////////////////////   
       // factor_mf_indef
       void factor_mf_indef(
