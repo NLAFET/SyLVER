@@ -55,55 +55,12 @@ namespace spldlt {
          typedef spldlt::ldlt_app_internal::CopyBackup<T, PoolAlloc> Backup;
          typedef FactorSymIndef<T, INNER_BLOCK_SIZE, Backup, debug, PoolAlloc> FactorSymIndefSpec;
          
-         // Backup &backup = *node.backup;
-         // CopyBackup<T, PoolAlloc> backup(m, n, blksz, pool_alloc);
-         // spldlt::ldlt_app_internal::ColumnData<T, IntAlloc> &cdata = *node.cdata;
-         //ColumnData<T, IntAlloc> cdata(n, blksz, IntAlloc(pool_alloc));
-
-         // int const mblk = calc_nblk(m, blksz);
-
-         // node.nelim = FactorSymIndef
-         //    <T, INNER_BLOCK_SIZE, CopyBackup<T, PoolAlloc>, debug, PoolAlloc>
-         //    ::ldlt_app(m, n, perm, lcol, ldl, d, backup, options, blksz, 0.0, upd, 0, 
-         //               workspaces, pool_alloc);
-           
-         // FactorSymIndef
-         //    <T, INNER_BLOCK_SIZE, CopyBackup<T, PoolAlloc>, debug, PoolAlloc>
-         //    ::factor_indef_app_async(m, n, perm, lcol, ldl, d, cdata, backup,
-         //                             options, blksz, 0.0, upd, 0, workspaces,
-         //                             pool_alloc, node.nelim);
-
          FactorSymIndefSpec::factor_front_indef_app(
                node, options, 0.0, upd, 0, workspaces, pool_alloc,
                node.nelim);
          
-// #if defined(SPLDLT_USE_STARPU)
-//          starpu_task_wait_for_all();
-// #endif
-
-//          printf("[factor_front_indef] node_nelim = %d\n", node.nelim);
-
-         // // realease all memory used for backup
-         // backup.release_all_memory(); 
-         
-         // // Permute failed entries to end
-         // if (node.nelim < n)
-         //    FactorSymIndef
-         //       <T, INNER_BLOCK_SIZE, CopyBackup<T, PoolAlloc>, debug, PoolAlloc>
-         //       ::permute_failed (
-         //             m, n, perm, lcol, ldl,
-         //             nelim, 
-         //             cdata, blksz,
-         //             pool_alloc);
-
          FactorSymIndefSpec::release_permute_failed_task (
                node, pool_alloc);
-
-// #if defined(SPLDLT_USE_STARPU)
-//          starpu_task_wait_for_all();
-// #endif
-         
-//         printf("[factor_front_indef_nocontrib] first pass = %d out of %d\n", node.nelim, n);
       }
 
       // Process uneliminated columns 
