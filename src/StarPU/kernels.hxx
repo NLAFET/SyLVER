@@ -837,7 +837,7 @@ namespace spldlt { namespace starpu {
       void subtree_assemble_contrib_cpu_func(void *buffers[], void *cl_arg) {
 
          NumericFront<T, PoolAlloc> *node = nullptr;
-         SymbolicFront *csnode;
+         SymbolicFront *csnode = nullptr;
          void **child_contrib;
          int contrib_idx;
          int blksz;
@@ -849,51 +849,7 @@ namespace spldlt { namespace starpu {
                                     &child_contrib, &contrib_idx,
                                     &blksz);
 
-         SymbolicFront const& snode = node->symb;
-
-         // Retreive contribution block from subtrees
-         int cn, ldcontrib, ndelay, lddelay;
-         double const *cval, *delay_val;
-         int const *crlist, *delay_perm;
-         spral_ssids_contrib_get_data(
-               child_contrib[contrib_idx], &cn, &cval, &ldcontrib, &crlist,
-               &ndelay, &delay_perm, &delay_val, &lddelay
-               );
-         // printf("[subtree_assemble_contrib_cpu_func] ndelay = %d, cval = %p\n", ndelay, cval);
-         if(!cval) return; // child was all delays, nothing more to do
-
-         int sa = snode.ncol / blksz; // Index of first block in contrib
-         int nr = (snode.nrow-1) / blksz + 1;
-         int ncontrib = nr-sa;
-         for(int j = 0; j < cn; ++j) {
-
-            int c = csnode->map[ j ]; // Destination column
-
-            T const* src = &cval[j*ldcontrib];
-
-            if (c >= snode.ncol) {
-
-
-               int cc = c / blksz; // Destination block column
-               int dest_col_sa = (snode.ncol > cc*blksz) ? 0 : (cc*blksz-snode.ncol); // First col in block
-
-               for (int i = j; i < cn; ++i) {
-                  int r = csnode->map[ i ]; // Destination row in parent front
-                  int rr = r / blksz; // Destination block row
-                  // First row index in CB of destination block
-                  int dest_row_sa = (snode.ncol > rr*blksz) ? 0 : (rr*blksz-snode.ncol);
-                  Tile<T, PoolAlloc> &dest_blk = node->contrib_blocks[(rr-sa)+(cc-sa)*ncontrib];
-                  int dest_blk_lda = dest_blk.lda;
-                  T *dest = &dest_blk.a[ (c - snode.ncol - dest_col_sa)*dest_blk_lda ];
-                  // Assemble destination block
-                  dest[ r - snode.ncol - dest_row_sa ] += src[i];
-               }
-            }
-         }
-
-         /* Free memory from child contribution block */
-         // TODO
-         // spral_ssids_contrib_free_dbl(child_contrib[contrib_idx]);
+         assemble_contrib_subtree(*node, *csnode, child_contrib,contrib_idx, blksz);
       }
 
       // StarPU codelet
@@ -1291,82 +1247,6 @@ namespace spldlt { namespace starpu {
       }
 
       ////////////////////////////////////////////////////////////////////////////////
-      // Assemble node contribution blocks
-
-      template <typename T, typename PoolAlloc>
-      void assemble_contrib_cpu_func(void *buffers[], void *cl_arg) {
-
-         NumericFront<T, PoolAlloc> *node;
-         void** child_contrib;
-         int blksz;
-
-         // printf("[assemble_contrib_cpu_func]\n");
-         
-         starpu_codelet_unpack_args(
-               cl_arg, &node, &child_contrib, &blksz);
-
-         assemble_contrib(*node, child_contrib, blksz);         
-      }
-
-      // assemble_contrib StarPU codelet
-      extern struct starpu_codelet cl_assemble_contrib;
-
-      template <typename T, typename PoolAlloc>
-      void insert_assemble_contrib(
-            starpu_data_handle_t node_hdl, // Node's symbolic handle
-            // starpu_data_handle_t contrib_hdl, // Node's contribution blocks symbolic handle
-            starpu_data_handle_t *cnode_hdls, int nhdl, // Children node's symbolic handles
-            NumericFront<T, PoolAlloc> *node,
-            void** child_contrib, 
-            int blksz
-            ) {
-
-         // printf("[insert_assemble_contrib]\n");
-
-         struct starpu_data_descr *descrs = new starpu_data_descr[nhdl+1];
-
-         int nh = 0;
-         descrs[nh].handle = node_hdl; descrs[nh].mode = STARPU_RW;
-         nh++;
-
-         for (int i=0; i<nhdl; i++) {
-            descrs[nh].handle = cnode_hdls[i]; descrs[nh].mode = STARPU_R;
-            nh++;
-         }
-         
-         // starpu_tag_t tagA = (starpu_tag_t) (2*node->symb.idx);
-         // starpu_tag_t tagB = (starpu_tag_t) (2*node->symb.idx+1);         
-         // starpu_tag_declare_deps(tagB, 1, tagA);
-         
-         starpu_tag_t tag1 = (starpu_tag_t) (2*node->symb.idx);
-         starpu_tag_t tag2 = (starpu_tag_t) (2*node->symb.idx+1);
-         starpu_tag_declare_deps(tag2, 1, tag1);
-         
-         int ret;
-         ret = starpu_task_insert(&cl_assemble_contrib,
-                                  STARPU_DATA_MODE_ARRAY, descrs, nh,
-                                  // STARPU_RW, node_hdl,
-                                  // STARPU_RW, contrib_hdl,
-                                  STARPU_TAG, tag2, 
-                                  STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
-                                  STARPU_VALUE, &child_contrib, sizeof(void**),
-                                  STARPU_VALUE, &blksz, sizeof(int),
-                                  0);
-         STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
-
-         // test/debug
-         // struct starpu_task *taskA = starpu_task_create();
-         // taskA->cl = NULL;
-         // taskA->use_tag = 1;
-         // taskA->tag_id = tagA;
-         // ret = starpu_task_submit(taskA); 
-         // STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_submit");
-         // end test/debug
-
-         delete[] descrs;
-      }
-
-      ////////////////////////////////////////////////////////////////////////////////
 
       // As it is not possible to statically intialize codelet in C++,
       // we do it via this function
@@ -1470,13 +1350,6 @@ namespace spldlt { namespace starpu {
          cl_assemble.nbuffers = STARPU_VARIABLE_NBUFFERS;
          cl_assemble.name = "ASSEMBLE";
          cl_assemble.cpu_funcs[0] = assemble_cpu_func<T, PoolAlloc>;
-
-         // assemble_contrib StarPU codelet
-         starpu_codelet_init(&cl_assemble_contrib);
-         cl_assemble_contrib.where = STARPU_CPU;
-         cl_assemble_contrib.nbuffers = STARPU_VARIABLE_NBUFFERS;
-         cl_assemble_contrib.name = "ASSEMBLE_CONTRIB";
-         cl_assemble_contrib.cpu_funcs[0] = assemble_contrib_cpu_func<T, PoolAlloc>;
 
          // assemble_block StarPU codelet
          starpu_codelet_init(&cl_assemble_block);

@@ -9,9 +9,11 @@
 #include "BuddyAllocator.hxx"
 #include "SymbolicTree.hxx"
 #include "NumericFront.hxx"
-#include "tasks.hxx"
 #include "factor_indef.hxx"
+#include "assemble.hxx"
+#include "tasks.hxx"
 #include "tasks_factor_indef.hxx"
+#include "tasks_assemble.hxx"
 #if defined(SPLDLT_USE_STARPU)
 #include "StarPU/kernels.hxx"
 #include "StarPU/factor_indef.hxx"
@@ -88,9 +90,11 @@ namespace spldlt {
             spldlt::starpu::codelet_init<T, FactorAllocator, PoolAllocator>();
          } else {
             // Init StarPU codelets
+            // TODO Put codelet initialisation in one routine
             spldlt::starpu::codelet_init<T, FactorAllocator, PoolAllocator>();
             spldlt::starpu::codelet_init_indef<T, INNER_BLOCK_SIZE, Backup, PoolAllocator>();
             spldlt::starpu::codelet_init_factor_indef<T, PoolAllocator>();
+            spldlt::starpu::codelet_init_assemble<T, PoolAllocator>();
          }
 #endif
          auto start = std::chrono::high_resolution_clock::now();
@@ -239,20 +243,22 @@ namespace spldlt {
             factor_front_indef_task(
                   fronts_[ni], workspaces,  pool_alloc_, options, 
                   worker_stats);
-// #if defined(SPLDLT_USE_STARPU)
-//             starpu_task_wait_for_all();
-// #endif
+#if defined(SPLDLT_USE_STARPU)
+            starpu_task_wait_for_all();
+#endif
             // factor_front_indef(
             //       fronts_[ni], workspaces, pool_alloc_, options, 
             //       worker_stats);
 
             // Assemble contributions from children nodes into non
             // fully-summed columns
-            // assemble_contrib(fronts_[ni], child_contrib, blksz);
-            assemble_contrib_task(fronts_[ni], child_contrib, blksz);
-// #if defined(SPLDLT_USE_STARPU)
-//             starpu_task_wait_for_all();
-// #endif
+
+            assemble_contrib_task(fronts_[ni], child_contrib);
+            // assemble_contrib(fronts_[ni], child_contrib);
+
+#if defined(SPLDLT_USE_STARPU)
+            starpu_task_wait_for_all();
+#endif
             
             // Deactivate children fronts
             for (auto* child=fronts_[ni].first_child; child!=NULL; child=child->next_child) {
@@ -288,7 +294,6 @@ namespace spldlt {
 
          // printf("[factor_mf_posdef] nparts = %d\n", symb_.nparts_);
          int INIT_PRIO = 4;
-         int ASSEMBLE_PRIO = 4;
 
          // Blocking size
          int blksz = options.cpu_block_size;
@@ -437,8 +442,8 @@ namespace spldlt {
                      // Assemble contribution block from subtrees into non
                      // fully-summed coefficients
                      assemble_contrib_subtree_task(
-                           sfront, fronts_[ni], child_sfront, child_contrib, 
-                           child_sfront.contrib_idx, child_sfront.map, blksz, 
+                           fronts_[ni], child_sfront, child_contrib, 
+                           child_sfront.contrib_idx, child_sfront.map, 
                            ASSEMBLE_PRIO);
 // #if defined(SPLDLT_USE_STARPU)
 //                      starpu_task_wait_for_all();
@@ -464,8 +469,8 @@ namespace spldlt {
                         for (int ii = jj; ii < cnr; ++ii) {
                            // assemble_contrib_block(nodes_[ni], *child, ii, jj, csnode.map, blksz)
                            assemble_contrib_block_task(
-                                 sfront, fronts_[ni], child_sfront, *child, ii, jj, 
-                                 child_sfront.map, blksz, ASSEMBLE_PRIO);
+                                 fronts_[ni], *child, ii, jj, 
+                                 child_sfront.map, ASSEMBLE_PRIO);
 // #if defined(SPLDLT_USE_STARPU)
 //                            starpu_task_wait_for_all();
 // #endif

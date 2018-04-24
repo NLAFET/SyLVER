@@ -19,6 +19,8 @@
 
 namespace spldlt {
 
+   const int ASSEMBLE_PRIO = 4;   
+
    ////////////////////////////////////////////////////////////////////////////////
    /// @brief Launches a task for activating a node.
    template <typename T, typename FactorAlloc, typename PoolAlloc>
@@ -420,7 +422,7 @@ namespace spldlt {
    ////////////////////////////////////////////////////////////////////////////////
    // Factor subtree task
 
-   template <typename T> 
+   template <typename T>
    inline void factor_subtree_task(
          const void *akeep,
          void *fkeep,
@@ -474,10 +476,10 @@ namespace spldlt {
 
 #if defined(SPLDLT_USE_STARPU)
 
-      int nrow = sfront.nrow;
-      int ncol = sfront.ncol; // no delays!
-      int nr = (nrow-1) / blksz + 1; // Number of block rows in destination node
-      int nc = (ncol-1) / blksz + 1; // Number of block columns in destination node
+      int nrow = front.get_nrow();
+      int ncol = front.get_ncol();
+      int nr = front.get_nr(); // Number of block rows in destination node
+      int nc = front.get_nc(); // Number of block columns in destination node
       int cc = -1; // Block column index in destination node
       int rr = -1; // Block row index in destination node
 
@@ -556,20 +558,21 @@ namespace spldlt {
    // Subtree assemble contrib task
    template <typename T, typename PoolAlloc>   
    void assemble_contrib_subtree_task(
-         SymbolicFront const& snode, // Destination node (Symbolic)
-         NumericFront<T,PoolAlloc>& node, // Destination node (Numeric) 
+         NumericFront<T,PoolAlloc>& node, // Destination node
          SymbolicFront& csnode, // Root of the subtree
          void** child_contrib, 
          int contrib_idx, // Index of subtree to assemble
          int *cmap, // row/column mapping array 
-         int blksz, int prio) {
+         int prio) {
+
+      int blksz = node.blksz;
 
 #if defined(SPLDLT_USE_STARPU)
+// #if 0
+      SymbolicFront const& snode = node.symb;
 
-      int nrow = snode.nrow;
-      int ncol = snode.ncol; // no delays!
-      int nr = (nrow-1) / blksz + 1; // Number of block rows in destination node
-      int nc = (ncol-1) / blksz + 1; // Number of block columns in destination node
+      int ncol = node.get_ncol();
+      int nr = node.get_nr();
       int rsa = ncol / blksz; // Rows/Cols index of first block in contrib 
       int ncontrib = nr-rsa; // Number of block rows/cols in contrib
 
@@ -613,8 +616,12 @@ namespace spldlt {
                contrib_idx, blksz, prio);
       }
       
+      delete[] hdls;
+      
 #else
-      assemble_contrib_subtree(node, csnode, child_contrib,contrib_idx, blksz);
+
+      assemble_contrib_subtree(node, csnode, child_contrib, contrib_idx, blksz);
+
 #endif
    }
 
@@ -624,16 +631,18 @@ namespace spldlt {
    // jj: Col index in frontal matrix node
    template <typename T, typename PoolAlloc>   
    void assemble_block_task(
-         SymbolicFront const& snode, NumericFront<T,PoolAlloc>& node, 
-         SymbolicFront const& csnode, NumericFront<T,PoolAlloc> const& cnode, 
+         SymbolicFront const& snode, 
+         NumericFront<T,PoolAlloc>& node, 
+         SymbolicFront const& csnode, 
+         NumericFront<T,PoolAlloc> const& cnode, 
          int ii, int jj, int *cmap, int blksz, int prio) {
 
 #if defined(SPLDLT_USE_STARPU)
 
-      int nrow = snode.nrow;
-      int ncol = snode.ncol; // no delays!
-      int nr = (nrow-1) / blksz+1; // number of block rows
-      int nc = (ncol-1) / blksz+1; // number of block columns
+      int nrow = node.get_nrow();
+      int ncol = node.get_ncol();
+      int nr = node.get_nr(); // Number of block-rows in destination node
+      int nc = node.get_nc(); // Number of block-columns in destination node
 
       starpu_data_handle_t *hdls = new starpu_data_handle_t[nr*nc];
       int nh = 0;
@@ -705,16 +714,21 @@ namespace spldlt {
    // jj: Col index in frontal matrix.
    template <typename T, typename PoolAlloc>   
    void assemble_contrib_block_task(
-         SymbolicFront const& snode, NumericFront<T,PoolAlloc>& node, 
-         SymbolicFront const& csnode, NumericFront<T,PoolAlloc>& cnode, 
-         int ii, int jj, int *cmap, int blksz, int prio) {
+         NumericFront<T,PoolAlloc>& node, 
+         NumericFront<T,PoolAlloc>& cnode, 
+         int ii, int jj, int *cmap, int prio) {
+
+      int blksz = node.blksz;
 
 #if defined(SPLDLT_USE_STARPU)
 
-      int nrow = snode.nrow;
-      int ncol = snode.ncol; // no delays!
-      int nr = (nrow-1)/blksz+1; // number of block rows
-      int nc = (ncol-1)/blksz+1; // number of block columns
+      SymbolicFront const& snode = node.symb;
+      SymbolicFront const& csnode = cnode.symb;
+   
+      int nrow = node.get_nrow();
+      int ncol = node.get_ncol();
+      int nr = node.get_nr(); // Number of block-rows in destination node
+      int nc = node.get_nc(); // Number of block-columns in destination node
       int rsa = ncol/blksz; // rows/cols index of first block in contrib 
       int ncontrib = nr-rsa; // number of block rows/cols in contrib
 
@@ -795,10 +809,8 @@ namespace spldlt {
          ) {
 
       /* Extract useful information about node */
-      int m = snode.nrow + node.ndelay_in;
-      int n = snode.ncol + node.ndelay_in;
-      // int m = snode.nrow;
-      // int n = snode.ncol;
+      int m = node.get_nrow();
+      int n = node.get_ncol();
       int lda = align_lda<T>(m);
       T *lcol = node.lcol;
       T *contrib = node.contrib;
@@ -997,44 +1009,6 @@ namespace spldlt {
       assemble(n, node, child_contrib, pool_alloc, blksz);
 #endif
       
-   }
-
-   ////////////////////////////////////////////////////////////////////////////////
-   // assemble front contribution block
-   
-   template <typename T, typename PoolAlloc>
-   void assemble_contrib_task(
-         NumericFront<T, PoolAlloc>& node,
-         void** child_contrib,
-         int blksz
-         ){
-
-#if defined(SPLDLT_USE_STARPU)
-
-      int nchild = 0;
-      for (auto* child=node.first_child; child!=NULL; child=child->next_child)
-         nchild++;
-
-      starpu_data_handle_t *cnode_hdls = new starpu_data_handle_t[nchild];
-      
-      int i = 0;
-      for (auto* child=node.first_child; child!=NULL; child=child->next_child) {
-         cnode_hdls[i] = child->symb.hdl;
-         ++i;
-      }
-      // printf("[assemble_contrib_task] node = %d, nchild = %d\n", node.symb.idx+1, nchild);
-
-      spldlt::starpu::insert_assemble_contrib(
-            node.get_hdl(), cnode_hdls, nchild, //node.contrib_hdl,
-            &node, child_contrib, blksz);
-
-      delete[] cnode_hdls;
-
-#else
-
-      assemble_contrib(node, child_contrib, blksz);
-
-#endif
    }
 
    // // TODO: error managment

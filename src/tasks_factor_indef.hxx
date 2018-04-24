@@ -79,4 +79,4 @@ namespace spldlt {
 
    }
    
-} // namespace spldlt
+} // end of namespace spldlt

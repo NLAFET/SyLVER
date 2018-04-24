@@ -767,8 +767,8 @@ namespace spldlt {
       SymbolicFront const& snode = node.symb;
 
       /* Initialise variables */
-      int ncol = snode.ncol + node.ndelay_in;
-      int nrow = snode.nrow + node.ndelay_in;
+      int ncol = node.get_ncol();
+      int nrow = node.get_nrow();
 
       // Retreive contribution block from subtrees
       int cn, ldcontrib, ndelay, lddelay;
@@ -970,12 +970,12 @@ namespace spldlt {
    } // assemble
 
    ////////////////////////////////////////////////////////////////////////////////   
-   // assemble_contrib
+   // assemble_contrib_notask
    //
    // Assemble contributions from children node and subtrees into the
    // contribution blocks
    template <typename T, typename PoolAlloc>
-   void assemble_contrib(
+   void assemble_contrib_notask(
          NumericFront<T,PoolAlloc>& node,
          void** child_contrib,
          int blksz) {
@@ -1019,7 +1019,7 @@ namespace spldlt {
          }
       } // Loop over child nodes
 
-   } // assemble_contrib
+   } // assemble_contrib_notask
 
 } /* end of namespace spldlt */
 
