@@ -860,6 +860,7 @@ namespace spldlt { namespace starpu {
             NumericFront<T, PoolAlloc> *node,
             SymbolicFront *csnode,
             starpu_data_handle_t node_hdl,
+            starpu_data_handle_t contrib_hdl,
             starpu_data_handle_t root_hdl,
             starpu_data_handle_t *dest_hdls, int ndest,
             void **child_contrib, int contrib_idx,
@@ -868,7 +869,7 @@ namespace spldlt { namespace starpu {
          int ret;
          int nh = 0;
          
-         struct starpu_data_descr *descrs = new starpu_data_descr[ndest+2];
+         struct starpu_data_descr *descrs = new starpu_data_descr[ndest+3];
 
          for (int i=0; i<ndest; i++) {
             descrs[nh].handle = dest_hdls[i]; descrs[nh].mode = STARPU_RW;
@@ -881,6 +882,10 @@ namespace spldlt { namespace starpu {
 
          // Handle on node to be assembled
          descrs[nh].handle = node_hdl; descrs[nh].mode = STARPU_R;
+         nh++;
+
+         // Handle on contrib blocks
+         descrs[nh].handle = contrib_hdl; descrs[nh].mode = STARPU_R;
          nh++;
 
          ret = starpu_task_insert(&cl_subtree_assemble_contrib,
@@ -1010,13 +1015,14 @@ namespace spldlt { namespace starpu {
             starpu_data_handle_t bc_hdl,
             starpu_data_handle_t *dest_hdls, int ndest,
             starpu_data_handle_t node_hdl, // Symbolic handle of destination node
+            starpu_data_handle_t contrib_hdl,
             starpu_data_handle_t cnode_hdl, // Symbolic handle of source node
             int prio) {
 
          int ret;
          int nh = 0;
          
-         struct starpu_data_descr *descrs = new starpu_data_descr[ndest+3];
+         struct starpu_data_descr *descrs = new starpu_data_descr[ndest+4];
 
          descrs[nh].handle = bc_hdl; descrs[nh].mode = STARPU_R;
          nh++;
@@ -1034,6 +1040,10 @@ namespace spldlt { namespace starpu {
          // Access symbolic handle of child node in read mode to
          // ensure that assemblies are done before cleaning it
          descrs[nh].handle = cnode_hdl; descrs[nh].mode = STARPU_R;
+         nh++;
+
+         // Handle on contrib blocks
+         descrs[nh].handle = contrib_hdl; descrs[nh].mode = STARPU_R;
          nh++;
 
          ret = starpu_task_insert(&cl_assemble_contrib_block,

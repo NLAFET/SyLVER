@@ -68,15 +68,11 @@ namespace spldlt {
             node, workspaces, options, worker_stats);
 
 // #if defined(SPLDLT_USE_STARPU)
-//          starpu_task_wait_for_all();
+//       ColumnData<T, IntAlloc> &cdata = *node.cdata;
+//       int const nblk = calc_nblk(n, blksz);
+//       insert_factor_sync(cdata[nblk-1].get_hdl(), node);
+//       // insert_factor_sync(node.contrib_hdl, node);
 // #endif
-
-#if defined(SPLDLT_USE_STARPU)
-      ColumnData<T, IntAlloc> &cdata = *node.cdata;
-      int const nblk = calc_nblk(n, blksz);
-      insert_factor_sync(cdata[nblk-1].get_hdl(), node);
-      // insert_factor_sync(node.contrib_hdl, node);
-#endif
    }
 
    template <typename T, int iblksz, typename Backup, typename PoolAlloc>

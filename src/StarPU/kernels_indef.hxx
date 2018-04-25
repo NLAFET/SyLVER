@@ -732,10 +732,9 @@ namespace spldlt { namespace starpu {
       extern struct starpu_codelet cl_factor_front_indef_failed;
 
       template <typename T, typename PoolAlloc>
-      void
-      insert_factor_front_indef_failed(
+      void insert_factor_front_indef_failed(
             starpu_data_handle_t col_hdl,
-            // starpu_data_handle_t node_hdl,
+            starpu_data_handle_t contrib_hdl,
             NumericFront<T, PoolAlloc> *node,
             std::vector<spral::ssids::cpu::Workspace> *workspaces,
             struct cpu_factor_options *options,
@@ -747,6 +746,7 @@ namespace spldlt { namespace starpu {
          ret = starpu_insert_task(
                &cl_factor_front_indef_failed,
                STARPU_RW, col_hdl,
+               STARPU_RW, contrib_hdl,
                STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
                STARPU_VALUE, &workspaces, sizeof(std::vector<spral::ssids::cpu::Workspace>*),
                STARPU_VALUE, &options, sizeof(struct cpu_factor_options*),

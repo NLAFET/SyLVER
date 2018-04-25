@@ -82,7 +82,7 @@ namespace spldlt {
       int const nblk = node.get_nc(); // Number of block-columns
       
       spldlt::starpu::insert_factor_front_indef_failed(
-            cdata[nblk-1].get_hdl(), // node.get_hdl(),
+            cdata[nblk-1].get_hdl(), node.contrib_hdl,
             &node, &workspaces, &options, &worker_stats
             );
 

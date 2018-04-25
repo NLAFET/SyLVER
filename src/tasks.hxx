@@ -612,8 +612,8 @@ namespace spldlt {
       // Insert assembly tasks if there are any contributions
       if (nh > 0) {
          spldlt::starpu::insert_subtree_assemble_contrib(
-               &node, &csnode, snode.hdl, csnode.hdl, hdls, nh, child_contrib,
-               contrib_idx, blksz, prio);
+               &node, &csnode, snode.hdl, node.contrib_hdl, csnode.hdl, hdls, nh, 
+               child_contrib, contrib_idx, blksz, prio);
       }
       
       delete[] hdls;
@@ -785,7 +785,7 @@ namespace spldlt {
          spldlt::starpu::insert_assemble_contrib_block(&node, &cnode, ii, jj, cmap, blksz, 
                                        // csnode.contrib_handles[(jj-crsa)*cncontrib+(ii-crsa)], 
                                        cnode.contrib_blocks[(jj-crsa)*cncontrib+(ii-crsa)].hdl,
-                                       hdls, nh, snode.hdl, csnode.hdl,
+                                       hdls, nh, snode.hdl, node.contrib_hdl, csnode.hdl,
                                        prio);
       }
       delete[] hdls;
