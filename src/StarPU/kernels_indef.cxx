@@ -32,7 +32,13 @@ namespace spldlt { namespace starpu {
       // factor_front_indef_secondpass_nocontrib StarPU codelet
       struct starpu_codelet cl_factor_front_indef_failed;
 
-      // factor_sync StarPU codelet
-      struct starpu_codelet cl_factor_sync;
+      // // factor_sync StarPU codelet
+      // struct starpu_codelet cl_factor_sync;
+
+      // assemble_contrib_sync StarPU codelet
+      struct starpu_codelet cl_assemble_contrib_sync;
+
+      // nelim_sync StarPU codelet
+      struct starpu_codelet cl_nelim_sync;
       
 }} /* namespaces spldlt::starpu  */

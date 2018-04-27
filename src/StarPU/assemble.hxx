@@ -51,7 +51,7 @@ namespace spldlt { namespace starpu {
       // starpu_tag_t tag1 = (starpu_tag_t) (2*node->symb.idx);
       // starpu_tag_t tag2 = (starpu_tag_t) (2*node->symb.idx+1);
       // starpu_tag_declare_deps(tag2, 1, tag1);
-         
+
       int ret;
       ret = starpu_task_insert(&cl_assemble_contrib,
                                STARPU_DATA_MODE_ARRAY, descrs, nh,

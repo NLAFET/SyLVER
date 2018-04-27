@@ -4,6 +4,7 @@
 
 #if defined(SPLDLT_USE_STARPU)
 #include "StarPU/assemble.hxx"
+#include "StarPU/kernels_indef.hxx"
 #endif
 
 namespace spldlt {
