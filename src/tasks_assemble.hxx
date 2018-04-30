@@ -9,6 +9,21 @@
 
 namespace spldlt {
 
+
+   ////////////////////////////////////////////////////////////////////////////////
+   // fini child nodes
+
+   template <typename T, typename PoolAlloc>
+   void fini_cnodes_task(NumericFront<T, PoolAlloc>& node) {
+
+#if defined(SPLDLT_USE_STARPU)
+
+#else
+
+#endif
+
+   }
+
    ////////////////////////////////////////////////////////////////////////////////
    // assemble contribution block
    

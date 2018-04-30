@@ -7,12 +7,41 @@
 namespace spldlt { namespace starpu {
 
    ////////////////////////////////////////////////////////////////////////////////
+   // fini child nodes
+   template <typename T, typename PoolAlloc>
+   void fini_cnodes_cpu_func(void *buffers[], void *cl_arg) {
+
+      NumericFront<T, PoolAlloc> *node = nullptr;
+
+      starpu_codelet_unpack_args(cl_arg, &node);
+      
+      printf("[fini_cnodes_cpu_func]\n");
+
+   }
+
+   // fini_cnodes StarPU codelet
+   extern struct starpu_codelet cl_fini_cnodes;
+
+   template <typename T, typename PoolAlloc>
+   void insert_fini_cnodes(
+         starpu_data_handle_t node_hdl,
+         NumericFront<T, PoolAlloc> *node) {
+
+      int ret;
+      ret = starpu_task_insert(&cl_fini_cnodes,
+                               STARPU_RW, node_hdl,
+                               0);
+      STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
+
+   }
+
+   ////////////////////////////////////////////////////////////////////////////////
    // Assemble node contribution blocks
 
    template <typename T, typename PoolAlloc>
    void assemble_contrib_cpu_func(void *buffers[], void *cl_arg) {
 
-      NumericFront<T, PoolAlloc> *node;
+      NumericFront<T, PoolAlloc> *node = nullptr;
       void** child_contrib;
       
       // printf("[assemble_contrib_cpu_func]\n");
@@ -84,6 +113,14 @@ namespace spldlt { namespace starpu {
       cl_assemble_contrib.nbuffers = STARPU_VARIABLE_NBUFFERS;
       cl_assemble_contrib.name = "ASSEMBLE_CONTRIB";
       cl_assemble_contrib.cpu_funcs[0] = assemble_contrib_cpu_func<T, PoolAlloc>;
+
+      // fini_cnodes StarPU codelet
+      starpu_codelet_init(&cl_fini_cnodes);
+      cl_fini_cnodes.where = STARPU_CPU;
+      cl_fini_cnodes.nbuffers = STARPU_VARIABLE_NBUFFERS;
+      cl_fini_cnodes.name = "FINI_CNODES";
+      cl_fini_cnodes.cpu_funcs[0] = fini_cnodes_cpu_func<T, PoolAlloc>;
+
    }
 
 }} // end of namespaces spldlt::starpu

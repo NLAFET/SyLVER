@@ -761,7 +761,7 @@ namespace spldlt { namespace starpu {
 
       template <typename T, typename PoolAlloc>
       void nelim_sync_cpu_func(void *buffers[], void *cl_arg) {
-         printf("[nelim_sync_cpu_func]\n");
+         // printf("[nelim_sync_cpu_func]\n");
       }
 
       // SarPU kernel
@@ -803,7 +803,7 @@ namespace spldlt { namespace starpu {
 
       template <typename T, typename PoolAlloc>
       void assemble_contrib_sync_cpu_func(void *buffers[], void *cl_arg) {
-         printf("[assemble_contrib_sync_cpu_func]\n");
+         // printf("[assemble_contrib_sync_cpu_func]\n");
       }
 
       // SarPU kernel

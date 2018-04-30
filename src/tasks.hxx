@@ -785,11 +785,12 @@ namespace spldlt {
          int crsa = csnode.ncol/blksz;
          int cncontrib = cnr-crsa;
 
-         spldlt::starpu::insert_assemble_contrib_block(&node, &cnode, ii, jj, cmap, blksz, 
-                                       // csnode.contrib_handles[(jj-crsa)*cncontrib+(ii-crsa)], 
-                                       cnode.contrib_blocks[(jj-crsa)*cncontrib+(ii-crsa)].hdl,
-                                       hdls, nh, snode.hdl, node.contrib_hdl, csnode.hdl,
-                                       prio);
+         spldlt::starpu::insert_assemble_contrib_block(
+               &node, &cnode, ii, jj, cmap, blksz, 
+               // csnode.contrib_handles[(jj-crsa)*cncontrib+(ii-crsa)], 
+               cnode.contrib_blocks[(jj-crsa)*cncontrib+(ii-crsa)].hdl,
+               hdls, nh, snode.hdl, node.contrib_hdl, csnode.hdl,
+               prio);
       }
       delete[] hdls;
 
