@@ -262,24 +262,26 @@ namespace spldlt {
 // #if defined(SPLDLT_USE_STARPU)
 //             starpu_task_wait_for_all();
 // #endif
+
+            fini_cnodes_task(fronts_[ni]);
             
-            // Deactivate children fronts
-            for (auto* child=fronts_[ni].first_child; child!=NULL; child=child->next_child) {
+//             // Deactivate children fronts
+//             for (auto* child=fronts_[ni].first_child; child!=NULL; child=child->next_child) {
 
-               SymbolicFront const& csnode = child->symb;
+//                SymbolicFront const& csnode = child->symb;
 
-               if (csnode.exec_loc == -1) {
-                  // fini_node(*child);
-                  fini_node_task(*child, INIT_PRIO);
+//                if (csnode.exec_loc == -1) {
+//                   // fini_node(*child);
+//                   fini_node_task(*child, INIT_PRIO);
+// // #if defined(SPLDLT_USE_STARPU)
+// //             starpu_task_wait_for_all();
+// // #endif
+//                }
 // #if defined(SPLDLT_USE_STARPU)
-//             starpu_task_wait_for_all();
+//                // Unregister symbolic handle on child node
+//                starpu_data_unregister_submit(csnode.hdl);
 // #endif
-               }
-#if defined(SPLDLT_USE_STARPU)
-               // Unregister symbolic handle on child node
-               starpu_data_unregister_submit(csnode.hdl);
-#endif
-            } // Loop over child nodes
+//             } // Loop over child nodes
 
 #if defined(SPLDLT_USE_STARPU)
             starpu_task_wait_for_all();

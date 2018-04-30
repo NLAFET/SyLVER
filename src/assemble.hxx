@@ -7,6 +7,33 @@
 namespace spldlt {
 
    ////////////////////////////////////////////////////////////////////////////////   
+   // fini_cnodes
+
+   template <typename T, typename PoolAlloc>
+   void fini_cnodes(NumericFront<T,PoolAlloc>& node) {
+
+      //             // Deactivate children fronts
+      for (auto* child=node.first_child; child!=NULL; child=child->next_child) {
+
+         SymbolicFront const& csnode = child->symb;
+
+         if (csnode.exec_loc == -1) {
+            // fini_node(*child);
+            fini_node_task(*child, INIT_PRIO);
+            // #if defined(SPLDLT_USE_STARPU)
+            //             starpu_task_wait_for_all();
+            // #endif
+         }
+#if defined(SPLDLT_USE_STARPU)
+         // Unregister symbolic handle on child node
+         starpu_data_unregister_submit(csnode.hdl);
+#endif
+      } // Loop over child nodes
+
+   }
+
+
+   ////////////////////////////////////////////////////////////////////////////////   
    // assemble_contrib
    //
    // Assemble contributions from children node and subtrees into the

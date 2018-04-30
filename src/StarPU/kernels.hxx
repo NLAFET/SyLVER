@@ -844,7 +844,7 @@ namespace spldlt { namespace starpu {
          int contrib_idx;
          int blksz;
 
-         printf("[subtree_assemble_contrib_cpu_func]\n");
+         // printf("[subtree_assemble_contrib_cpu_func]\n");
 
          starpu_codelet_unpack_args(cl_arg,
                                     &node, &csnode,
@@ -997,7 +997,7 @@ namespace spldlt { namespace starpu {
                cl_arg, &node, &cnode,
                &ii, &jj, &map, &blksz);
 
-         printf("[assemble_contrib_block_cpu_func]\n");
+         // printf("[assemble_contrib_block_cpu_func]\n");
 
          assemble_contrib_block(*node, *cnode, ii, jj, map, blksz);
       }
