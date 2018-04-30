@@ -161,9 +161,7 @@ namespace spldlt {
 
          printf("[factor_mf_indef] posdef = %d\n", posdef);
          // printf("[factor_mf_indef] nparts = %d\n", symb_.nparts_);
-         int INIT_PRIO = 4;
-         int ASSEMBLE_PRIO = 4;
-
+         
          // Blocking size
          int blksz = options.cpu_block_size;
 
@@ -261,9 +259,9 @@ namespace spldlt {
                   fronts_[ni].get_hdl(), sfront.idx);
 #endif
 
-// #if defined(SPLDLT_USE_STARPU)
-//             starpu_task_wait_for_all();
-// #endif
+#if defined(SPLDLT_USE_STARPU)
+            starpu_task_wait_for_all();
+#endif
             
             // Deactivate children fronts
             for (auto* child=fronts_[ni].first_child; child!=NULL; child=child->next_child) {
@@ -272,7 +270,7 @@ namespace spldlt {
 
                if (csnode.exec_loc == -1) {
                   // fini_node(*child);
-                  fini_node_task(*child, blksz, INIT_PRIO);
+                  fini_node_task(*child, INIT_PRIO);
 // #if defined(SPLDLT_USE_STARPU)
 //             starpu_task_wait_for_all();
 // #endif
@@ -283,9 +281,9 @@ namespace spldlt {
 #endif
             } // Loop over child nodes
 
-// #if defined(SPLDLT_USE_STARPU)
-//             starpu_task_wait_for_all();
-// #endif
+#if defined(SPLDLT_USE_STARPU)
+            starpu_task_wait_for_all();
+#endif
 
          } // Loop over nodes
       }
@@ -490,7 +488,7 @@ namespace spldlt {
 
                if (child_sfront.exec_loc == -1) {
                   // fini_node(*child);
-                  fini_node_task(*child, blksz, INIT_PRIO);
+                  fini_node_task(*child, INIT_PRIO);
 // #if defined(SPLDLT_USE_STARPU)
 //                   starpu_task_wait_for_all();
 // #endif

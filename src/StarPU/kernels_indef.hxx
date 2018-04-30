@@ -781,20 +781,20 @@ namespace spldlt { namespace starpu {
          // printf("[insert_nelim_sync] nodeidx = %d, tag1 = %d, , tag2 = %d\n", 
          //        nodeidx, tag1, tag2);
 
-         ret = starpu_task_insert(
-               &cl_nelim_sync,
-               STARPU_TAG, tag2,
-               STARPU_RW, node_hdl,
-               0);
-         STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
+         // ret = starpu_task_insert(
+         //       &cl_nelim_sync,
+         //       STARPU_TAG, tag2,
+         //       STARPU_RW, node_hdl,
+         //       0);
+         // STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
 
-         // struct starpu_task *task = starpu_task_create();
-         // task->cl = &cl_nelim_sync; 
-         // task->use_tag = 1;
-         // task->tag_id = tag2;
-         // task->handles[0] = node_hdl;
-         // ret = starpu_task_submit(task);
-         // STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_submit");
+         struct starpu_task *task = starpu_task_create();
+         task->cl = &cl_nelim_sync; 
+         task->use_tag = 1;
+         task->tag_id = tag2;
+         task->handles[0] = node_hdl;
+         ret = starpu_task_submit(task);
+         STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_submit");
 
       }
 

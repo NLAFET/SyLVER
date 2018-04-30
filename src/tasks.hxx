@@ -19,7 +19,11 @@
 
 namespace spldlt {
 
+   ///////////////////////////////////////////////////////////////////////////////
+   // Task priorities
+
    const int ASSEMBLE_PRIO = 4;   
+   const int INIT_PRIO = 4;
 
    ////////////////////////////////////////////////////////////////////////////////
    /// @brief Launches a task for activating a node.
@@ -87,8 +91,7 @@ namespace spldlt {
    // Terminate node
    template <typename T, typename PoolAlloc>
    void fini_node_task(
-         NumericFront<T, PoolAlloc> &node, 
-         int blksz, 
+         NumericFront<T, PoolAlloc> &node,
          int prio) {
 
 #if defined(SPLDLT_USE_STARPU)
