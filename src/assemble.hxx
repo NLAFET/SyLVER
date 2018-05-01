@@ -12,14 +12,14 @@ namespace spldlt {
    template <typename T, typename PoolAlloc>
    void fini_cnodes(NumericFront<T,PoolAlloc>& node) {
 
-      //             // Deactivate children fronts
+      // Deactivate children fronts
       for (auto* child=node.first_child; child!=NULL; child=child->next_child) {
 
          SymbolicFront const& csnode = child->symb;
 
          if (csnode.exec_loc == -1) {
             // fini_node(*child);
-            fini_node_task(*child, INIT_PRIO);
+            fini_node_task(*child);
             // #if defined(SPLDLT_USE_STARPU)
             //             starpu_task_wait_for_all();
             // #endif
@@ -31,7 +31,6 @@ namespace spldlt {
       } // Loop over child nodes
 
    }
-
 
    ////////////////////////////////////////////////////////////////////////////////   
    // assemble_contrib

@@ -109,7 +109,7 @@ namespace spldlt { namespace starpu {
          
          starpu_codelet_unpack_args(cl_arg, &node);
 
-         printf("[fini_node_cpu_func]\n");
+         // printf("[fini_node_cpu_func]\n");
 
          fini_node(*node);
 

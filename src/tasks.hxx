@@ -91,13 +91,17 @@ namespace spldlt {
    // Terminate node
    template <typename T, typename PoolAlloc>
    void fini_node_task(
-         NumericFront<T, PoolAlloc> &node,
-         int prio) {
+         NumericFront<T, PoolAlloc> &node) {
 
 #if defined(SPLDLT_USE_STARPU)
-      spldlt::starpu::insert_fini_node(node.get_hdl(), &node, prio);
+
+      spldlt::starpu::insert_fini_node(
+            node.get_hdl(), &node, INIT_PRIO);
+
 #else
+
       fini_node(node);
+
 #endif
 
    }

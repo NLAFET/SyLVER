@@ -490,7 +490,7 @@ namespace spldlt {
 
                if (child_sfront.exec_loc == -1) {
                   // fini_node(*child);
-                  fini_node_task(*child, INIT_PRIO);
+                  fini_node_task(*child);
 // #if defined(SPLDLT_USE_STARPU)
 //                   starpu_task_wait_for_all();
 // #endif

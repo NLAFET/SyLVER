@@ -15,8 +15,9 @@ namespace spldlt { namespace starpu {
 
       starpu_codelet_unpack_args(cl_arg, &node);
       
-      printf("[fini_cnodes_cpu_func]\n");
+      // printf("[fini_cnodes_cpu_func]\n");
 
+      fini_cnodes(*node);
    }
 
    // fini_cnodes StarPU codelet
@@ -30,6 +31,7 @@ namespace spldlt { namespace starpu {
       int ret;
       ret = starpu_task_insert(&cl_fini_cnodes,
                                STARPU_RW, node_hdl,
+                               STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
                                0);
       STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
 

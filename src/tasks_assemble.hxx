@@ -18,7 +18,12 @@ namespace spldlt {
 
 #if defined(SPLDLT_USE_STARPU)
 
+      spldlt::starpu::insert_fini_cnodes(
+            node.get_hdl(), &node);
+
 #else
+
+      fini_cnodes(node);
 
 #endif
 
