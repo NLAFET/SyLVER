@@ -283,9 +283,9 @@ namespace spldlt {
 // #endif
 //             } // Loop over child nodes
 
-#if defined(SPLDLT_USE_STARPU)
-            starpu_task_wait_for_all();
-#endif
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
 
          } // Loop over nodes
       }
