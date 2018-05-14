@@ -883,8 +883,8 @@ namespace spldlt { namespace starpu {
          nh++;
 
          // Handle on node to be assembled
-         descrs[nh].handle = node_hdl; descrs[nh].mode = STARPU_R;
-         nh++;
+         // descrs[nh].handle = node_hdl; descrs[nh].mode = STARPU_R;
+         // nh++;
 
          // Handle on contrib blocks
          descrs[nh].handle = contrib_hdl; descrs[nh].mode = STARPU_R;
@@ -1036,8 +1036,8 @@ namespace spldlt { namespace starpu {
 
          // Access symbolic handle of node in read mode to ensure that
          // it has been initialized
-         descrs[nh].handle = node_hdl; descrs[nh].mode = STARPU_R;
-         nh++;
+         // descrs[nh].handle = node_hdl; descrs[nh].mode = STARPU_R;
+         // nh++;
 
          // Access symbolic handle of child node in read mode to
          // ensure that assemblies are done before cleaning it

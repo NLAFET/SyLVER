@@ -253,6 +253,10 @@ namespace spldlt {
 
             assemble_contrib_task(fronts_[ni], child_contrib);
             // assemble_contrib(fronts_[ni], child_contrib);
+
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
             
 #if defined(SPLDLT_USE_STARPU)
             spldlt::starpu::insert_nelim_sync(

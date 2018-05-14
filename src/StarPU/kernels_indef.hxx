@@ -987,8 +987,8 @@ namespace spldlt { namespace starpu {
          starpu_codelet_init(&cl_nelim_sync);
          // cl_nelim_sync.where = STARPU_NOWHERE;
          cl_nelim_sync.where = STARPU_CPU;
-         // cl_nelim_sync.nbuffers = 1;
-         cl_nelim_sync.nbuffers = STARPU_VARIABLE_NBUFFERS;
+         cl_nelim_sync.nbuffers = 1;
+         // cl_nelim_sync.nbuffers = STARPU_VARIABLE_NBUFFERS;
          cl_nelim_sync.modes[0] = STARPU_RW;
          // cl_nelim_sync.modes[0] = STARPU_R;
          cl_nelim_sync.name = "NELIM_SYNC";

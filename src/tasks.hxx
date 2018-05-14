@@ -615,9 +615,11 @@ namespace spldlt {
          }
       }
 
-      // printf("[assemble_contrib_subtree_task] nh = %d\n", nh);
       // Insert assembly tasks if there are any contributions
       if (nh > 0) {
+
+         // printf("[assemble_contrib_subtree_task] nh = %d\n", nh);
+
          spldlt::starpu::insert_subtree_assemble_contrib(
                &node, &csnode, snode.hdl, node.contrib_hdl, csnode.hdl, hdls, nh, 
                child_contrib, contrib_idx, blksz, prio);
@@ -784,6 +786,8 @@ namespace spldlt {
 
       // Insert assembly tasks if there are contribution
       if (nh>0) {
+
+         // printf("[assemble_contrib_block_task] nh = %d\n", nh);
          
          int cnr = (csnode.nrow-1)/blksz+1;  
          int crsa = csnode.ncol/blksz;
