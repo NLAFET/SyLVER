@@ -15,8 +15,6 @@
 #SBATCH --error=job.err
 #SBATCH --output=job.out
 
-# srun ./hpc2n_run_tests_job_aux.sh
-
 echo "[HPC2N run_tests SpLDLT]"
 
 # Choose build

@@ -34,6 +34,7 @@ do
                 case $build in
                     starpu)
                         ../builds/starpu/spldlt_test --posdef --ncpu ${ncpu} --nb ${nb} --nemin ${nemin} > $outdir/starpu/${matname}_NCPU-${ncpu}_NB-${nb}_NEMIN-${nemin}${outsuffix}
+                        # ../builds/starpu/spldlt_test --posdef --ncpu ${ncpu} --nb ${nb} --nemin ${nemin}
                         ;;
                 esac
 
