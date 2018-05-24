@@ -874,7 +874,7 @@ namespace spldlt { namespace starpu {
          struct starpu_data_descr *descrs = new starpu_data_descr[ndest+3];
 
          for (int i=0; i<ndest; i++) {
-            descrs[nh].handle = dest_hdls[i]; descrs[nh].mode = STARPU_RW;
+            descrs[nh].handle = dest_hdls[i]; descrs[nh].mode = (starpu_data_access_mode) (STARPU_RW | STARPU_COMMUTE);
             nh++;
          }
 
