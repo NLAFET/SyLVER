@@ -1047,7 +1047,20 @@ namespace spldlt { namespace starpu {
          // Handle on contrib blocks
          descrs[nh].handle = contrib_hdl; descrs[nh].mode = STARPU_R;
          nh++;
+         
+#if defined(SPLDLT_USE_PROFILING)
+         // Compute flops
+         Tile<T, PoolAlloc>& cblock = cnode->get_contrib_block(ii, jj);
+         int blk_m = cblock.m;
+         int blk_n = cblock.n;
+         double flops = static_cast<double>(blk_m)*static_cast<double>(blk_n);
+         if (ii==jj) 
+            flops -= (static_cast<double>(blk_n)*
+                      (static_cast<double>(blk_n)-1.0))/2.0; // Remove flops flops above diagonal
 
+         // printf("[insert_assemble_contrib_block] flops = %f\n", flops);
+#endif
+            
          ret = starpu_task_insert(&cl_assemble_contrib_block,
                                   STARPU_DATA_MODE_ARRAY, descrs, nh,
                                   STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
@@ -1057,6 +1070,7 @@ namespace spldlt { namespace starpu {
                                   STARPU_VALUE, &cmap, sizeof(int*),
                                   STARPU_VALUE, &blksz, sizeof(int),
                                   STARPU_PRIORITY, prio,
+                                  STARPU_FLOPS, flops,
                                   0);
          delete[] descrs;
 

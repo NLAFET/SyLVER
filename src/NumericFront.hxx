@@ -189,7 +189,7 @@ namespace spldlt {
          }
       }
 
-      /// @breif zero contribution blocks
+      /// @brief zero contribution blocks
       /// 
       /// Note: Mainly used for testing purpose as we avoid explictily
       /// zeroing
@@ -308,6 +308,19 @@ namespace spldlt {
       /** \brief Return leading dimension of node's lcol member. */
       inline size_t get_ldl() const {
          return spral::ssids::cpu::align_lda<T>(symb.nrow + ndelay_in);
+      }
+
+      /// @Brief Return block (i,j) in the contribution block
+      /// @param i row index of block in the frontal matrix
+      /// @param j column index of block in the frontal matrix
+      inline Tile<T, PoolAllocator>& get_contrib_block(int i, int j) {
+
+         int n = get_ncol();
+         int sa = n/blksz;
+         int nr = get_nr();
+         int ncontrib = nr-sa;
+
+         return contrib_blocks[(i-sa)+(j-sa)*ncontrib];
       }
 
 #if defined(SPLDLT_USE_STARPU)

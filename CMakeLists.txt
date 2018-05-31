@@ -120,6 +120,13 @@ MESSAGE( STATUS "Use GPU:         " ${USE_GPU} )
 option(USE_MPI "Use MPI" OFF)
 MESSAGE( STATUS "Use MPI:         " ${USE_MPI} )   
 
+# Profiling
+option(USE_PROFILING "Activate profiling info" OFF)
+MESSAGE( STATUS "Profiling: " ${USE_PROFILING} )
+if (${USE_PROFILING} MATCHES "ON")
+  add_definitions(-DSPLDLT_USE_PROFILING)
+endif()
+
 ################################################################################
 # Third-party libraries
 
