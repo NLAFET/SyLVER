@@ -23,6 +23,11 @@ namespace spldlt { namespace starpu {
       /* restore StarPU codelet */
       struct starpu_codelet cl_restore_block_app;
 
+#if defined(SPLDLT_USE_PROFILING)
+      // udpate_contrib_block_indef StarPU perfmodel
+      struct starpu_perfmodel update_contrib_block_app_perfmodel;
+#endif
+
       // udpate_contrib_block_indef StarPU codelet
       struct starpu_codelet cl_update_contrib_block_app;
 

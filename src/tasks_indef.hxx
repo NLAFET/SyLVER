@@ -43,8 +43,7 @@ namespace spldlt {
             cdata[nblk-1].get_hdl(), // make sure col has been processed
             node.contrib_hdl, // For synchronization purpose
             &node, blk, iblk, jblk, 
-            &workspaces,
-            blksz, prio);
+            &workspaces, prio);
 
 #else
 

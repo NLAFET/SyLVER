@@ -323,6 +323,16 @@ namespace spldlt {
          return contrib_blocks[(i-sa)+(j-sa)*ncontrib];
       }
 
+      /// @Brief Return block (i,j) in the factors
+      /// 
+      /// @param i row index of block in the frontal matrix 
+      /// @param j column index of block in the frontal matrix
+      inline Tile<T, PoolAllocator>& get_block(int i, int j) {
+
+         int nr = get_nr();
+         return blocks[i+j*nr];
+      }
+
 #if defined(SPLDLT_USE_STARPU)
       starpu_data_handle_t get_hdl() const {
          return symb.hdl;

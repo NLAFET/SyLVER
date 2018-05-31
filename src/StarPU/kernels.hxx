@@ -1058,8 +1058,7 @@ namespace spldlt { namespace starpu {
             flops -= (static_cast<double>(blk_n)*
                       (static_cast<double>(blk_n)-1.0))/2.0; // Remove flops flops above diagonal
 
-         if (flops <= 0.0)
-            printf("[insert_assemble_contrib_block] flops = %f\n", flops);
+         // printf("[insert_assemble_contrib_block] flops = %.2f\n", flops);
 #endif
             
          ret = starpu_task_insert(&cl_assemble_contrib_block,

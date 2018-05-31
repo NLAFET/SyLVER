@@ -22,7 +22,6 @@ namespace spldlt { namespace starpu {
 
       /* factor_block_app CPU kernel */
       template<typename T,
-               int iblksz,
                typename Backup,
                typename IntAlloc,
                typename Allocator>
@@ -55,7 +54,7 @@ namespace spldlt { namespace starpu {
                &cdata, &backup,
                &options, &work, &alloc);
 
-         spldlt::ldlt_app_internal::Block<T, iblksz, IntAlloc> dblk(blk, blk, m, n, *cdata, a_kk, lda, options->cpu_block_size);
+         spldlt::ldlt_app_internal::Block<T, INNER_BLOCK_SIZE, IntAlloc> dblk(blk, blk, m, n, *cdata, a_kk, lda, options->cpu_block_size);
 
          // printf("[factor_block_app_cpu_func] iblksz: %d, blksz: %d\n", iblksz, options->cpu_block_size);
          // printf("[factor_block_app_cpu_func] blk: %d, blksz: %d\n", blk, options->cpu_block_size);
@@ -562,6 +561,58 @@ namespace spldlt { namespace starpu {
 
       ////////////////////////////////////////////////////////////////////////////////      
       // Update contribution blocks
+
+#if defined(SPLDLT_USE_PROFILING)
+
+      template <typename T, typename IntAlloc, typename PoolAlloc>
+      size_t update_contrib_block_app_size_base(struct starpu_task *task, unsigned nimpl) {
+         
+         size_t flops_task = 0;
+
+         starpu_data_handle_t upd_hdl = STARPU_TASK_GET_HANDLE(task, 0);
+         size_t updm = (size_t) starpu_matrix_get_nx(upd_hdl);
+         size_t updn = (size_t) starpu_matrix_get_ny(upd_hdl);
+         
+         NumericFront<T, PoolAlloc> *node = nullptr;
+         int k, i, j;
+         std::vector<spral::ssids::cpu::Workspace> *workspaces;
+
+         starpu_codelet_unpack_args(
+               task->cl_arg, &node, &k, &i, &j, &workspaces);
+
+         spldlt::ldlt_app_internal::ColumnData<T, IntAlloc> *cdata = node->cdata;
+         int cnelim = (*cdata)[k].nelim;
+         
+         flops_task = 2*updm*updn*cnelim;
+
+         task->flops = (double)flops_task;
+
+         // printf("[update_contrib_block_app_size_base] flops_task = %zu\n", flops_task);
+
+         return flops_task;
+      }
+
+      template <typename T, typename IntAlloc, typename PoolAlloc>
+      uint32_t update_contrib_block_app_footprint(struct starpu_task *task) {
+         
+         uint32_t footprint = 0;
+         size_t flops;
+         
+         flops = update_contrib_block_app_size_base<T, IntAlloc, PoolAlloc>(task, 0);
+
+         footprint = starpu_hash_crc32c_be_n(&flops, sizeof(flops), footprint);
+
+         return footprint;
+      }
+
+      extern struct starpu_perfmodel update_contrib_block_app_perfmodel;
+
+      // struct starpu_perfmodel update_contrib_block_app_perfmodel = {
+      //    .type = STARPU_HISTORY_BASED,
+      //    .size_base = update_contrib_block_app_size_base,
+      //    .footprint = update_contrib_block_app_footprint
+      // };
+#endif
       
       template <typename T, typename IntAlloc, typename PoolAlloc>
       void update_contrib_block_app_cpu_func(void *buffers[], void *cl_arg) {
@@ -580,10 +631,9 @@ namespace spldlt { namespace starpu {
          NumericFront<T, PoolAlloc> *node = nullptr;
          int k, i, j;
          std::vector<spral::ssids::cpu::Workspace> *workspaces;
-         int blksz;
 
          starpu_codelet_unpack_args(
-               cl_arg, &node, &k, &i, &j, &workspaces, &blksz);
+               cl_arg, &node, &k, &i, &j, &workspaces);
 
          int workerid = starpu_worker_get_id();
          spral::ssids::cpu::Workspace &work = (*workspaces)[workerid];
@@ -608,13 +658,19 @@ namespace spldlt { namespace starpu {
             NumericFront<T, PoolAlloc> *node,
             int k, int i, int j,
             std::vector<spral::ssids::cpu::Workspace> *workspaces,
-            int blksz, int prio
-            ) {
+            int prio) {
 
          // printf("[insert_udpate_contrib_block_indef]\n");
 
          int ret;
-         
+
+// #if defined(SPLDLT_USE_PROFILING)
+
+         // Tile<T, PoolAlloc>& upd = cnode->get_contrib_block(i, j);
+         // spldlt::ldlt_app_internal::Block<T, INNER_BLOCK_SIZE, IntAlloc>
+
+// #endif
+
          ret = starpu_insert_task(
                &cl_update_contrib_block_app,
                STARPU_RW, upd_hdl,
@@ -627,7 +683,6 @@ namespace spldlt { namespace starpu {
                STARPU_VALUE, &i, sizeof(int),
                STARPU_VALUE, &j, sizeof(int),
                STARPU_VALUE, &workspaces, sizeof(std::vector<spral::ssids::cpu::Workspace>*),
-               STARPU_VALUE, &blksz, sizeof(int),
                STARPU_PRIORITY, prio,
                0);
          STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
@@ -903,7 +958,7 @@ namespace spldlt { namespace starpu {
          cl_factor_block_app.where = STARPU_CPU;
          cl_factor_block_app.nbuffers = STARPU_VARIABLE_NBUFFERS;
          cl_factor_block_app.name = "FACOTR_BLK_APP";
-         cl_factor_block_app.cpu_funcs[0] = factor_block_app_cpu_func<T, iblksz, Backup, IntAlloc, Allocator>;
+         cl_factor_block_app.cpu_funcs[0] = factor_block_app_cpu_func<T, Backup, IntAlloc, Allocator>;
 
          // printf("[codelet_init_indef] %s\n", cl_factor_block_app.name);
 
@@ -942,12 +997,27 @@ namespace spldlt { namespace starpu {
          cl_adjust.name = "ADJUST";
          cl_adjust.cpu_funcs[0] = adjust_cpu_func<T, IntAlloc>;
 
+#if defined(SPLDLT_USE_PROFILING)
+      //    .type = STARPU_HISTORY_BASED,
+      //    .size_base = update_contrib_block_app_size_base,
+      //    .footprint = update_contrib_block_app_footprint
+
+         // Initialize update_contrib_block_indef StarPU perfmodel
+         starpu_perfmodel_init(&update_contrib_block_app_perfmodel);
+         update_contrib_block_app_perfmodel.type = STARPU_HISTORY_BASED;
+         update_contrib_block_app_perfmodel.symbol = "udpate_contrib_block_app_model";
+         update_contrib_block_app_perfmodel.size_base = update_contrib_block_app_size_base<T, IntAlloc, Allocator>;
+         update_contrib_block_app_perfmodel.footprint = update_contrib_block_app_footprint<T, IntAlloc, Allocator>;
+#endif
          // Initialize update_contrib_block_indef StarPU codelet
          starpu_codelet_init(&cl_update_contrib_block_app);
          cl_update_contrib_block_app.where = STARPU_CPU;
          cl_update_contrib_block_app.nbuffers = STARPU_VARIABLE_NBUFFERS;
          cl_update_contrib_block_app.name = "UPDATE_CONTRIB_BLOCK_APP";
          cl_update_contrib_block_app.cpu_funcs[0] = update_contrib_block_app_cpu_func<T, IntAlloc, Allocator>;
+#if defined(SPLDLT_USE_PROFILING)
+         cl_update_contrib_block_app.model = &update_contrib_block_app_perfmodel;
+#endif
 
          // permute failed
          starpu_codelet_init(&cl_permute_failed);
