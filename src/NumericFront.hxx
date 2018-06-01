@@ -163,6 +163,27 @@ namespace spldlt {
                   contrib_blocks.emplace_back(i-rsa, j-rsa, blkm, blkn, blkm, pool_alloc_);
                }
             }
+
+#if defined(SPLDLT_MEMLAYOUT_1D)
+
+            for(int j = rsa; j < nr; j++) {
+               // First col in contrib block
+               int first_col = std::max(j*blksz, n);
+               // Tile width
+               int blkn = std::min((j+1)*blksz, m) - first_col;
+               // Column height
+               int ldcol = m;
+               int colm = m - first_col;
+               size_t col_dimn = colm*blkn;
+               T *col = (col_dimn>0) ? 
+                  PATraits::allocate(pool_alloc_, col_dimn) : nullptr;  
+
+               for(int i = j; i < ncontrib; i++) {
+                  // contrib_blocks[j*ncontrib+i].a = &col[()] 
+               }                  
+            }
+
+#else
    
             for(int j = 0; j < ncontrib; j++) {
                for(int i = j; i < ncontrib; i++) {
@@ -170,6 +191,8 @@ namespace spldlt {
                   contrib_blocks[j*ncontrib+i].alloc();
                }
             }
+#endif
+
          }
       }
 
