@@ -166,6 +166,11 @@ namespace spldlt {
 
 #if defined(MEMLAYOUT_1D)
 
+            // Here we allocate block-columns and let the diagonal
+            // block hold the data.
+            
+            // printf("[alloc_contrib_blocks]\n");
+
             for(int j = rsa; j < nr; j++) {
                // First col in contrib block
                int first_col = std::max(j*blksz, n);
