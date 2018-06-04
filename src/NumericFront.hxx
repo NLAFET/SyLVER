@@ -164,22 +164,27 @@ namespace spldlt {
                }
             }
 
-#if defined(SPLDLT_MEMLAYOUT_1D)
+#if defined(MEMLAYOUT_1D)
 
             for(int j = rsa; j < nr; j++) {
                // First col in contrib block
                int first_col = std::max(j*blksz, n);
                // Tile width
-               int blkn = std::min((j+1)*blksz, m) - first_col;
+               int blk_n = std::min((j+1)*blksz, m) - first_col;
                // Column height
-               int ldcol = m;
-               int colm = m - first_col;
-               size_t col_dimn = colm*blkn;
+               int col_m = m - first_col;
+               int col_ld = col_m;
+               size_t col_dimn = col_ld*blk_n;
                T *col = (col_dimn>0) ? 
                   PATraits::allocate(pool_alloc_, col_dimn) : nullptr;  
 
-               for(int i = j; i < ncontrib; i++) {
-                  // contrib_blocks[j*ncontrib+i].a = &col[()] 
+               for(int i = j; i < nr; i++) {
+
+                  int row = std::max(i*blksz, n) - first_col; 
+                  
+                  contrib_blocks[(j-rsa)*ncontrib+(i-rsa)].a = &col[row];
+                  contrib_blocks[(j-rsa)*ncontrib+(i-rsa)].lda = col_ld; 
+                  // contrib_blocks[j*ncontrib+i].a = &col[()]
                }                  
             }
 
@@ -199,15 +204,45 @@ namespace spldlt {
       void free_contrib_blocks() {
          int m = get_nrow();
          int n = get_ncol();           
+         int rsa = n / blksz; // index of first block in contribution blocks  
          size_t contrib_dimn = m-n; // Dimension of contribution block
          if (contrib_dimn>0 && contrib_blocks.size()>0) {
             int nr = get_nr(); // number of block rows in front amtrix
             int rsa = n / blksz; // index of first block in contribution blocks  
             int ncontrib = nr-rsa;
             for(int j = 0; j < ncontrib; j++) {
+
+#if defined(MEMLAYOUT_1D)
+               // Free data for the block column that are begin held
+               // by the diagonal block. Then nullify data pointer in
+               // each row tile.
+
+               int jj = j + rsa; // Column index in the global matrix
+               int first_col = std::max(jj*blksz, n);
+               // Column height
+               int col_m = m - first_col;
+               int col_ld = col_m;
+               // Column width
+               int blk_n = std::min((jj+1)*blksz, m) - first_col;
+               size_t col_dimn = col_ld*blk_n;
+
+               // Diagonal block holding the data for the block-column
+               T *col = contrib_blocks[j*(ncontrib+1)].a;
+               assert(col != nullptr);
+               PATraits::deallocate(pool_alloc_, col, col_dimn);
+
+               for(int i = j; i < ncontrib; i++) {
+
+                  int row = i*blksz - first_col; 
+                  // Nullify pointer on block 
+                  contrib_blocks[j*ncontrib+i].a = nullptr;
+               }
+               
+#else
                for(int i = j; i < ncontrib; i++) {
                   contrib_blocks[j*ncontrib+i].free();
                }
+#endif
             }
          }
       }

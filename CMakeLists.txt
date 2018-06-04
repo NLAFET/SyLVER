@@ -122,9 +122,19 @@ MESSAGE( STATUS "Use MPI:         " ${USE_MPI} )
 
 # Profiling
 option(USE_PROFILING "Activate profiling info" OFF)
-MESSAGE( STATUS "Profiling: " ${USE_PROFILING} )
+MESSAGE( STATUS "Profiling: " ${USE_PROFILING})
 if (${USE_PROFILING} MATCHES "ON")
   add_definitions(-DSPLDLT_USE_PROFILING)
+endif()
+
+################################################################################
+# Low-level options
+
+SET(MEMLAYOUT "2D" CACHE STRING "Memory layout")
+set_property(CACHE MEMLAYOUT PROPERTY STRINGS 2D 1D)
+MESSAGE( STATUS "Memory layout: " ${MEMLAYOUT})
+if (${MEMLAYOUT} MATCHES "1D")
+  add_definitions(-DMEMLAYOUT_1D)
 endif()
 
 ################################################################################
