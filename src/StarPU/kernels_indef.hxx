@@ -998,14 +998,11 @@ namespace spldlt { namespace starpu {
          cl_adjust.cpu_funcs[0] = adjust_cpu_func<T, IntAlloc>;
 
 #if defined(SPLDLT_USE_PROFILING)
-      //    .type = STARPU_HISTORY_BASED,
-      //    .size_base = update_contrib_block_app_size_base,
-      //    .footprint = update_contrib_block_app_footprint
 
          // Initialize update_contrib_block_indef StarPU perfmodel
          starpu_perfmodel_init(&update_contrib_block_app_perfmodel);
          update_contrib_block_app_perfmodel.type = STARPU_HISTORY_BASED;
-         update_contrib_block_app_perfmodel.symbol = "udpate_contrib_block_app_model";
+         update_contrib_block_app_perfmodel.symbol = "update_contrib_block_app_model";
          update_contrib_block_app_perfmodel.size_base = update_contrib_block_app_size_base<T, IntAlloc, Allocator>;
          update_contrib_block_app_perfmodel.footprint = update_contrib_block_app_footprint<T, IntAlloc, Allocator>;
 #endif
