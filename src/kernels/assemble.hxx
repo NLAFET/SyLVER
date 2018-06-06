@@ -654,10 +654,81 @@ namespace spldlt {
                dest[ r - ncol - dest_row_sa ] += src[i];
             }
          }
-      }
-      
+      }      
    }
 
+   ////////////////////////////////////////////////////////////////////////////////   
+   // Assemble contrib block with block-column memory layout
+
+   template <typename T, typename PoolAlloc>
+   void assemble_contrib_block_1d(
+         NumericFront<T,PoolAlloc>& node, 
+         NumericFront<T,PoolAlloc>& cnode, 
+         int ii, int jj, int const* cmap) {
+      
+      // printf("[assemble_contrib_block_1d]\n");
+
+      int blksz = node.blksz;
+      
+      // Destination node
+      int ncol = node.get_ncol();
+
+      // Source node
+      int cncol = cnode.get_ncol();
+      int cnrow = cnode.get_nrow();
+
+      Tile<T, PoolAlloc>& src_blk = cnode.get_contrib_block(ii, jj);
+      // Get source block info
+      int src_blk_lda = src_blk.lda;
+      int src_blk_m = src_blk.m;
+      int src_blk_n = src_blk.n;
+
+      // Index of first col in block-column
+      int col_sa = std::max(0, jj*blksz-cncol);
+
+      // Index of first col in block-column
+      int row_sa = std::max(0, ii*blksz-cncol);
+
+      // loop over columns in block jj
+      for (int j=0; j<src_blk_n; j++) {
+
+         // j-th column in source block 
+         T *src = &(src_blk.a[j*src_blk_lda]);
+
+         // Destination column in parent front
+         int c = cmap[ col_sa + j ];
+         
+         // Enusre the destination column is in the contribution blocks
+         if (c >= ncol) {
+
+            // Block-column index
+            int cc = c / blksz;
+            // First col in block-column cc
+            int dest_col_sa = std::max(0, cc*blksz-ncol);
+
+            // Get diag block
+            int diag_row_sa =  std::max(0, cc*blksz-ncol);
+            Tile<T, PoolAlloc>& diag_blk = node.get_contrib_block(cc, cc);
+            int diag_blk_lda = diag_blk.lda;
+            T *dest = &diag_blk.a[ (c - ncol - dest_col_sa)*diag_blk_lda ];
+
+            // In the case where the source block is on the diagonal,
+            // we only assemble the cofficients below the diagonal
+            int i_sa = ( ii==jj ) ? j : 0;
+
+            for (int i=i_sa; i<src_blk_m; i++) {
+
+               // Destination row in parent front
+               int r = cmap[ row_sa + i ];
+
+               assert(r-ncol-diag_row_sa >= 0);
+               
+               dest[ r - ncol - diag_row_sa ] += src[i];
+            }
+         }         
+      }      
+   }
+   
    // template <typename T, typename PoolAlloc>
    // void assemble_contrib_block(spldlt::NumericNode<T,PoolAlloc>& node, 
    //                             spldlt::NumericNode<T,PoolAlloc> const& cnode, 
@@ -710,6 +781,7 @@ namespace spldlt {
 
    ////////////////////////////////////////////////////////////////////////////////   
    // Assemble subtree
+
    template <typename T, typename PoolAlloc>
    void assemble_subtree (
          NumericFront<T,PoolAlloc>& node,

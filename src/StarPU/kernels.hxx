@@ -999,7 +999,11 @@ namespace spldlt { namespace starpu {
 
          // printf("[assemble_contrib_block_cpu_func]\n");
 
+#if defined(MEMLAYOUT_1D)
+         assemble_contrib_block_1d(*node, *cnode, ii, jj, map);
+#else
          assemble_contrib_block(*node, *cnode, ii, jj, map, blksz);
+#endif
       }
 
       // assemble_contrib_block StarPU codelet
