@@ -45,13 +45,14 @@ namespace spldlt { namespace starpu {
 
       NumericFront<T, PoolAlloc> *node = nullptr;
       void** child_contrib;
+      std::vector<spral::ssids::cpu::Workspace> *workspaces;
       
       // printf("[assemble_contrib_cpu_func]\n");
       
       starpu_codelet_unpack_args(
-            cl_arg, &node, &child_contrib);
+            cl_arg, &node, &child_contrib, &workspaces);
       
-      assemble_contrib(*node, child_contrib);         
+      assemble_contrib(*node, child_contrib, *workspaces);
    }
 
    // assemble_contrib StarPU codelet
@@ -63,7 +64,8 @@ namespace spldlt { namespace starpu {
          // starpu_data_handle_t contrib_hdl, // Node's contribution blocks symbolic handle
          starpu_data_handle_t *cnode_hdls, int nhdl, // Children node's symbolic handles
          NumericFront<T, PoolAlloc> *node,
-         void** child_contrib
+         void** child_contrib,
+         std::vector<spral::ssids::cpu::Workspace> *workspaces
          ) {
 
       // printf("[insert_assemble_contrib]\n");
@@ -84,14 +86,16 @@ namespace spldlt { namespace starpu {
       // starpu_tag_declare_deps(tag2, 1, tag1);
 
       int ret;
-      ret = starpu_task_insert(&cl_assemble_contrib,
-                               STARPU_DATA_MODE_ARRAY, descrs, nh,
-                               // STARPU_RW, node_hdl,
-                               // STARPU_RW, contrib_hdl,
-                               // STARPU_TAG, tag2, 
-                               STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
-                               STARPU_VALUE, &child_contrib, sizeof(void**),
-                               0);
+      ret = starpu_task_insert(
+            &cl_assemble_contrib,
+            STARPU_DATA_MODE_ARRAY, descrs, nh,
+            // STARPU_RW, node_hdl,
+            // STARPU_RW, contrib_hdl,
+            // STARPU_TAG, tag2, 
+            STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
+            STARPU_VALUE, &child_contrib, sizeof(void**),
+            STARPU_VALUE, &workspaces, sizeof(std::vector<spral::ssids::cpu::Workspace>*),
+            0);
       STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
 
       // test/debug

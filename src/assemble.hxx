@@ -40,7 +40,9 @@ namespace spldlt {
    template <typename T, typename PoolAlloc>
    void assemble_contrib(
          NumericFront<T,PoolAlloc>& node,
-         void** child_contrib) {
+         void** child_contrib,
+         std::vector<spral::ssids::cpu::Workspace>& workspaces
+         ) {
 
       // printf("[assemble_contrib]\n");
 
@@ -92,7 +94,8 @@ namespace spldlt {
 
                      assemble_contrib_block_task(
                            node, *child, ii, jj, 
-                           child_sfront.map, ASSEMBLE_PRIO);
+                           child_sfront.map, workspaces,
+                           ASSEMBLE_PRIO);
 // #if defined(SPLDLT_USE_STARPU)
 //             starpu_task_wait_for_all();
 // #endif

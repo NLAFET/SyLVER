@@ -98,9 +98,10 @@ namespace spldlt {
          }
 #endif
          auto start = std::chrono::high_resolution_clock::now();
-         if (posdef) factor_mf_posdef(aval, child_contrib, options, worker_stats);
-         else        factor_mf_indef(aval, child_contrib, workspaces, options,
-                                     worker_stats);
+         if (posdef) factor_mf_posdef(aval, child_contrib, workspaces,
+                                      options, worker_stats);
+         else        factor_mf_indef(aval, child_contrib, workspaces,
+                                     options, worker_stats);
          auto end = std::chrono::high_resolution_clock::now();
          long ttotal = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count();
          printf("[NumericTree] Task submission: %e\n", 1e-9*ttotal);
@@ -251,7 +252,7 @@ namespace spldlt {
             // Assemble contributions from children nodes into non
             // fully-summed columns
 
-            assemble_contrib_task(fronts_[ni], child_contrib);
+            assemble_contrib_task(fronts_[ni], child_contrib, workspaces);
             // assemble_contrib(fronts_[ni], child_contrib);
 
 // #if defined(SPLDLT_USE_STARPU)
@@ -297,7 +298,8 @@ namespace spldlt {
       ////////////////////////////////////////////////////////////////////////////////   
       // factor_mf_posdef
       void factor_mf_posdef(
-            T *aval, void** child_contrib, 
+            T *aval, void** child_contrib,
+            std::vector<spral::ssids::cpu::Workspace>& workspaces,
             struct spral::ssids::cpu::cpu_factor_options& options,
             std::vector<ThreadStats>& worker_stats) {
 
@@ -416,7 +418,7 @@ namespace spldlt {
                            // assemble_block(nodes_[ni], *child, ii, jj, csnode.map, blksz);
                            assemble_block_task(
                                  sfront, fronts_[ni], child_sfront, *child, ii, jj, 
-                                 child_sfront.map, blksz, ASSEMBLE_PRIO);
+                                 child_sfront.map, ASSEMBLE_PRIO);
 // #if defined(SPLDLT_USE_STARPU)
 //                            starpu_task_wait_for_all();
 // #endif
@@ -479,7 +481,7 @@ namespace spldlt {
                            // assemble_contrib_block(nodes_[ni], *child, ii, jj, csnode.map, blksz)
                            assemble_contrib_block_task(
                                  fronts_[ni], *child, ii, jj, 
-                                 child_sfront.map, ASSEMBLE_PRIO);
+                                 child_sfront.map, workspaces, ASSEMBLE_PRIO);
 // #if defined(SPLDLT_USE_STARPU)
 //                            starpu_task_wait_for_all();
 // #endif

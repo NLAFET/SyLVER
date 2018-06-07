@@ -991,18 +991,21 @@ namespace spldlt { namespace starpu {
          NumericFront<T, PoolAlloc> *node = nullptr, *cnode = nullptr;
          int ii, jj; // Block row and col indexes
          int *map;
-         int blksz; // Block size
-
+         std::vector<spral::ssids::cpu::Workspace> *workspaces;
+         
          starpu_codelet_unpack_args(
                cl_arg, &node, &cnode,
-               &ii, &jj, &map, &blksz);
+               &ii, &jj, &map, &workspaces);
 
          // printf("[assemble_contrib_block_cpu_func]\n");
 
+         int workerid = starpu_worker_get_id();
+         spral::ssids::cpu::Workspace &work = (*workspaces)[workerid];
+
 #if defined(MEMLAYOUT_1D)
-         assemble_contrib_block_1d(*node, *cnode, ii, jj, map);
+         assemble_contrib_block_1d(*node, *cnode, ii, jj, map, work);
 #else
-         assemble_contrib_block(*node, *cnode, ii, jj, map, blksz);
+         assemble_contrib_block(*node, *cnode, ii, jj, map);
 #endif
       }
 
@@ -1017,12 +1020,12 @@ namespace spldlt { namespace starpu {
             int *cmap, // Mapping vector i.e. i-th column must be
                        // assembled in cmap(i) column of destination
                        // node
-            int blksz,
             starpu_data_handle_t bc_hdl,
             starpu_data_handle_t *dest_hdls, int ndest,
             starpu_data_handle_t node_hdl, // Symbolic handle of destination node
             starpu_data_handle_t contrib_hdl,
             starpu_data_handle_t cnode_hdl, // Symbolic handle of source node
+            std::vector<spral::ssids::cpu::Workspace> *workspaces,
             int prio) {
 
          int ret;
@@ -1060,24 +1063,26 @@ namespace spldlt { namespace starpu {
          double flops = static_cast<double>(blk_m)*static_cast<double>(blk_n);
          if (ii==jj) 
             flops -= (static_cast<double>(blk_n)*
-                      (static_cast<double>(blk_n)-1.0))/2.0; // Remove flops flops above diagonal
+                      (static_cast<double>(blk_n)-1.0))/2.0; // Remove flops for coef above diagonal
 
          // printf("[insert_assemble_contrib_block] flops = %.2f\n", flops);
 #endif
             
-         ret = starpu_task_insert(&cl_assemble_contrib_block,
-                                  STARPU_DATA_MODE_ARRAY, descrs, nh,
-                                  STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
-                                  STARPU_VALUE, &cnode, sizeof(NumericFront<T, PoolAlloc>*),
-                                  STARPU_VALUE, &ii, sizeof(int),
-                                  STARPU_VALUE, &jj, sizeof(int),
-                                  STARPU_VALUE, &cmap, sizeof(int*),
-                                  STARPU_VALUE, &blksz, sizeof(int),
-                                  STARPU_PRIORITY, prio,
+         ret = starpu_task_insert(
+               &cl_assemble_contrib_block,
+               STARPU_DATA_MODE_ARRAY, descrs, nh,
+               STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
+               STARPU_VALUE, &cnode, sizeof(NumericFront<T, PoolAlloc>*),
+               STARPU_VALUE, &ii, sizeof(int),
+               STARPU_VALUE, &jj, sizeof(int),
+               STARPU_VALUE, &cmap, sizeof(int*),
+               STARPU_VALUE, &workspaces, sizeof(std::vector<spral::ssids::cpu::Workspace>*),
+               STARPU_PRIORITY, prio,
 #if defined(SPLDLT_USE_PROFILING)
-                                  STARPU_FLOPS, flops,
+               STARPU_FLOPS, flops,
 #endif
-                                  0);
+               0);
+
          delete[] descrs;
 
       }

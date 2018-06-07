@@ -644,10 +644,12 @@ namespace spldlt {
          NumericFront<T,PoolAlloc>& node, 
          SymbolicFront const& csnode, 
          NumericFront<T,PoolAlloc> const& cnode, 
-         int ii, int jj, int *cmap, int blksz, int prio) {
+         int ii, int jj, int *cmap, int prio) {
 
 #if defined(SPLDLT_USE_STARPU)
 
+      int blksz = node.blksz;
+      
       int nrow = node.get_nrow();
       int ncol = node.get_ncol();
       int nr = node.get_nr(); // Number of block-rows in destination node
@@ -725,7 +727,9 @@ namespace spldlt {
    void assemble_contrib_block_task(
          NumericFront<T,PoolAlloc>& node, 
          NumericFront<T,PoolAlloc>& cnode, 
-         int ii, int jj, int *cmap, int prio) {
+         int ii, int jj, int *cmap,
+         std::vector<spral::ssids::cpu::Workspace>& workspaces,
+         int prio) {
 
       int blksz = node.blksz;
 
@@ -794,18 +798,23 @@ namespace spldlt {
          int cncontrib = cnr-crsa;
 
          spldlt::starpu::insert_assemble_contrib_block(
-               &node, &cnode, ii, jj, cmap, blksz, 
-               // csnode.contrib_handles[(jj-crsa)*cncontrib+(ii-crsa)], 
+               &node, &cnode, ii, jj, cmap, 
                cnode.contrib_blocks[(jj-crsa)*cncontrib+(ii-crsa)].hdl,
                hdls, nh, snode.hdl, node.contrib_hdl, csnode.hdl,
-               prio);
+               &workspaces, prio);
       }
       delete[] hdls;
 
       // assemble_contrib_block(node, cnode, ii, jj, cmap, blksz);
 #else
 
-      assemble_contrib_block(node, cnode, ii, jj, cmap, blksz);
+      spral::ssids::cpu::Workspace& work = workspaces[0];
+#if defined(MEMLAYOUT_1D)
+      assemble_contrib_block_1d(node, cnode, ii, jj, cmap, work);
+#else
+      assemble_contrib_block(node, cnode, ii, jj, cmap);
+#endif
+      
 #endif
    }   
 

@@ -35,7 +35,8 @@ namespace spldlt {
    template <typename T, typename PoolAlloc>
    void assemble_contrib_task(
          NumericFront<T, PoolAlloc>& node,
-         void** child_contrib
+         void** child_contrib,
+         std::vector<spral::ssids::cpu::Workspace>& workspaces
          ){
 
 #if defined(SPLDLT_USE_STARPU)
@@ -55,13 +56,13 @@ namespace spldlt {
 
       spldlt::starpu::insert_assemble_contrib(
             node.get_hdl(), cnode_hdls, nchild, //node.contrib_hdl,
-            &node, child_contrib);
+            &node, child_contrib, &workspaces);
 
       delete[] cnode_hdls;
 
 #else
 
-      assemble_contrib(node, child_contrib);
+      assemble_contrib(node, child_contrib, workspaces);
 
 #endif
    }

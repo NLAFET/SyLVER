@@ -6,15 +6,10 @@
 #pragma once
 
 #include "ssids/cpu/cpu_iface.hxx"
-// #include "ssids/cpu/NumericNode.hxx"
-// #include "ssids/cpu/SymbolicNode.hxx"
-// #include "ssids/cpu/Workspace.hxx"
 #include "ssids/cpu/kernels/assemble.hxx"
 
 #include "kernels/ldlt_app.hxx"
 #include "NumericFront.hxx"
-
-// using namespace spral::ssids::cpu;
 
 namespace spldlt {
 
@@ -576,11 +571,14 @@ namespace spldlt {
    // Assemble contrib block
    
    template <typename T, typename PoolAlloc>
-   void assemble_contrib_block(NumericFront<T,PoolAlloc>& node, 
-                               NumericFront<T,PoolAlloc> const& cnode, 
-                               int ii, int jj, int const* cmap, int blksz) {
+   void assemble_contrib_block(
+         NumericFront<T,PoolAlloc>& node, 
+         NumericFront<T,PoolAlloc> const& cnode, 
+         int ii, int jj, int const* cmap) {
 
       // printf("[assemble_contrib_block]\n");
+
+      int blksz = node.blksz;
 
       SymbolicFront const& csnode = cnode.symb;
       
@@ -664,7 +662,8 @@ namespace spldlt {
    void assemble_contrib_block_1d(
          NumericFront<T,PoolAlloc>& node, 
          NumericFront<T,PoolAlloc>& cnode, 
-         int ii, int jj, int const* cmap) {
+         int ii, int jj, int const* cmap,
+         spral::ssids::cpu::Workspace &work) {
       
       // printf("[assemble_contrib_block_1d]\n");
 
@@ -694,7 +693,7 @@ namespace spldlt {
 
          // j-th column in source block 
          T *src = &(src_blk.a[j*src_blk_lda]);
-
+         
          // Destination column in parent front
          int c = cmap[ col_sa + j ];
          
@@ -710,23 +709,37 @@ namespace spldlt {
             int diag_row_sa =  std::max(0, cc*blksz-ncol);
             Tile<T, PoolAlloc>& diag_blk = node.get_contrib_block(cc, cc);
             int diag_blk_lda = diag_blk.lda;
+
+            assert(c - ncol - dest_col_sa >= 0);
+
             T *dest = &diag_blk.a[ (c - ncol - dest_col_sa)*diag_blk_lda ];
 
             // In the case where the source block is on the diagonal,
             // we only assemble the cofficients below the diagonal
             int i_sa = ( ii==jj ) ? j : 0;
 
-            for (int i=i_sa; i<src_blk_m; i++) {
+            int* cache = work.get_ptr<int>(src_blk_m-i_sa);
+            for (int i=0; i<src_blk_m-i_sa; i++)
+               cache[i] = cmap[ row_sa + i_sa + i ] - ncol - diag_row_sa;
+               
+            spral::ssids::cpu::asm_col(src_blk_m-i_sa, cache, &src[i_sa], dest);
+            
+            // for (int i=0; i<src_blk_m-i_sa; i++) {
+            //    dest[ cache[i] ] += src[i];
+            // }
+            
+            // for (int i=i_sa; i<src_blk_m; i++) {
 
                // Destination row in parent front
-               int r = cmap[ row_sa + i ];
+               // int r = cmap[ row_sa + i ];
 
-               assert(r-ncol-diag_row_sa >= 0);
+               // assert(r-ncol-diag_row_sa >= 0);
                
-               dest[ r - ncol - diag_row_sa ] += src[i];
-            }
-         }         
-      }      
+               // dest[ r - ncol - diag_row_sa ] += src[i];
+
+            // }
+         }
+      }   
    }
    
    // template <typename T, typename PoolAlloc>
