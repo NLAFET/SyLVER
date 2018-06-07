@@ -718,18 +718,17 @@ namespace spldlt {
             // we only assemble the cofficients below the diagonal
             int i_sa = ( ii==jj ) ? j : 0;
 
-            int* cache = work.get_ptr<int>(src_blk_m-i_sa);
-            for (int i=0; i<src_blk_m-i_sa; i++)
-               cache[i] = cmap[ row_sa + i_sa + i ] - ncol - diag_row_sa;
+            // int* cache = work.get_ptr<int>(src_blk_m-i_sa);
+            // for (int i=0; i<src_blk_m-i_sa; i++)
+            //    cache[i] = cmap[ row_sa + i_sa + i ] - ncol - diag_row_sa;
                
-            spral::ssids::cpu::asm_col(src_blk_m-i_sa, cache, &src[i_sa], dest);
+            // spral::ssids::cpu::asm_col(src_blk_m-i_sa, cache, &src[i_sa], dest);
             
             // for (int i=0; i<src_blk_m-i_sa; i++) {
             //    dest[ cache[i] ] += src[i];
             // }
             
-            // for (int i=i_sa; i<src_blk_m; i++) {
-
+            for (int i=i_sa; i<src_blk_m; i++) {
                // Destination row in parent front
                // int r = cmap[ row_sa + i ];
 
@@ -737,7 +736,12 @@ namespace spldlt {
                
                // dest[ r - ncol - diag_row_sa ] += src[i];
 
-            // }
+               assert(cmap[ row_sa + i ]-ncol-diag_row_sa >= 0);
+
+               dest[ cmap[ row_sa + i ] - ncol - diag_row_sa ] += src[i];
+                              
+            }
+
          }
       }   
    }

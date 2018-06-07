@@ -241,11 +241,11 @@ if(${USE_GPU} MATCHES ON)
   # set(CUDA_SEPARABLE_COMPILATION TRUE)
 
   # MAGMA library
-  set(MAGMA_DIR $ENV{MAGMADIR} CACHE PATH "Location of MAGMA Library")
-  set(MAGMA_SRCDIR $ENV{MAGMASRCDIR} CACHE PATH "Location of MAGMA Sources")
-  include_directories(${MAGMA_DIR}/include)
-  include_directories(${MAGMA_SRCDIR}/control)     
-  find_library(MAGMA_LIBRARY magma PATHS ${MAGMA_DIR}/lib)
+  # set(MAGMA_DIR $ENV{MAGMADIR} CACHE PATH "Location of MAGMA Library")
+  # set(MAGMA_SRCDIR $ENV{MAGMASRCDIR} CACHE PATH "Location of MAGMA Sources")
+  # include_directories(${MAGMA_DIR}/include)
+  # include_directories(${MAGMA_SRCDIR}/control)     
+  # find_library(MAGMA_LIBRARY magma PATHS ${MAGMA_DIR}/lib)
 
 endif()
 
@@ -393,5 +393,14 @@ message(" ")
 if(${RUNTIME} MATCHES "StarPU")
   message("Runtime system: StarPU")
   message("StarPU libraries: ${STARPU_LIBRARIES}")
+endif()
+message(" ")
+if(${USE_GPU} MATCHES ON)
+  message(
+    "CUDA host compiler: ${CUDA_HOST_COMPILER}\n"
+    "NVVC comiler: ${CUDA_NVCC_EXECUTABLE}\n"
+    "NVCC FLAGS: ${CUDA_NVCC_FLAGS}\n"
+    )
+  message(" ")
 endif()
 message("--------------------------------------------------------------------------------")

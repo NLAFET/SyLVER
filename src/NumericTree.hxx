@@ -74,7 +74,8 @@ namespace spldlt {
          
          int nworkers = 1;
 #if defined(SPLDLT_USE_STARPU)
-         nworkers = starpu_cpu_worker_get_count();
+         // nworkers = starpu_cpu_worker_get_count();
+         nworkers = starpu_worker_get_count();
 #endif
          printf("[NumericTree] blksz = %d, nworkers = %d\n", blksz, nworkers);         
 
