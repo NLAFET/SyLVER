@@ -22,8 +22,7 @@
 
 namespace spldlt { namespace tests {
 
-      template<typename T,
-               bool debug = false>
+      template<typename T, bool debug = false>
       int form_contrib_test(
             T u, T small, bool posdef,
             int m, int n, int from, int to,
@@ -46,7 +45,7 @@ namespace spldlt { namespace tests {
             
       // Generate test matrix
       int lda = spral::ssids::cpu::align_lda<T>(m);
-      T* a = new double[m*lda];
+      T* a = new T[m*lda];
 
       if (posdef) gen_posdef(m, a, lda);
       else gen_sym_indef(m, a, lda);
