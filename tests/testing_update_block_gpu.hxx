@@ -50,11 +50,22 @@ namespace spldlt { namespace tests {
          delete[] perm;
          
          // Create matrix L_ij
-         T* l_ij = new T[m*n];         
-         // Create matrix L_ij
-         T* l_ik = new T[m*k];
-         // Create matrix L_ij
+         int ld_lij = m;
+         T* l_ij = new T[ld_lij*n];         
+         // Create matrix L_ik
+         int ld_lik = m;
+         T* l_ik = new T[ld_lik*k];
+         // Create matrix L_jk
+         int ld_lik = m;
+
          T* l_jk = new T[n*k];
+         // Create matrix LD = Lik D_k
+         T* l_jk = new T[n*k];
+
+         // Compute LD
+         spral::ssids::cpu::calcLD<OP_N>(
+               m, k, l_ik, ld_lik, d, ld, ldld);
+
 
          ////////////////////////////////////////
          // Init GPU
