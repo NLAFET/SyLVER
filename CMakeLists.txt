@@ -236,6 +236,8 @@ if(${USE_GPU} MATCHES ON)
   MESSAGE( STATUS "CUDA nvcc compiler: " ${CUDA_NVCC_EXECUTABLE})
   MESSAGE( STATUS "NVCC FLAGS:         " ${CUDA_NVCC_FLAGS} )
 
+  set(LIBS ${LIBS} ${CUDA_LIBRARIES})
+
   # enable_language(CUDA)
   # include(FindCUDA)
 
@@ -338,7 +340,19 @@ if (${KERNEL_TESTS} MATCHES "ON")
   add_executable(spldlt_tests_factor_node tests/drivers/factor_node_test.cxx)
   add_executable(spldlt_tests_kernels tests/drivers/kernel_test.cxx)
 
-  # MESSAGE( STATUS "SpLDLT SRC DIR: " ${SpLDLT_SOURCE_DIR}/tests )
+  if(${USE_GPU} MATCHES ON)
+
+    add_executable(spldlt_tests_update_block_gpu tests/drivers/update_block_gpu_test.cxx)
+
+    target_include_directories(spldlt_tests_update_block_gpu PUBLIC "${SpLDLT_SOURCE_DIR}/tests")
+    target_include_directories(spldlt_tests_update_block_gpu PUBLIC ${SPRAL_DIR})
+    target_link_libraries(spldlt_tests_update_block_gpu spldlt)
+    target_link_libraries(spldlt_tests_update_block_gpu ${obj})
+    target_link_libraries(spldlt_tests_update_block_gpu ${SPRAL_LIBRARY})
+    target_link_libraries(spldlt_tests_update_block_gpu ${LIBS})
+    target_link_libraries(spldlt_tests_update_block_gpu spldlt_tests)
+
+  endif()
   
   target_include_directories(spldlt_tests_factor_node PUBLIC "${SpLDLT_SOURCE_DIR}/tests")
   target_include_directories(spldlt_tests_factor_node PUBLIC ${SPRAL_DIR})
@@ -400,6 +414,7 @@ message(" ")
 if(${USE_GPU} MATCHES ON)
   message(
     "CUDA host compiler: ${CUDA_HOST_COMPILER}\n"
+    "CUDA libraries: ${CUDA_LIBRARIES}\n"
     "NVVC comiler: ${CUDA_NVCC_EXECUTABLE}\n"
     "NVCC FLAGS: ${CUDA_NVCC_FLAGS}\n"
     )
