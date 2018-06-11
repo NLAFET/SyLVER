@@ -8,7 +8,7 @@ namespace spldlt {
    class SpldltOpts {
 
    public:
-      SpldltOpts() : ncpu(1), m(32), n(32),
+      SpldltOpts() : ncpu(1), m(32), n(32), k(32),
                      nb(32), ib(32), posdef(false) {}
 
       void parse_opts(int argc, char** argv) {
@@ -23,6 +23,9 @@ namespace spldlt {
             }
             else if ( !strcmp("--n", argv[i]) && i+1 < argc ) {
                n =  std::atoi( argv[++i] );
+            }
+            else if ( !strcmp("--k", argv[i]) && i+1 < argc ) {
+               k =  std::atoi( argv[++i] );
             }
             else if ( !strcmp("--ncpu", argv[i]) && i+1 < argc ) {
                ncpu =  std::atoi( argv[++i] );
@@ -39,6 +42,7 @@ namespace spldlt {
       int ncpu; // no cpu
       int m; // no rows in matrix
       int n; // no columns in matrix
+      int k;
       int nb; // block size
       int ib; // inner block size
       bool posdef;
