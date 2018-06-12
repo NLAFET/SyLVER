@@ -8,8 +8,9 @@ namespace spldlt {
    class SpldltOpts {
 
    public:
-      SpldltOpts() : ncpu(1), m(32), n(32), k(32),
-                     nb(32), ib(32), posdef(false) {}
+      SpldltOpts() : ncpu(1), m(256), n(256), k(256),
+                     nb(256), ib(256), posdef(false),
+                     check(true){}
 
       void parse_opts(int argc, char** argv) {
          
@@ -34,6 +35,10 @@ namespace spldlt {
                posdef = true;
                ++i;
             }
+            else if ( !strcmp("--no-check", argv[i]) ) {
+               check = false;
+               ++i;
+            }
 
          }
          
@@ -46,5 +51,6 @@ namespace spldlt {
       int nb; // block size
       int ib; // inner block size
       bool posdef;
+      bool check;
    };
 }

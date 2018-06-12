@@ -528,5 +528,14 @@ namespace spldlt { namespace tests {
       }
       
    }
+
+   template<typename T>
+   void gen_mat(int m, int n, T* a, int lda) {
+      /* Fill matrix with random numbers from Unif [-1.0,1.0] */
+      for(int j=0; j<n; ++j)
+         for(int i=0; i<m; ++i)
+            a[j*lda+i] = 1.0 - (2.0*rand()) / RAND_MAX ;
+   }
+
    
    }} // namespace spldlt::tests

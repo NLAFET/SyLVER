@@ -237,6 +237,7 @@ if(${USE_GPU} MATCHES ON)
   MESSAGE( STATUS "NVCC FLAGS:         " ${CUDA_NVCC_FLAGS} )
 
   set(LIBS ${LIBS} ${CUDA_LIBRARIES})
+  set(LIBS ${LIBS} ${CUDA_CUBLAS_LIBRARIES})
 
   # enable_language(CUDA)
   # include(FindCUDA)
@@ -415,6 +416,7 @@ if(${USE_GPU} MATCHES ON)
   message(
     "CUDA host compiler: ${CUDA_HOST_COMPILER}\n"
     "CUDA libraries: ${CUDA_LIBRARIES}\n"
+    "CUBLAS libraries: ${CUDA_CUBLAS_LIBRARIES}\n"
     "NVVC comiler: ${CUDA_NVCC_EXECUTABLE}\n"
     "NVCC FLAGS: ${CUDA_NVCC_FLAGS}\n"
     )
