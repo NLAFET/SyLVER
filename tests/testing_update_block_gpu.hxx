@@ -120,6 +120,7 @@ namespace spldlt { namespace tests {
          T* d_l_ik;
          T* d_l_jk;
 
+         T* d_d;
          T* d_ld;
 
          // Allocate memory on GPU
@@ -127,17 +128,21 @@ namespace spldlt { namespace tests {
          cerr = cudaMalloc((void **) &d_upd, ld_lij*n*sizeof(T));
          cerr = cudaMalloc((void **) &d_l_jk, ld_ljk*k*sizeof(T));
          cerr = cudaMalloc((void **) &d_ld, ldld*k*sizeof(T));
+         cerr = cudaMalloc((void **) &d_d, 2*k*sizeof(T));
 
          // Send data to the GPU
          cudaMemcpy(d_upd, upd, ld_lij*n*sizeof(T), cudaMemcpyHostToDevice);
          cudaMemcpy(d_l_jk, l_jk, ld_ljk*k*sizeof(T), cudaMemcpyHostToDevice);
-         cudaMemcpy(d_ld, ld, ldld*k*sizeof(T), cudaMemcpyHostToDevice);
+         // cudaMemcpy(d_ld, ld, ldld*k*sizeof(T), cudaMemcpyHostToDevice);
+         cudaMemcpy(d_d, d, 2*k*sizeof(T), cudaMemcpyHostToDevice);
 
          // Perform update on the GPU
          cublasHandle_t handle;
          cublasCreate(&handle);
 
          auto start = std::chrono::high_resolution_clock::now();
+
+         
 
          cublasDgemm(
                handle,
