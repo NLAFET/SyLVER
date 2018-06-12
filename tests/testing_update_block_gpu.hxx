@@ -2,6 +2,7 @@
 
 // SpLDLT
 #include "common.hxx"
+#include "kernels/wrappers.hxx"
 
 // STD
 #include <cstdio>
@@ -128,7 +129,7 @@ namespace spldlt { namespace tests {
          cerr = cudaMalloc((void **) &d_ld, ldld*k*sizeof(T));
 
          // Send data to the GPU
-         cudaMemcpy(d_upd, l_ij, ld_lij*n*sizeof(T), cudaMemcpyHostToDevice);
+         cudaMemcpy(d_upd, upd, ld_lij*n*sizeof(T), cudaMemcpyHostToDevice);
          cudaMemcpy(d_l_jk, l_jk, ld_ljk*k*sizeof(T), cudaMemcpyHostToDevice);
          cudaMemcpy(d_ld, ld, ldld*k*sizeof(T), cudaMemcpyHostToDevice);
 
@@ -158,10 +159,21 @@ namespace spldlt { namespace tests {
          ////////////////////////////////////////
          // Check results
 
+         T lij_norm = host_lange(spldlt::NORM_FRO, m, n, l_ij, ld_lij);
+         host_axpy(ld_lij*n, -1.0, upd, 1.0, l_ij, 1.0);
+         // host_axpy(ld_lij*n, -1.0, l_ij, 1.0, l_ij, 1.0);
+         T err_norm = host_lange(spldlt::NORM_FRO, m, n, l_ij, ld_lij);
 
-         printf("[update_block_gpu_test] init = : %e\n", 1e-9*t_init);
-         printf("[update_block_gpu_test] t_gpu = : %e\n", 1e-9*ttotal);
-         printf("[update_block_gpu_test] t_cpu = : %e\n", 1e-9*ttotal_cpu);
+         // printf("[update_block_gpu_test] lij_norm = : %e\n", lij_norm);
+         // printf("[update_block_gpu_test] err_norm = : %e\n", err_norm);
+         printf("[update_block_gpu_test] rel err = %e\n", err_norm/lij_norm);
+
+         ////////////////////////////////////////
+         // Print results
+
+         printf("[update_block_gpu_test] init = %e\n", 1e-9*t_init);
+         printf("[update_block_gpu_test] t_gpu = %e\n", 1e-9*ttotal);
+         printf("[update_block_gpu_test] t_cpu = %e\n", 1e-9*ttotal_cpu);
          
          ////////////////////////////////////////
          // Cleanup memory
