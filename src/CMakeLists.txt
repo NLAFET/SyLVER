@@ -46,6 +46,23 @@ if(${RUNTIME} MATCHES "StarPU")
 
 endif()
 
+if(${USE_GPU} MATCHES ON)
+
+  file(
+    GLOB
+    cuda_sources 
+    kernels/gpu/*.cu)
+
+  # set(sources ${sources} ${cuda_sources})
+  # set(sources ${cuda_sources})
+  
+  MESSAGE( STATUS "CUDA source files: " ${cuda_sources} )
+endif()
+
+if(${USE_GPU} MATCHES ON)
+  cuda_add_library(spllt_cuda ${cuda_sources})
+endif()
+
 message(STATUS "Sources: ${sources}")
 
 add_library(spldlt ${sources})

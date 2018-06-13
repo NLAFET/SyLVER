@@ -239,6 +239,8 @@ if(${USE_GPU} MATCHES ON)
   set(LIBS ${LIBS} ${CUDA_LIBRARIES})
   set(LIBS ${LIBS} ${CUDA_CUBLAS_LIBRARIES})
 
+  set(LIBS ${LIBS} spllt_cuda)
+
   # enable_language(CUDA)
   # include(FindCUDA)
 

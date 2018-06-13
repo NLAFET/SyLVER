@@ -1,7 +1,7 @@
 #include <cuda_runtime.h>
 #include <cuda_runtime_api.h>
 
-#define CALC_LD_NTX 8  // Number of threads x
+#define BLOCK_SIZE 8  // Number of threads
 
 namespace /* anon */ {
 
@@ -23,9 +23,9 @@ namespace spldlt {
             const cudaStream_t stream,
             int m,
             int n,
-            double *const d,
+            double *const d
             ) {
-
+         
       }
       
    }
