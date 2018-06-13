@@ -23,7 +23,18 @@
 // cuBLAS
 #include "cublas_v2.h"
 
-
+namespace spldlt {
+   
+   void calc_ld(
+         const cudaStream_t stream,
+         int m,
+         int n,
+         double *const l, int ldl,
+         double *const d,
+         double *ld, int ldld
+         );
+   }
+   
 namespace spldlt { namespace tests {
 
       template<typename T, bool debug = false>
@@ -60,7 +71,10 @@ namespace spldlt { namespace tests {
 
          delete[] tmp;
          delete[] perm;
-         
+
+         // Print D
+         // print_d(k, d);
+            
          // Create matrix L_ij
          int ld_lij = m;
          T* l_ij = new T[ld_lij*n];         
@@ -89,6 +103,8 @@ namespace spldlt { namespace tests {
          spral::ssids::cpu::calcLD<spral::ssids::cpu::OP_N>(
                m, k, l_ik, ld_lik, d, ld, ldld);
 
+         // print_mat("%10.2e", m, ld, ldld);
+         
          auto start_cpu = std::chrono::high_resolution_clock::now();
          // Compute U = U - W L^{T}
          host_gemm(
@@ -126,6 +142,7 @@ namespace spldlt { namespace tests {
          // Allocate memory on GPU
          cudaError_t cerr;
          cerr = cudaMalloc((void **) &d_upd, ld_lij*n*sizeof(T));
+         cerr = cudaMalloc((void **) &d_l_ik, ld_lik*k*sizeof(T));
          cerr = cudaMalloc((void **) &d_l_jk, ld_ljk*k*sizeof(T));
          cerr = cudaMalloc((void **) &d_ld, ldld*k*sizeof(T));
          cerr = cudaMalloc((void **) &d_d, 2*k*sizeof(T));
@@ -133,17 +150,29 @@ namespace spldlt { namespace tests {
          // Send data to the GPU
          cudaMemcpy(d_upd, upd, ld_lij*n*sizeof(T), cudaMemcpyHostToDevice);
          cudaMemcpy(d_l_jk, l_jk, ld_ljk*k*sizeof(T), cudaMemcpyHostToDevice);
+         cudaMemcpy(d_l_ik, l_ik, ld_lik*k*sizeof(T), cudaMemcpyHostToDevice);
          // cudaMemcpy(d_ld, ld, ldld*k*sizeof(T), cudaMemcpyHostToDevice);
          cudaMemcpy(d_d, d, 2*k*sizeof(T), cudaMemcpyHostToDevice);
 
          // Perform update on the GPU
+
+         // Create CUDA stream and cuBLAS handle 
+         cudaStream_t stream;
+         cudaStreamCreate(&stream);
          cublasHandle_t handle;
          cublasCreate(&handle);
-
-         auto start = std::chrono::high_resolution_clock::now();
-
+         cublasSetStream(handle, stream);
          
+         auto start = std::chrono::high_resolution_clock::now();         
 
+         calc_ld(
+               stream, m, k,
+               d_l_ik, ld_lik,
+               d_d,
+               d_ld, ldld);
+
+         // cudaStreamSynchronize(stream); // unecessary, for debug purpose
+         
          cublasDgemm(
                handle,
                CUBLAS_OP_N, CUBLAS_OP_T,
@@ -153,6 +182,9 @@ namespace spldlt { namespace tests {
                &rbeta,
                d_upd, ld_lij);               
 
+                     
+         cudaStreamSynchronize(stream);
+         
          auto end = std::chrono::high_resolution_clock::now();
          long ttotal = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count();
 
@@ -183,16 +215,25 @@ namespace spldlt { namespace tests {
          ////////////////////////////////////////
          // Cleanup memory
 
-         delete[] ld;
 
          cerr = cudaFree((void*)d_upd);
+         cerr = cudaFree((void*)d_l_ik);
          cerr = cudaFree((void*)d_l_jk);
          cerr = cudaFree((void*)d_ld);
-
+         
+         delete[] d;
+         delete[] ld;
          delete[] c;
          delete[] l_ij;
          delete[] l_ik;
          delete[] l_jk;
+
+         ////////////////////////////////////////
+         // 
+
+         cudaStreamDestroy(stream);
+
+         cudaDeviceReset();
 
          return failed ? -1 : 0;
       }
