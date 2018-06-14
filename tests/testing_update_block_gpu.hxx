@@ -100,12 +100,14 @@ namespace spldlt { namespace tests {
          // Compute L_ik D_k
          int ldld = m;
          T* ld = new T[ldld*k];
+
+         auto start_cpu = std::chrono::high_resolution_clock::now();
          spral::ssids::cpu::calcLD<spral::ssids::cpu::OP_N>(
                m, k, l_ik, ld_lik, d, ld, ldld);
+         auto t_ld_en = std::chrono::high_resolution_clock::now();
 
          // print_mat("%10.2e", m, ld, ldld);
          
-         auto start_cpu = std::chrono::high_resolution_clock::now();
          // Compute U = U - W L^{T}
          host_gemm(
                OP_N, OP_T, m, n, k,
@@ -113,8 +115,11 @@ namespace spldlt { namespace tests {
                -1.0, ld, ldld, l_jk, ld_ljk,
                rbeta, l_ij, ld_lij);
          auto end_cpu = std::chrono::high_resolution_clock::now();
+         // Time for performing update
          long ttotal_cpu = std::chrono::duration_cast<std::chrono::nanoseconds>(end_cpu-start_cpu).count();
-
+         // Time for computing LD
+         long t_ld = std::chrono::duration_cast<std::chrono::nanoseconds>(t_ld_en-start_cpu).count();
+         long t_gemm_cpu = std::chrono::duration_cast<std::chrono::nanoseconds>(end_cpu-t_ld_en).count();
 
          ////////////////////////////////////////
          // Init GPU
@@ -209,6 +214,8 @@ namespace spldlt { namespace tests {
          // Print results
 
          printf("[update_block_gpu_test] init = %e\n", 1e-9*t_init);
+         printf("[update_block_gpu_test] t_ld_cpu (us) = %f.3\n", 1e-3*t_ld);
+         printf("[update_block_gpu_test] t_gemm_cpu (us) = %f.3\n", 1e-3*t_gemm_cpu);
          printf("[update_block_gpu_test] t_gpu = %e\n", 1e-9*ttotal);
          printf("[update_block_gpu_test] t_cpu = %e\n", 1e-9*ttotal_cpu);
          
