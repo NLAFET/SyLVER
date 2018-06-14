@@ -4,8 +4,8 @@
 #include <cuda_runtime_api.h>
 
 // #define BLOCK_SIZE 128  // Number of threads
-// #define BLOCK_SIZE 16  // Number of threads
-#define BLOCK_SIZE 32  // Number of threads
+#define BLOCK_SIZE 16  // Number of threads
+// #define BLOCK_SIZE 32  // Number of threads
 
 namespace /* anon */ {
 
@@ -26,8 +26,8 @@ namespace /* anon */ {
       for (int col = ty + by * blockDim.y; col < n; col += blockDim.y * gridDim.y) {
 
          // Check if we are halfway trhough a 2x2 pivot
-         if (col+1 < n && !std::isfinite(d[2*col]))
-            continue;
+         // if (col+1 < n && !std::isfinite(d[2*col]))
+         //    continue;
          
          if(col+1==n || (std::isfinite(d[2*col+2]) && std::isfinite(d[2*col]))) {
             // 1x1 pivot
@@ -41,8 +41,8 @@ namespace /* anon */ {
                ld[col*ldld+row] = d11 * l[col*ldl+row];
 
          }
-         else {
-         // else if (std::isfinite(d[2*col])) {
+         // else {
+         else if (std::isfinite(d[2*col])) {
             // 2x2 pivot
 
             // printf("[cu_calc_ld] 2x2\n");
@@ -155,9 +155,11 @@ namespace spldlt {
             ) {
 
          dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
-         dim3 grid((m + threads.x - 1) / threads.x, (n - threads.y -1) / threads.y);
+         dim3 grid((m + threads.x - 1) / threads.x, (n + threads.y -1) / threads.y);
 
          printf("[calc_ld] m = %d, n = %d\n", m, n);
+         printf("[calc_ld] thx = %d, thy = %d\n", threads.x, threads.y);
+         printf("[calc_ld] grx = %d, gry = %d\n", grid.x, grid.y);
 
          // int nb = (m + BLOCK_SIZE - 1) / BLOCK_SIZE;
          
