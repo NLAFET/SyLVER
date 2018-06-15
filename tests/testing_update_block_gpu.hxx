@@ -3,6 +3,7 @@
 // SpLDLT
 #include "common.hxx"
 #include "kernels/wrappers.hxx"
+#include "kernels/gpu/factor_indef.hxx"
 
 // STD
 #include <cstdio>
@@ -23,17 +24,18 @@
 // cuBLAS
 #include "cublas_v2.h"
 
-namespace spldlt {
+// namespace spldlt { namespace gpu {
    
-   void calc_ld(
-         const cudaStream_t stream,
-         int m,
-         int n,
-         double *const l, int ldl,
-         double *const d,
-         double *ld, int ldld
-         );
-   }
+//       template<typename T>
+//       void calc_ld(
+//             const cudaStream_t stream,
+//             int m,
+//             int n,
+//             T *const l, int ldl,
+//             T *const d,
+//             T *ld, int ldld);
+
+// }}
    
 namespace spldlt { namespace tests {
 
@@ -167,26 +169,53 @@ namespace spldlt { namespace tests {
          cublasHandle_t handle;
          cublasCreate(&handle);
          cublasSetStream(handle, stream);
+
+         // if (warmup) {
+
+         //    spldlt::gpu::update_block(
+         //          stream, handle,
+         //          m, n,
+         //          d_upd, ld_lij,
+         //          k,
+         //          d_l_ik, ld_lik, 
+         //          d_l_jk, ld_ljk,
+         //          false,
+         //          d_d,
+         //          d_ld, ldld);
+                     
+         //    cudaStreamSynchronize(stream);
+
+         // }
          
          auto start = std::chrono::high_resolution_clock::now();         
 
-         calc_ld(
-               stream, m, k,
-               d_l_ik, ld_lik,
+         spldlt::gpu::update_block(
+               stream, handle,
+               m, n,
+               d_upd, ld_lij,
+               k,
+               d_l_ik, ld_lik, 
+               d_l_jk, ld_ljk,
+               false,
                d_d,
                d_ld, ldld);
 
+         // spldlt::gpu::calc_ld(
+         //       stream, m, k,
+         //       d_l_ik, ld_lik,
+         //       d_d,
+         //       d_ld, ldld);
+
          // cudaStreamSynchronize(stream); // unecessary, for debug purpose
          
-         cublasDgemm(
-               handle,
-               CUBLAS_OP_N, CUBLAS_OP_T,
-               m, n, k,
-               &ralpha, 
-               d_ld, ldld, d_l_jk, ld_ljk,
-               &rbeta,
-               d_upd, ld_lij);               
-
+         // cublasDgemm(
+         //       handle,
+         //       CUBLAS_OP_N, CUBLAS_OP_T,
+         //       m, n, k,
+         //       &ralpha, 
+         //       d_ld, ldld, d_l_jk, ld_ljk,
+         //       &rbeta,
+         //       d_upd, ld_lij);               
                      
          cudaStreamSynchronize(stream);
          
@@ -213,11 +242,18 @@ namespace spldlt { namespace tests {
          ////////////////////////////////////////
          // Print results
 
-         printf("[update_block_gpu_test] init = %e\n", 1e-9*t_init);
-         printf("[update_block_gpu_test] t_ld_cpu (us) = %f.3\n", 1e-3*t_ld);
-         printf("[update_block_gpu_test] t_gemm_cpu (us) = %f.3\n", 1e-3*t_gemm_cpu);
-         printf("[update_block_gpu_test] t_gpu = %e\n", 1e-9*ttotal);
-         printf("[update_block_gpu_test] t_cpu = %e\n", 1e-9*ttotal_cpu);
+         double flops = (double)2*m*n*k;
+
+         printf("[update_block_gpu_test]\n");
+         printf("init = %e\n", 1e-9*t_init);
+         printf("t_ld_cpu (us) = %f\n", 1e-3*t_ld);
+         printf("t_gemm_cpu (us) = %f\n", 1e-3*t_gemm_cpu);
+         printf("t_gpu (ms) = %e\n", 1e-6*ttotal);
+         printf("t_cpu (ms) = %e\n", 1e-6*ttotal_cpu);
+
+         // printf("[update_block_gpu_test] flops = %f\n", flops);
+         printf("GFlop/s GPU = %.3f\n", flops/(double)ttotal);
+         printf("GFlop/s CPU = %.3f\n", flops/(double)ttotal_cpu);
          
          ////////////////////////////////////////
          // Cleanup memory

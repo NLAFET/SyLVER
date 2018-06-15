@@ -160,8 +160,9 @@ namespace /* anon */ {
 
 } // end of anon namespace
 
-namespace spldlt {
+namespace spldlt { namespace gpu {
    
+      // template<typename T>
       void calc_ld(
             const cudaStream_t stream,
             int m, int n,
@@ -173,9 +174,9 @@ namespace spldlt {
          dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
          dim3 grid((m + threads.x - 1) / threads.x, (n + threads.y -1) / threads.y);
 
-         printf("[calc_ld] m = %d, n = %d\n", m, n);
-         printf("[calc_ld] thx = %d, thy = %d\n", threads.x, threads.y);
-         printf("[calc_ld] grx = %d, gry = %d\n", grid.x, grid.y);
+         // printf("[calc_ld] m = %d, n = %d\n", m, n);
+         // printf("[calc_ld] thx = %d, thy = %d\n", threads.x, threads.y);
+         // printf("[calc_ld] grx = %d, gry = %d\n", grid.x, grid.y);
 
          // int nb = (m + BLOCK_SIZE - 1) / BLOCK_SIZE;
          
@@ -188,4 +189,4 @@ namespace spldlt {
 
       }
       
-}
+}} // End of namespace spldlt::gpu

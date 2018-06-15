@@ -49,6 +49,15 @@ endif()
 if(${USE_GPU} MATCHES ON)
 
   file(
+    GLOB 
+    gpu_sources
+    kernels/gpu/*.cxx
+    kernels/gpu/*.hxx
+    )  
+
+  set(sources ${sources} ${gpu_sources})
+
+  file(
     GLOB
     cuda_sources 
     kernels/gpu/*.cu)
@@ -60,7 +69,7 @@ if(${USE_GPU} MATCHES ON)
 endif()
 
 if(${USE_GPU} MATCHES ON)
-  cuda_add_library(spllt_cuda ${cuda_sources})
+  cuda_add_library(spldlt_cuda ${cuda_sources})
 endif()
 
 message(STATUS "Sources: ${sources}")
