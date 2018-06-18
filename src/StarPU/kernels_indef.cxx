@@ -23,7 +23,7 @@ namespace spldlt { namespace starpu {
       struct starpu_codelet cl_adjust;
 
       /* restore StarPU codelet */
-      struct starpu_codelet cl_restore_block_app;
+      struct starpu_codelet cl_restore_failed_block_app;
 
 #if defined(SPLDLT_USE_PROFILING)
       // udpate_contrib_block_indef StarPU perfmodel

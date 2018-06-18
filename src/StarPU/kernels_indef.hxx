@@ -166,6 +166,9 @@ namespace spldlt { namespace starpu {
          (*cdata)[blk].update_passed(blkpass);
       }
 
+      ////////////////////////////////////////
+      // applyT
+
       /* applyT_block_app StarPU codelet */
       // static
       extern struct starpu_codelet cl_applyT_block_app;
@@ -279,8 +282,11 @@ namespace spldlt { namespace starpu {
          STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
       }
 
+      ////////////////////////////////////////
+      // restore failed
+
       /* restore_block_app StarPU codelet */
-      extern struct starpu_codelet cl_restore_block_app;      
+      extern struct starpu_codelet cl_restore_failed_block_app;      
 
       /*  restore_block_app StarPU task
          
@@ -290,7 +296,7 @@ namespace spldlt { namespace starpu {
                typename Backup, 
                typename IntAlloc>
       void
-      restore_block_app_cpu_func(void *buffers[], void *cl_arg) {
+      restore_failed_block_app_cpu_func(void *buffers[], void *cl_arg) {
 
          T *a_ij = (T *)STARPU_MATRIX_GET_PTR(buffers[0]); // Get diagonal block pointer
          unsigned ld_a_ij = STARPU_MATRIX_GET_LD(buffers[0]); // Get leading dimensions
@@ -316,6 +322,20 @@ namespace spldlt { namespace starpu {
 
          ublk.restore_if_required(*backup, blk);
       }
+
+      void insert_restore_failed_block_app(
+            starpu_data_handle_t hdl,
+            ColumnData<T,IntAlloc> *cdata, Backup *backup) {
+
+         ret = starpu_task_insert(
+               &cl_restore_failed_block_app,
+               STARPU_RW, hdl,
+               0);
+         
+      }
+
+      ////////////////////////////////////////
+      // updateN
 
       /* updateN_block_app StarPU codelet */
       // static
@@ -1072,6 +1092,13 @@ namespace spldlt { namespace starpu {
          cl_nelim_sync.name = "NELIM_SYNC";
          // cl_nelim_sync.cpu_funcs[0] = nelim_sync_cpu_func<T, Allocator>;
          cl_nelim_sync.cpu_funcs[0] = nelim_sync_cpu_func;
+
+         // Restore failed
+         starpu_codelet_init(&cl_restore_failed_block_app);
+         cl_restore_failed_block_app.where = STARPU_CPU;
+         cl_restore_failed_block_app.nbuffers = STARPU_VARIABLE_NBUFFERS;
+         cl_restore_failed_block_app.name = "PERMUTE_FAILED";
+         cl_restore_failed_block_app.cpu_funcs[0] = restore_failed_block_app_cpu_func<T, IntAlloc, Allocator>;
 
       }
       

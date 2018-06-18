@@ -137,7 +137,7 @@ namespace spldlt { namespace tests {
 
       int nworkers = 1;
 #if defined(SPLDLT_USE_STARPU)
-      nworkers = starpu_cpu_worker_get_count();
+      nworkers = starpu_worker_get_count();
 // #else
 //       nworkers = omp_get_num_threads();
 #endif
