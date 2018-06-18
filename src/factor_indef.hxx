@@ -426,18 +426,25 @@ namespace spldlt {
       /// Restore ny failed row and release backup
       static 
       void restore_failed_block_task(
-            int elim_col, BlockSpec& blk) {
+            int elim_col, BlockSpec& blk,
+            ColumnData<T,IntAlloc>& cdata, Backup& backup) {
 
 #if defined(SPLDLT_USE_STARPU)
 
+         int iblk = blk.get_row();
+         int jblk = blk.get_col();
+
+         spldlt::starpu::insert_restore_failed_block_app(
+               ublk.get_hdl(), )
+         
 #else
 
-         ublk.restore_if_required(backup, elim_col);
+         blk.restore_if_required(backup, elim_col);
 
 #endif
       } 
 
-      ////////////////////////////////////////////////////////////////////////////////   
+      ////////////////////////////////////////////////////////////////////////////////
       // factorize_indef_app_notask
       // Sequential factorization routine for indefinite matrices implementing an
       // APTP strategy. Failed entires are left in place.

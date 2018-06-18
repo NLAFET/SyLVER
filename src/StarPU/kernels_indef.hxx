@@ -330,6 +330,8 @@ namespace spldlt { namespace starpu {
          ret = starpu_task_insert(
                &cl_restore_failed_block_app,
                STARPU_RW, hdl,
+               STARPU_VALUE, &cdata, sizeof(ColumnData<T,IntAlloc>*),
+               STARPU_VALUE, &backup, sizeof(Backup*),
                0);
          
       }
