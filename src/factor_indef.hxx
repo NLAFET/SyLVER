@@ -427,7 +427,8 @@ namespace spldlt {
       static 
       void restore_failed_block_task(
             int elim_col, BlockSpec& blk,
-            ColumnData<T,IntAlloc>& cdata, Backup& backup) {
+            ColumnData<T,IntAlloc>& cdata, Backup& backup,
+            std::vector<spral::ssids::cpu::Workspace>& workspaces) {
 
 #if defined(SPLDLT_USE_STARPU)
 
@@ -435,7 +436,7 @@ namespace spldlt {
                blk.get_hdl(),
                blk.get_m(), blk.get_n(),
                blk.get_row(), blk.get_col(), elim_col,
-               &cdata, &backup, blk.get_blksz());
+               &cdata, &backup, &workspaces, blk.get_blksz());
 
 #else
 
@@ -1379,21 +1380,44 @@ namespace spldlt {
                   // END DEBUG
                }
             }
+
+#if defined(SPLDLT_USE_GPU)            
+
+            for(int iblk=blk; iblk<mblk; iblk++) {
+               restore_failed_block_task(
+                     blk, blocks[blk*mblk+iblk], cdata, backup,
+                     workspaces);
+            }
+
             for(int jblk=blk; jblk<nblk; jblk++) {
 
+               for(int iblk=jblk; iblk<mblk; iblk++) {
+
+               updateN_block_app_task (
+                     // isrc, jsrc, ublk,
+                     blocks[blk*mblk+iblk], blocks[blk*mblk+jblk],
+                     blocks[jblk*mblk+iblk],
+                     cdata, backup,
+                     beta, upd, ldupd,
+                     workspaces);
+
+               }
+            }
+#else
+            for(int jblk=blk; jblk<nblk; jblk++) {
                // Source block
                // BlockSpec jsrc(jblk, blk, m, n, cdata, &a[blk*block_size*lda+jblk*block_size], lda, block_size);
 
                for(int iblk=jblk; iblk<mblk; iblk++) {
 
-#if defined(SPLDLT_USE_GPU)
+// #if defined(SPLDLT_USE_GPU)
                   
-                  if (jblk == blk)
-                     restore_failed_block_task(
-                           blk, blocks[jblk*mblk+iblk], cdata, backup);
+//                   if (jblk == blk)
+//                      restore_failed_block_task(
+//                            blk, blocks[jblk*mblk+iblk], cdata, backup);
 
 
-#endif
+// #endif
 
                   // Source block
                   // BlockSpec isrc(iblk, blk, m, n, cdata, &a[blk*block_size*lda+iblk*block_size], lda, block_size);
@@ -1417,6 +1441,8 @@ namespace spldlt {
 
                }
             }
+
+#endif
 
             // Handle update to contribution block, if required
             if (contrib_dimn > 0) {

@@ -1163,7 +1163,9 @@ public:
     */
    void update(Block const& isrc, Block const& jsrc, Workspace& work,
          double beta=1.0, T* upd=nullptr, int ldupd=0) {
+
       if(isrc.i_ == i_ && isrc.j_ == jsrc.j_) {
+         
          // Update to right of elim column (UpdateN)
          int elim_col = isrc.j_;
          if(cdata_[elim_col].nelim == 0) return; // nothing to do
@@ -1204,7 +1206,9 @@ public:
                      );
             }
          }
-      } else {
+      } 
+      
+      else {
          // Update to left of elim column (UpdateT)
          int elim_col = jsrc.i_;
          if(cdata_[elim_col].nelim == 0) return; // nothing to do

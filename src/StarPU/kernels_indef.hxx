@@ -301,6 +301,8 @@ namespace spldlt { namespace starpu {
          T *a_ij = (T *)STARPU_MATRIX_GET_PTR(buffers[0]); // Get diagonal block pointer
          unsigned ld_a_ij = STARPU_MATRIX_GET_LD(buffers[0]); // Get leading dimensions
 
+         int id = starpu_worker_get_id();
+
          int m, n; // node's dimensions
          int iblk; // destination block's row index
          int jblk; // destination block's column index     
@@ -309,24 +311,45 @@ namespace spldlt { namespace starpu {
          ColumnData<T,IntAlloc> *cdata = nullptr;
          Backup *backup = nullptr;
 
+         std::vector<spral::ssids::cpu::Workspace> *workspaces;
          int blksz;
 
          starpu_codelet_unpack_args (
                cl_arg,
                &m, &n,
-               &iblk, &jblk, &elim_col,
-               &cdata, &backup,
+               &iblk, &jblk, 
+               &elim_col,
+               &cdata, 
+               &backup,
+               &workspaces, 
                &blksz);
 
-         printf("TETETETETET\n");
+         // printf("[restore_failed_block_app_cpu_func] jblk = %d, elim_col = %d\n",
+         //        jblk, elim_col);
 
          spldlt::ldlt_app_internal::
             Block<T, iblksz, IntAlloc> 
             ublk(iblk, jblk, m, n, *cdata, a_ij, ld_a_ij, blksz);
 
+         spldlt::ldlt_app_internal::
+            Block<T, iblksz, IntAlloc> 
+            isrc(iblk, elim_col, m, n, *cdata, a_ij, ld_a_ij, blksz);
+         
+         spldlt::ldlt_app_internal::
+            Block<T, iblksz, IntAlloc> 
+            jsrc(jblk, elim_col, m, n, *cdata, a_ij, ld_a_ij, blksz);
+
          // Restore any failed cols and release resources storing
          // backup
          ublk.restore_if_required(*backup, elim_col);
+
+         T beta = 0.0;
+         T *upd = nullptr;
+         int ldupd = 0;
+         // Update failed cols
+         ublk.update(
+               isrc, jsrc, (*workspaces)[id], beta, upd, ldupd);
+
       }
 
       template<typename T, 
@@ -336,6 +359,7 @@ namespace spldlt { namespace starpu {
             starpu_data_handle_t hdl,
             int m, int n, int iblk, int jblk, int elim_col,
             ColumnData<T,IntAlloc> *cdata, Backup *backup,
+            std::vector<spral::ssids::cpu::Workspace> *workspaces, 
             int blksz) {
 
          int ret;
@@ -350,6 +374,7 @@ namespace spldlt { namespace starpu {
                STARPU_VALUE, &elim_col, sizeof(int),
                STARPU_VALUE, &cdata, sizeof(ColumnData<T,IntAlloc>*),
                STARPU_VALUE, &backup, sizeof(Backup*),
+               STARPU_VALUE, &workspaces, sizeof(std::vector<spral::ssids::cpu::Workspace>*),
                STARPU_VALUE, &blksz, sizeof(int),
                0);
          
@@ -361,6 +386,19 @@ namespace spldlt { namespace starpu {
       /* updateN_block_app StarPU codelet */
       // static
       extern struct starpu_codelet cl_updateN_block_app;      
+
+#if defined(SPLDLT_USE_GPU)
+      template<typename T,
+               int iblksz,
+               typename Backup, 
+               typename IntAlloc>
+      void 
+      updateN_block_app_gpu_func(void *buffers[], void *cl_arg) {
+
+         printf("[updateN_block_app_gpu_func]\n");
+      }
+
+#endif
 
       /*  updateN_block_app StarPU task
          
@@ -382,7 +420,6 @@ namespace spldlt { namespace starpu {
          unsigned ld_a_ij = STARPU_MATRIX_GET_LD(buffers[2]); // Get leading dimensions
          
          int id = starpu_worker_get_id();
-         // printf("[updateN_block_app_cpu_func] id: %d nworker: %d\n", id, starpu_worker_get_count());
 
          int m, n; // node's dimensions
          int iblk; // destination block's row index
@@ -408,6 +445,9 @@ namespace spldlt { namespace starpu {
                &cdata, &backup,
                &beta, &upd, &ldupd,
                &work, &blksz /*&options*/);
+
+         // printf("[updateN_block_app_cpu_func] iblk = %d, jblk = %d, blk = %d\n", iblk, jblk, blk);
+         printf("[updateN_block_app_cpu_func] beta = %f\n", beta);
 
          spldlt::ldlt_app_internal::Block<T, iblksz, IntAlloc> ublk(iblk, jblk, m, n, *cdata, a_ij, ld_a_ij, blksz);
          spldlt::ldlt_app_internal::Block<T, iblksz, IntAlloc> isrc(iblk, blk, m, n, *cdata, a_ik, ld_a_ik, blksz);
@@ -1032,10 +1072,13 @@ namespace spldlt { namespace starpu {
          // Initialize updateN_block_app StarPU codelet
          starpu_codelet_init(&cl_updateN_block_app);
          cl_updateN_block_app.where = STARPU_CPU;
+         // cl_updateN_block_app.where = STARPU_CUDA;
          cl_updateN_block_app.nbuffers = STARPU_VARIABLE_NBUFFERS;
          cl_updateN_block_app.name = "UPDATEN_BLK_APP";
          cl_updateN_block_app.cpu_funcs[0] = updateN_block_app_cpu_func<T, iblksz, Backup, IntAlloc>;
-
+#if defined(SPLDLT_USE_GPU)
+         cl_updateN_block_app.cuda_funcs[0] = updateN_block_app_gpu_func<T, iblksz, Backup, IntAlloc>;
+#endif
          // Initialize updateT_block_app StarPU codelet
          starpu_codelet_init(&cl_updateT_block_app);
          cl_updateT_block_app.where = STARPU_CPU;
