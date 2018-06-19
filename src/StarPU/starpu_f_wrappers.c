@@ -13,14 +13,14 @@ int starpu_f_init_c(int ncpus) {
   if(ncpus > 0)
     conf->ncpus = ncpus;  
   printf("starpu_f_init_c, ncpu: %d\n", conf->ncpus);
-#if defined(SPLLT_USE_GPU)
+#if defined(SPLDLT_USE_GPU)
   conf->ncuda = 1;
 #endif
 
-#if defined(SPLLT_USE_GPU)
-  conf->sched_policy_name = "dmdas";
+#if defined(SPLDLT_USE_GPU)
+  /* conf->sched_policy_name = "dmdas"; */
   /* conf->sched_policy_name = "eager"; */
-  /* conf->sched_policy_name = "lws"; */
+  conf->sched_policy_name = "lws";
 #else
   conf->sched_policy_name = "ws"; // Use WS because LWS is currently buggy
   /* conf->sched_policy_name = "lws"; */

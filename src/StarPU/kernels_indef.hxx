@@ -304,7 +304,7 @@ namespace spldlt { namespace starpu {
          int m, n; // node's dimensions
          int iblk; // destination block's row index
          int jblk; // destination block's column index     
-         int blk; // source block's column index     
+         int elim_col; // Eliminated column      
 
          ColumnData<T,IntAlloc> *cdata = nullptr;
          Backup *backup = nullptr;
@@ -314,24 +314,43 @@ namespace spldlt { namespace starpu {
          starpu_codelet_unpack_args (
                cl_arg,
                &m, &n,
-               &iblk, &jblk, &blk,
+               &iblk, &jblk, &elim_col,
                &cdata, &backup,
                &blksz);
 
-         spldlt::ldlt_app_internal::Block<T, iblksz, IntAlloc> ublk(iblk, jblk, m, n, *cdata, a_ij, ld_a_ij, blksz);
+         printf("TETETETETET\n");
 
-         ublk.restore_if_required(*backup, blk);
+         spldlt::ldlt_app_internal::
+            Block<T, iblksz, IntAlloc> 
+            ublk(iblk, jblk, m, n, *cdata, a_ij, ld_a_ij, blksz);
+
+         // Restore any failed cols and release resources storing
+         // backup
+         ublk.restore_if_required(*backup, elim_col);
       }
 
+      template<typename T, 
+               typename Backup, 
+               typename IntAlloc>
       void insert_restore_failed_block_app(
             starpu_data_handle_t hdl,
-            ColumnData<T,IntAlloc> *cdata, Backup *backup) {
+            int m, int n, int iblk, int jblk, int elim_col,
+            ColumnData<T,IntAlloc> *cdata, Backup *backup,
+            int blksz) {
+
+         int ret;
 
          ret = starpu_task_insert(
                &cl_restore_failed_block_app,
                STARPU_RW, hdl,
+               STARPU_VALUE, &m, sizeof(int),
+               STARPU_VALUE, &n, sizeof(int),
+               STARPU_VALUE, &iblk, sizeof(int),
+               STARPU_VALUE, &jblk, sizeof(int),
+               STARPU_VALUE, &elim_col, sizeof(int),
                STARPU_VALUE, &cdata, sizeof(ColumnData<T,IntAlloc>*),
                STARPU_VALUE, &backup, sizeof(Backup*),
+               STARPU_VALUE, &blksz, sizeof(int),
                0);
          
       }
@@ -394,12 +413,14 @@ namespace spldlt { namespace starpu {
          spldlt::ldlt_app_internal::Block<T, iblksz, IntAlloc> isrc(iblk, blk, m, n, *cdata, a_ik, ld_a_ik, blksz);
          spldlt::ldlt_app_internal::Block<T, iblksz, IntAlloc> jsrc(jblk, blk, m, n, *cdata, a_jk, ld_a_jk, blksz);
 
+#if !defined(SPLDLT_USE_GPU)
          // If we're on the block col we've just eliminated, restore
          // any failed cols and release resources storing backup
          ublk.restore_if_required(*backup, blk);
+#endif
          // Perform actual update
-         ublk.update(isrc, jsrc, (*work)[id],
-                     beta, upd, ldupd);
+         ublk.update(
+               isrc, jsrc, (*work)[id], beta, upd, ldupd);
       }
 
       template<typename T, 
@@ -1100,7 +1121,7 @@ namespace spldlt { namespace starpu {
          cl_restore_failed_block_app.where = STARPU_CPU;
          cl_restore_failed_block_app.nbuffers = STARPU_VARIABLE_NBUFFERS;
          cl_restore_failed_block_app.name = "PERMUTE_FAILED";
-         cl_restore_failed_block_app.cpu_funcs[0] = restore_failed_block_app_cpu_func<T, IntAlloc, Allocator>;
+         cl_restore_failed_block_app.cpu_funcs[0] = restore_failed_block_app_cpu_func<T, iblksz, Backup, IntAlloc>;
 
       }
       

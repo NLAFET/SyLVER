@@ -12,8 +12,8 @@ int main(int argc, char** argv) {
    spldlt::SpldltOpts opts;
    opts.parse_opts(argc, argv);
 
-   printf("[factor_node_test] Matrix %dx%d\n", opts.m, opts.n);
-   printf("[factor_node_test] blksz = %d, ib:%d\n", opts.nb, opts.ib);
+   printf("[factor_node_test] Matrix m = %d, n = %d\n", opts.m, opts.n);
+   printf("[factor_node_test] blksz = %d\n", opts.nb);
    printf("[factor_node_test] ncpu = %d\n", opts.ncpu);
    printf("[factor_node_test] posdef = %d\n", opts.posdef);
 
