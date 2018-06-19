@@ -426,14 +426,16 @@ namespace spldlt {
       /// Restore ny failed row and release backup
       static 
       void restore_failed_block_task(
-            int elim_col, BlockSpec& blk,
+            int elim_col,
+            BlockSpec& jblk,
+            BlockSpec& blk,
             ColumnData<T,IntAlloc>& cdata, Backup& backup,
             std::vector<spral::ssids::cpu::Workspace>& workspaces) {
 
 #if defined(SPLDLT_USE_STARPU)
 
          spldlt::starpu::insert_restore_failed_block_app(
-               blk.get_hdl(),
+               jblk.get_hdl(), blk.get_hdl(),
                blk.get_m(), blk.get_n(),
                blk.get_row(), blk.get_col(), elim_col,
                &cdata, &backup, &workspaces, blk.get_blksz());
@@ -1385,11 +1387,11 @@ namespace spldlt {
 
             for(int iblk=blk; iblk<mblk; iblk++) {
                restore_failed_block_task(
-                     blk, blocks[blk*mblk+iblk], cdata, backup,
+                     blk, blocks[blk*(mblk+1)], blocks[blk*mblk+iblk], cdata, backup,
                      workspaces);
             }
 
-            for(int jblk=blk; jblk<nblk; jblk++) {
+            for(int jblk=blk+1; jblk<nblk; jblk++) {
 
                for(int iblk=jblk; iblk<mblk; iblk++) {
 

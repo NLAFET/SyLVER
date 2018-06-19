@@ -298,14 +298,17 @@ namespace spldlt { namespace starpu {
       void
       restore_failed_block_app_cpu_func(void *buffers[], void *cl_arg) {
 
-         T *a_ij = (T *)STARPU_MATRIX_GET_PTR(buffers[0]); // Get diagonal block pointer
-         unsigned ld_a_ij = STARPU_MATRIX_GET_LD(buffers[0]); // Get leading dimensions
+         T *l_jk = (T *)STARPU_MATRIX_GET_PTR(buffers[0]); // Get diagonal block pointer
+         unsigned ld_l_jk = STARPU_MATRIX_GET_LD(buffers[0]); // Get leading dimensions
+
+         T *l_ij = (T *)STARPU_MATRIX_GET_PTR(buffers[1]); // Get diagonal block pointer
+         unsigned ld_l_ij = STARPU_MATRIX_GET_LD(buffers[1]); // Get leading dimensions
 
          int id = starpu_worker_get_id();
 
          int m, n; // node's dimensions
          int iblk; // destination block's row index
-         int jblk; // destination block's column index     
+         int jblk; // destination block's column index
          int elim_col; // Eliminated column      
 
          ColumnData<T,IntAlloc> *cdata = nullptr;
@@ -329,15 +332,15 @@ namespace spldlt { namespace starpu {
 
          spldlt::ldlt_app_internal::
             Block<T, iblksz, IntAlloc> 
-            ublk(iblk, jblk, m, n, *cdata, a_ij, ld_a_ij, blksz);
+            ublk(iblk, jblk, m, n, *cdata, l_ij, ld_l_ij, blksz);
 
          spldlt::ldlt_app_internal::
             Block<T, iblksz, IntAlloc> 
-            isrc(iblk, elim_col, m, n, *cdata, a_ij, ld_a_ij, blksz);
+            isrc(iblk, elim_col, m, n, *cdata, l_ij, ld_l_ij, blksz);
          
          spldlt::ldlt_app_internal::
-            Block<T, iblksz, IntAlloc> 
-            jsrc(jblk, elim_col, m, n, *cdata, a_ij, ld_a_ij, blksz);
+            Block<T, iblksz, IntAlloc>
+            jsrc(jblk, elim_col, m, n, *cdata, l_jk, ld_l_jk, blksz);
 
          // Restore any failed cols and release resources storing
          // backup
@@ -356,7 +359,8 @@ namespace spldlt { namespace starpu {
                typename Backup, 
                typename IntAlloc>
       void insert_restore_failed_block_app(
-            starpu_data_handle_t hdl,
+            starpu_data_handle_t l_jk_hdl,
+            starpu_data_handle_t l_ij_hdl,
             int m, int n, int iblk, int jblk, int elim_col,
             ColumnData<T,IntAlloc> *cdata, Backup *backup,
             std::vector<spral::ssids::cpu::Workspace> *workspaces, 
@@ -366,7 +370,8 @@ namespace spldlt { namespace starpu {
 
          ret = starpu_task_insert(
                &cl_restore_failed_block_app,
-               STARPU_RW, hdl,
+               STARPU_R , l_jk_hdl,
+               STARPU_RW, l_ij_hdl,
                STARPU_VALUE, &m, sizeof(int),
                STARPU_VALUE, &n, sizeof(int),
                STARPU_VALUE, &iblk, sizeof(int),
