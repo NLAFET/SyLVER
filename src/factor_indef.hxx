@@ -735,6 +735,7 @@ namespace spldlt {
             struct cpu_factor_options& options, int const block_size,
             T const beta, T* upd, int const ldupd, std::vector<spral::ssids::cpu::Workspace>& work,
             Allocator const& alloc, int const from_blk=0) {
+
          typedef spldlt::ldlt_app_internal::Block<T, iblksz, IntAlloc> BlockSpec;
          // typedef ColumnData<T,IntAlloc> ColumnDataSpec;
 

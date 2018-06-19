@@ -415,6 +415,8 @@ namespace spldlt { namespace starpu {
       void 
       updateN_block_app_cpu_func(void *buffers[], void *cl_arg) {
 
+         typedef spldlt::ldlt_app_internal::Block<T, iblksz, IntAlloc> BlockSpec;
+
          T *a_ik = (T *)STARPU_MATRIX_GET_PTR(buffers[0]); // Get diagonal block pointer
          unsigned ld_a_ik = STARPU_MATRIX_GET_LD(buffers[0]); // Get leading dimensions
 
@@ -452,11 +454,11 @@ namespace spldlt { namespace starpu {
                &work, &blksz /*&options*/);
 
          // printf("[updateN_block_app_cpu_func] iblk = %d, jblk = %d, blk = %d\n", iblk, jblk, blk);
-         printf("[updateN_block_app_cpu_func] beta = %f\n", beta);
+         // printf("[updateN_block_app_cpu_func] beta = %f\n", beta);
 
-         spldlt::ldlt_app_internal::Block<T, iblksz, IntAlloc> ublk(iblk, jblk, m, n, *cdata, a_ij, ld_a_ij, blksz);
-         spldlt::ldlt_app_internal::Block<T, iblksz, IntAlloc> isrc(iblk, blk, m, n, *cdata, a_ik, ld_a_ik, blksz);
-         spldlt::ldlt_app_internal::Block<T, iblksz, IntAlloc> jsrc(jblk, blk, m, n, *cdata, a_jk, ld_a_jk, blksz);
+         BlockSpec ublk(iblk, jblk, m, n, *cdata, a_ij, ld_a_ij, blksz);
+         BlockSpec isrc(iblk, blk, m, n, *cdata, a_ik, ld_a_ik, blksz);
+         BlockSpec jsrc(jblk, blk, m, n, *cdata, a_jk, ld_a_jk, blksz);
 
 #if !defined(SPLDLT_USE_GPU)
          // If we're on the block col we've just eliminated, restore
@@ -523,6 +525,8 @@ namespace spldlt { namespace starpu {
       void 
       updateT_block_app_cpu_func(void *buffers[], void *cl_arg) {
 
+         typedef spldlt::ldlt_app_internal::Block<T, iblksz, IntAlloc> BlockSpec;
+         
          T *a_ik = (T *)STARPU_MATRIX_GET_PTR(buffers[0]); // Get diagonal block pointer
          unsigned ld_a_ik = STARPU_MATRIX_GET_LD(buffers[0]); // Get leading dimensions
          
@@ -542,7 +546,7 @@ namespace spldlt { namespace starpu {
 
          ColumnData<T,IntAlloc> *cdata = nullptr;
          Backup *backup = nullptr;
-         std::vector<spral::ssids::cpu::Workspace> *work; 
+         std::vector<spral::ssids::cpu::Workspace> *workspaces; 
          // Workspace *work;
          // struct cpu_factor_options *options = nullptr;
          int blksz;
@@ -553,17 +557,18 @@ namespace spldlt { namespace starpu {
                &isrc_row, &isrc_col,
                &iblk, &jblk, &blk,
                &cdata, &backup,
-               &work, &blksz /*&options*/);
+               &workspaces, &blksz /*&options*/);
 
-         spldlt::ldlt_app_internal::Block<T, iblksz, IntAlloc> ublk(iblk, jblk, m, n, *cdata, a_ij, ld_a_ij, blksz);
-         spldlt::ldlt_app_internal::Block<T, iblksz, IntAlloc> isrc(isrc_row, isrc_col, m, n, *cdata, a_ik, ld_a_ik, blksz);
-         spldlt::ldlt_app_internal::Block<T, iblksz, IntAlloc> jsrc(blk, jblk, m, n, *cdata, a_jk, ld_a_jk, blksz);
+
+         BlockSpec ublk(iblk, jblk, m, n, *cdata, a_ij, ld_a_ij, blksz);
+         BlockSpec isrc(isrc_row, isrc_col, m, n, *cdata, a_ik, ld_a_ik, blksz);
+         BlockSpec jsrc(blk, jblk, m, n, *cdata, a_jk, ld_a_jk, blksz);
 
          // If we're on the block row we've just eliminated, restore
          // any failed rows and release resources storing backup
          ublk.restore_if_required(*backup, blk);
          // Perform actual update
-         ublk.update(isrc, jsrc, (*work)[id]);
+         ublk.update(isrc, jsrc, (*workspaces)[id]);
       }
 
       template<typename T, 
