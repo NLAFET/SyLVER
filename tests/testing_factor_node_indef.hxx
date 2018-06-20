@@ -165,7 +165,12 @@ namespace spldlt { namespace tests {
          workspaces.emplace_back(PAGE_SIZE);
       if(debug) printf("[factor_node_indef_test] nworkers =  %d\n", nworkers);
 
-      // Init factoriization 
+      // Register worksapce handle
+      starpu_matrix_data_register (
+            &spldlt::starpu::workspace_hdl, -1, (uintptr_t) NULL, blksz, blksz, blksz,
+            sizeof(T));
+
+      // Init factorization 
 #if defined(SPLDLT_USE_STARPU)
       spldlt::starpu::codelet_init<T, FactorAllocator, PoolAllocator>();
       spldlt::starpu::codelet_init_indef<T, iblksz, Backup, PoolAllocator>();
@@ -174,8 +179,8 @@ namespace spldlt { namespace tests {
 
 #if defined(SPLDLT_USE_STARPU)
       // Register symbolic handles
-      starpu_void_data_register(&(sfront.hdl)); // Node's symbolic handle
-      starpu_void_data_register(&(front.contrib_hdl));
+      starpu_void_data_register(&(sfront.hdl)); // Symbolic handle on node
+      starpu_void_data_register(&(front.contrib_hdl)); // Symbolic handle on contrib blocks 
       // Register StarPU data handles
       spldlt::starpu::register_node_indef(front);
 #endif
@@ -192,6 +197,9 @@ namespace spldlt { namespace tests {
 #if defined(SPLDLT_USE_STARPU)
       starpu_task_wait_for_all();      
 #endif
+      auto end = std::chrono::high_resolution_clock::now();
+      long ttotal = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count();
+
       if(debug) printf("[factor_node_indef_test] factorization done\n");
       if(debug) printf("[factor_node_indef_test] nelim1 = %d\n", front.nelim1);
       
@@ -202,15 +210,13 @@ namespace spldlt { namespace tests {
       std::cout << "FIRST FACTOR CALL ELIMINATED " << q1 << " of " << n << " pivots" << std::endl;
       std::cout << "SECOND FACTOR CALL ELIMINATED " << q2 << " of " << n << " pivots" << std::endl;
       
-      auto end = std::chrono::high_resolution_clock::now();
-      long ttotal = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count();
-      printf("[testing_factor_node_indef] factor time: %e\n", 1e-9*ttotal);
-
 #if defined(SPLDLT_USE_STARPU)
       spldlt::starpu::unregister_node_indef_submit(front);
       starpu_task_wait_for_all(); // Wait for unregistration of handles      
       starpu_data_unregister(sfront.hdl); // Node's symbolic handle
       starpu_data_unregister(front.contrib_hdl);
+
+      starpu_data_unregister(spldlt::starpu::workspace_hdl);
 #endif
       
       // Deinitialize solver (shutdown tasking system in particular)
@@ -300,6 +306,15 @@ namespace spldlt { namespace tests {
       T bwderr = backward_error(m, a, lda, b, 1, soln, m);
       /*if(debug)*/ printf("bwderr = %le\n", bwderr);
       EXPECT_LE(bwderr, 5e-14) << "(test " << test << " seed " << seed << ")" << std::endl;
+
+      ////////////////////////////////////////
+      // Print results
+
+      double flops = ((double)m*n*n)/3.0;
+      printf("[factor_node_indef_test]\n");
+      printf("factor time (s) = %e\n", 1e-9*ttotal);
+      printf("GFlop/s = %.3f\n", flops/(double)ttotal);
+
 
       // Cleanup memory
       allocT.deallocate(l, m*lda);

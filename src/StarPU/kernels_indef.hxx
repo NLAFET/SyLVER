@@ -19,6 +19,8 @@ namespace spldlt { namespace starpu {
 
       using namespace spldlt::ldlt_app_internal;
 
+      extern starpu_data_handle_t workspace_hdl;      
+
       /* factor_block_app StarPU task
          
        */
@@ -86,7 +88,7 @@ namespace spldlt { namespace starpu {
                typename IntAlloc, 
                typename Allocator>
       void
-      insert_factor_block_app_task (
+      insert_factor_block_app (
             starpu_data_handle_t a_kk_hdl,
             starpu_data_handle_t d_hdl,
             starpu_data_handle_t col_hdl,
@@ -423,6 +425,9 @@ namespace spldlt { namespace starpu {
          T *d_d = (T *)STARPU_VECTOR_GET_PTR(buffers[3]);
          unsigned d_dimn = STARPU_VECTOR_GET_NX(buffers[3]);
 
+         T *d_ld = (T *)STARPU_MATRIX_GET_PTR(buffers[4]); // Get pointer on scratch memory
+         unsigned ldld = STARPU_MATRIX_GET_LD(buffers[4]); // Get leading dimensions
+
          int id = starpu_worker_get_id();
          
          // printf("[updateN_block_app_gpu_func] workerid = %d\n", id);
@@ -455,7 +460,7 @@ namespace spldlt { namespace starpu {
                &work, &blksz);
 
          int idx = (*cdata)[blk].d - (*cdata)[0].d;
-         printf("[updateN_block_app_cpu_func] idx = %d\n", idx);
+         // printf("[updateN_block_app_cpu_func] idx = %d\n", idx);
          
          int cnelim = (*cdata)[blk].nelim;
          // printf("[updateN_block_app_cpu_func] iblk = %d, jblk = %d, blk = %d, cnelim = %d\n", iblk, jblk, blk, cnelim);
@@ -467,10 +472,10 @@ namespace spldlt { namespace starpu {
          cudaStream_t stream = starpu_cuda_get_local_stream();
          cublasHandle_t handle = starpu_cublas_get_local_handle();
 
-         T* d_ld;
-         cudaError_t cerr;
-         int ldld = blksz;
-         cerr = cudaMalloc((void **) &d_ld, ldld*blksz*sizeof(T));
+         // T* d_ld;
+         // cudaError_t cerr;
+         // int ldld = blksz;
+         // cerr = cudaMalloc((void **) &d_ld, ldld*blksz*sizeof(T));
 
          spldlt::gpu::update_block(
                stream, handle,
@@ -483,8 +488,8 @@ namespace spldlt { namespace starpu {
                &d_d[idx],
                d_ld, ldld);
  
-         cudaStreamSynchronize(stream);
-         cerr = cudaFree((void*)d_ld);
+         // cudaStreamSynchronize(stream);
+         // cerr = cudaFree((void*)d_ld);
 
       }
 
@@ -577,6 +582,7 @@ namespace spldlt { namespace starpu {
                STARPU_R, a_jk_hdl,
                STARPU_RW, a_ij_hdl,
                STARPU_R, d_hdl,
+               STARPU_SCRATCH, workspace_hdl,
                STARPU_R, col_hdl,
                STARPU_VALUE, &m, sizeof(int),
                STARPU_VALUE, &n, sizeof(int),
@@ -1172,6 +1178,7 @@ namespace spldlt { namespace starpu {
          cl_updateN_block_app.cpu_funcs[0] = updateN_block_app_cpu_func<T, iblksz, Backup, IntAlloc>;
 #if defined(SPLDLT_USE_GPU)
          cl_updateN_block_app.cuda_funcs[0] = updateN_block_app_gpu_func<T, iblksz, Backup, IntAlloc>;
+         cl_updateN_block_app.cuda_flags[0] = STARPU_CUDA_ASYNC;
 #endif
          // Initialize updateT_block_app StarPU codelet
          starpu_codelet_init(&cl_updateT_block_app);

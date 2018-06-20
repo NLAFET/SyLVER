@@ -142,7 +142,7 @@ namespace spldlt {
 
          // printf("[factor_block_app_task] m = %d, n = %d\n", dblk.get_m(), dblk.get_n());
 
-         insert_factor_block_app_task (
+         insert_factor_block_app(
                dblk.get_hdl(), cdata.get_d_hdl(), cdata[blk].get_hdl(),
                dblk.get_m(), dblk.get_n(), 
                blk,

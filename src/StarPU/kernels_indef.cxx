@@ -3,6 +3,8 @@
 #include <starpu.h>
 
 namespace spldlt { namespace starpu {
+
+      starpu_data_handle_t workspace_hdl;
       
       /* factor_block_app StarPU codelet */
       struct starpu_codelet cl_factor_block_app;
