@@ -22,6 +22,10 @@
 
 #if defined(SPLDLT_USE_STARPU)
 #include <starpu.h>
+#if defined(SPLDLT_USE_GPU)
+#include <starpu_cublas.h>
+#include <starpu_cublas_v2.h>
+#endif
 #include "StarPU/kernels.hxx"
 #include "StarPU/kernels_indef.hxx"
 #endif
@@ -130,9 +134,18 @@ namespace spldlt { namespace tests {
       struct starpu_conf *conf = new starpu_conf;
       starpu_conf_init(conf);
       conf->ncpus = ncpu;
+#if defined(SPLDLT_USE_GPU)
+      conf->ncuda = 1;
+      conf->sched_policy_name = "eager";
+#else
+      conf->sched_policy_name = "lws";
+#endif
       int ret = starpu_init(conf);
       STARPU_CHECK_RETURN_VALUE(ret, "starpu_init");
       delete conf;
+#if defined(SPLDLT_USE_GPU)
+      starpu_cublas_init();
+#endif
 #endif
 
       int nworkers = 1;
@@ -202,6 +215,10 @@ namespace spldlt { namespace tests {
       
       // Deinitialize solver (shutdown tasking system in particular)
 #if defined(SPLDLT_USE_STARPU)
+
+#if defined(SPLDLT_USE_GPU)
+      starpu_cublas_shutdown();
+#endif
       starpu_shutdown();
 #endif
 

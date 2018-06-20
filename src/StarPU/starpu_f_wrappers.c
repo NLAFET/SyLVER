@@ -19,8 +19,8 @@ int starpu_f_init_c(int ncpus) {
 
 #if defined(SPLDLT_USE_GPU)
   /* conf->sched_policy_name = "dmdas"; */
-  /* conf->sched_policy_name = "eager"; */
-  conf->sched_policy_name = "lws";
+  conf->sched_policy_name = "eager";
+  /* conf->sched_policy_name = "lws"; */
 #else
   conf->sched_policy_name = "ws"; // Use WS because LWS is currently buggy
   /* conf->sched_policy_name = "lws"; */

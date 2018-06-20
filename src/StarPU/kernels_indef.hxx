@@ -1,5 +1,9 @@
 #pragma once
 
+#if defined(SPLDLT_USE_GPU)
+#include "kernels/gpu/factor_indef.hxx"
+#endif
+
 #include "kernels/ldlt_app.hxx"
 #include "kernels/factor_indef.hxx"
 // #include "StarPU/kernels.hxx"
@@ -7,6 +11,9 @@
 #include "NumericFront.hxx"
 
 #include <starpu.h>
+#if defined(SPLDLT_USE_GPU)
+#include <starpu_cublas_v2.h>
+#endif
 
 namespace spldlt { namespace starpu {
 
@@ -81,6 +88,7 @@ namespace spldlt { namespace starpu {
       void
       insert_factor_block_app_task (
             starpu_data_handle_t a_kk_hdl,
+            starpu_data_handle_t d_hdl,
             starpu_data_handle_t col_hdl,
             int m, int n, int blk,
             int *next_elim, int *perm, T* d,
@@ -95,6 +103,7 @@ namespace spldlt { namespace starpu {
          ret = starpu_task_insert(
                &cl_factor_block_app,
                STARPU_RW, a_kk_hdl,
+               STARPU_RW, d_hdl,
                STARPU_RW, col_hdl,
                STARPU_VALUE, &m, sizeof(int),
                STARPU_VALUE, &n, sizeof(int),
@@ -327,8 +336,7 @@ namespace spldlt { namespace starpu {
                &workspaces, 
                &blksz);
 
-         // printf("[restore_failed_block_app_cpu_func] jblk = %d, elim_col = %d\n",
-         //        jblk, elim_col);
+         // printf("[restore_failed_block_app_cpu_func] jblk = %d, elim_col = %d\n", jblk, elim_col);
 
          spldlt::ldlt_app_internal::
             Block<T, iblksz, IntAlloc> 
@@ -370,7 +378,7 @@ namespace spldlt { namespace starpu {
 
          ret = starpu_task_insert(
                &cl_restore_failed_block_app,
-               STARPU_R , l_jk_hdl,
+               STARPU_R, l_jk_hdl,
                STARPU_RW, l_ij_hdl,
                STARPU_VALUE, &m, sizeof(int),
                STARPU_VALUE, &n, sizeof(int),
@@ -393,6 +401,7 @@ namespace spldlt { namespace starpu {
       extern struct starpu_codelet cl_updateN_block_app;      
 
 #if defined(SPLDLT_USE_GPU)
+
       template<typename T,
                int iblksz,
                typename Backup, 
@@ -400,20 +409,82 @@ namespace spldlt { namespace starpu {
       void 
       updateN_block_app_gpu_func(void *buffers[], void *cl_arg) {
 
-         // T *d_lik = (T *)STARPU_MATRIX_GET_PTR(buffers[0]); // Get diagonal block pointer
-         // unsigned ld_lik = STARPU_MATRIX_GET_LD(buffers[0]); // Get leading dimensions
+         T *d_lik = (T *)STARPU_MATRIX_GET_PTR(buffers[0]); // Get diagonal block pointer
+         unsigned ld_lik = STARPU_MATRIX_GET_LD(buffers[0]); // Get leading dimensions
 
-         // T *d_ljk = (T *)STARPU_MATRIX_GET_PTR(buffers[1]); // Get diagonal block pointer
-         // unsigned ld_ljk = STARPU_MATRIX_GET_LD(buffers[1]); // Get leading dimensions
+         T *d_ljk = (T *)STARPU_MATRIX_GET_PTR(buffers[1]); // Get diagonal block pointer
+         unsigned ld_ljk = STARPU_MATRIX_GET_LD(buffers[1]); // Get leading dimensions
 
-         // T *d_lij = (T *)STARPU_MATRIX_GET_PTR(buffers[2]); // Get diagonal block pointer
-         // unsigned ld_lij = STARPU_MATRIX_GET_LD(buffers[2]); // Get leading dimensions
+         T *d_lij = (T *)STARPU_MATRIX_GET_PTR(buffers[2]); // Get diagonal block pointer
+         unsigned updm = STARPU_MATRIX_GET_NX(buffers[2]); // Get diagonal block pointer
+         unsigned updn = STARPU_MATRIX_GET_NY(buffers[2]); // Get diagonal block pointer
+         unsigned ld_lij = STARPU_MATRIX_GET_LD(buffers[2]); // Get leading dimensions
 
-         // T *d_d = (T *)STARPU_VECTOR_GET_PTR(buffers[3]);
-         // unsigned d_dimn = STARPU_VECTOR_GET_NX(buffers[3]);
+         T *d_d = (T *)STARPU_VECTOR_GET_PTR(buffers[3]);
+         unsigned d_dimn = STARPU_VECTOR_GET_NX(buffers[3]);
+
+         int id = starpu_worker_get_id();
          
+         // printf("[updateN_block_app_gpu_func] workerid = %d\n", id);
+         // printf("[updateN_block_app_gpu_func] d_lik = %p, d_ljk = %p, d_lij = %p\n", 
+         //        d_lik, d_ljk, d_lij);
          // printf("[updateN_block_app_gpu_func] d_dimn = %d\n", d_dimn);
-         printf("[updateN_block_app_gpu_func]\n");
+         // printf("[updateN_block_app_gpu_func]\n");
+
+         int m, n; // node's dimensions
+         int iblk; // destination block's row index
+         int jblk; // destination block's column index     
+         int blk; // source block's column index     
+
+         ColumnData<T,IntAlloc> *cdata = nullptr;
+         Backup *backup = nullptr;
+         
+         T beta;
+         T* upd = nullptr;
+         int ldupd;
+
+         std::vector<spral::ssids::cpu::Workspace> *work;
+         int blksz;
+
+         starpu_codelet_unpack_args (
+               cl_arg,
+               &m, &n,
+               &iblk, &jblk, &blk,
+               &cdata, &backup,
+               &beta, &upd, &ldupd,
+               &work, &blksz);
+
+         int idx = (*cdata)[blk].d - (*cdata)[0].d;
+         printf("[updateN_block_app_cpu_func] idx = %d\n", idx);
+         
+         int cnelim = (*cdata)[blk].nelim;
+         // printf("[updateN_block_app_cpu_func] iblk = %d, jblk = %d, blk = %d, cnelim = %d\n", iblk, jblk, blk, cnelim);
+         if (cnelim == 0) return;
+
+         // printf("[updateN_block_app_gpu_func] udpate (%d,%d,%d), updm = %d, updn = %d, cnelim = %d\n", blk, iblk, jblk, updm, updn, cnelim);
+         // printf("[updateN_block_app_gpu_func] ld_lij = %d, ld_lik = %d, ld_lkj = %d\n", ld_lij, ld_lik, ld_ljk);
+
+         cudaStream_t stream = starpu_cuda_get_local_stream();
+         cublasHandle_t handle = starpu_cublas_get_local_handle();
+
+         T* d_ld;
+         cudaError_t cerr;
+         int ldld = blksz;
+         cerr = cudaMalloc((void **) &d_ld, ldld*blksz*sizeof(T));
+
+         spldlt::gpu::update_block(
+               stream, handle,
+               updm, updn,
+               d_lij, ld_lij,
+               cnelim,
+               d_lik, ld_lik, 
+               d_ljk, ld_ljk,
+               false,
+               &d_d[idx],
+               d_ld, ldld);
+ 
+         cudaStreamSynchronize(stream);
+         cerr = cudaFree((void*)d_ld);
 
       }
 
@@ -455,8 +526,6 @@ namespace spldlt { namespace starpu {
          int ldupd;
 
          std::vector<spral::ssids::cpu::Workspace> *work;
-         // Workspace *work;
-         // struct cpu_factor_options *options = nullptr;
          int blksz;
 
          starpu_codelet_unpack_args (
@@ -465,7 +534,7 @@ namespace spldlt { namespace starpu {
                &iblk, &jblk, &blk,
                &cdata, &backup,
                &beta, &upd, &ldupd,
-               &work, &blksz /*&options*/);
+               &work, &blksz);
 
          // printf("[updateN_block_app_cpu_func] iblk = %d, jblk = %d, blk = %d\n", iblk, jblk, blk);
          // printf("[updateN_block_app_cpu_func] beta = %f\n", beta);
@@ -1188,7 +1257,7 @@ namespace spldlt { namespace starpu {
          starpu_codelet_init(&cl_restore_failed_block_app);
          cl_restore_failed_block_app.where = STARPU_CPU;
          cl_restore_failed_block_app.nbuffers = STARPU_VARIABLE_NBUFFERS;
-         cl_restore_failed_block_app.name = "PERMUTE_FAILED";
+         cl_restore_failed_block_app.name = "restore_failed_block";
          cl_restore_failed_block_app.cpu_funcs[0] = restore_failed_block_app_cpu_func<T, iblksz, Backup, IntAlloc>;
 
       }

@@ -143,7 +143,7 @@ namespace spldlt {
          // printf("[factor_block_app_task] m = %d, n = %d\n", dblk.get_m(), dblk.get_n());
 
          insert_factor_block_app_task (
-               dblk.get_hdl(), cdata[blk].get_hdl(),
+               dblk.get_hdl(), cdata.get_d_hdl(), cdata[blk].get_hdl(),
                dblk.get_m(), dblk.get_n(), 
                blk,
                &next_elim, perm, d,
@@ -1386,26 +1386,36 @@ namespace spldlt {
 
 #if defined(SPLDLT_USE_GPU)            
 
+
             for(int iblk=blk; iblk<mblk; iblk++) {
                restore_failed_block_task(
                      blk, blocks[blk*(mblk+1)], blocks[blk*mblk+iblk], cdata, backup,
                      workspaces);
             }
 
+// #if defined(SPLDLT_USE_STARPU)
+//                   starpu_task_wait_for_all();
+// #endif
+
             for(int jblk=blk+1; jblk<nblk; jblk++) {
 
                for(int iblk=jblk; iblk<mblk; iblk++) {
 
-               updateN_block_app_task (
-                     // isrc, jsrc, ublk,
-                     blocks[blk*mblk+iblk], blocks[blk*mblk+jblk],
-                     blocks[jblk*mblk+iblk],
-                     cdata, backup,
-                     beta, upd, ldupd,
-                     workspaces);
+                  updateN_block_app_task (
+                        // isrc, jsrc, ublk,
+                        blocks[blk*mblk+iblk], blocks[blk*mblk+jblk],
+                        blocks[jblk*mblk+iblk],
+                        cdata, backup,
+                        beta, upd, ldupd,
+                        workspaces);
 
                }
             }
+
+// #if defined(SPLDLT_USE_STARPU)
+//          starpu_task_wait_for_all();
+// #endif
+
 #else
             for(int jblk=blk; jblk<nblk; jblk++) {
                // Source block
