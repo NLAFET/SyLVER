@@ -142,7 +142,7 @@ namespace spldlt {
 
          // printf("[factor_block_app_task] m = %d, n = %d\n", dblk.get_m(), dblk.get_n());
 
-         insert_factor_block_app(
+         spldlt::starpu::insert_factor_block_app(
                dblk.get_hdl(), cdata.get_d_hdl(), cdata[blk].get_hdl(),
                dblk.get_m(), dblk.get_n(), 
                blk,
@@ -193,7 +193,7 @@ namespace spldlt {
 
 #if defined(SPLDLT_USE_STARPU)
 
-         insert_applyN_block_app (
+         spldlt::starpu::insert_applyN_block_app(
                dblk.get_hdl(), rblk.get_hdl(),
                cdata[blk].get_hdl(),
                dblk.get_m(), dblk.get_n(), 
@@ -239,7 +239,7 @@ namespace spldlt {
 
 #if defined(SPLDLT_USE_STARPU)
 
-         insert_applyT_block_app (
+         spldlt::starpu::insert_applyT_block_app (
                dblk.get_hdl(), cblk.get_hdl(),
                cdata[blk].get_hdl(),
                dblk.get_m(), dblk.get_n(), 
@@ -292,7 +292,7 @@ namespace spldlt {
 
 #if defined(SPLDLT_USE_STARPU)
 
-         insert_updateN_block_app(
+         spldlt::starpu::insert_updateN_block_app(
                isrc.get_hdl(), jsrc.get_hdl(), ublk.get_hdl(), 
                cdata.get_d_hdl(), cdata[blk].get_hdl(),
                ublk.get_m(), ublk.get_n(), 
@@ -349,8 +349,8 @@ namespace spldlt {
          int isrc_col = isrc.get_col();
 
 #if defined(SPLDLT_USE_STARPU)
-
-         insert_updateT_block_app(
+         
+         spldlt::starpu::insert_updateT_block_app(
                isrc.get_hdl(), jsrc.get_hdl(), ublk.get_hdl(), 
                cdata[blk].get_hdl(),
                ublk.get_m(), ublk.get_n(),
