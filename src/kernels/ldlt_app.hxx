@@ -198,6 +198,20 @@ public:
    void unregister_handle_submit() {
       starpu_data_unregister_submit(hdl_);
    }
+
+   /// @brief Return StarPU handle on diagonal D
+   starpu_data_handle_t get_d_hdl() const { return d_hdl_; }
+
+   void register_d_hdl(const T *d, int dimn) {
+      starpu_vector_data_register(
+            &d_hdl_, STARPU_MAIN_RAM, reinterpret_cast<uintptr_t>(d), dimn,
+            sizeof(T));
+   }
+
+   void unregister_d_hdl() {
+      starpu_data_unregister_submit(d_hdl_);
+   }
+
 #endif
 
 private:
@@ -209,6 +223,10 @@ private:
 
    std::mutex mtx;
    // std::atomic<int> npass_=0; ///< reduction variable for nelim
+
+   // StarPU handle for diagonal D
+   starpu_data_handle_t d_hdl_;
+
 #else
    spral::omp::Lock lock_; ///< lock for altering npass
    int npass_=0; ///< reduction variable for nelim
