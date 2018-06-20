@@ -17,6 +17,8 @@ namespace spldlt { namespace gpu {
             double *ld, int ldld
             );
 
+      /// @bried Perform the update operation of a block on the GPU:
+      /// A_{ij} = A_{ij} - L_{ik} D_k L_{jk}^T
       template<typename T>
       void update_block(
             const cudaStream_t stream, const cublasHandle_t handle,
@@ -48,5 +50,5 @@ namespace spldlt { namespace gpu {
                &rbeta,
                d_upd, d_ldupd);
       }
-
+      
 }} // End of namespace spldlt::gpu

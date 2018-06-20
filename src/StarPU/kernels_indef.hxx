@@ -400,7 +400,21 @@ namespace spldlt { namespace starpu {
       void 
       updateN_block_app_gpu_func(void *buffers[], void *cl_arg) {
 
+         // T *d_lik = (T *)STARPU_MATRIX_GET_PTR(buffers[0]); // Get diagonal block pointer
+         // unsigned ld_lik = STARPU_MATRIX_GET_LD(buffers[0]); // Get leading dimensions
+
+         // T *d_ljk = (T *)STARPU_MATRIX_GET_PTR(buffers[1]); // Get diagonal block pointer
+         // unsigned ld_ljk = STARPU_MATRIX_GET_LD(buffers[1]); // Get leading dimensions
+
+         // T *d_lij = (T *)STARPU_MATRIX_GET_PTR(buffers[2]); // Get diagonal block pointer
+         // unsigned ld_lij = STARPU_MATRIX_GET_LD(buffers[2]); // Get leading dimensions
+
+         // T *d_d = (T *)STARPU_VECTOR_GET_PTR(buffers[3]);
+         // unsigned d_dimn = STARPU_VECTOR_GET_NX(buffers[3]);
+         
+         // printf("[updateN_block_app_gpu_func] d_dimn = %d\n", d_dimn);
          printf("[updateN_block_app_gpu_func]\n");
+
       }
 
 #endif
@@ -477,6 +491,7 @@ namespace spldlt { namespace starpu {
             starpu_data_handle_t a_ik_hdl,
             starpu_data_handle_t a_jk_hdl,
             starpu_data_handle_t a_ij_hdl,
+            starpu_data_handle_t d_hdl,
             starpu_data_handle_t col_hdl,
             int m, int n, int iblk, int jblk, int blk,
             ColumnData<T,IntAlloc> *cdata, Backup *backup,
@@ -492,6 +507,7 @@ namespace spldlt { namespace starpu {
                STARPU_R, a_ik_hdl,
                STARPU_R, a_jk_hdl,
                STARPU_RW, a_ij_hdl,
+               STARPU_R, d_hdl,
                STARPU_R, col_hdl,
                STARPU_VALUE, &m, sizeof(int),
                STARPU_VALUE, &n, sizeof(int),
@@ -505,7 +521,6 @@ namespace spldlt { namespace starpu {
                STARPU_VALUE, &ldupd, sizeof(int),
                STARPU_VALUE, &work, sizeof(std::vector<spral::ssids::cpu::Workspace>*),
                STARPU_VALUE, &blksz, sizeof(int),
-               // STARPU_VALUE, &options, sizeof(struct cpu_factor_options *),
                0);
          STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
          
@@ -1081,8 +1096,8 @@ namespace spldlt { namespace starpu {
 
          // Initialize updateN_block_app StarPU codelet
          starpu_codelet_init(&cl_updateN_block_app);
-         cl_updateN_block_app.where = STARPU_CPU;
-         // cl_updateN_block_app.where = STARPU_CUDA;
+         // cl_updateN_block_app.where = STARPU_CPU;
+         cl_updateN_block_app.where = STARPU_CUDA;
          cl_updateN_block_app.nbuffers = STARPU_VARIABLE_NBUFFERS;
          cl_updateN_block_app.name = "UPDATEN_BLK_APP";
          cl_updateN_block_app.cpu_funcs[0] = updateN_block_app_cpu_func<T, iblksz, Backup, IntAlloc>;

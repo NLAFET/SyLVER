@@ -122,6 +122,10 @@ namespace spldlt {
          int nc = front.get_nc(); // number of block columns
          spldlt::ldlt_app_internal::ColumnData<T, IntAlloc>& cdata = *front.cdata;
 
+         // Register diagonal
+         T *d = &a[n*lda];
+         cdata.register_d_hdl(d);
+         
          // sfront.handles.reserve(nr*nc);
          sfront.handles.resize(nr*nc); // allocate handles
          // printf("[register_front] sfront.handles size = %d\n", sfront.handles.size());
@@ -216,6 +220,9 @@ namespace spldlt {
          int nc = node.get_nc(); // number of block columns
          spldlt::ldlt_app_internal::ColumnData<T, IntAlloc>& cdata = *node.cdata;
 
+         // Unregister diagonal handle
+         cdata.unregister_d_hdl();
+         
          // Unregister block handles in the factors
          for(int j = 0; j < nc; ++j) {
 

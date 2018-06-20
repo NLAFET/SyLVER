@@ -294,7 +294,7 @@ namespace spldlt {
 
          insert_updateN_block_app(
                isrc.get_hdl(), jsrc.get_hdl(), ublk.get_hdl(), 
-               cdata[blk].get_hdl(),
+               cdata.get_d_hdl(), cdata[blk].get_hdl(),
                ublk.get_m(), ublk.get_n(), 
                iblk, jblk, blk,
                &cdata, &backup,
