@@ -113,18 +113,20 @@ namespace spldlt {
          return calc_blkn(blk, m, block_size);
       }
 
-      // Tasks
-
+      ////////////////////////////////////////
       // Task priorities
 
-      static const int FACTOR_APP_PRIO   = 4;
-      static const int APPLYN_APP_PRIO   = 3;
-      static const int APPLYT_APP_PRIO   = 1;
-      static const int ADJUST_APP_PRIO   = 4;
-      static const int RESTORE_APP_PRIO  = 3;
-      static const int UPDATEN_APP_PRIO  = 2;
-      static const int UPDATET_APP_PRIO  = 1;
-      static const int UPDATEC_APP_PRIO  = 2;
+      static const int FACTOR_APP_PRIO   = 3;
+      static const int APPLYN_APP_PRIO   = 2;
+      static const int APPLYT_APP_PRIO   = 0;
+      static const int ADJUST_APP_PRIO   = 3;
+      static const int RESTORE_APP_PRIO  = 2;
+      static const int UPDATEN_APP_PRIO  = 1;
+      static const int UPDATET_APP_PRIO  = 0;
+      static const int UPDATEC_APP_PRIO  = 1;
+
+      ////////////////////////////////////////
+      // Tasks
 
       /* Factor task: factorize a diagonal block 
          A_kk = P_k L_kk D_k L_kk^T P_k
