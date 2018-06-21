@@ -113,16 +113,18 @@ namespace spldlt {
          return calc_blkn(blk, m, block_size);
       }
 
-      /** \brief Print given matrix (for debug usage)
-       *  \param m number of rows
-       *  \param n number of columns
-       *  \param perm[n] permutation of fully summed variables
-       *  \param eliminated[n] status of fully summed variables
-       *  \param a matrix values
-       *  \param lda leading dimension of a
-       */
-   
-      /* Tasks */
+      // Tasks
+
+      // Task priorities
+
+      static const int FACTOR_APP_PRIO   = 4;
+      static const int APPLYN_APP_PRIO   = 3;
+      static const int APPLYT_APP_PRIO   = 1;
+      static const int ADJUST_APP_PRIO   = 4;
+      static const int RESTORE_APP_PRIO  = 3;
+      static const int UPDATEN_APP_PRIO  = 2;
+      static const int UPDATET_APP_PRIO  = 1;
+      static const int UPDATEC_APP_PRIO  = 2;
 
       /* Factor task: factorize a diagonal block 
          A_kk = P_k L_kk D_k L_kk^T P_k
@@ -148,7 +150,8 @@ namespace spldlt {
                blk,
                &next_elim, perm, d,
                &cdata, &backup,
-               &options, &work, &alloc);
+               &options, &work, &alloc,
+               FACTOR_APP_PRIO);
          
 #else
          bool abort=false;
@@ -198,7 +201,8 @@ namespace spldlt {
                cdata[blk].get_hdl(),
                dblk.get_m(), dblk.get_n(), 
                blk, iblk,
-               &cdata, &backup, &options);
+               &cdata, &backup, &options,
+               APPLYN_APP_PRIO);
 
 #else
          if(debug) printf("ApplyN(%d,%d)\n", iblk, blk);
@@ -244,7 +248,8 @@ namespace spldlt {
                cdata[blk].get_hdl(),
                dblk.get_m(), dblk.get_n(), 
                blk, jblk,
-               &cdata, &backup, &options);
+               &cdata, &backup, &options,
+               APPLYT_APP_PRIO);
 
 #else
          if(debug) printf("ApplyT(%d,%d)\n", blk, jblk);
@@ -299,7 +304,8 @@ namespace spldlt {
                iblk, jblk, blk,
                &cdata, &backup,
                beta, upd, ldupd,
-               &work, ublk.get_blksz());
+               &work, ublk.get_blksz(),
+               UPDATEN_APP_PRIO);
 
 #else
          if(debug) printf("UpdateN(%d,%d,%d)\n", iblk, jblk, blk);
@@ -357,7 +363,8 @@ namespace spldlt {
                isrc_row, isrc_col,
                iblk, jblk, blk,
                &cdata, &backup,
-               &work, ublk.get_blksz());
+               &work, ublk.get_blksz(),
+               UPDATET_APP_PRIO);
 
 #else
          if(debug) printf("UpdateT(%d,%d,%d)\n", iblk, jblk, blk);
@@ -391,7 +398,8 @@ namespace spldlt {
 #if defined(SPLDLT_USE_STARPU)
          spldlt::starpu::insert_adjust(
                cdata[blk].get_hdl(), blk,
-               &next_elim, &cdata);
+               &next_elim, &cdata,
+               ADJUST_APP_PRIO);
 #else
          // Adjust column once all applys have finished and we know final
          // number of passed columns.
@@ -438,7 +446,8 @@ namespace spldlt {
                jblk.get_hdl(), blk.get_hdl(),
                blk.get_m(), blk.get_n(),
                blk.get_row(), blk.get_col(), elim_col,
-               &cdata, &backup, &workspaces, blk.get_blksz());
+               &cdata, &backup, &workspaces, blk.get_blksz(),
+               RESTORE_APP_PRIO);
 
 #else
 
@@ -1215,8 +1224,6 @@ namespace spldlt {
          int rsa = n/block_size; // index of first block in contribution blocks  
          int ncontrib = mblk-rsa;
 
-         int UPDATE_PRIO = 4;
-
          /* Setup */
          // int next_elim = from_blk*block_size;
       
@@ -1465,7 +1472,8 @@ namespace spldlt {
                            blocks[blk*mblk+iblk], blocks[blk*mblk+jblk],
                            contrib_blocks[(jblk-rsa)*ncontrib+(iblk-rsa)],
                            node,
-                           blk, iblk, jblk, workspaces, block_size, UPDATE_PRIO);
+                           blk, iblk, jblk, workspaces, block_size, 
+                           UPDATEC_APP_PRIO);
 
 // #if defined(SPLDLT_USE_STARPU)
 //                      starpu_task_wait_for_all();

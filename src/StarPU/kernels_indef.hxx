@@ -96,8 +96,10 @@ namespace spldlt { namespace starpu {
             int *next_elim, int *perm, T* d,
             ColumnData<T,IntAlloc> *cdata, Backup *backup,
             struct cpu_factor_options *options,
-            std::vector<spral::ssids::cpu::Workspace> *work, Allocator *alloc) {
-         
+            std::vector<spral::ssids::cpu::Workspace> *work, 
+            Allocator *alloc,
+            int prio) {
+
          int ret;
 
          // printf("[insert_factor_block_app_task] %s\n", cl_factor_block_app.name);
@@ -119,6 +121,7 @@ namespace spldlt { namespace starpu {
                STARPU_VALUE, &options, sizeof(struct cpu_factor_options *),
                STARPU_VALUE, &work, sizeof(std::vector<spral::ssids::cpu::Workspace>*),
                STARPU_VALUE, &alloc, sizeof(Allocator*),
+               STARPU_PRIORITY, prio,
                0);
 
          STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
@@ -194,7 +197,8 @@ namespace spldlt { namespace starpu {
             starpu_data_handle_t col_hdl,
             int m, int n, int blk, int iblk,            
             ColumnData<T,IntAlloc> *cdata, Backup *backup,
-            struct cpu_factor_options *options) {
+            struct cpu_factor_options *options,
+            int prio) {
 
          int ret;
 
@@ -210,6 +214,7 @@ namespace spldlt { namespace starpu {
                STARPU_VALUE, &cdata, sizeof(ColumnData<T,IntAlloc>*),
                STARPU_VALUE, &backup, sizeof(Backup*),
                STARPU_VALUE, &options, sizeof(struct cpu_factor_options *),
+               STARPU_PRIORITY, prio,
                0);
          STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");         
 
@@ -273,7 +278,8 @@ namespace spldlt { namespace starpu {
             starpu_data_handle_t col_hdl,
             int m, int n, int blk, int jblk,            
             ColumnData<T,IntAlloc> *cdata, Backup *backup,
-            struct cpu_factor_options *options) {
+            struct cpu_factor_options *options,
+            int prio) {
 
          int ret;
 
@@ -289,6 +295,7 @@ namespace spldlt { namespace starpu {
                STARPU_VALUE, &cdata, sizeof(ColumnData<T,IntAlloc>*),
                STARPU_VALUE, &backup, sizeof(Backup*),
                STARPU_VALUE, &options, sizeof(struct cpu_factor_options *),
+               STARPU_PRIORITY, prio,
                0);
          STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
       }
@@ -368,9 +375,11 @@ namespace spldlt { namespace starpu {
             starpu_data_handle_t l_jk_hdl,
             starpu_data_handle_t l_ij_hdl,
             int m, int n, int iblk, int jblk, int elim_col,
-            ColumnData<T,IntAlloc> *cdata, Backup *backup,
+            ColumnData<T,IntAlloc> *cdata, 
+            Backup *backup,
             std::vector<spral::ssids::cpu::Workspace> *workspaces, 
-            int blksz) {
+            int blksz, 
+            int prio) {
 
          int ret;
 
@@ -387,6 +396,7 @@ namespace spldlt { namespace starpu {
                STARPU_VALUE, &backup, sizeof(Backup*),
                STARPU_VALUE, &workspaces, sizeof(std::vector<spral::ssids::cpu::Workspace>*),
                STARPU_VALUE, &blksz, sizeof(int),
+               STARPU_PRIORITY, prio,
                0);
          
       }
@@ -566,7 +576,9 @@ namespace spldlt { namespace starpu {
             int m, int n, int iblk, int jblk, int blk,
             ColumnData<T,IntAlloc> *cdata, Backup *backup,
             T beta, T* upd, int ldupd,
-            std::vector<spral::ssids::cpu::Workspace> *work, int blksz/*struct cpu_factor_options *options*/) {
+            std::vector<spral::ssids::cpu::Workspace> *work, 
+            int blksz,
+            int prio) {
 
          // printf("[insert_updateN_block_app] blk: %d, iblk: %d, jblk: %d\n", blk, iblk, jblk);
 
@@ -592,6 +604,7 @@ namespace spldlt { namespace starpu {
                STARPU_VALUE, &ldupd, sizeof(int),
                STARPU_VALUE, &work, sizeof(std::vector<spral::ssids::cpu::Workspace>*),
                STARPU_VALUE, &blksz, sizeof(int),
+               STARPU_PRIORITY, prio,
                0);
          STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
          
@@ -633,8 +646,6 @@ namespace spldlt { namespace starpu {
          ColumnData<T,IntAlloc> *cdata = nullptr;
          Backup *backup = nullptr;
          std::vector<spral::ssids::cpu::Workspace> *workspaces; 
-         // Workspace *work;
-         // struct cpu_factor_options *options = nullptr;
          int blksz;
 
          starpu_codelet_unpack_args (
@@ -668,7 +679,9 @@ namespace spldlt { namespace starpu {
             int m, int n, int isrc_row, int isrc_col,
             int iblk, int jblk, int blk,
             ColumnData<T,IntAlloc> *cdata, Backup *backup,
-            std::vector<spral::ssids::cpu::Workspace> *work, int blksz/*struct cpu_factor_options *options*/) {
+            std::vector<spral::ssids::cpu::Workspace> *work, 
+            int blksz,
+            int prio) {
 
          int ret;
 
@@ -689,7 +702,7 @@ namespace spldlt { namespace starpu {
                STARPU_VALUE, &backup, sizeof(Backup*),
                STARPU_VALUE, &work, sizeof(std::vector<spral::ssids::cpu::Workspace>*),
                STARPU_VALUE, &blksz, sizeof(int),
-               // STARPU_VALUE, &options, sizeof(struct cpu_factor_options *),
+               STARPU_PRIORITY, prio,
                0);
          STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");         
       }
@@ -724,7 +737,8 @@ namespace spldlt { namespace starpu {
             starpu_data_handle_t col_hdl,
             int blk,
             int *next_elim,
-            ColumnData<T,IntAlloc> *cdata) {
+            ColumnData<T,IntAlloc> *cdata,
+            int prio) {
 
          int ret;
 
@@ -734,6 +748,7 @@ namespace spldlt { namespace starpu {
                STARPU_VALUE, &blk, sizeof(int),
                STARPU_VALUE, &next_elim, sizeof(int*),
                STARPU_VALUE, &cdata, sizeof(ColumnData<T,IntAlloc>*),
+               STARPU_PRIORITY, prio,
                0);
          STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
       }
@@ -868,7 +883,7 @@ namespace spldlt { namespace starpu {
 
       }
 
-      ////////////////////////////////////////////////////////////////////////////////
+      ////////////////////////////////////////
       // permute failed
 
       // CPU kernel
