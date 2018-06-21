@@ -309,6 +309,8 @@ namespace spldlt { namespace starpu {
       void
       restore_failed_block_app_cpu_func(void *buffers[], void *cl_arg) {
 
+         typedef spldlt::ldlt_app_internal::Block<T, iblksz, IntAlloc> BlockSpec;
+
          T *l_jk = (T *)STARPU_MATRIX_GET_PTR(buffers[0]); // Get diagonal block pointer
          unsigned ld_l_jk = STARPU_MATRIX_GET_LD(buffers[0]); // Get leading dimensions
 
@@ -340,17 +342,11 @@ namespace spldlt { namespace starpu {
 
          // printf("[restore_failed_block_app_cpu_func] jblk = %d, elim_col = %d\n", jblk, elim_col);
 
-         spldlt::ldlt_app_internal::
-            Block<T, iblksz, IntAlloc> 
-            ublk(iblk, jblk, m, n, *cdata, l_ij, ld_l_ij, blksz);
+         BlockSpec ublk(iblk, jblk, m, n, *cdata, l_ij, ld_l_ij, blksz);
 
-         spldlt::ldlt_app_internal::
-            Block<T, iblksz, IntAlloc> 
-            isrc(iblk, elim_col, m, n, *cdata, l_ij, ld_l_ij, blksz);
+         BlockSpec isrc(iblk, elim_col, m, n, *cdata, l_ij, ld_l_ij, blksz);
          
-         spldlt::ldlt_app_internal::
-            Block<T, iblksz, IntAlloc>
-            jsrc(jblk, elim_col, m, n, *cdata, l_jk, ld_l_jk, blksz);
+         BlockSpec jsrc(jblk, elim_col, m, n, *cdata, l_jk, ld_l_jk, blksz);
 
          // Restore any failed cols and release resources storing
          // backup

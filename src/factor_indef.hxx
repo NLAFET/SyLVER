@@ -143,7 +143,7 @@ namespace spldlt {
          // printf("[factor_block_app_task] m = %d, n = %d\n", dblk.get_m(), dblk.get_n());
 
          spldlt::starpu::insert_factor_block_app(
-               dblk.get_hdl(), cdata.get_d_hdl(), cdata[blk].get_hdl(),
+               dblk.get_hdl(), cdata[blk].get_d_hdl(), cdata[blk].get_hdl(),
                dblk.get_m(), dblk.get_n(), 
                blk,
                &next_elim, perm, d,
@@ -294,7 +294,7 @@ namespace spldlt {
 
          spldlt::starpu::insert_updateN_block_app(
                isrc.get_hdl(), jsrc.get_hdl(), ublk.get_hdl(), 
-               cdata.get_d_hdl(), cdata[blk].get_hdl(),
+               cdata[blk].get_d_hdl(), cdata[blk].get_hdl(),
                ublk.get_m(), ublk.get_n(), 
                iblk, jblk, blk,
                &cdata, &backup,

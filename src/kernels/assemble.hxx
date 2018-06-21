@@ -124,8 +124,8 @@ namespace spldlt {
 
          // Register diagonal
          T *d = &a[n*lda];
-         cdata.register_d_hdl(d);
-         
+         // cdata.register_d_hdl(d);
+
          // sfront.handles.reserve(nr*nc);
          sfront.handles.resize(nr*nc); // allocate handles
          // printf("[register_front] sfront.handles size = %d\n", sfront.handles.size());
@@ -135,7 +135,8 @@ namespace spldlt {
 
             // Register cdata for APP factorization.
             // FIXME: Only if pivot_method is APP
-            cdata[j].register_handle();     
+            cdata[j].register_handle(); // Symbolic handle on column j
+            cdata[j].register_d_hdl(d, 2*n); // Handle on diagonal D 
 
             for(int i = j; i < nr; ++i) {
                int blkm = std::min(blksz, m - i*blksz);
@@ -219,15 +220,14 @@ namespace spldlt {
          int nr = node.get_nr(); // number of block rows
          int nc = node.get_nc(); // number of block columns
          spldlt::ldlt_app_internal::ColumnData<T, IntAlloc>& cdata = *node.cdata;
-
-         // Unregister diagonal handle
-         cdata.unregister_d_hdl();
          
          // Unregister block handles in the factors
          for(int j = 0; j < nc; ++j) {
 
             // FIXME: only if PivotMethod is APP
             cdata[j].unregister_handle_submit();
+
+            cdata[j].unregister_d_hdl(); // Unregister handle on diagonal D
 
             for(int i = j; i < nr; ++i) {
                starpu_data_unregister_submit(snode.handles[i + j*nr]);
