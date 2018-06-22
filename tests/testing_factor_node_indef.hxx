@@ -223,9 +223,8 @@ namespace spldlt { namespace tests {
       starpu_data_unregister(spldlt::starpu::workspace_hdl);
 #endif
       
-      // Deinitialize solver (shutdown tasking system in particular)
+      // Deinitialize solver (including shutdown tasking system)
 #if defined(SPLDLT_USE_STARPU)
-
 #if defined(SPLDLT_USE_GPU)
       starpu_cublas_shutdown();
 #endif

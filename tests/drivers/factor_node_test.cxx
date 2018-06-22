@@ -20,13 +20,13 @@ int main(int argc, char** argv) {
 
    if (opts.chol) {
 
-      
+      spldlt::tests::factor_node_posdef_test<double>(opts.m, opts.n, opts.nb, opts.ncpu, opts.ngpu);
    }
    else {
       // factor_node_indef_test<double, 32, false>(0.01, 1e-20, true, false, opts.m, opts.n, opts.nb, opts.ncpu);
       // factor_node_indef_test<double, 32, false>(0.01, 1e-20, opts.posdef, true, false, opts.m, opts.n, opts.nb, opts.ncpu);
       // No delays
-      factor_node_indef_test<double, 32, false>(0.01, 1e-20, opts.posdef, false, false, opts.m, opts.n, opts.nb, opts.ncpu);   
+      spldlt::tests::factor_node_indef_test<double, 32, false>(0.01, 1e-20, opts.posdef, false, false, opts.m, opts.n, opts.nb, opts.ncpu, opts.ngpu);   
    }
 }
 

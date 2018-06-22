@@ -7,7 +7,7 @@
 #endif
 
 // SpLDLT tests
-#include "testing_factor_node_posdef.hxx"
+// #include "testing_factor_node_posdef.hxx"
 
 // STD
 #include <vector>
@@ -31,7 +31,7 @@ namespace spldlt { namespace tests {
          printf("[factor_node_posdef_test] m = %d, n =  %d, blksz = %d\n", m, n, blksz);
 
          ////////////////////////////////////////
-         // Setup test matrix
+         // Setup test matrix and rhs
 
          // Generate test matrix
          int lda = spral::ssids::cpu::align_lda<T>(m);
@@ -73,11 +73,13 @@ namespace spldlt { namespace tests {
          // if (debug) printf("m = %d, n = %d, lda = %d, len = %zu\n", m, n, lda, len);
          front.lcol = allocT.allocate(len);
 
-         memcpy(front.lcol, a, lda*n*sizeof(T)); // Copy a to l
+         // Copy a into l
+         memcpy(front.lcol, a, lda*n*sizeof(T));
 
          // Allocate contribution blocks
          front.alloc_contrib_blocks();
 
+         ////////////////////////////////////////
          // Init runtime system
 #if defined(SPLDLT_USE_STARPU)
          struct starpu_conf conf;
@@ -104,6 +106,8 @@ namespace spldlt { namespace tests {
 #if defined(SPLDLT_USE_STARPU)
          nworkers = starpu_worker_get_count();
 #endif
+
+         ////////////////////////////////////////
          // Init factor
 #if defined(SPLDLT_USE_STARPU)
          spldlt::starpu::codelet_init<T, FactorAllocator, PoolAllocator>();
@@ -125,8 +129,59 @@ namespace spldlt { namespace tests {
             (end-start).count();
 
          // if(debug) printf("[factor_node_indef_test] factorization done\n");
-      
-      }
 
+         spldlt::starpu::unregister_node_indef_submit(front);
+         starpu_task_wait_for_all(); // Wait for unregistration of handles      
+      
+         // Deinitialize solver (including shutdown tasking system)
+#if defined(SPLDLT_USE_STARPU)
+#if defined(SPLDLT_USE_GPU)
+         starpu_cublas_shutdown();
+#endif
+         starpu_shutdown();
+#endif
+
+         ////////////////////////////////////////
+         // Check result
+
+         // Alloc L array for storing factors
+         T *l = allocT.allocate(lda*m);
+         // Initialize L with zeros
+         for (int j=0; j<m; ++j)
+            for (int i=j; i<m; ++i)
+               l[i+j*lda] = 0.0;
+      
+         // Copy factors from LCOL into L array
+         // Copy only factors (colmuns 1 to n)
+         memcpy(l, front.lcol, lda*n*sizeof(T)); // Copy a to l
+         
+         // Eliminate remaining columns in L
+         if (m > n) {
+
+            // ...
+            // lapack_potrf<double>(FILL_MODE_LWR, m-n, &l[n*lda+n], lda);
+         }
+         
+         int nrhs = 1;
+         int ldsoln = m;
+         double *soln = new double[nrhs*ldsoln];
+         
+         cholesky_solve_fwd(m, n, l, lda, nrhs, soln, ldsoln);
+         host_trsm<double>(SIDE_LEFT, FILL_MODE_LWR, OP_N, DIAG_NON_UNIT, m-n, nrhs, 1.0, &l[n*lda+n], lda, &soln[n], ldsoln);
+         host_trsm<double>(SIDE_LEFT, FILL_MODE_LWR, OP_T, DIAG_NON_UNIT, m-n, nrhs, 1.0, &l[n*lda+n], lda, &soln[n], ldsoln);
+         cholesky_solve_bwd(m, n, l, lda, nrhs, soln, ldsoln);
+
+         T bwderr = backward_error(m, a, lda, b, 1, soln, m);
+         printf("bwderr = %le\n", bwderr);
+
+         ////////////////////////////////////////
+         // Cleanup memory
+
+         delete[] a;
+         delete[] b;
+         delete[] l;
+         delete[] soln;
+
+      }
 
    }}

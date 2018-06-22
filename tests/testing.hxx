@@ -86,7 +86,7 @@ namespace spldlt {
       int ib; // inner block size
       bool posdef;
       bool check;
-      bool chold;
+      bool chol; // Use Cholesky factorization
 
    };
 }

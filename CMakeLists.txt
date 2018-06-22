@@ -241,6 +241,8 @@ if(${USE_GPU} MATCHES ON)
 
   set(LIBS ${LIBS} spldlt_cuda)
 
+  # find_library(NVIDIA_"/usr/lib64/nvidia")
+
   # enable_language(CUDA)
   # include(FindCUDA)
 
