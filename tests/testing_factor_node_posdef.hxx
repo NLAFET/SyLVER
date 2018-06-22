@@ -3,6 +3,7 @@
 // SpLDLT
 #include "SymbolicFront.hxx"
 #include "NumericFront.hxx"
+#include "factor.hxx"
 #if defined(SPLDLT_USE_STARPU)
 #include "StarPU/scheduler.hxx"
 #include "StarPU/kernels.hxx"
@@ -19,6 +20,7 @@
 // SSIDS
 #include "ssids/cpu/cpu_iface.hxx"
 #include "ssids/cpu/BuddyAllocator.hxx"
+#include "ssids/cpu/kernels/cholesky.hxx"
 // SSIDS tests
 #include "tests/ssids/kernels/AlignedAllocator.hxx"
 
@@ -90,8 +92,9 @@ namespace spldlt { namespace tests {
 #if defined(SPLDLT_USE_GPU)
          conf.ncuda = ngpu;
          // Scheduler
-         conf.sched_policy_name = "heteroprio";
-         conf.sched_policy_init = &spldlt::starpu::init_heteroprio;
+         // conf.sched_policy_name = "heteroprio";
+         // conf.sched_policy_init = &spldlt::starpu::init_heteroprio;
+         conf.sched_policy_name = "ws";
 #else
          conf.sched_policy_name = "lws";
 #endif
@@ -113,10 +116,15 @@ namespace spldlt { namespace tests {
          // Init factor
 #if defined(SPLDLT_USE_STARPU)
          spldlt::starpu::codelet_init<T, FactorAllocator, PoolAllocator>();
+
+         // Register symbolic handles
+         starpu_void_data_register(&(sfront.hdl)); // Symbolic handle on node
+         starpu_void_data_register(&(front.contrib_hdl)); // Symbolic handle on contrib blocks 
          
          spldlt::starpu::register_node(front);
 #endif
          
+         printf("[factor_node_posdef_test] Factor..\n");
          // Run matrix factorization
          auto start = std::chrono::high_resolution_clock::now();
 
@@ -129,11 +137,15 @@ namespace spldlt { namespace tests {
          long ttotal = 
             std::chrono::duration_cast<std::chrono::nanoseconds>
             (end-start).count();
+         
+         printf("[factor_node_posdef_test] Done\n");
 
          // if(debug) printf("[factor_node_indef_test] factorization done\n");
 
-         spldlt::starpu::unregister_node_indef_submit(front);
+         spldlt::starpu::unregister_node_submit(front);
          starpu_task_wait_for_all(); // Wait for unregistration of handles      
+         starpu_data_unregister(sfront.hdl); // Node's symbolic handle
+         starpu_data_unregister(front.contrib_hdl);
       
          // Deinitialize solver (including shutdown tasking system)
 #if defined(SPLDLT_USE_STARPU)
@@ -167,11 +179,17 @@ namespace spldlt { namespace tests {
          int nrhs = 1;
          int ldsoln = m;
          double *soln = new double[nrhs*ldsoln];
+         for(int r=0; r<nrhs; ++r)
+            memcpy(&soln[r*ldsoln], b, m*sizeof(double));
+
+         printf("[factor_node_posdef_test] Solve..\n");
          
          cholesky_solve_fwd(m, n, l, lda, nrhs, soln, ldsoln);
          host_trsm<double>(SIDE_LEFT, FILL_MODE_LWR, OP_N, DIAG_NON_UNIT, m-n, nrhs, 1.0, &l[n*lda+n], lda, &soln[n], ldsoln);
          host_trsm<double>(SIDE_LEFT, FILL_MODE_LWR, OP_T, DIAG_NON_UNIT, m-n, nrhs, 1.0, &l[n*lda+n], lda, &soln[n], ldsoln);
          cholesky_solve_bwd(m, n, l, lda, nrhs, soln, ldsoln);
+
+         printf("[factor_node_posdef_test] Done\n");
 
          T bwderr = backward_error(m, a, lda, b, 1, soln, m);
          printf("bwderr = %le\n", bwderr);

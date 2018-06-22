@@ -25,14 +25,19 @@ namespace spldlt {
       int ldcontrib = m-n;
 
       int blksz = options.cpu_block_size;
-      int nr = (m-1) / blksz + 1; // number of block rows
-      int nc = (n-1) / blksz + 1; // number of block columns
+      int nr = node.get_nr(); // number of block rows
+      int nc = node.get_nc(); // number of block columns
    
-      // printf("[factorize_node_posdef_mf] contrib: %p\n", contrib);
+      // printf("[factor_front_posdef]\n");
 
-      int FACTOR_PRIO = 3;
-      int SOLVE_PRIO = 2;
-      int UPDATE_PRIO = 1;
+      // int FACTOR_PRIO = 3;
+      // int SOLVE_PRIO = 2;
+      // int UPDATE_PRIO = 1;
+
+      // Heteroprio
+      int FACTOR_PRIO = 0;
+      int SOLVE_PRIO  = 1;
+      int UPDATE_PRIO = 2;
 
       for(int j = 0; j < nc; ++j) {
 
@@ -48,9 +53,8 @@ namespace spldlt {
          //       contrib, ldcontrib,
          //       j==0);
 
-         factorize_diag_block_task(
-               snode, node, j, // block  column (and row) index
-               blksz, FACTOR_PRIO);
+         factor_diag_block_task(
+               node, j, FACTOR_PRIO);
 
          // #if defined(SPLDLT_USE_STARPU)
          //             starpu_task_wait_for_all();
@@ -64,10 +68,10 @@ namespace spldlt {
             // printf("[factorize_node_posdef_mf] contrib start: %d\n", (i*blksz)-n);
             // TODO fix STF version
             solve_block_task(
-                  snode, node, j, i,
+                  node, j, i,
                   &lcol[j*blksz*(lda+1)], lda,
                   &lcol[(j*blksz*lda) + (i*blksz)], lda,
-                  blksz, SOLVE_PRIO);
+                  SOLVE_PRIO);
 
             // solve_block(blkm, blkn, 
             //             &lcol[j*blksz*(lda+1)], lda, 

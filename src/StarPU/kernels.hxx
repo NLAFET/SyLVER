@@ -187,7 +187,7 @@ namespace spldlt { namespace starpu {
       // factorize block codelet
       extern struct starpu_codelet cl_factorize_contrib_block;
 
-      void insert_factorize_block(
+      void insert_factor_block(
             int k, 
             starpu_data_handle_t bc_hdl,
             starpu_data_handle_t contrib_hdl,
@@ -200,7 +200,7 @@ namespace spldlt { namespace starpu {
       // factorize block codelet
       extern struct starpu_codelet cl_factorize_block;      
 
-      void insert_factorize_block(
+      void insert_factor_block(
             starpu_data_handle_t bc_hdl,
             starpu_data_handle_t node_hdl, // Symbolic node handle
             int prio);

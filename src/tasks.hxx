@@ -152,27 +152,29 @@ namespace spldlt {
 
    }
 
-   ////////////////////////////////////////////////////////////////////////////////
+   ////////////////////////////////////////////////////////////
+
    // Factorize block on the diagonal
 
-   // TODO create and use BLK structure
    template <typename T, typename PoolAlloc>
-   void factorize_diag_block_task(
-         SymbolicFront const& snode,
+   void factor_diag_block_task (
          NumericFront<T, PoolAlloc> &node,
          int kk, // block  column (and row) index
-         int blksz, int prio) {
+         int prio) {
 
-      int m = snode.nrow + node.ndelay_in;
-      int n = snode.ncol + node.ndelay_in;
+      SymbolicFront const& snode = node.symb;
+      int blksz = node.blksz;
 
-      int nr = (m-1) / blksz + 1; // number of block rows
-      int nc = (n-1) / blksz + 1; // number of block columns
+      int m = node.get_nrow();
+      int n = node.get_ncol();
+
+      int nr = node.get_nr(); // number of block rows
+      int nc = node.get_nc(); // number of block columns
       
       // printf("[factorize_diag_block_task] nr: %d, nc: %d, kk: %d\n", 
       //        nr, nc, kk);
 
-      // printf("[factorize_diag_block_task] \n");
+      // printf("[factor_diag_block_task] \n");
 
       int blkm = std::min(blksz, m - kk*blksz);
       int blkn = std::min(blksz, n - kk*blksz);
@@ -194,13 +196,13 @@ namespace spldlt {
          //                      contrib, ldcontrib,
          //                      kk==0);
 
-         spldlt::starpu::insert_factorize_block(
+         spldlt::starpu::insert_factor_block(
                kk, snode.handles[kk*nr + kk], node.contrib_blocks[0].hdl,
                snode.hdl, prio);
       }
       else {
          // printf("blkm: %d, blkn: %d, ldcontrib:%d\n", blkm, blkn, ldcontrib);
-         spldlt::starpu::insert_factorize_block(
+         spldlt::starpu::insert_factor_block(
                snode.handles[kk*nr + kk], snode.hdl, prio);
       }
 
@@ -218,20 +220,22 @@ namespace spldlt {
 
    template <typename T, typename PoolAlloc>
    void solve_block_task(
-         SymbolicFront const& snode,
          NumericFront<T, PoolAlloc> &node,
          int k, // Column index
          int i, // Row index
          T *a, int lda, 
          T *a_ik, int lda_ik,         
-         int blksz, int prio) {
+         int prio) {
+
+      SymbolicFront const& snode = node.symb;
+      int blksz = node.blksz;
       
-      int m = snode.nrow + node.ndelay_in;
-      int n = snode.ncol + node.ndelay_in;
+      int m = node.get_nrow();
+      int n = node.get_ncol();
       int ldcontrib = m-n;
 
-      int nr = (m-1) / blksz + 1; // number of block rows
-      int nc = (n-1) / blksz + 1; // number of block columns
+      int nr = node.get_nr(); // number of block rows
+      int nc = node.get_nc(); // number of block columns
 
       int rsa = n / blksz; // Row/Col index of first block in contrib 
 
