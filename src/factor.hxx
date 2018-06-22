@@ -3,8 +3,8 @@
 #include "tasks.hxx"
 
 namespace spldlt {
-
-   ////////////////////////////////////////////////////////////////////////////////
+   
+   ////////////////////////////////////////////////////////////
    // factor_front_posdef
    //
    // Factorize a supernode using a multifrontal mode
@@ -29,15 +29,6 @@ namespace spldlt {
       int nc = node.get_nc(); // number of block columns
    
       // printf("[factor_front_posdef]\n");
-
-      // int FACTOR_PRIO = 3;
-      // int SOLVE_PRIO = 2;
-      // int UPDATE_PRIO = 1;
-
-      // Heteroprio
-      int FACTOR_PRIO = 0;
-      int SOLVE_PRIO  = 1;
-      int UPDATE_PRIO = 2;
 
       for(int j = 0; j < nc; ++j) {
 

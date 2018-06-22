@@ -19,13 +19,31 @@
 
 namespace spldlt {
 
-   ///////////////////////////////////////////////////////////////////////////////
-   // Task priorities
+   ////////////////////////////////////////////////////////////
+   // Task prio
 
-   const int ASSEMBLE_PRIO = 4;   
-   const int INIT_PRIO = 4;
+#if defined(SPLDLT_USE_GPU)
 
-   ////////////////////////////////////////////////////////////////////////////////
+   // Heteroprio
+   const int FACTOR_PRIO   = 0;
+   const int INIT_PRIO     = 0;
+   const int ASSEMBLE_PRIO = 0;
+   const int SOLVE_PRIO    = 1;
+   const int UPDATE_PRIO   = 2;
+
+#else
+
+   // LWS
+   const int FACTOR_PRIO   = 3;
+   const int INIT_PRIO     = 3;
+   const int ASSEMBLE_PRIO = 3;
+   const int SOLVE_PRIO    = 2;
+   const int UPDATE_PRIO   = 1;
+
+#endif
+
+   ////////////////////////////////////////////////////////////
+
    /// @brief Launches a task for activating a node.
    template <typename T, typename FactorAlloc, typename PoolAlloc>
    void activate_front_task(

@@ -180,17 +180,6 @@ namespace spldlt {
                    rbeta,
                    upd, ldupd);
 
-         // int upd_width = (m<n+blksz) ? m-n : blksz-n;
-         //    if(i-n < 0) {
-         //       // Special case for first block of contrib
-         //       host_gemm(OP_N, OP_T, blkm+i-n, upd_width, blkn, -1.0,
-         //                 &a[j*lda+n], lda, &a[j*lda+k+blkk], lda, rbeta,
-         //                 upd, ldupd);
-         //    } else {
-         //       host_gemm(OP_N, OP_T, blkm, upd_width, blkn, -1.0,
-         //                 &a[j*lda+i], lda, &a[j*lda+k+blkk], lda, rbeta,
-         //                 &upd[i-n], ldupd);
-         //    }
       }
    }
 
@@ -216,7 +205,7 @@ namespace spldlt {
       // printf("[update_block] blkm: %d, blkn: %d, k: %d\n", m, n, k);
       // printf("[update_block] ldupd: %d\n", ldupd);
 
-      double rbeta = zero_upd ? 0.0 : 1.0;
+      T rbeta = zero_upd ? 0.0 : 1.0;
 
       host_gemm(
             OP_N, OP_T, 
