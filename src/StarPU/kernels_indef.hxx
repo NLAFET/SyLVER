@@ -1182,8 +1182,9 @@ namespace spldlt { namespace starpu {
 
          // Initialize updateN_block_app StarPU codelet
          starpu_codelet_init(&cl_updateN_block_app);
-         // cl_updateN_block_app.where = STARPU_CPU;
-         cl_updateN_block_app.where = STARPU_CUDA;
+         // cl_updateN_block_app.where = STARPU_CPU; // DEBUG
+         // cl_updateN_block_app.where = STARPU_CUDA; // DEBUG
+         cl_updateN_block_app.where = STARPU_CPU | STARPU_CUDA;
          cl_updateN_block_app.nbuffers = STARPU_VARIABLE_NBUFFERS;
          cl_updateN_block_app.name = "UPDATEN_BLK_APP";
          cl_updateN_block_app.cpu_funcs[0] = updateN_block_app_cpu_func<T, iblksz, Backup, IntAlloc>;

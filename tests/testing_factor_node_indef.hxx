@@ -26,6 +26,7 @@
 #include <starpu_cublas.h>
 #include <starpu_cublas_v2.h>
 #endif
+#include "StarPU/scheduler.hxx"
 #include "StarPU/kernels.hxx"
 #include "StarPU/kernels_indef.hxx"
 #endif
@@ -136,7 +137,11 @@ namespace spldlt { namespace tests {
       conf->ncpus = ncpu;
 #if defined(SPLDLT_USE_GPU)
       conf->ncuda = 1;
-      conf->sched_policy_name = "eager";
+      // conf->sched_policy_name = "eager";
+
+      conf->sched_policy_name = "heteroprio";
+      conf->sched_policy_init = &spldlt::starpu::init_heteroprio;
+
 #else
       conf->sched_policy_name = "lws";
 #endif
