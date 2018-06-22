@@ -1499,7 +1499,7 @@ namespace spldlt { namespace starpu {
          // update_block StarPU codelet
          starpu_codelet_init(&cl_update_block);
 #if defined(SPLDLT_USE_GPU)
-         cl_update_block.where = STARPU_CUDA;
+         cl_update_block.where = STARPU_CPU | STARPU_CUDA;
 #else
          cl_update_block.where = STARPU_CPU;
 #endif

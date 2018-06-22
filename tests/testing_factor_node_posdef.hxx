@@ -92,9 +92,9 @@ namespace spldlt { namespace tests {
 #if defined(SPLDLT_USE_GPU)
          conf.ncuda = ngpu;
          // Scheduler
-         // conf.sched_policy_name = "heteroprio";
-         // conf.sched_policy_init = &spldlt::starpu::init_heteroprio;
-         conf.sched_policy_name = "ws";
+         conf.sched_policy_name = "heteroprio";
+         conf.sched_policy_init = &spldlt::starpu::init_heteroprio;
+         // conf.sched_policy_name = "ws";
 #else
          conf.sched_policy_name = "lws";
 #endif
