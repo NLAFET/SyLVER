@@ -20,9 +20,11 @@ namespace spldlt {
       // Register handles for a node in StarPU
       template <typename T, typename PoolAlloc>
       void register_node(
-            SymbolicFront& sfront,
-            NumericFront<T, PoolAlloc> &front,
-            int blksz) {
+            NumericFront<T, PoolAlloc> &front) {
+
+         
+         SymbolicFront& sfront = front.symb;
+         int blksz = front.blksz;
 
          int m = front.get_nrow();
          int n = front.get_ncol();
@@ -279,7 +281,7 @@ namespace spldlt {
       // Register block handles
       // register_node(sfront, front, blksz);
 
-      if (posdef) spldlt::starpu::register_node(sfront, front, blksz);
+      if (posdef) spldlt::starpu::register_node(front);
       else        spldlt::starpu::register_node_indef(front);
 #endif
    }

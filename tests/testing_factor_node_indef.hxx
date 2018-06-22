@@ -13,12 +13,12 @@
 
 // SSIDS
 #include "ssids/cpu/cpu_iface.hxx"
-#include "tests/ssids/kernels/AlignedAllocator.hxx"
 #include "ssids/cpu/BuddyAllocator.hxx"
 #include "ssids/cpu/kernels/ldlt_tpp.hxx"
 #include "ssids/cpu/kernels/ldlt_app.hxx"
 // SSIDS tests
 #include "tests/ssids/kernels/framework.hxx"
+#include "tests/ssids/kernels/AlignedAllocator.hxx"
 
 #if defined(SPLDLT_USE_STARPU)
 #include <starpu.h>
@@ -38,12 +38,11 @@ namespace spldlt { namespace tests {
             int iblksz=INNER_BLOCK_SIZE,
             bool debug = false>
    int factor_node_indef_test(T u, T small, bool posdef, bool delays, bool singular, int m, int n, 
-                              int blksz, int ncpu, int test=0, int seed=0) {
+                              int blksz, int ncpu, int ngpu=0, int test=0, int seed=0) {
    
       bool failed = false;
 
       printf("[factor_node_indef_test] %d x %d, posdef = %d, blksz = %d\n", m, n, posdef, blksz);
-      if (debug) printf("[factor_node_indef_test] %d x %d, posdef = %d\n", m, n, posdef);
 
       ASSERT_TRUE(m >= n);
          
@@ -82,7 +81,7 @@ namespace spldlt { namespace tests {
       // options.failed_pivot_method = FailedPivotMethod::pass;
          
       // Setup pool allocator
-      typedef BuddyAllocator<T, std::allocator<T>> PoolAllocator;
+      typedef spral::ssids::cpu::BuddyAllocator<T, std::allocator<T>> PoolAllocator;
       PoolAllocator pool_alloc(lda*n);
 
       SymbolicFront sfront;
@@ -136,7 +135,7 @@ namespace spldlt { namespace tests {
       starpu_conf_init(conf);
       conf->ncpus = ncpu;
 #if defined(SPLDLT_USE_GPU)
-      conf->ncuda = 1;
+      conf->ncuda = ngpu;
       // conf->sched_policy_name = "eager";
 
       conf->sched_policy_name = "heteroprio";

@@ -9,9 +9,10 @@
 #include "BuddyAllocator.hxx"
 #include "SymbolicTree.hxx"
 #include "NumericFront.hxx"
+#include "tasks.hxx"
+#include "factor.hxx"
 #include "factor_indef.hxx"
 #include "assemble.hxx"
-#include "tasks.hxx"
 #include "tasks_factor_indef.hxx"
 #include "tasks_assemble.hxx"
 #if defined(SPLDLT_USE_STARPU)
@@ -433,7 +434,7 @@ namespace spldlt {
 // #endif
 
             // Compute factors and Schur complement 
-            factor_front_posdef(sfront, fronts_[ni], options);
+            factor_front_posdef(fronts_[ni], options);
 // #if defined(SPLDLT_USE_STARPU)
 //             starpu_task_wait_for_all();
 // #endif
