@@ -17,10 +17,12 @@ module starpu_f_mod
   end interface starpu_f_resume
 
   interface starpu_f_init
-     function starpu_f_init_c(ncpus) bind(c)
+     function starpu_f_init_c( &
+          ncpu, ngpu) bind(c)
        use iso_c_binding
        integer(c_int)        :: starpu_f_init_c
-       integer(c_int), value :: ncpus 
+       integer(c_int), value :: ncpu 
+       integer(c_int), value :: ngpu 
      end function starpu_f_init_c
      function starpu_init(conf) bind(c)
        use iso_c_binding

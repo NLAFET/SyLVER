@@ -16,12 +16,13 @@ namespace spldlt {
 #if defined(SPLDLT_USE_STARPU)
 
    namespace starpu {
-      
+
+      extern starpu_data_handle_t workspace_hdl;      
+
       // Register handles for a node in StarPU
       template <typename T, typename PoolAlloc>
       void register_node(
             NumericFront<T, PoolAlloc> &front) {
-
          
          SymbolicFront& sfront = front.symb;
          int blksz = front.blksz;
@@ -128,6 +129,13 @@ namespace spldlt {
          T *d = &a[n*lda];
          // cdata.register_d_hdl(d);
 
+         // Register worksapce handle
+         starpu_matrix_data_register (
+               &spldlt::starpu::workspace_hdl,
+               -1, (uintptr_t) NULL,
+               blksz, blksz, blksz,
+               sizeof(T));
+
          // sfront.handles.reserve(nr*nc);
          sfront.handles.resize(nr*nc); // allocate handles
          // printf("[register_front] sfront.handles size = %d\n", sfront.handles.size());
@@ -222,6 +230,8 @@ namespace spldlt {
          int nr = node.get_nr(); // number of block rows
          int nc = node.get_nc(); // number of block columns
          spldlt::ldlt_app_internal::ColumnData<T, IntAlloc>& cdata = *node.cdata;
+
+         starpu_data_unregister(spldlt::starpu::workspace_hdl);
          
          // Unregister block handles in the factors
          for(int j = 0; j < nc; ++j) {

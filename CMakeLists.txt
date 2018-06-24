@@ -339,7 +339,8 @@ if (${KERNEL_TESTS} MATCHES "ON")
     GLOB
     test_src
     tests/*.cxx
-    tests/*.hxx)
+    tests/*.hxx
+    tests/*.F90)
   add_library(spldlt_tests ${test_src})
 
   add_executable(spldlt_tests_factor_node tests/drivers/factor_node_test.cxx)

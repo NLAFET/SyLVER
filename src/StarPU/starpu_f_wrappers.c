@@ -1,36 +1,44 @@
+#include "scheduler.h"
+
 #include <starpu.h>
 #include <starpu_cuda.h>
 #include <starpu_profiling.h>
 #include <limits.h>
 
-int starpu_f_init_c(int ncpus) {
+int starpu_f_init_c(
+      int ncpu,
+      int ngpu) {
 
   int info;
-  struct starpu_conf *conf = malloc(sizeof(struct starpu_conf));
+  struct starpu_conf conf;
   
-  starpu_conf_init(conf);
+  starpu_conf_init(&conf);
 
-  if(ncpus > 0)
-    conf->ncpus = ncpus;  
-  printf("starpu_f_init_c, ncpu: %d\n", conf->ncpus);
+  if(ncpu >= 0)
+    conf.ncpus = ncpu;  
 #if defined(SPLDLT_USE_GPU)
-  conf->ncuda = 1;
+  if(ngpu >= 0)
+     conf.ncuda = ngpu;
 #endif
+  printf("[starpu_f_init_c], ncpu = %d, ngpu = %d\n", conf.ncpus, conf.ncuda);
 
 #if defined(SPLDLT_USE_GPU)
   /* conf->sched_policy_name = "dmdas"; */
-  conf->sched_policy_name = "eager";
+  conf.sched_policy_name = "eager";
   /* conf->sched_policy_name = "lws"; */
+
+  /* conf->sched_policy_name = "heteroprio"; */
+  /* conf->sched_policy_init = &spldlt::starpu::init_heteroprio; */
+
 #else
-  conf->sched_policy_name = "ws"; // Use WS because LWS is currently buggy
+  conf.sched_policy_name = "ws"; // Use WS because LWS is currently buggy
   /* conf->sched_policy_name = "lws"; */
   /* conf->sched_policy_name = "prio"; */
 #endif
 
-  info = starpu_init(conf);
+  info = starpu_init(&conf);
   STARPU_CHECK_RETURN_VALUE(info, "starpu_init");
 
-  free(conf);
   return info;
 }
 

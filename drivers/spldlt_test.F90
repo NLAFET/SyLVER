@@ -27,8 +27,10 @@ program spldlt_test
 
    ! Block-size
    integer :: nb
-   ! Number of cpus
+   ! Number of CPUs
    integer :: ncpu
+   ! Number of GPUs
+   integer :: ngpu
 
    ! right-hand side and solution
    integer :: nrhs
@@ -70,7 +72,7 @@ program spldlt_test
 
    pos_def = .false. ! Matrix assumed indef by default
    
-   call proc_args(ssids_opt, nrhs, pos_def, ncpu, matfile)
+   call proc_args(ssids_opt, nrhs, pos_def, ncpu, ngpu, matfile)
 
    ! ssids_opt%print_level = 1 ! enable printing
    ssids_opt%print_level = 0 ! disable printing
@@ -150,7 +152,7 @@ program spldlt_test
    ! call spldlt_print_atree_part(spldlt_akeep%akeep)
 
    ! Initialize SpLDLT
-   call spldlt_init(ncpu)
+   call spldlt_init(ncpu, ngpu)
 
    ! print *, "TETETET"
    ! stop
@@ -248,7 +250,7 @@ program spldlt_test
  contains
 
    ! Get argument from command line
-   subroutine proc_args(options, nrhs, pos_def, ncpu, matfile)
+   subroutine proc_args(options, nrhs, pos_def, ncpu, ngpu, matfile)
      use spral_ssids
      implicit none
 
@@ -256,6 +258,7 @@ program spldlt_test
      integer, intent(inout) :: nrhs
      logical, intent(inout) :: pos_def
      integer, intent(inout) :: ncpu
+     integer, intent(inout) :: ngpu
      character(len=200), intent(inout) :: matfile
 
      integer :: argnum, narg
@@ -265,6 +268,7 @@ program spldlt_test
      nb = 2
      nrhs = 1
      ncpu = 1
+     ngpu = 0
 
      ! Process args
      narg = command_argument_count()
@@ -299,6 +303,11 @@ program spldlt_test
            argnum = argnum + 1
            read( argval, * ) ncpu
            print *, 'Number of CPUs = ', ncpu
+        case("--ngpu")
+           call get_command_argument(argnum, argval)
+           argnum = argnum + 1
+           read( argval, * ) ngpu
+           print *, 'Number of GPUs = ', ngpu
         case("--mat")
            call get_command_argument(argnum, argval)
            argnum = argnum + 1

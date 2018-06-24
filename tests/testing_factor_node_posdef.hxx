@@ -9,9 +9,6 @@
 #include "StarPU/kernels.hxx"
 #endif
 
-// SpLDLT tests
-// #include "testing_factor_node_posdef.hxx"
-
 // STD
 #include <vector>
 #include <cstdio>
@@ -23,6 +20,7 @@
 #include "ssids/cpu/kernels/cholesky.hxx"
 // SSIDS tests
 #include "tests/ssids/kernels/AlignedAllocator.hxx"
+#include "tests/ssids/kernels/framework.hxx"
 
 namespace spldlt { namespace tests {
 
@@ -193,6 +191,10 @@ namespace spldlt { namespace tests {
 
          T bwderr = backward_error(m, a, lda, b, 1, soln, m);
          printf("bwderr = %le\n", bwderr);
+
+         double flops = ((double)m*n*n)/3.0;
+         printf("factor time (s) = %e\n", 1e-9*ttotal);
+         printf("GFlop/s = %.3f\n", flops/(double)ttotal);
 
          ////////////////////////////////////////
          // Cleanup memory

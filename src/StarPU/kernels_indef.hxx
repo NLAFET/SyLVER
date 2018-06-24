@@ -19,11 +19,10 @@ namespace spldlt { namespace starpu {
 
       using namespace spldlt::ldlt_app_internal;
 
-      extern starpu_data_handle_t workspace_hdl;      
-
       /* factor_block_app StarPU task
          
        */
+      extern starpu_data_handle_t workspace_hdl;      
       
       /* factor_block_app StarPU codelet */
       // static
@@ -1161,7 +1160,7 @@ namespace spldlt { namespace starpu {
          starpu_codelet_init(&cl_factor_block_app);
          cl_factor_block_app.where = STARPU_CPU;
          cl_factor_block_app.nbuffers = STARPU_VARIABLE_NBUFFERS;
-         cl_factor_block_app.name = "FACOTR_BLK_APP";
+         cl_factor_block_app.name = "FactorBlockApp";
          cl_factor_block_app.cpu_funcs[0] = factor_block_app_cpu_func<T, Backup, IntAlloc, Allocator>;
 
          // printf("[codelet_init_indef] %s\n", cl_factor_block_app.name);
@@ -1170,27 +1169,27 @@ namespace spldlt { namespace starpu {
          starpu_codelet_init(&cl_applyN_block_app);
          cl_applyN_block_app.where = STARPU_CPU;
          cl_applyN_block_app.nbuffers = STARPU_VARIABLE_NBUFFERS;
-         cl_applyN_block_app.name = "APPLYN_BLK_APP";
+         cl_applyN_block_app.name = "ApplyNBlockAPP";
          cl_applyN_block_app.cpu_funcs[0] = applyN_block_app_cpu_func<T, iblksz, Backup, IntAlloc>;
          
          // Initialize applyT_block_app StarPU codelet
          starpu_codelet_init(&cl_applyT_block_app);
          cl_applyT_block_app.where = STARPU_CPU;
          cl_applyT_block_app.nbuffers = STARPU_VARIABLE_NBUFFERS;
-         cl_applyT_block_app.name = "APPLYT_BLK_APP";
+         cl_applyT_block_app.name = "ApplyTBlockAPP";
          cl_applyT_block_app.cpu_funcs[0] = applyT_block_app_cpu_func<T, iblksz, Backup, IntAlloc>;
 
          // Initialize updateN_block_app StarPU codelet
          starpu_codelet_init(&cl_updateN_block_app);
 #if defined(SPLDLT_USE_GPU)
          // cl_updateN_block_app.where = STARPU_CPU; // DEBUG
-         // cl_updateN_block_app.where = STARPU_CUDA; // DEBUG
-         cl_updateN_block_app.where = STARPU_CPU | STARPU_CUDA;
+         cl_updateN_block_app.where = STARPU_CUDA; // DEBUG
+         // cl_updateN_block_app.where = STARPU_CPU | STARPU_CUDA;
 #else
          cl_updateN_block_app.where = STARPU_CPU;
 #endif
          cl_updateN_block_app.nbuffers = STARPU_VARIABLE_NBUFFERS;
-         cl_updateN_block_app.name = "UPDATEN_BLK_APP";
+         cl_updateN_block_app.name = "UpdateNBlockAPP";
          cl_updateN_block_app.cpu_funcs[0] = updateN_block_app_cpu_func<T, iblksz, Backup, IntAlloc>;
 #if defined(SPLDLT_USE_GPU)
          cl_updateN_block_app.cuda_funcs[0] = updateN_block_app_gpu_func<T, iblksz, Backup, IntAlloc>;
@@ -1200,14 +1199,14 @@ namespace spldlt { namespace starpu {
          starpu_codelet_init(&cl_updateT_block_app);
          cl_updateT_block_app.where = STARPU_CPU;
          cl_updateT_block_app.nbuffers = STARPU_VARIABLE_NBUFFERS;
-         cl_updateT_block_app.name = "UPDATET_BLK_APP";
+         cl_updateT_block_app.name = "UpdateTBlockAPP";
          cl_updateT_block_app.cpu_funcs[0] = updateT_block_app_cpu_func<T, iblksz, Backup, IntAlloc>;
 
          // Initialize adjust StarPU codelet
          starpu_codelet_init(&cl_adjust);
          cl_adjust.where = STARPU_CPU;
          cl_adjust.nbuffers = STARPU_VARIABLE_NBUFFERS;
-         cl_adjust.name = "ADJUST";
+         cl_adjust.name = "Adjust";
          cl_adjust.cpu_funcs[0] = adjust_cpu_func<T, IntAlloc>;
 
 #if defined(SPLDLT_USE_PROFILING)
@@ -1215,7 +1214,7 @@ namespace spldlt { namespace starpu {
          // Initialize update_contrib_block_indef StarPU perfmodel
          starpu_perfmodel_init(&update_contrib_block_app_perfmodel);
          update_contrib_block_app_perfmodel.type = STARPU_HISTORY_BASED;
-         update_contrib_block_app_perfmodel.symbol = "update_contrib_block_app_model";
+         update_contrib_block_app_perfmodel.symbol = "UpdateContribBlockAPPModel";
          update_contrib_block_app_perfmodel.size_base = update_contrib_block_app_size_base<T, IntAlloc, Allocator>;
          update_contrib_block_app_perfmodel.footprint = update_contrib_block_app_footprint<T, IntAlloc, Allocator>;
 #endif
@@ -1223,7 +1222,7 @@ namespace spldlt { namespace starpu {
          starpu_codelet_init(&cl_update_contrib_block_app);
          cl_update_contrib_block_app.where = STARPU_CPU;
          cl_update_contrib_block_app.nbuffers = STARPU_VARIABLE_NBUFFERS;
-         cl_update_contrib_block_app.name = "UPDATE_CONTRIB_BLOCK_APP";
+         cl_update_contrib_block_app.name = "UpdateContribBlockAPP";
          cl_update_contrib_block_app.cpu_funcs[0] = update_contrib_block_app_cpu_func<T, IntAlloc, Allocator>;
 #if defined(SPLDLT_USE_PROFILING)
          cl_update_contrib_block_app.model = &update_contrib_block_app_perfmodel;
@@ -1233,14 +1232,14 @@ namespace spldlt { namespace starpu {
          starpu_codelet_init(&cl_permute_failed);
          cl_permute_failed.where = STARPU_CPU;
          cl_permute_failed.nbuffers = STARPU_VARIABLE_NBUFFERS;
-         cl_permute_failed.name = "PERMUTE_FAILED";
+         cl_permute_failed.name = "PermuteFailed";
          cl_permute_failed.cpu_funcs[0] = permute_failed_cpu_func<T, IntAlloc, Allocator>;
 
          // Initialize factor_front_indef_failed StarPU codelet
          starpu_codelet_init(&cl_factor_front_indef_failed);
          cl_factor_front_indef_failed.where = STARPU_CPU;
          cl_factor_front_indef_failed.nbuffers = STARPU_VARIABLE_NBUFFERS;
-         cl_factor_front_indef_failed.name = "FACTOR_FRONT_FAILED";
+         cl_factor_front_indef_failed.name = "FactorFrontFailed";
          cl_factor_front_indef_failed.cpu_funcs[0] = factor_front_indef_failed_cpu_func<T, Allocator>;
 
          // // Initialize factor_sync StarPU codelet
@@ -1260,7 +1259,7 @@ namespace spldlt { namespace starpu {
          cl_assemble_contrib_sync.nbuffers = 1;
          cl_assemble_contrib_sync.modes[0] = STARPU_RW;
          // cl_assemble_contrib_sync.modes[0] = STARPU_R;
-         cl_assemble_contrib_sync.name = "ASSEMBLE_CONTRIB_SYNC";
+         cl_assemble_contrib_sync.name = "AssembleContribSync";
          // cl_assemble_contrib_sync.cpu_funcs[0] = assemble_contrib_sync_cpu_func<T, Allocator>;
          cl_assemble_contrib_sync.cpu_funcs[0] = assemble_contrib_sync_cpu_func;
 
@@ -1272,7 +1271,7 @@ namespace spldlt { namespace starpu {
          // cl_nelim_sync.nbuffers = STARPU_VARIABLE_NBUFFERS;
          cl_nelim_sync.modes[0] = STARPU_RW;
          // cl_nelim_sync.modes[0] = STARPU_R;
-         cl_nelim_sync.name = "NELIM_SYNC";
+         cl_nelim_sync.name = "NelimSync";
          // cl_nelim_sync.cpu_funcs[0] = nelim_sync_cpu_func<T, Allocator>;
          cl_nelim_sync.cpu_funcs[0] = nelim_sync_cpu_func;
 
@@ -1280,7 +1279,7 @@ namespace spldlt { namespace starpu {
          starpu_codelet_init(&cl_restore_failed_block_app);
          cl_restore_failed_block_app.where = STARPU_CPU;
          cl_restore_failed_block_app.nbuffers = STARPU_VARIABLE_NBUFFERS;
-         cl_restore_failed_block_app.name = "restore_failed_block";
+         cl_restore_failed_block_app.name = "RestoreFailedBlock";
          cl_restore_failed_block_app.cpu_funcs[0] = restore_failed_block_app_cpu_func<T, iblksz, Backup, IntAlloc>;
 
       }
