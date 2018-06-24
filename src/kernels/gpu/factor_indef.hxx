@@ -3,6 +3,8 @@
 /// \author    Florent Lopez
 #pragma once
 
+#include "NumericFront.hxx"
+
 // cuBLAS
 #include "cublas_v2.h"
 
@@ -49,6 +51,44 @@ namespace spldlt { namespace gpu {
                d_ld, d_ldld, d_ljk, d_ld_ljk,
                &rbeta,
                d_upd, d_ldupd);
+      }
+
+      template <typename T, typename IntAlloc, typename PoolAlloc>
+      void update_contrib_block_app(
+            const cudaStream_t stream, const cublasHandle_t handle,
+            NumericFront<T, PoolAlloc>& node,
+            int k, int i, int j,
+            T *d_lik, int ld_lik,
+            T *d_ljk, int ld_ljk,
+            int updm, int updn, T *d_upd, int ld_upd, 
+            T *d_d, // Diagonal for block-column k
+            T *d_ld, int ldld) {
+
+         int blksz = node.blksz;
+         
+         int nrow = node.get_nrow();
+         int ncol = node.get_ncol();
+
+         int ljk_first_row = std::max(0, ncol-j*blksz);
+         int lik_first_row = std::max(0, ncol-i*blksz);
+
+         spldlt::ldlt_app_internal::ColumnData<T, IntAlloc> *cdata = node.cdata;
+         int cnelim = (*cdata)[k].nelim;
+         if (cnelim <= 0) return; // No factors to update in current block-column
+         bool first_elim = (*cdata)[k].first_elim;
+         int idx = (*cdata)[k].d - (*cdata)[0].d;
+
+         spldlt::gpu::update_block(
+               stream, handle,
+               updm, updn,
+               d_upd, ld_upd,
+               cnelim,
+               &d_lik[lik_first_row], ld_lik, 
+               &d_ljk[ljk_first_row], ld_ljk,
+               first_elim,
+               &d_d[idx],
+               d_ld, ldld);
+
       }
       
 }} // End of namespace spldlt::gpu

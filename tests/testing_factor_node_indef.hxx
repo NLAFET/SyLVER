@@ -26,7 +26,7 @@
 #include <starpu_cublas.h>
 #include <starpu_cublas_v2.h>
 #endif
-#include "StarPU/scheduler.hxx"
+#include "StarPU/scheduler.h"
 #include "StarPU/kernels.hxx"
 #include "StarPU/kernels_indef.hxx"
 #endif
@@ -139,7 +139,7 @@ namespace spldlt { namespace tests {
       // conf->sched_policy_name = "eager";
 
       conf->sched_policy_name = "heteroprio";
-      conf->sched_policy_init = &spldlt::starpu::init_heteroprio;
+      conf->sched_policy_init = &init_heteroprio;
 
 #else
       conf->sched_policy_name = "lws";

@@ -40,6 +40,7 @@ namespace spldlt {
             upd.hdl, isrc.get_hdl(), jsrc.get_hdl(),
             // node.contrib_blocks[(jblk-rsa)*ncontrib+(iblk-rsa)].hdl,
             // snode.handles[blk*nr+iblk], snode.handles[blk*nr+jblk],
+            cdata[blk].get_d_hdl(),
             cdata[nblk-1].get_hdl(), // make sure col has been processed
             node.contrib_hdl, // For synchronization purpose
             &node, blk, iblk, jblk, 

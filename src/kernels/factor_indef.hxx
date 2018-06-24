@@ -83,11 +83,14 @@ namespace spldlt {
 
       update_contrib_block(
             updm, updn, upd, ldupd,
-            cnelim, &lik[lik_first_row], ld_lik, &ljk[ljk_first_row], ld_ljk,
-            first_elim, dk, ld, ldld);
+            cnelim,
+            &lik[lik_first_row], ld_lik,
+            &ljk[ljk_first_row], ld_ljk,
+            first_elim,
+            dk,
+            ld, ldld);
    
    }
-   
 
    /// @brief Form cotribution blocks using the the columns nelim_from
    /// to nelim_to in the factors

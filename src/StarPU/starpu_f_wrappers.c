@@ -27,8 +27,8 @@ int starpu_f_init_c(
   conf.sched_policy_name = "eager";
   /* conf->sched_policy_name = "lws"; */
 
-  /* conf->sched_policy_name = "heteroprio"; */
-  /* conf->sched_policy_init = &spldlt::starpu::init_heteroprio; */
+  /* conf.sched_policy_name = "heteroprio"; */
+  /* conf.sched_policy_init = &init_heteroprio; */
 
 #else
   conf.sched_policy_name = "ws"; // Use WS because LWS is currently buggy

@@ -806,7 +806,55 @@ namespace spldlt { namespace starpu {
       //    .footprint = update_contrib_block_app_footprint
       // };
 #endif
+
+
+#if defined(SPLDLT_USE_GPU)
+
+      template <typename T, typename IntAlloc, typename PoolAlloc>
+      void update_contrib_block_app_gpu_func(void *buffers[], void *cl_arg) {
+
+         T *upd = (T *)STARPU_MATRIX_GET_PTR(buffers[0]);
+         unsigned ldupd = STARPU_MATRIX_GET_LD(buffers[0]); // Leading dimensions
+         unsigned updm = STARPU_MATRIX_GET_NX(buffers[0]);
+         unsigned updn = STARPU_MATRIX_GET_NY(buffers[0]);
+
+         T *lik = (T *)STARPU_MATRIX_GET_PTR(buffers[1]);
+         unsigned ld_lik = STARPU_MATRIX_GET_LD(buffers[1]); // Leading dimensions
+
+         T *ljk = (T *)STARPU_MATRIX_GET_PTR(buffers[2]);
+         unsigned ld_ljk = STARPU_MATRIX_GET_LD(buffers[2]); // Leading dimensions
+
+         T *d_d = (T *)STARPU_VECTOR_GET_PTR(buffers[3]);
+         unsigned d_dimn = STARPU_VECTOR_GET_NX(buffers[3]);
+
+         T *d_ld = (T *)STARPU_MATRIX_GET_PTR(buffers[4]); // Get pointer on scratch memory
+         unsigned ldld = STARPU_MATRIX_GET_LD(buffers[4]); // Get leading dimensions
+
+         NumericFront<T, PoolAlloc> *node = nullptr;
+         int k, i, j;
+         std::vector<spral::ssids::cpu::Workspace> *workspaces;
+
+         starpu_codelet_unpack_args(
+               cl_arg, &node, &k, &i, &j, &workspaces);
+
+         
+         cudaStream_t stream = starpu_cuda_get_local_stream();
+         cublasHandle_t handle = starpu_cublas_get_local_handle();
+         
+         spldlt::gpu::update_contrib_block_app
+            <T, IntAlloc, PoolAlloc>(
+               stream, handle,
+               *node,
+               k, i, j,
+               lik, ld_lik,
+               ljk, ld_ljk,
+               updm, updn, upd, ldupd,
+               d_d,
+               d_ld, ldld);
+      }
       
+#endif
+
       template <typename T, typename IntAlloc, typename PoolAlloc>
       void update_contrib_block_app_cpu_func(void *buffers[], void *cl_arg) {
 
@@ -846,6 +894,7 @@ namespace spldlt { namespace starpu {
             starpu_data_handle_t upd_hdl,
             starpu_data_handle_t lik_hdl,
             starpu_data_handle_t ljk_hdl,
+            starpu_data_handle_t d_hdl,
             starpu_data_handle_t col_hdl, // Symbolic handle on block-column k
             starpu_data_handle_t contrib_hdl, // Contribution blocks symbolic handle
             NumericFront<T, PoolAlloc> *node,
@@ -869,6 +918,8 @@ namespace spldlt { namespace starpu {
                STARPU_RW, upd_hdl,
                STARPU_R, lik_hdl,
                STARPU_R, ljk_hdl,
+               STARPU_R, d_hdl,
+               STARPU_SCRATCH, workspace_hdl,
                STARPU_R, col_hdl,
                STARPU_R, contrib_hdl, // Contribution blocks symbolic handle
                STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
@@ -1182,8 +1233,8 @@ namespace spldlt { namespace starpu {
          // Initialize updateN_block_app StarPU codelet
          starpu_codelet_init(&cl_updateN_block_app);
 #if defined(SPLDLT_USE_GPU)
-         // cl_updateN_block_app.where = STARPU_CPU; // DEBUG
-         cl_updateN_block_app.where = STARPU_CUDA; // DEBUG
+         cl_updateN_block_app.where = STARPU_CPU; // DEBUG
+         // cl_updateN_block_app.where = STARPU_CUDA; // DEBUG
          // cl_updateN_block_app.where = STARPU_CPU | STARPU_CUDA;
 #else
          cl_updateN_block_app.where = STARPU_CPU;
@@ -1220,10 +1271,20 @@ namespace spldlt { namespace starpu {
 #endif
          // Initialize update_contrib_block_indef StarPU codelet
          starpu_codelet_init(&cl_update_contrib_block_app);
+#if defined(SPLDLT_USE_GPU)
+         // cl_update_contrib_block_app.where = STARPU_CPU;
+         cl_update_contrib_block_app.where = STARPU_CUDA;
+         // cl_update_contrib_block_app.where = STARPU_CPU | STARPU_CUDA;
+#else
          cl_update_contrib_block_app.where = STARPU_CPU;
+#endif
          cl_update_contrib_block_app.nbuffers = STARPU_VARIABLE_NBUFFERS;
          cl_update_contrib_block_app.name = "UpdateContribBlockAPP";
-         cl_update_contrib_block_app.cpu_funcs[0] = update_contrib_block_app_cpu_func<T, IntAlloc, Allocator>;
+#if defined(SPLDLT_USE_GPU)
+         cl_update_contrib_block_app.cuda_funcs[0] = update_contrib_block_app_gpu_func<T, IntAlloc, Allocator>;
+         cl_update_contrib_block_app.cuda_flags[0] = STARPU_CUDA_ASYNC;
+#endif
+         cl_update_contrib_block_app.cpu_funcs[0]  = update_contrib_block_app_cpu_func<T, IntAlloc, Allocator>;
 #if defined(SPLDLT_USE_PROFILING)
          cl_update_contrib_block_app.model = &update_contrib_block_app_perfmodel;
 #endif

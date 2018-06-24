@@ -5,7 +5,7 @@
 #include "NumericFront.hxx"
 #include "factor.hxx"
 #if defined(SPLDLT_USE_STARPU)
-#include "StarPU/scheduler.hxx"
+#include "StarPU/scheduler.h"
 #include "StarPU/kernels.hxx"
 #endif
 
@@ -91,7 +91,7 @@ namespace spldlt { namespace tests {
          conf.ncuda = ngpu;
          // Scheduler
          conf.sched_policy_name = "heteroprio";
-         conf.sched_policy_init = &spldlt::starpu::init_heteroprio;
+         conf.sched_policy_init = &init_heteroprio;
          // conf.sched_policy_name = "ws";
 #else
          conf.sched_policy_name = "lws";
