@@ -373,8 +373,9 @@ namespace spldlt { namespace starpu {
       void insert_restore_failed_block_app(
             starpu_data_handle_t l_jk_hdl,
             starpu_data_handle_t l_ij_hdl,
+            starpu_data_handle_t col_hdl,
             int m, int n, int iblk, int jblk, int elim_col,
-            ColumnData<T,IntAlloc> *cdata, 
+            ColumnData<T, IntAlloc> *cdata, 
             Backup *backup,
             std::vector<spral::ssids::cpu::Workspace> *workspaces, 
             int blksz, 
@@ -384,8 +385,9 @@ namespace spldlt { namespace starpu {
 
          ret = starpu_task_insert(
                &cl_restore_failed_block_app,
-               STARPU_R, l_jk_hdl,
+               STARPU_R,  l_jk_hdl,
                STARPU_RW, l_ij_hdl,
+               STARPU_R,  col_hdl,
                STARPU_VALUE, &m, sizeof(int),
                STARPU_VALUE, &n, sizeof(int),
                STARPU_VALUE, &iblk, sizeof(int),

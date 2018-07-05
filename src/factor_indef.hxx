@@ -460,7 +460,7 @@ namespace spldlt {
 #if defined(SPLDLT_USE_STARPU)
 
          spldlt::starpu::insert_restore_failed_block_app(
-               jblk.get_hdl(), blk.get_hdl(),
+               jblk.get_hdl(), blk.get_hdl(), cdata[elim_col].get_hdl(),
                blk.get_m(), blk.get_n(),
                blk.get_row(), blk.get_col(), elim_col,
                &cdata, &backup, &workspaces, blk.get_blksz(),
