@@ -1213,7 +1213,7 @@ namespace spldlt { namespace starpu {
          starpu_codelet_init(&cl_factor_block_app);
          cl_factor_block_app.where = STARPU_CPU;
          cl_factor_block_app.nbuffers = STARPU_VARIABLE_NBUFFERS;
-         cl_factor_block_app.name = "FactorBlockApp";
+         cl_factor_block_app.name = "FactorBlockAPP";
          cl_factor_block_app.cpu_funcs[0] = factor_block_app_cpu_func<T, Backup, IntAlloc, Allocator>;
 
          // printf("[codelet_init_indef] %s\n", cl_factor_block_app.name);
