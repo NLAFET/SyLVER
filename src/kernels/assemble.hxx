@@ -215,8 +215,8 @@ namespace spldlt {
       }
 
       /// @brief Unregister StarPU data handles associated with a node
-      template <typename T, typename PoolAlloc>
-      void unregister_node_indef_submit(
+      template <typename T, typename PoolAlloc, bool async=true>
+      void unregister_node_indef(
             NumericFront<T, PoolAlloc> &node
             ) {
 
@@ -231,7 +231,8 @@ namespace spldlt {
          int nc = node.get_nc(); // number of block columns
          spldlt::ldlt_app_internal::ColumnData<T, IntAlloc>& cdata = *node.cdata;
 
-         starpu_data_unregister(spldlt::starpu::workspace_hdl);
+         if (async) starpu_data_unregister_submit(spldlt::starpu::workspace_hdl);
+         else starpu_data_unregister(spldlt::starpu::workspace_hdl);
          
          // Unregister block handles in the factors
          for(int j = 0; j < nc; ++j) {
@@ -259,8 +260,9 @@ namespace spldlt {
 
             for(int j = rsa; j < nr; j++) {
                for(int i = j; i < nr; i++) {
+
                   // Register block in StarPU
-                  node.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib].unregister_handle_submit();
+                  node.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib].unregister_handle();
                }
             }
 

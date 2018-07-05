@@ -44,6 +44,9 @@ namespace spldlt { namespace tests {
 
       printf("[factor_node_indef_test] %d x %d, posdef = %d, blksz = %d\n", m, n, posdef, blksz);
 
+      // We don't allow these cases
+      ASSERT_TRUE(n > 0);
+      ASSERT_TRUE(m > 0);
       ASSERT_TRUE(m >= n);
          
       // Generate test matrix
@@ -136,10 +139,10 @@ namespace spldlt { namespace tests {
       conf->ncpus = ncpu;
 #if defined(SPLDLT_USE_GPU)
       conf->ncuda = ngpu;
-      // conf->sched_policy_name = "eager";
+      conf->sched_policy_name = "eager";
 
-      conf->sched_policy_name = "heteroprio";
-      conf->sched_policy_init = &init_heteroprio;
+      // conf->sched_policy_name = "heteroprio";
+      // conf->sched_policy_init = &init_heteroprio;
 
 #else
       conf->sched_policy_name = "lws";
@@ -179,6 +182,17 @@ namespace spldlt { namespace tests {
       spldlt::starpu::codelet_init<T, FactorAllocator, PoolAllocator>();
       spldlt::starpu::codelet_init_indef<T, iblksz, Backup, PoolAllocator>();
       spldlt::starpu::codelet_init_factor_indef<T, PoolAllocator>();
+
+      // extern struct starpu_codelet cl_update_contrib_block_app;
+
+      // Force updqte_contrib taks on the CPU/GPU
+      // cl_update_contrib_block_app.where = STARPU_CPU;
+      cl_update_contrib_block_app.where = STARPU_CUDA;
+      
+      // Force UpdateN taks on the CPU/GPU
+      cl_updateN_block_app.where = STARPU_CPU; 
+      // cl_updateN_block_app.where = STARPU_CUDA; 
+
 #endif
 
 #if defined(SPLDLT_USE_STARPU)
@@ -215,7 +229,7 @@ namespace spldlt { namespace tests {
       std::cout << "SECOND FACTOR CALL ELIMINATED " << q2 << " of " << n << " pivots" << std::endl;
       
 #if defined(SPLDLT_USE_STARPU)
-      spldlt::starpu::unregister_node_indef_submit(front);
+      spldlt::starpu::unregister_node_indef<T, PoolAllocator, false>(front);
       starpu_task_wait_for_all(); // Wait for unregistration of handles      
       starpu_data_unregister(sfront.hdl); // Node's symbolic handle
       starpu_data_unregister(front.contrib_hdl);

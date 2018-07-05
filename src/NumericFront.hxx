@@ -88,8 +88,12 @@ namespace spldlt {
       }
 
       // Unregister handle on block asynchronously
-      void unregister_handle_submit() {
+      // template<bool async=true>
+      void unregister_handle() {
+         // if(async) starpu_data_unregister_submit(hdl);
+         // else      starpu_data_unregister(hdl);
          starpu_data_unregister_submit(hdl);
+      
       }
 #endif
 

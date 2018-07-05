@@ -11,16 +11,20 @@ int starpu_f_init_c(
 
   int info;
   struct starpu_conf conf;
+
+  /* printf("[starpu_f_init_c], ncpu = %d, ngpu = %d\n", ncpu, ngpu); */
   
   starpu_conf_init(&conf);
 
   if(ncpu >= 0)
-    conf.ncpus = ncpu;  
+    conf.ncpus = ncpu;
 #if defined(SPLDLT_USE_GPU)
   if(ngpu >= 0)
      conf.ncuda = ngpu;
+#else
+     conf.ncuda = 0;
 #endif
-  printf("[starpu_f_init_c], ncpu = %d, ngpu = %d\n", conf.ncpus, conf.ncuda);
+  printf("[starpu_f_init_c], conf.ncpus = %d, conf.ncuda = %d\n", conf.ncpus, conf.ncuda);
 
 #if defined(SPLDLT_USE_GPU)
   /* conf->sched_policy_name = "dmdas"; */

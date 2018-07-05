@@ -48,7 +48,7 @@ namespace spldlt { namespace starpu {
             for(int j = rsa; j < nr; j++) {
                for(int i = j; i < nr; i++) {
                   // Register block in StarPU
-                  node.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib].unregister_handle_submit();
+                  node.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib].unregister_handle();
                }
             }
 
