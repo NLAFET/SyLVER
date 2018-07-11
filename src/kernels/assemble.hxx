@@ -873,10 +873,11 @@ namespace spldlt {
          NumericFront<T,PoolAlloc>& node,
          SymbolicFront const& csnode,
          void** child_contrib, 
-         int contrib_idx, // Index of subtree to assemble
-         int blksz) {
+         int contrib_idx// Index of subtree to assemble
+         ) {
 
       SymbolicFront const& snode = node.symb;
+      int blksz = node.blksz;
 
       /* Initialise variables */
       int ncol = node.get_ncol();
@@ -925,11 +926,49 @@ namespace spldlt {
       // spral_ssids_contrib_free_dbl(child_contrib[contrib_idx]);
    }
 
-   ////////////////////////////////////////////////////////////////////////////////   
-   // Assemble contributions from children node and subtrees into the
-   // fully-summed columns
+   ///////////////////////////////////////////////////////////   
+   // @brief Copy delays columns from a chil node to its parent
+   template <typename T, typename PoolAlloc, typename PoolAllocInt>
+   void assemble_delays(
+         std::vector<int, PoolAllocInt> map,
+         NumericFront<T,PoolAlloc>& cnode,
+         int delay_col,
+         NumericFront<T,PoolAlloc>& node
+         ) {
+
+      SymbolicFront &csnode = cnode.symb; // Child symbolic node
+
+      int ncol = node.get_ncol();
+      size_t ldl = node.get_ldl();
+
+      for(int i=0; i<cnode.ndelay_out; i++) {
+         // Add delayed rows (from delayed cols)
+         T *dest = &node.lcol[delay_col*(ldl+1)];
+         int lds = align_lda<T>(csnode.nrow + cnode.ndelay_in);
+         T *src = &cnode.lcol[(cnode.nelim+i)*(lds+1)];
+         node.perm[delay_col] = cnode.perm[cnode.nelim+i];
+         for(int j=0; j<cnode.ndelay_out-i; j++) {
+            dest[j] = src[j];
+         }
+         // Add child's non-fully summed rows (from delayed cols)
+         dest = node.lcol;
+         src = &cnode.lcol[cnode.nelim*lds + cnode.ndelay_in +i*lds];
+         for(int j=csnode.ncol; j<csnode.nrow; j++) {
+            int r = map[ csnode.rlist[j] ];
+            // int r = csnode.map[j];
+            if(r < ncol) dest[r*ldl+delay_col] = src[j];
+            else         dest[delay_col*ldl+r] = src[j];
+         }
+         delay_col++;
+      }
+
+   }
+
+   ///////////////////////////////////////////////////////////   
+   // @brief Assemble contributions from children node and subtrees
+   // into the fully-summed columns
    template <typename T, typename PoolAlloc>
-   void assemble(
+   void assemble_notask(
          int n,
          NumericFront<T,PoolAlloc>& node,
          void** child_contrib,
@@ -982,26 +1021,30 @@ namespace spldlt {
 
             /* Handle delays - go to back of node
              * (i.e. become the last rows as in lower triangular format) */
-            for(int i=0; i<child->ndelay_out; i++) {
-               // Add delayed rows (from delayed cols)
-               T *dest = &node.lcol[delay_col*(ldl+1)];
-               int lds = align_lda<T>(csnode.nrow + child->ndelay_in);
-               T *src = &child->lcol[(child->nelim+i)*(lds+1)];
-               node.perm[delay_col] = child->perm[child->nelim+i];
-               for(int j=0; j<child->ndelay_out-i; j++) {
-                  dest[j] = src[j];
-               }
-               // Add child's non-fully summed rows (from delayed cols)
-               dest = node.lcol;
-               src = &child->lcol[child->nelim*lds + child->ndelay_in +i*lds];
-               for(int j=csnode.ncol; j<csnode.nrow; j++) {
-                  int r = map[ csnode.rlist[j] ];
-                  // int r = csnode.map[j];
-                  if(r < ncol) dest[r*ldl+delay_col] = src[j];
-                  else         dest[delay_col*ldl+r] = src[j];
-               }
-               delay_col++;
-            }
+            // for(int i=0; i<child->ndelay_out; i++) {
+            //    // Add delayed rows (from delayed cols)
+            //    T *dest = &node.lcol[delay_col*(ldl+1)];
+            //    int lds = align_lda<T>(csnode.nrow + child->ndelay_in);
+            //    T *src = &child->lcol[(child->nelim+i)*(lds+1)];
+            //    node.perm[delay_col] = child->perm[child->nelim+i];
+            //    for(int j=0; j<child->ndelay_out-i; j++) {
+            //       dest[j] = src[j];
+            //    }
+            //    // Add child's non-fully summed rows (from delayed cols)
+            //    dest = node.lcol;
+            //    src = &child->lcol[child->nelim*lds + child->ndelay_in +i*lds];
+            //    for(int j=csnode.ncol; j<csnode.nrow; j++) {
+            //       int r = map[ csnode.rlist[j] ];
+            //       // int r = csnode.map[j];
+            //       if(r < ncol) dest[r*ldl+delay_col] = src[j];
+            //       else         dest[delay_col*ldl+r] = src[j];
+            //    }
+            //    delay_col++;
+            // }
+
+            assemble_delays(map, *child, delay_col, node);
+            
+            delay_col += child->ndelay_out;
 
             // Handle expected contributions (only if something there)
             if (ldcontrib>0) {

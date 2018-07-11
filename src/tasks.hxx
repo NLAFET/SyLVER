@@ -644,7 +644,7 @@ namespace spldlt {
 
          spldlt::starpu::insert_subtree_assemble_contrib(
                &node, &csnode, snode.hdl, node.contrib_hdl, csnode.hdl, hdls, nh, 
-               child_contrib, contrib_idx, blksz, prio);
+               child_contrib, contrib_idx, prio);
       }
       
       delete[] hdls;

@@ -981,7 +981,7 @@ namespace spldlt { namespace starpu {
          delete[] descrs;
       }
 
-      ////////////////////////////////////////////////////////////////////////////////
+      ////////////////////////////////////////////////////////////
       // Subtree assemble contrib task
 
       // CPU kernel
@@ -992,16 +992,14 @@ namespace spldlt { namespace starpu {
          SymbolicFront *csnode = nullptr;
          void **child_contrib;
          int contrib_idx;
-         int blksz;
 
          // printf("[subtree_assemble_contrib_cpu_func]\n");
 
          starpu_codelet_unpack_args(cl_arg,
                                     &node, &csnode,
-                                    &child_contrib, &contrib_idx,
-                                    &blksz);
+                                    &child_contrib, &contrib_idx);
 
-         assemble_contrib_subtree(*node, *csnode, child_contrib,contrib_idx, blksz);
+         assemble_contrib_subtree(*node, *csnode, child_contrib,contrib_idx);
       }
 
       // StarPU codelet
@@ -1016,7 +1014,7 @@ namespace spldlt { namespace starpu {
             starpu_data_handle_t root_hdl,
             starpu_data_handle_t *dest_hdls, int ndest,
             void **child_contrib, int contrib_idx,
-            int blksz, int prio) {
+            int prio) {
 
          int ret;
          int nh = 0;
@@ -1046,7 +1044,6 @@ namespace spldlt { namespace starpu {
                                   STARPU_VALUE, &csnode, sizeof(SymbolicFront*),
                                   STARPU_VALUE, &child_contrib, sizeof(void**),
                                   STARPU_VALUE, &contrib_idx, sizeof(int),
-                                  STARPU_VALUE, &blksz, sizeof(int),
                                   STARPU_PRIORITY, prio,
                                   0);
 
@@ -1375,7 +1372,7 @@ namespace spldlt { namespace starpu {
          delete[] descrs;
       }
 
-      ////////////////////////////////////////////////////////////////////////////////
+      ////////////////////////////////////////////////////////////
       // Assemble node
 
       template <typename T, typename PoolAlloc>
@@ -1389,7 +1386,7 @@ namespace spldlt { namespace starpu {
          starpu_codelet_unpack_args(
                cl_arg, &n, &node, &child_contrib, &pool_alloc);
 
-         assemble(n, *node, child_contrib, *pool_alloc);         
+         assemble_notask(n, *node, child_contrib, *pool_alloc);         
       }
 
       // assemble StarPU codelet
