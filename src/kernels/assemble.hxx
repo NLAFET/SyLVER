@@ -232,20 +232,22 @@ namespace spldlt {
          spldlt::ldlt_app_internal::ColumnData<T, IntAlloc>& cdata = *node.cdata;
 
          if (async) starpu_data_unregister_submit(spldlt::starpu::workspace_hdl);
-         else starpu_data_unregister(spldlt::starpu::workspace_hdl);
+         else       starpu_data_unregister(spldlt::starpu::workspace_hdl);
          
          // Unregister block handles in the factors
          for(int j = 0; j < nc; ++j) {
 
             // FIXME: only if PivotMethod is APP
-            cdata[j].unregister_handle_submit();
+            cdata[j].template unregister_handle<async>();
 
-            cdata[j].unregister_d_hdl(); // Unregister handle on diagonal D
+            cdata[j].template unregister_d_hdl<async>(); // Unregister handle on diagonal D
 
             for(int i = j; i < nr; ++i) {
-               starpu_data_unregister_submit(snode.handles[i + j*nr]);
                
-               if (i>=j) node.blocks[j*nr+i].unregister_handle_submit();
+               if (async) starpu_data_unregister_submit(snode.handles[i + j*nr]);
+               else       starpu_data_unregister(snode.handles[i + j*nr]);
+
+               if (i>=j) node.blocks[j*nr+i].template unregister_handle<async>();
             }
          }
 
@@ -262,7 +264,7 @@ namespace spldlt {
                for(int i = j; i < nr; i++) {
 
                   // Register block in StarPU
-                  node.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib].unregister_handle();
+                  node.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib].template unregister_handle<async>();
                }
             }
 
@@ -931,12 +933,12 @@ namespace spldlt {
          int n,
          NumericFront<T,PoolAlloc>& node,
          void** child_contrib,
-         PoolAlloc const& pool_alloc,
-         int blksz
+         PoolAlloc const& pool_alloc
          ) {
 
       typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> PoolAllocInt;
 
+      int blksz = node.blksz;
       SymbolicFront snode = node.symb;
 
       int nrow = node.get_nrow();

@@ -741,7 +741,7 @@ namespace spldlt {
 #endif
    }
 
-   ////////////////////////////////////////////////////////////////////////////////
+   ////////////////////////////////////////////////////////////
    // Assemble contrib block task.   
    // ii: Row index in frontal matrix.
    // jj: Col index in frontal matrix.
@@ -840,7 +840,7 @@ namespace spldlt {
 #endif
    }   
 
-   ////////////////////////////////////////////////////////////////////////////////
+   ////////////////////////////////////////////////////////////
    // assemble front
    template <typename T, typename PoolAlloc>
    void assemble_task(
@@ -848,8 +848,7 @@ namespace spldlt {
          SymbolicFront& snode,
          NumericFront<T, PoolAlloc>& node,
          void** child_contrib,
-         PoolAlloc& pool_alloc,
-         int blksz
+         PoolAlloc& pool_alloc
          ) {
 
 #if defined(SPLDLT_USE_STARPU)
@@ -868,7 +867,7 @@ namespace spldlt {
       // printf("[assemble_task] node = %d, nchild = %d\n", snode.idx+1, nchild);
       spldlt::starpu::insert_assemble(
             snode.hdl, cnode_hdls, nchild,
-            n, &node, child_contrib, &pool_alloc, blksz);
+            n, &node, child_contrib, &pool_alloc);
 
       delete[] cnode_hdls;
       

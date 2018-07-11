@@ -234,7 +234,7 @@ namespace spldlt {
             
             // assemble contributions from children fronts and subtreess
             // assemble(symb_.n, fronts_[ni], child_contrib, pool_alloc_, blksz);
-            assemble_task(symb_.n, sfront, fronts_[ni], child_contrib, pool_alloc_, blksz);
+            assemble_task(symb_.n, sfront, fronts_[ni], child_contrib, pool_alloc_);
 // #if defined(SPLDLT_USE_STARPU)
 //             starpu_task_wait_for_all();
 // #endif

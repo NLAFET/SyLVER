@@ -1364,6 +1364,16 @@ namespace spldlt {
             // cdata[blk].adjust(next_elim);
             // END DEBUG
 
+#if defined(SPLDLT_USE_GPU)            
+
+            for(int iblk=blk; iblk<mblk; iblk++) {
+               restore_failed_block_task(
+                     blk, blocks[blk*(mblk+1)], blocks[blk*mblk+iblk], cdata, backup,
+                     workspaces);
+            }
+
+#endif
+
             // Update uneliminated columns
             for(int jblk=0; jblk<blk; jblk++) {
 
@@ -1408,18 +1418,12 @@ namespace spldlt {
                }
             }
 
-#if defined(SPLDLT_USE_GPU)            
-
-
-            for(int iblk=blk; iblk<mblk; iblk++) {
-               restore_failed_block_task(
-                     blk, blocks[blk*(mblk+1)], blocks[blk*mblk+iblk], cdata, backup,
-                     workspaces);
-            }
 
 // #if defined(SPLDLT_USE_STARPU)
 //                   starpu_task_wait_for_all();
 // #endif
+
+#if defined(SPLDLT_USE_GPU)            
 
             for(int jblk=blk+1; jblk<nblk; jblk++) {
 

@@ -1385,12 +1385,11 @@ namespace spldlt { namespace starpu {
          NumericFront<T, PoolAlloc> *node;
          void** child_contrib;
          PoolAlloc *pool_alloc;
-         int blksz;
 
          starpu_codelet_unpack_args(
-               cl_arg, &n, &node, &child_contrib, &pool_alloc, &blksz);
+               cl_arg, &n, &node, &child_contrib, &pool_alloc);
 
-         assemble(n, *node, child_contrib, *pool_alloc, blksz);         
+         assemble(n, *node, child_contrib, *pool_alloc);         
       }
 
       // assemble StarPU codelet
@@ -1403,8 +1402,7 @@ namespace spldlt { namespace starpu {
             int n,
             NumericFront<T, PoolAlloc> *node,
             void** child_contrib, 
-            PoolAlloc *pool_alloc,
-            int blksz
+            PoolAlloc *pool_alloc
             ) {
 
          struct starpu_data_descr *descrs = new starpu_data_descr[nhdl+1];
@@ -1426,7 +1424,6 @@ namespace spldlt { namespace starpu {
                                   STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
                                   STARPU_VALUE, &child_contrib, sizeof(void**),
                                   STARPU_VALUE, &pool_alloc, sizeof(PoolAlloc*),
-                                  STARPU_VALUE, &blksz, sizeof(int),
                                   0);
          STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
 

@@ -185,13 +185,17 @@ namespace spldlt { namespace tests {
 
       // extern struct starpu_codelet cl_update_contrib_block_app;
 
-      // Force updqte_contrib taks on the CPU/GPU
+#if defined(SPLDLT_USE_STARPU)
+
+      // Force update_contrib taks on the CPU/GPU
       // cl_update_contrib_block_app.where = STARPU_CPU;
       cl_update_contrib_block_app.where = STARPU_CUDA;
       
       // Force UpdateN taks on the CPU/GPU
       cl_updateN_block_app.where = STARPU_CPU; 
       // cl_updateN_block_app.where = STARPU_CUDA; 
+
+#endif
 
 #endif
 
@@ -229,8 +233,8 @@ namespace spldlt { namespace tests {
       std::cout << "SECOND FACTOR CALL ELIMINATED " << q2 << " of " << n << " pivots" << std::endl;
       
 #if defined(SPLDLT_USE_STARPU)
-      spldlt::starpu::unregister_node_indef<T, PoolAllocator, false>(front);
-      starpu_task_wait_for_all(); // Wait for unregistration of handles      
+      spldlt::starpu::unregister_node_indef<T, PoolAllocator, false>(front); // Synchronous unregister
+      // starpu_task_wait_for_all(); // Wait for unregistration of handles      
       starpu_data_unregister(sfront.hdl); // Node's symbolic handle
       starpu_data_unregister(front.contrib_hdl);
 
