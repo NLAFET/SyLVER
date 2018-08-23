@@ -822,49 +822,49 @@ namespace spldlt {
    ////////////////////////////////////////////////////////////////////////////////   
    // Assemble subtree
 
-   template <typename T, typename PoolAlloc>
-   void assemble_subtree (
-         NumericFront<T,PoolAlloc>& node,
-         SymbolicFront const& csnode,
-         void** child_contrib, 
-         int contrib_idx // Index of subtree to assemble
-         ) {
+   // template <typename T, typename PoolAlloc>
+   // void assemble_subtree (
+   //       NumericFront<T,PoolAlloc>& node,
+   //       SymbolicFront const& csnode,
+   //       void** child_contrib, 
+   //       int contrib_idx // Index of subtree to assemble
+   //       ) {
 
-      SymbolicFront const& snode = node.symb;
+   //    SymbolicFront const& snode = node.symb;
 
-      // Retreive contribution block from subtrees
-      int cn, ldcontrib, ndelay, lddelay;
-      double const *cval, *delay_val;
-      int const *crlist, *delay_perm;
-      spral_ssids_contrib_get_data(
-            child_contrib[contrib_idx], &cn, &cval, &ldcontrib, &crlist,
-            &ndelay, &delay_perm, &delay_val, &lddelay
-            );
+   //    // Retreive contribution block from subtrees
+   //    int cn, ldcontrib, ndelay, lddelay;
+   //    double const *cval, *delay_val;
+   //    int const *crlist, *delay_perm;
+   //    spral_ssids_contrib_get_data(
+   //          child_contrib[contrib_idx], &cn, &cval, &ldcontrib, &crlist,
+   //          &ndelay, &delay_perm, &delay_val, &lddelay
+   //          );
 
-      /* Handle delays - go to back of node
-       * (i.e. become the last rows as in lower triangular format) */
+   //    /* Handle delays - go to back of node
+   //     * (i.e. become the last rows as in lower triangular format) */
 
-      if(!cval) return; // child was all delays, nothing more to do
+   //    if(!cval) return; // child was all delays, nothing more to do
 
-      for(int j = 0; j < cn; ++j) {
+   //    for(int j = 0; j < cn; ++j) {
                
-         int c = csnode.map[ j ]; // Destination column
+   //       int c = csnode.map[ j ]; // Destination column
                   
-         T const* src = &cval[j*ldcontrib];
+   //       T const* src = &cval[j*ldcontrib];
 
-         if (c < snode.ncol) {
+   //       if (c < snode.ncol) {
 
-            int ldd = node.get_ldl();
-            T *dest = &node.lcol[c*ldd];
+   //          int ldd = node.get_ldl();
+   //          T *dest = &node.lcol[c*ldd];
 
-            for (int i = j ; i < cn; ++i) {
-               // Assemble destination block
-               dest[ csnode.map[ i ]] += src[i];
-            }
-         }
-      }
+   //          for (int i = j ; i < cn; ++i) {
+   //             // Assemble destination block
+   //             dest[ csnode.map[ i ]] += src[i];
+   //          }
+   //       }
+   //    }
 
-   }
+   // }
 
    ////////////////////////////////////////////////////////////////////////////////   
    // Assemble contrib subtree
@@ -927,6 +927,74 @@ namespace spldlt {
    }
 
    ///////////////////////////////////////////////////////////   
+   // @brief Assemble a subtree to its parent
+
+   template <typename T, typename PoolAlloc>
+   void assemble_subtree(
+         NumericFront<T,PoolAlloc>& node,
+         SymbolicFront const& csnode,
+         void** child_contrib, 
+         int contrib_idx,// Index of subtree to assemble
+         int delay_col
+         ) {
+
+      SymbolicFront snode = node.symb; // Symbolic node
+      int ncol = node.get_ncol();
+      size_t ldl = node.get_ldl(); // Leading dimension
+
+      // Retreive contribution block from subtrees
+      int cn, ldcontrib, ndelay, lddelay;
+      double const *cval, *delay_val;
+      int const *crlist, *delay_perm;
+      spral_ssids_contrib_get_data(
+            child_contrib[csnode.contrib_idx], &cn, &cval, &ldcontrib, &crlist,
+            &ndelay, &delay_perm, &delay_val, &lddelay
+            );
+      // int *cache = new int[cn];
+      // for(int j=0; j<cn; ++j)
+      //    cache[j] = map[ crlist[j] ];
+
+      // printf("[assemble] contrib_idx = %d, ndelay = %d\n", csnode.contrib_idx, ndelay);
+
+      /* Handle delays - go to back of node
+       * (i.e. become the last rows as in lower triangular format) */
+      for(int i=0; i<ndelay; i++) {
+         // Add delayed rows (from delayed cols)
+         T *dest = &node.lcol[delay_col*(ldl+1)];
+         T const* src = &delay_val[i*(lddelay+1)];
+         node.perm[delay_col] = delay_perm[i];
+         for(int j=0; j<ndelay-i; j++) {
+            dest[j] = src[j];
+         }
+         // Add child's non-fully summed rows (from delayed cols)
+         dest = node.lcol;
+         src = &delay_val[i*lddelay+ndelay];
+         for(int j=0; j<cn; j++) {
+            // int r = cache[j];
+            int r = csnode.map[j];
+            if(r < ncol) dest[r*ldl+delay_col] = src[j];
+            else         dest[delay_col*ldl+r] = src[j];
+         }
+         delay_col++;
+      }
+      if(!cval) return; // child was all delays, nothing more to do
+      /* Handle expected contribution */
+      for(int j = 0; j < cn; ++j) {               
+         int c = csnode.map[ j ]; // Destination column                  
+         T const* src = &cval[j*ldcontrib];
+         if (c < snode.ncol) {
+            int ldd = node.get_ldl();
+            T *dest = &node.lcol[c*ldd];
+
+            for (int i = j ; i < cn; ++i) {
+               // Assemble destination block
+               dest[ csnode.map[ i ]] += src[i];
+            }
+         }
+      }
+   }
+
+   ///////////////////////////////////////////////////////////   
    // @brief Copy delays columns from a chil node to its parent
    template <typename T, typename PoolAlloc, typename PoolAllocInt>
    void assemble_delays(
@@ -935,6 +1003,8 @@ namespace spldlt {
          int delay_col,
          NumericFront<T,PoolAlloc>& node
          ) {
+
+      // printf("[assemble_delays]\n");
 
       SymbolicFront &csnode = cnode.symb; // Child symbolic node
 

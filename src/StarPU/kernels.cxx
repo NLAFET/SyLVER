@@ -240,10 +240,4 @@ namespace spldlt { namespace starpu {
       // assemble_contrib_block StarPU codelet
       struct starpu_codelet cl_assemble_contrib_block;
 
-      // assemble StarPU codelet
-      struct starpu_codelet cl_assemble;
-
-      // assemble_contrib StarPU codelet
-      struct starpu_codelet cl_assemble_contrib;
-
 }} /* namespaces spldlt::starpu  */

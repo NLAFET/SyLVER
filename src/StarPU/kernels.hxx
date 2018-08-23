@@ -906,6 +906,8 @@ namespace spldlt { namespace starpu {
                                     &node, &csnode,
                                     &child_contrib, &contrib_idx);
 
+         // TODO: replace the following code portion by the dedicated
+         // routine
          SymbolicFront const& snode = node->symb;
 
          // Retreive contribution block from subtrees
@@ -1371,62 +1373,7 @@ namespace spldlt { namespace starpu {
 
          delete[] descrs;
       }
-
-      ////////////////////////////////////////////////////////////
-      // Assemble node
-
-      template <typename T, typename PoolAlloc>
-      void assemble_cpu_func(void *buffers[], void *cl_arg) {
-
-         int n;
-         NumericFront<T, PoolAlloc> *node;
-         void** child_contrib;
-         PoolAlloc *pool_alloc;
-
-         starpu_codelet_unpack_args(
-               cl_arg, &n, &node, &child_contrib, &pool_alloc);
-
-         assemble_notask(n, *node, child_contrib, *pool_alloc);         
-      }
-
-      // assemble StarPU codelet
-      extern struct starpu_codelet cl_assemble;
       
-      template <typename T, typename PoolAlloc>
-      void insert_assemble(
-            starpu_data_handle_t node_hdl, // Node's symbolic handle
-            starpu_data_handle_t *cnode_hdls, int nhdl, // Children node's symbolic handles
-            int n,
-            NumericFront<T, PoolAlloc> *node,
-            void** child_contrib, 
-            PoolAlloc *pool_alloc
-            ) {
-
-         struct starpu_data_descr *descrs = new starpu_data_descr[nhdl+1];
-
-         int nh = 0;
-         descrs[nh].handle = node_hdl; descrs[nh].mode = STARPU_RW;
-         nh++;
-
-         for (int i=0; i<nhdl; i++) {
-            descrs[nh].handle = cnode_hdls[i]; descrs[nh].mode = STARPU_R;
-            nh++;
-         }
-         // printf("[insert_assemble] node = %d, nh = %d\n", node->symb.idx+1, nh);
-
-         int ret;
-         ret = starpu_task_insert(&cl_assemble,
-                                  STARPU_DATA_MODE_ARRAY, descrs, nh,
-                                  STARPU_VALUE, &n, sizeof(int),
-                                  STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
-                                  STARPU_VALUE, &child_contrib, sizeof(void**),
-                                  STARPU_VALUE, &pool_alloc, sizeof(PoolAlloc*),
-                                  0);
-         STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
-
-         delete[] descrs;
-      }
-
       ////////////////////////////////////////////////////////////////////////////////
 
       // As it is not possible to statically intialize codelet in C++,
@@ -1540,13 +1487,6 @@ namespace spldlt { namespace starpu {
          // cl_update_between.nbuffers = STARPU_VARIABLE_NBUFFERS;
          // cl_update_between.name = "UPDATE_BETWEEN_BLK";
          // cl_update_between.cpu_funcs[0] = update_between_cpu_func<T, PoolAlloc>;
-
-         // assemble StarPU codelet
-         starpu_codelet_init(&cl_assemble);
-         cl_assemble.where = STARPU_CPU;
-         cl_assemble.nbuffers = STARPU_VARIABLE_NBUFFERS;
-         cl_assemble.name = "Assemble";
-         cl_assemble.cpu_funcs[0] = assemble_cpu_func<T, PoolAlloc>;
 
          // assemble_block StarPU codelet
          starpu_codelet_init(&cl_assemble_block);

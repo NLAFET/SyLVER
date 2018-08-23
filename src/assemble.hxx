@@ -114,4 +114,164 @@ namespace spldlt {
 
    } // assemble_contrib
 
+   ///////////////////////////////////////////////////////////   
+   // @brief Assemble contributions from children node and subtrees
+   // into the fully-summed columns
+   template <typename T, typename PoolAlloc>
+   void assemble(
+         int n,
+         NumericFront<T,PoolAlloc>& node,
+         void** child_contrib,
+         PoolAlloc const& pool_alloc
+         ) {
+
+      typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> PoolAllocInt;
+
+      int blksz = node.blksz;
+      SymbolicFront snode = node.symb;
+
+      int nrow = node.get_nrow();
+      int ncol = node.get_ncol();
+      size_t ldl = align_lda<double>(nrow);
+
+      /*
+       * Add children
+       */
+      int delay_col = snode.ncol;
+
+      // printf("[assemble]\n");
+
+      // Allocate mapping array
+      // int *map = new int[n+1];
+      std::vector<int, PoolAllocInt> map(n+1, PoolAllocInt(pool_alloc));
+
+      // build lookup vector, allowing for insertion of delayed vars
+      // Note that while rlist[] is 1-indexed this is fine so long as lookup
+      // is also 1-indexed (which it is as it is another node's rlist[]
+      for(int i=0; i<snode.ncol; i++)
+         map[ snode.rlist[i] ] = i;
+      for(int i=snode.ncol; i<snode.nrow; i++)
+         map[ snode.rlist[i] ] = i + node.ndelay_in;
+      
+      // Assemble front: fully-summed columns 
+      for (auto* child=node.first_child; child!=NULL; child=child->next_child) {
+
+         SymbolicFront &csnode = child->symb; // Children symbolic node
+
+         int cm = csnode.nrow - csnode.ncol;
+         csnode.map = new int[cm];
+         for (int i=0; i<cm; i++)
+            csnode.map[i] = map[ csnode.rlist[csnode.ncol+i] ];
+
+         int ldcontrib = csnode.nrow - csnode.ncol;
+         if (csnode.exec_loc == -1) {
+            // Assemble contributions from child front
+
+            // printf("[assemble] child->ndelay_out = %d\n", child->ndelay_out);
+
+            /* Handle delays - go to back of node
+             * (i.e. become the last rows as in lower triangular format) */
+            // for(int i=0; i<child->ndelay_out; i++) {
+            //    // Add delayed rows (from delayed cols)
+            //    T *dest = &node.lcol[delay_col*(ldl+1)];
+            //    int lds = align_lda<T>(csnode.nrow + child->ndelay_in);
+            //    T *src = &child->lcol[(child->nelim+i)*(lds+1)];
+            //    node.perm[delay_col] = child->perm[child->nelim+i];
+            //    for(int j=0; j<child->ndelay_out-i; j++) {
+            //       dest[j] = src[j];
+            //    }
+            //    // Add child's non-fully summed rows (from delayed cols)
+            //    dest = node.lcol;
+            //    src = &child->lcol[child->nelim*lds + child->ndelay_in +i*lds];
+            //    for(int j=csnode.ncol; j<csnode.nrow; j++) {
+            //       int r = map[ csnode.rlist[j] ];
+            //       // int r = csnode.map[j];
+            //       if(r < ncol) dest[r*ldl+delay_col] = src[j];
+            //       else         dest[delay_col*ldl+r] = src[j];
+            //    }
+            //    delay_col++;
+            // }
+
+            assemble_delays(map, *child, delay_col, node);
+            
+            delay_col += child->ndelay_out;
+
+            // Handle expected contributions (only if something there)
+            if (ldcontrib>0) {
+               // int *cache = new int[cm];
+               // spral::ssids::cpu::assemble_expected(0, cm, node, *child, map, cache);
+               // delete cache;
+                  
+               int cnrow = child->get_nrow();
+               int cncol = child->get_ncol();
+                  
+               int csa = cncol / blksz;
+               int cnr = child->get_nr(); // number of block rows
+               // Loop over blocks in contribution blocks
+               for (int jj = csa; jj < cnr; ++jj) {
+                  for (int ii = jj; ii < cnr; ++ii) {
+                     assemble_block(node, *child, ii, jj, csnode.map);
+                  }
+               }
+            }
+ 
+         }
+         else {
+            // Assemble contributions from subtree
+
+            // Retreive contribution block from subtrees
+            int cn, ldcontrib, ndelay, lddelay;
+            double const *cval, *delay_val;
+            int const *crlist, *delay_perm;
+            spral_ssids_contrib_get_data(
+                  child_contrib[csnode.contrib_idx], &cn, &cval, &ldcontrib, &crlist,
+                  &ndelay, &delay_perm, &delay_val, &lddelay
+                  );
+            // int *cache = new int[cn];
+            // for(int j=0; j<cn; ++j)
+            //    cache[j] = map[ crlist[j] ];
+
+            // printf("[assemble] contrib_idx = %d, ndelay = %d\n", csnode.contrib_idx, ndelay);
+
+            /* Handle delays - go to back of node
+             * (i.e. become the last rows as in lower triangular format) */
+            for(int i=0; i<ndelay; i++) {
+               // Add delayed rows (from delayed cols)
+               T *dest = &node.lcol[delay_col*(ldl+1)];
+               T const* src = &delay_val[i*(lddelay+1)];
+               node.perm[delay_col] = delay_perm[i];
+               for(int j=0; j<ndelay-i; j++) {
+                  dest[j] = src[j];
+               }
+               // Add child's non-fully summed rows (from delayed cols)
+               dest = node.lcol;
+               src = &delay_val[i*lddelay+ndelay];
+               for(int j=0; j<cn; j++) {
+                  // int r = cache[j];
+                  int r = csnode.map[j];
+                  if(r < ncol) dest[r*ldl+delay_col] = src[j];
+                  else         dest[delay_col*ldl+r] = src[j];
+               }
+               delay_col++;
+            }
+            if(!cval) continue; // child was all delays, nothing more to do
+            /* Handle expected contribution */
+            for(int j = 0; j < cn; ++j) {               
+               int c = csnode.map[ j ]; // Destination column                  
+               T const* src = &cval[j*ldcontrib];
+               if (c < snode.ncol) {
+                  int ldd = node.get_ldl();
+                  T *dest = &node.lcol[c*ldd];
+
+                  for (int i = j ; i < cn; ++i) {
+                     // Assemble destination block
+                     dest[ csnode.map[ i ]] += src[i];
+                  }
+               }
+            }
+
+         }
+      }
+   } // assemble
+
 } // end of namespace spldlt

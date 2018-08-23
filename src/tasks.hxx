@@ -840,43 +840,6 @@ namespace spldlt {
 #endif
    }   
 
-   ////////////////////////////////////////////////////////////
-   // assemble front
-   template <typename T, typename PoolAlloc>
-   void assemble_task(
-         int n,
-         SymbolicFront& snode,
-         NumericFront<T, PoolAlloc>& node,
-         void** child_contrib,
-         PoolAlloc& pool_alloc
-         ) {
-
-#if defined(SPLDLT_USE_STARPU)
-
-      int nchild = 0;
-      for (auto* child=node.first_child; child!=NULL; child=child->next_child)
-         nchild++;
-
-      starpu_data_handle_t *cnode_hdls = new starpu_data_handle_t[nchild];
-      
-      int i = 0;
-      for (auto* child=node.first_child; child!=NULL; child=child->next_child) {
-         cnode_hdls[i] = child->symb.hdl;
-         ++i;
-      }
-      // printf("[assemble_task] node = %d, nchild = %d\n", snode.idx+1, nchild);
-      spldlt::starpu::insert_assemble(
-            snode.hdl, cnode_hdls, nchild,
-            n, &node, child_contrib, &pool_alloc);
-
-      delete[] cnode_hdls;
-      
-#else
-      assemble(n, node, child_contrib, pool_alloc, blksz);
-#endif
-      
-   }
-
    // // TODO: error managment
    // template <typename T, typename PoolAlloc>
    // void factorize_node_posdef(
