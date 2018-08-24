@@ -192,7 +192,7 @@ namespace spldlt {
             //    delay_col++;
             // }
 
-            assemble_delays(map, *child, delay_col, node);
+            assemble_delays(*child, delay_col, node);
             
             delay_col += child->ndelay_out;
 
@@ -201,7 +201,7 @@ namespace spldlt {
                // int *cache = new int[cm];
                // spral::ssids::cpu::assemble_expected(0, cm, node, *child, map, cache);
                // delete cache;
-                  
+
                int cnrow = child->get_nrow();
                int cncol = child->get_ncol();
                   

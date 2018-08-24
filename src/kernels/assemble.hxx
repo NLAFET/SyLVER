@@ -996,9 +996,9 @@ namespace spldlt {
 
    ///////////////////////////////////////////////////////////   
    // @brief Copy delays columns from a chil node to its parent
-   template <typename T, typename PoolAlloc, typename PoolAllocInt>
+   template <typename T, typename PoolAlloc>
    void assemble_delays(
-         std::vector<int, PoolAllocInt> map,
+         // std::vector<int, PoolAllocInt> map,
          NumericFront<T,PoolAlloc>& cnode,
          int delay_col,
          NumericFront<T,PoolAlloc>& node
@@ -1024,8 +1024,8 @@ namespace spldlt {
          dest = node.lcol;
          src = &cnode.lcol[cnode.nelim*lds + cnode.ndelay_in +i*lds];
          for(int j=csnode.ncol; j<csnode.nrow; j++) {
-            int r = map[ csnode.rlist[j] ];
-            // int r = csnode.map[j];
+            // int r = map[ csnode.rlist[j] ];
+            int r = csnode.map[j-csnode.ncol];
             if(r < ncol) dest[r*ldl+delay_col] = src[j];
             else         dest[delay_col*ldl+r] = src[j];
          }
@@ -1112,7 +1112,7 @@ namespace spldlt {
             //    delay_col++;
             // }
 
-            assemble_delays(map, *child, delay_col, node);
+            assemble_delays(*child, delay_col, node);
             
             delay_col += child->ndelay_out;
 

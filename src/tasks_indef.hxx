@@ -1,5 +1,6 @@
 #pragma once
 
+#include <assert.h>
 #include "ssids/cpu/cpu_iface.hxx"
 
 #include "kernels/ldlt_app.hxx"
@@ -92,6 +93,96 @@ namespace spldlt {
       factor_front_indef_failed(node, work, options, stats);
 #endif
       
+   }
+
+   ////////////////////////////////////////////////////////////
+   // Assemble delays task
+
+   /// @brief Submit task for assembling delays from one node to its
+   /// parent.
+   template <typename T, typename PoolAlloc>
+   void assemble_delays_task(
+         NumericFront<T,PoolAlloc>& cnode,
+         int delay_col,
+         NumericFront<T,PoolAlloc>& node) {
+
+      if (cnode.ndelay_out <= 0) return; // No task to submit if no delays
+
+#if defined(SPLDLT_USE_STARPU)
+      // Node info
+      SymbolicFront &snode = node.symb; // Child symbolic node
+      int blksz = node.blksz;
+      int ncol = node.get_ncol();
+      int nr = node.get_nr(); // Number of block-rows in destination node
+      int nc = node.get_nc(); // Number of block-columns in destination node
+      starpu_data_handle_t *hdls = new starpu_data_handle_t[nr*nc];
+      int nh = 0; // Number of handles/blocks in node
+      
+      // Child node info
+      SymbolicFront &csnode = cnode.symb; // Child symbolic node
+      int cncol = cnode.get_ncol();
+      int cnrow = cnode.get_nrow();
+      int cnr = cnode.get_nr(); // Number of block-rows in child node
+      int cnc = cnode.get_nc(); // Number of block-columns in child node
+      starpu_data_handle_t *chdls = new starpu_data_handle_t[cnr*cnc];
+      int nch = 0; // Number of handles/blocks in the child node
+
+      int csa = cnode.nelim / blksz; // First block-column in 
+
+      // Add block handles in the child node
+      //
+      // Note: add blocks for both fully summed and non-fully summed
+      // rows which must be delayed in the parent
+      for (int jj=csa; jj<cnc; jj++) {
+         for (int ii=jj; ii<cnr; ii++) {
+            chdls[nch] = csnode.handles[jj*cnr+ii];
+            nch++;
+         }
+      }
+
+      // Add blocks in node
+      int rr = -1;
+      int cc = -1;
+      for(int j = 0; j < cnode.ndelay_out; j++) {
+
+         int c = delay_col+j;
+         if (cc == (c/blksz)) continue;
+         cc = c/blksz;
+         rr = -1;
+
+         for (int i = cnode.nelim+j; i < cnrow; i++) {
+
+            int r = -1;
+            if (i < cncol) {
+               r = delay_col+i;
+            }
+            else {
+               r = csnode.map[i-cncol];
+            }
+
+            if (rr == (r/blksz)) continue;
+            
+            if (r < ncol) {
+               hdls[nh] = snode.handles[cc*nr+rr];
+            }
+            else {
+               hdls[nh] = snode.handles[rr*nr+cc];
+            }
+            nh++;
+            
+         }
+      }
+      
+      assert(nch > 0); // Make sure the set is not empty
+      assert(nh > 0);
+            
+      delete[] chdls;
+      delete[] hdls;
+#else
+
+      assemble_delays(cnode, delay_col, node);
+            
+#endif
    }
    
 } // namespace spldlt
