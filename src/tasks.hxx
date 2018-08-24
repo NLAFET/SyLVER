@@ -662,14 +662,14 @@ namespace spldlt {
    // jj: Col index in frontal matrix node
    template <typename T, typename PoolAlloc>   
    void assemble_block_task(
-         SymbolicFront const& snode, 
          NumericFront<T,PoolAlloc>& node, 
-         SymbolicFront const& csnode, 
          NumericFront<T,PoolAlloc> const& cnode, 
          int ii, int jj, int *cmap, int prio) {
 
 #if defined(SPLDLT_USE_STARPU)
 
+      SymbolicFront const& snode = node.symb;
+      SymbolicFront const& csnode = cnode.symb;
       int blksz = node.blksz;
       
       int nrow = node.get_nrow();

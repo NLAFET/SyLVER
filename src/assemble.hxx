@@ -210,7 +210,12 @@ namespace spldlt {
                // Loop over blocks in contribution blocks
                for (int jj = csa; jj < cnr; ++jj) {
                   for (int ii = jj; ii < cnr; ++ii) {
-                     assemble_block(node, *child, ii, jj, csnode.map);
+                     // assemble_block(node, *child, ii, jj, csnode.map);
+                     assemble_block_task(
+                           node, *child, ii, jj, csnode.map, ASSEMBLE_PRIO);
+#if defined(SPLDLT_USE_STARPU)
+                     starpu_task_wait_for_all();
+#endif      
                   }
                }
             }
@@ -218,6 +223,8 @@ namespace spldlt {
          }
          else {
             // Assemble contributions from subtree
+
+            assemble_subtree(node, csnode, child_contrib, csnode.contrib_idx, delay_col);
 
             // Retreive contribution block from subtrees
             int cn, ldcontrib, ndelay, lddelay;
@@ -227,48 +234,53 @@ namespace spldlt {
                   child_contrib[csnode.contrib_idx], &cn, &cval, &ldcontrib, &crlist,
                   &ndelay, &delay_perm, &delay_val, &lddelay
                   );
-            // int *cache = new int[cn];
-            // for(int j=0; j<cn; ++j)
-            //    cache[j] = map[ crlist[j] ];
 
-            // printf("[assemble] contrib_idx = %d, ndelay = %d\n", csnode.contrib_idx, ndelay);
+            // delay_col += child->ndelay_out;
+            delay_col += ndelay;
+            // printf("[assemble] ndelay = %d, delay_col = %d\n", ndelay, delay_col);
 
-            /* Handle delays - go to back of node
-             * (i.e. become the last rows as in lower triangular format) */
-            for(int i=0; i<ndelay; i++) {
-               // Add delayed rows (from delayed cols)
-               T *dest = &node.lcol[delay_col*(ldl+1)];
-               T const* src = &delay_val[i*(lddelay+1)];
-               node.perm[delay_col] = delay_perm[i];
-               for(int j=0; j<ndelay-i; j++) {
-                  dest[j] = src[j];
-               }
-               // Add child's non-fully summed rows (from delayed cols)
-               dest = node.lcol;
-               src = &delay_val[i*lddelay+ndelay];
-               for(int j=0; j<cn; j++) {
-                  // int r = cache[j];
-                  int r = csnode.map[j];
-                  if(r < ncol) dest[r*ldl+delay_col] = src[j];
-                  else         dest[delay_col*ldl+r] = src[j];
-               }
-               delay_col++;
-            }
-            if(!cval) continue; // child was all delays, nothing more to do
-            /* Handle expected contribution */
-            for(int j = 0; j < cn; ++j) {               
-               int c = csnode.map[ j ]; // Destination column                  
-               T const* src = &cval[j*ldcontrib];
-               if (c < snode.ncol) {
-                  int ldd = node.get_ldl();
-                  T *dest = &node.lcol[c*ldd];
+            // // int *cache = new int[cn];
+            // // for(int j=0; j<cn; ++j)
+            // //    cache[j] = map[ crlist[j] ];
 
-                  for (int i = j ; i < cn; ++i) {
-                     // Assemble destination block
-                     dest[ csnode.map[ i ]] += src[i];
-                  }
-               }
-            }
+            // // printf("[assemble] contrib_idx = %d, ndelay = %d\n", csnode.contrib_idx, ndelay);
+
+            // /* Handle delays - go to back of node
+            //  * (i.e. become the last rows as in lower triangular format) */
+            // for(int i=0; i<ndelay; i++) {
+            //    // Add delayed rows (from delayed cols)
+            //    T *dest = &node.lcol[delay_col*(ldl+1)];
+            //    T const* src = &delay_val[i*(lddelay+1)];
+            //    node.perm[delay_col] = delay_perm[i];
+            //    for(int j=0; j<ndelay-i; j++) {
+            //       dest[j] = src[j];
+            //    }
+            //    // Add child's non-fully summed rows (from delayed cols)
+            //    dest = node.lcol;
+            //    src = &delay_val[i*lddelay+ndelay];
+            //    for(int j=0; j<cn; j++) {
+            //       // int r = cache[j];
+            //       int r = csnode.map[j];
+            //       if(r < ncol) dest[r*ldl+delay_col] = src[j];
+            //       else         dest[delay_col*ldl+r] = src[j];
+            //    }
+            //    delay_col++;
+            // }
+            // if(!cval) continue; // child was all delays, nothing more to do
+            // /* Handle expected contribution */
+            // for(int j = 0; j < cn; ++j) {               
+            //    int c = csnode.map[ j ]; // Destination column                  
+            //    T const* src = &cval[j*ldcontrib];
+            //    if (c < snode.ncol) {
+            //       int ldd = node.get_ldl();
+            //       T *dest = &node.lcol[c*ldd];
+
+            //       for (int i = j ; i < cn; ++i) {
+            //          // Assemble destination block
+            //          dest[ csnode.map[ i ]] += src[i];
+            //       }
+            //    }
+            // }
 
          }
       }

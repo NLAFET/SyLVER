@@ -228,16 +228,17 @@ namespace spldlt {
             activate_init_front_task(
                   false, sfront, fronts_[ni], child_contrib, blksz, 
                   factor_alloc_, pool_alloc_, aval);
-// #if defined(SPLDLT_USE_STARPU)
-//             starpu_task_wait_for_all();
-// #endif
+#if defined(SPLDLT_USE_STARPU)
+            starpu_task_wait_for_all();
+#endif
             
             // assemble contributions from children fronts and subtreess
-            // assemble(symb_.n, fronts_[ni], child_contrib, pool_alloc_, blksz);
-            assemble_task(symb_.n, fronts_[ni], child_contrib, pool_alloc_);
-// #if defined(SPLDLT_USE_STARPU)
-//             starpu_task_wait_for_all();
-// #endif
+            // assemble_notask(symb_.n, fronts_[ni], child_contrib, pool_alloc_);
+            assemble(symb_.n, fronts_[ni], child_contrib, pool_alloc_);
+            // assemble_task(symb_.n, fronts_[ni], child_contrib, pool_alloc_);
+#if defined(SPLDLT_USE_STARPU)
+            starpu_task_wait_for_all();
+#endif
 
             // factor_front_posdef(sfront, fronts_[ni], options);
 
@@ -419,7 +420,7 @@ namespace spldlt {
                         for (int ii = jj; ii < cnr; ++ii) {
                            // assemble_block(nodes_[ni], *child, ii, jj, csnode.map, blksz);
                            assemble_block_task(
-                                 sfront, fronts_[ni], child_sfront, *child, ii, jj, 
+                                 fronts_[ni], *child, ii, jj, 
                                  child_sfront.map, ASSEMBLE_PRIO);
 // #if defined(SPLDLT_USE_STARPU)
 //                            starpu_task_wait_for_all();
