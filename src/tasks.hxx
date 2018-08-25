@@ -401,8 +401,8 @@ namespace spldlt {
          int k, int i, int j,
          int blksz, int prio) {
 
-      int m = snode.nrow + node.ndelay_in;
-      int n = snode.ncol + node.ndelay_in;
+      int m = node.get_nrow();
+      int n = node.get_ncol(); 
 
       int blkm = std::min(blksz, m - i*blksz);
       int blkn = std::min(blksz, m - j*blksz);
@@ -413,8 +413,8 @@ namespace spldlt {
       int ldcontrib = m-n;
       T *contrib = node.contrib;
 
-      int nr = (m-1)/blksz + 1; // number of block rows
-      int nc = (n-1)/blksz + 1; // number of block columns
+      int nr = node.get_nr();
+      int nc = node.get_nc();
 
 #if defined(SPLDLT_USE_STARPU)
 
@@ -712,7 +712,8 @@ namespace spldlt {
                if (rr == (r / blksz)) continue;
                rr = r/blksz;
                
-               hdls[nh] = snode.handles[cc*nr+rr];
+               // hdls[nh] = snode.handles[cc*nr+rr];
+               hdls[nh] = node.blocks[cc*nr+rr].get_hdl();
                nh++;
             }
          }

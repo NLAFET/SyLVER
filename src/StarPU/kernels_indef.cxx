@@ -125,5 +125,10 @@ namespace spldlt { namespace starpu {
          STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_submit");
 
       }
+
+      ////////////////////////////////////////
+      // assemble_delays
       
+      struct starpu_codelet cl_assemble_delays;
+
 }} /* namespaces spldlt::starpu  */

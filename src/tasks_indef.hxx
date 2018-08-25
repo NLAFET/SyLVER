@@ -135,7 +135,7 @@ namespace spldlt {
       // rows which must be delayed in the parent
       for (int jj=csa; jj<cnc; jj++) {
          for (int ii=jj; ii<cnr; ii++) {
-            chdls[nch] = csnode.handles[jj*cnr+ii];
+            chdls[nch] = cnode.blocks[jj*cnr+ii].get_hdl();
             nch++;
          }
       }
@@ -145,28 +145,23 @@ namespace spldlt {
       int cc = -1;
       for(int j = 0; j < cnode.ndelay_out; j++) {
 
-         int c = delay_col+j;
+         int c = delay_col+j; // Destination column
          if (cc == (c/blksz)) continue;
-         cc = c/blksz;
+         cc = c/blksz; // Destination block-column
          rr = -1;
 
          for (int i = cnode.nelim+j; i < cnrow; i++) {
 
-            int r = -1;
-            if (i < cncol) {
-               r = delay_col+i;
-            }
-            else {
-               r = csnode.map[i-cncol];
-            }
-
+            int r = (i < cncol) ? delay_col+i-cnode.nelim : csnode.map[i-cncol];
+            
             if (rr == (r/blksz)) continue;
+            rr = r / blksz; // Destination block-row
             
             if (r < ncol) {
-               hdls[nh] = snode.handles[cc*nr+rr];
+               hdls[nh] = node.blocks[rr*nr+cc].get_hdl();
             }
             else {
-               hdls[nh] = snode.handles[rr*nr+cc];
+               hdls[nh] = node.blocks[cc*nr+rr].get_hdl();
             }
             nh++;
             
@@ -175,7 +170,10 @@ namespace spldlt {
       
       assert(nch > 0); // Make sure the set is not empty
       assert(nh > 0);
-            
+
+      spldlt::starpu::insert_assemble_delays(
+            chdls, nch, hdls, nh, &cnode, delay_col, &node);
+      
       delete[] chdls;
       delete[] hdls;
 #else

@@ -192,8 +192,11 @@ namespace spldlt {
             //    delay_col++;
             // }
 
-            assemble_delays(*child, delay_col, node);
-            
+            // assemble_delays(*child, delay_col, node);
+            assemble_delays_task(*child, delay_col, node);            
+#if defined(SPLDLT_USE_STARPU)
+            starpu_task_wait_for_all();
+#endif      
             delay_col += child->ndelay_out;
 
             // Handle expected contributions (only if something there)
@@ -234,7 +237,6 @@ namespace spldlt {
                   child_contrib[csnode.contrib_idx], &cn, &cval, &ldcontrib, &crlist,
                   &ndelay, &delay_perm, &delay_val, &lddelay
                   );
-
             // delay_col += child->ndelay_out;
             delay_col += ndelay;
             // printf("[assemble] ndelay = %d, delay_col = %d\n", ndelay, delay_col);

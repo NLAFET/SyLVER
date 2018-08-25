@@ -1112,7 +1112,7 @@ namespace spldlt { namespace starpu {
       //    // printf("[assemble_contrib_sync_cpu_func]\n");
       // }
 
-      // sarpu kernel
+      // StarPU kernel
       extern struct starpu_codelet cl_assemble_contrib_sync;
 
       void insert_assemble_contrib_sync(
@@ -1190,7 +1190,63 @@ namespace spldlt { namespace starpu {
       //    // STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
          
       // }
+
+      ////////////////////////////////////////
+      // assemble_delays
       
+      // CPU kernel      
+      template <typename T, typename PoolAlloc>      
+      void assemble_delays_cpu_func(void *buffers[], void *cl_arg) {
+
+         NumericFront<T, PoolAlloc> *node = nullptr;
+         NumericFront<T, PoolAlloc> *cnode = nullptr;
+         int delay_col;
+
+         starpu_codelet_unpack_args(
+               cl_arg, &cnode, &delay_col, &node);
+
+         assemble_delays(*cnode, delay_col, *node);
+      }
+
+      // StarPU kernel
+      extern struct starpu_codelet cl_assemble_delays;
+
+      template <typename T, typename PoolAlloc>
+      void insert_assemble_delays(
+            starpu_data_handle_t *chdls, int nchdl,
+            starpu_data_handle_t *hdls, int nhdl,
+            NumericFront<T, PoolAlloc> *cnode,
+            int delay_col,
+            NumericFront<T, PoolAlloc> *node) {
+
+         int ret;
+
+         struct starpu_data_descr *descrs = new starpu_data_descr[nchdl+nhdl];
+
+         int nh = 0;
+         // Add handles from cnode in R mode
+         for (int i=0; i<nchdl; i++) {
+            descrs[nh].handle = chdls[i]; descrs[nh].mode = STARPU_R;
+            nh++;
+         }
+
+         // Add handles from node in RW mode
+         for (int i=0; i<nhdl; i++) {
+            descrs[nh].handle = hdls[i]; descrs[nh].mode = STARPU_RW;
+            nh++;
+         }
+
+         ret = starpu_insert_task(
+               &cl_assemble_delays,
+               STARPU_VALUE, &cnode, sizeof(NumericFront<T, PoolAlloc>*),
+               STARPU_VALUE, &delay_col, sizeof(int),
+               STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
+               STARPU_DATA_MODE_ARRAY, descrs, nh,               
+               0);
+         STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
+
+      }
+
       ////////////////////////////////////////////////////////////////////////////////
 
       /* As it is not possible to statically intialize codelet in C++,
@@ -1371,6 +1427,13 @@ namespace spldlt { namespace starpu {
          cl_restore_failed_block_app.name = "RestoreFailedBlock";
          cl_restore_failed_block_app.cpu_funcs[0] = restore_failed_block_app_cpu_func<T, iblksz, Backup, IntAlloc>;
 
+         ////////////////////////////////////////////////////////////
+         // assemble_delays StarPU codelet
+         starpu_codelet_init(&cl_assemble_delays);
+         cl_assemble_delays.where = STARPU_CPU;
+         cl_assemble_delays.nbuffers = STARPU_VARIABLE_NBUFFERS;
+         cl_assemble_delays.name = "AssembleDelays";
+         cl_assemble_delays.cpu_funcs[0] = assemble_delays_cpu_func<T, Allocator>;
       }
       
    }} /* namespaces spldlt::starpu  */
