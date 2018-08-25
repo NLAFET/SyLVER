@@ -495,15 +495,16 @@ namespace spldlt {
    // Assemble subtree task
    template <typename T, typename PoolAlloc>   
    void assemble_subtree_task(
-         SymbolicFront const& sfront, // Destination node (Symbolic)
-         NumericFront<T,PoolAlloc>& front, // Destination node (Numeric) 
+         NumericFront<T,PoolAlloc>& front, // Destination node 
          SymbolicFront &csfront, // Root of the subtree
          void** child_contrib, 
          int contrib_idx, // Index of subtree to assemble
          int *cmap, // row/column mapping array 
-         int blksz, int prio) {
+         int prio) {
 
 #if defined(SPLDLT_USE_STARPU)
+
+      int blksz = front.blksz;
 
       int nrow = front.get_nrow();
       int ncol = front.get_ncol();
@@ -533,7 +534,8 @@ namespace spldlt {
                if (rr==(r/blksz)) continue;
                rr = r/blksz;
                
-               hdls[nh] = sfront.handles[cc*nr+rr];
+               // hdls[nh] = sfront.handles[cc*nr+rr];
+               hdls[nh] = front.blocks[cc*nr+rr].get_hdl();
                nh++;            
             }
          }         
@@ -542,44 +544,47 @@ namespace spldlt {
       // Insert assembly tasks if there are any contributions
       if (nh>0) {
          spldlt::starpu::insert_subtree_assemble(
-               &front, &csfront, sfront.hdl, csfront.hdl, hdls, nh, 
+               &front, &csfront, front.get_hdl(), csfront.hdl, hdls, nh, 
                child_contrib, contrib_idx);
       }
 
       delete[] hdls;
 
 #else      
-      // Retreive contribution block from subtrees
-      int cn, ldcontrib, ndelay, lddelay;
-      double const *cval, *delay_val;
-      int const *crlist, *delay_perm;
-      spral_ssids_contrib_get_data(
-            child_contrib[contrib_idx], &cn, &cval, &ldcontrib, &crlist,
-            &ndelay, &delay_perm, &delay_val, &lddelay
-            );
 
-      printf("[subtree_assemble_task] contrib_idx: %d, cn: %d, ndelay: %d\n", 
-             contrib_idx+1, cn, ndelay);
-      // continue;
-      if(!cval) return; // child was all delays, nothing more to do
-      // int* cache = work[omp_get_thread_num()].get_ptr<int>(cn);
-      for(int j = 0; j < cn; ++j) {
+      assemble_subtree(front, csfront, child_contrib, contrib_idx);
+
+      // // Retreive contribution block from subtrees
+      // int cn, ldcontrib, ndelay, lddelay;
+      // double const *cval, *delay_val;
+      // int const *crlist, *delay_perm;
+      // spral_ssids_contrib_get_data(
+      //       child_contrib[contrib_idx], &cn, &cval, &ldcontrib, &crlist,
+      //       &ndelay, &delay_perm, &delay_val, &lddelay
+      //       );
+
+      // printf("[subtree_assemble_task] contrib_idx: %d, cn: %d, ndelay: %d\n", 
+      //        contrib_idx+1, cn, ndelay);
+      // // continue;
+      // if(!cval) return; // child was all delays, nothing more to do
+      // // int* cache = work[omp_get_thread_num()].get_ptr<int>(cn);
+      // for(int j = 0; j < cn; ++j) {
                
-         int c = cmap[ j ]; // Destination column
+      //    int c = cmap[ j ]; // Destination column
                   
-         T const* src = &cval[j*ldcontrib];
+      //    T const* src = &cval[j*ldcontrib];
 
-         if (c < sfront.ncol) {
+      //    if (c < sfront.ncol) {
 
-            int ldd = front.get_ldl();
-            T *dest = &front.lcol[c*ldd];
+      //       int ldd = front.get_ldl();
+      //       T *dest = &front.lcol[c*ldd];
 
-            for (int i = j ; i < cn; ++i) {
-               // Assemble destination block
-               dest[ cmap[ i ]] += src[i];
-            }
-         }
-      }
+      //       for (int i = j ; i < cn; ++i) {
+      //          // Assemble destination block
+      //          dest[ cmap[ i ]] += src[i];
+      //       }
+      //    }
+      // }
 #endif
    }
    

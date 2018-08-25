@@ -131,4 +131,9 @@ namespace spldlt { namespace starpu {
       
       struct starpu_codelet cl_assemble_delays;
 
+      ////////////////////////////////////////
+      // assemble_delays_subtree
+
+      struct starpu_codelet cl_assemble_delays_subtree;
+
 }} /* namespaces spldlt::starpu  */

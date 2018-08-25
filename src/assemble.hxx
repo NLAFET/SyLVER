@@ -194,9 +194,9 @@ namespace spldlt {
 
             // assemble_delays(*child, delay_col, node);
             assemble_delays_task(*child, delay_col, node);            
-#if defined(SPLDLT_USE_STARPU)
-            starpu_task_wait_for_all();
-#endif      
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif      
             delay_col += child->ndelay_out;
 
             // Handle expected contributions (only if something there)
@@ -216,19 +216,26 @@ namespace spldlt {
                      // assemble_block(node, *child, ii, jj, csnode.map);
                      assemble_block_task(
                            node, *child, ii, jj, csnode.map, ASSEMBLE_PRIO);
-#if defined(SPLDLT_USE_STARPU)
-                     starpu_task_wait_for_all();
-#endif      
                   }
                }
+// #if defined(SPLDLT_USE_STARPU)
+//                starpu_task_wait_for_all();
+// #endif
             }
  
          }
          else {
             // Assemble contributions from subtree
 
-            assemble_subtree(node, csnode, child_contrib, csnode.contrib_idx, delay_col);
-
+            // Assemble delays
+            // assemble_delays_subtree(
+            //       node, csnode, child_contrib, csnode.contrib_idx, delay_col);
+            assemble_delays_subtree_task(
+                  node, csnode, child_contrib, csnode.contrib_idx, delay_col);
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
+            
             // Retreive contribution block from subtrees
             int cn, ldcontrib, ndelay, lddelay;
             double const *cval, *delay_val;
@@ -240,6 +247,15 @@ namespace spldlt {
             // delay_col += child->ndelay_out;
             delay_col += ndelay;
             // printf("[assemble] ndelay = %d, delay_col = %d\n", ndelay, delay_col);
+
+            // Assemble contribution blocks
+            // assemble_subtree(node, csnode, child_contrib, csnode.contrib_idx);
+            assemble_subtree_task(
+                  node, csnode, child_contrib, csnode.contrib_idx,
+                  csnode.map, ASSEMBLE_PRIO);
+// #if defined(SPLDLT_USE_STARPU)
+//                      starpu_task_wait_for_all();
+// #endif      
 
             // // int *cache = new int[cn];
             // // for(int j=0; j<cn; ++j)

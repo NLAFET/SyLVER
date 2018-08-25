@@ -94,7 +94,82 @@ namespace spldlt {
 #endif
       
    }
+   ////////////////////////////////////////////////////////////
+   // Assemble subtree delays task
 
+   /// @brief Submit task for assembling delays from one subtree to
+   /// its parent.
+   template <typename T, typename PoolAlloc>
+   void assemble_delays_subtree_task(
+         NumericFront<T,PoolAlloc>& node, // Destination node 
+         SymbolicFront &csnode, // Root of the subtree
+         void** child_contrib, 
+         int contrib_idx, // Index of subtree to assemble
+         int delay_col) {
+
+#if defined(SPLDLT_USE_STARPU)
+
+      // Node info
+      int blksz = node.blksz;
+      int ncol = node.get_ncol(); // Number of block-rows in destination node
+      int nr = node.get_nr(); // Number of block-rows in destination node
+      int nc = node.get_nc(); // Number of block-columns in destination node
+      starpu_data_handle_t *hdls = new starpu_data_handle_t[nr*nc];
+      int nh = 0; // Number of handles/blocks in node
+
+      // Retreive contribution block from subtrees
+      int cn, ldcontrib, ndelay, lddelay;
+      double const *cval, *delay_val;
+      int const *crlist, *delay_perm;
+      spral_ssids_contrib_get_data(
+            child_contrib[csnode.contrib_idx], &cn, &cval, &ldcontrib, &crlist,
+            &ndelay, &delay_perm, &delay_val, &lddelay
+            );
+      
+      // Add blocks in node
+      int rr = -1;
+      int cc = -1;
+      for(int j = 0; j < ndelay; j++) {
+
+         int c = delay_col+j; // Destination column
+         if (cc == (c/blksz)) continue;
+         cc = c/blksz; // Destination block-column
+         rr = -1; // Reset block-row index 
+
+         int r;
+
+         for(int i=0; i<ndelay-j; i++) {
+            r = delay_col+i;
+            if (rr == (r/blksz)) continue;
+            rr = r/blksz; // Destination block-row
+            hdls[nh] = node.blocks[cc*nr+rr].get_hdl();
+            nh++;
+         }
+         for(int i=0; i<cn; i++) {
+            int r = csnode.map[i];
+            if (rr == (r/blksz)) continue;
+            rr = r/blksz; // Destination block-row
+            if (r < ncol) hdls[nh] = node.blocks[rr*nr+cc].get_hdl();
+            else          hdls[nh] = node.blocks[cc*nr+rr].get_hdl();
+         }
+      }
+      
+      assert(nh > 0);
+
+      spldlt::starpu::insert_assemble_delays_subtree(
+            hdls, nh, csnode.hdl, &node, &csnode, child_contrib, contrib_idx,
+            delay_col);
+
+      delete[] hdls;
+#else
+
+      assemble_delays_subtree(
+            node, csnode, child_contrib, contrib_idx, delay_col);
+
+#endif
+      
+   }
+   
    ////////////////////////////////////////////////////////////
    // Assemble delays task
 

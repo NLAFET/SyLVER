@@ -906,38 +906,40 @@ namespace spldlt { namespace starpu {
                                     &node, &csnode,
                                     &child_contrib, &contrib_idx);
 
+         assemble_subtree(*node, *csnode, child_contrib, contrib_idx);
+
          // TODO: replace the following code portion by the dedicated
          // routine
-         SymbolicFront const& snode = node->symb;
+         // SymbolicFront const& snode = node->symb;
 
-         // Retreive contribution block from subtrees
-         int cn, ldcontrib, ndelay, lddelay;
-         double const *cval, *delay_val;
-         int const *crlist, *delay_perm;
-         spral_ssids_contrib_get_data(
-               child_contrib[contrib_idx], &cn, &cval, &ldcontrib, &crlist,
-               &ndelay, &delay_perm, &delay_val, &lddelay
-               );
-         // printf("[subtree_assemble_cpu_func] ndelay = %d, cval = %p\n", ndelay, cval);
-         if(!cval) return; // child was all delays, nothing more to do
+         // // Retreive contribution block from subtrees
+         // int cn, ldcontrib, ndelay, lddelay;
+         // double const *cval, *delay_val;
+         // int const *crlist, *delay_perm;
+         // spral_ssids_contrib_get_data(
+         //       child_contrib[contrib_idx], &cn, &cval, &ldcontrib, &crlist,
+         //       &ndelay, &delay_perm, &delay_val, &lddelay
+         //       );
+         // // printf("[subtree_assemble_cpu_func] ndelay = %d, cval = %p\n", ndelay, cval);
+         // if(!cval) return; // child was all delays, nothing more to do
 
-         for(int j = 0; j < cn; ++j) {
+         // for(int j = 0; j < cn; ++j) {
                
-            int c = csnode->map[ j ]; // Destination column
+         //    int c = csnode->map[ j ]; // Destination column
                   
-            T const* src = &cval[j*ldcontrib];
+         //    T const* src = &cval[j*ldcontrib];
 
-            if (c < snode.ncol) {
+         //    if (c < snode.ncol) {
 
-               int ldd = node->get_ldl();
-               T *dest = &node->lcol[c*ldd];
+         //       int ldd = node->get_ldl();
+         //       T *dest = &node->lcol[c*ldd];
 
-               for (int i = j ; i < cn; ++i) {
-                  // Assemble destination block
-                  dest[ csnode->map[ i ]] += src[i];
-               }
-            }
-         }
+         //       for (int i = j ; i < cn; ++i) {
+         //          // Assemble destination block
+         //          dest[ csnode->map[ i ]] += src[i];
+         //       }
+         //    }
+         // }
 
       }
 
@@ -968,9 +970,9 @@ namespace spldlt { namespace starpu {
          descrs[nh].handle = root_hdl; descrs[nh].mode = STARPU_R;
          nh++;
 
-         // Handle on node to be assembled
-         descrs[nh].handle = node_hdl; descrs[nh].mode = STARPU_R;
-         nh++;
+         // // Handle on node to be assembled
+         // descrs[nh].handle = node_hdl; descrs[nh].mode = STARPU_R;
+         // nh++;
 
          ret = starpu_task_insert(&cl_subtree_assemble,
                                   STARPU_DATA_MODE_ARRAY, descrs, nh,
@@ -1106,8 +1108,8 @@ namespace spldlt { namespace starpu {
 
          // Access symbolic handle of node in read mode to ensure that
          // it has been initialized
-         descrs[nh].handle = node_hdl; descrs[nh].mode = STARPU_R;
-         nh++;
+         // descrs[nh].handle = node_hdl; descrs[nh].mode = STARPU_R;
+         // nh++;
 
          // Access symbolic handle of child node in read mode to
          // ensure that assemblies are done before cleaning it

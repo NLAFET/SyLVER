@@ -1192,6 +1192,66 @@ namespace spldlt { namespace starpu {
       // }
 
       ////////////////////////////////////////
+      // assemble_delays_subtree
+      
+      // CPU kernel      
+      template <typename T, typename PoolAlloc>      
+      void assemble_delays_subtree_cpu_func(void *buffers[], void *cl_arg) {
+
+         NumericFront<T, PoolAlloc> *node = nullptr;
+         SymbolicFront *csnode = nullptr;
+         void **child_contrib;
+         int contrib_idx;
+         int delay_col;
+
+         starpu_codelet_unpack_args(
+               cl_arg,
+               &node, &csnode, &child_contrib, &contrib_idx, &delay_col);
+         
+         assemble_delays_subtree(
+               *node, *csnode, child_contrib, contrib_idx, delay_col);
+         
+      }
+
+      // StarPU kernel
+      extern struct starpu_codelet cl_assemble_delays_subtree;
+
+      template <typename T, typename PoolAlloc>
+      void insert_assemble_delays_subtree(
+            starpu_data_handle_t *hdls, int nhdl,
+            starpu_data_handle_t root_hdl,
+            NumericFront<T, PoolAlloc> *node,
+            SymbolicFront *csnode,
+            void **child_contrib, int contrib_idx,
+            int delay_col) {
+
+         int ret;
+         int nh = 0;
+
+         struct starpu_data_descr *descrs = new starpu_data_descr[nhdl+1];
+         
+         for (int i=0; i<nhdl; i++) {
+            descrs[nh].handle = hdls[i]; descrs[nh].mode = STARPU_RW;
+            nh++;
+         }
+
+         // Handle on subtree
+         descrs[nh].handle = root_hdl; descrs[nh].mode = STARPU_R;
+         nh++;
+
+         ret = starpu_task_insert(
+               &cl_assemble_delays_subtree,
+               STARPU_DATA_MODE_ARRAY, descrs, nh,
+               STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
+               STARPU_VALUE, &csnode, sizeof(SymbolicFront*),
+               STARPU_VALUE, &child_contrib, sizeof(void**),
+               STARPU_VALUE, &contrib_idx, sizeof(int),
+               STARPU_VALUE, &delay_col, sizeof(int),
+               0);
+
+      }
+         
+      ////////////////////////////////////////
       // assemble_delays
       
       // CPU kernel      
@@ -1434,6 +1494,14 @@ namespace spldlt { namespace starpu {
          cl_assemble_delays.nbuffers = STARPU_VARIABLE_NBUFFERS;
          cl_assemble_delays.name = "AssembleDelays";
          cl_assemble_delays.cpu_funcs[0] = assemble_delays_cpu_func<T, Allocator>;
+
+         ////////////////////////////////////////////////////////////
+         // assemble_delays_subtree StarPU codelet
+         starpu_codelet_init(&cl_assemble_delays_subtree);
+         cl_assemble_delays_subtree.where = STARPU_CPU;
+         cl_assemble_delays_subtree.nbuffers = STARPU_VARIABLE_NBUFFERS;
+         cl_assemble_delays_subtree.name = "AssembleDelaysSubtree";
+         cl_assemble_delays_subtree.cpu_funcs[0] = assemble_delays_subtree_cpu_func<T, Allocator>;
       }
       
    }} /* namespaces spldlt::starpu  */
