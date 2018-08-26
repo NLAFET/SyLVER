@@ -113,6 +113,8 @@ namespace spldlt {
       template <typename T, typename PoolAlloc>
       void register_node_indef(NumericFront<T, PoolAlloc>& front) {
 
+         // Note: blocks are already registered when allocated
+         
          typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
 
          SymbolicFront& sfront = front.symb;
@@ -129,12 +131,12 @@ namespace spldlt {
          T *d = &a[n*lda];
          // cdata.register_d_hdl(d);
 
-         // Register worksapce handle
-         starpu_matrix_data_register (
-               &spldlt::starpu::workspace_hdl,
-               -1, (uintptr_t) NULL,
-               blksz, blksz, blksz,
-               sizeof(T));
+         // // Register worksapce handle
+         // starpu_matrix_data_register (
+         //       &spldlt::starpu::workspace_hdl,
+         //       -1, (uintptr_t) NULL,
+         //       blksz, blksz, blksz,
+         //       sizeof(T));
 
          // sfront.handles.reserve(nr*nc);
          sfront.handles.resize(nr*nc); // allocate handles
@@ -220,8 +222,10 @@ namespace spldlt {
             NumericFront<T, PoolAlloc> &node
             ) {
 
+         // printf("[unregister_node_indef] nodeidx = %d\n", node.symb.idx);
+         
          typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
- 
+
          // Get node info
          SymbolicFront &snode = node.symb;
          int blksz = node.blksz;
@@ -229,10 +233,10 @@ namespace spldlt {
          int n = node.get_ncol();
          int nr = node.get_nr(); // number of block rows
          int nc = node.get_nc(); // number of block columns
-         spldlt::ldlt_app_internal::ColumnData<T, IntAlloc>& cdata = *node.cdata;
 
-         if (async) starpu_data_unregister_submit(spldlt::starpu::workspace_hdl);
-         else       starpu_data_unregister(spldlt::starpu::workspace_hdl);
+         assert(node.cdata); // Make sure cdata is allocated
+
+         spldlt::ldlt_app_internal::ColumnData<T, IntAlloc>& cdata = *node.cdata;
          
          // Unregister block handles in the factors
          for(int j = 0; j < nc; ++j) {
@@ -247,7 +251,8 @@ namespace spldlt {
                if (async) starpu_data_unregister_submit(snode.handles[i + j*nr]);
                else       starpu_data_unregister(snode.handles[i + j*nr]);
 
-               if (i>=j) node.blocks[j*nr+i].template unregister_handle<async>();
+               // Unregister block (i,j)
+               node.blocks[j*nr+i].template unregister_handle<async>();
             }
          }
 

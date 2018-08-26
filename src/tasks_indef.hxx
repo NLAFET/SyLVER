@@ -126,6 +126,8 @@ namespace spldlt {
             &ndelay, &delay_perm, &delay_val, &lddelay
             );
       
+      if (ndelay <= 0) return;
+         
       // Add blocks in node
       int rr = -1;
       int cc = -1;
@@ -156,9 +158,10 @@ namespace spldlt {
       
       assert(nh > 0);
 
-      spldlt::starpu::insert_assemble_delays_subtree(
-            hdls, nh, csnode.hdl, &node, &csnode, child_contrib, contrib_idx,
-            delay_col);
+      if (nh > 0)
+         spldlt::starpu::insert_assemble_delays_subtree(
+               hdls, nh, csnode.hdl, &node, &csnode, child_contrib, contrib_idx,
+               delay_col);
 
       delete[] hdls;
 #else
@@ -246,8 +249,9 @@ namespace spldlt {
       assert(nch > 0); // Make sure the set is not empty
       assert(nh > 0);
 
-      spldlt::starpu::insert_assemble_delays(
-            chdls, nch, hdls, nh, &cnode, delay_col, &node);
+      if ((nh > 0) && (nch > 0))
+         spldlt::starpu::insert_assemble_delays(
+               chdls, nch, hdls, nh, &cnode, delay_col, &node);
       
       delete[] chdls;
       delete[] hdls;

@@ -21,6 +21,9 @@ namespace spldlt { namespace starpu {
             NumericFront<T, PoolAlloc> &node
             ) {
 
+
+         // printf("[unregister_node_submit]\n");
+         
          // Get node info
          SymbolicFront &snode = node.symb;
          int blksz = node.blksz;
@@ -114,9 +117,12 @@ namespace spldlt { namespace starpu {
 
          // printf("[fini_node_cpu_func]\n");
 
-         fini_node(*node);
+         // FIXME: implement posdef case
+         // unregister_node_submit(*node);
+         unregister_node_indef<T, PoolAlloc, true>(*node);
+         // unregister_node_indef<T, PoolAlloc, false>(*node);
 
-         unregister_node_submit(*node);
+         fini_node(*node);
       }
 
       // fini_node codelet
@@ -1442,7 +1448,8 @@ namespace spldlt { namespace starpu {
          // update_block StarPU codelet
          starpu_codelet_init(&cl_update_block);
 #if defined(SPLDLT_USE_GPU)
-         cl_update_block.where = STARPU_CPU | STARPU_CUDA;
+         // cl_update_block.where = STARPU_CPU | STARPU_CUDA;
+         cl_update_block.where = STARPU_CPU; // Debug
 #else
          cl_update_block.where = STARPU_CPU;
 #endif

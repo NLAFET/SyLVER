@@ -172,10 +172,10 @@ namespace spldlt { namespace tests {
          workspaces.emplace_back(PAGE_SIZE);
       if(debug) printf("[factor_node_indef_test] nworkers =  %d\n", nworkers);
 
-      // // Register worksapce handle
-      // starpu_matrix_data_register (
-      //       &spldlt::starpu::workspace_hdl, -1, (uintptr_t) NULL, blksz, blksz, blksz,
-      //       sizeof(T));
+      // Register worksapce handle
+      starpu_matrix_data_register (
+            &spldlt::starpu::workspace_hdl, -1, (uintptr_t) NULL, blksz, blksz, blksz,
+            sizeof(T));
 
       // Init factorization 
 #if defined(SPLDLT_USE_STARPU)
@@ -238,7 +238,7 @@ namespace spldlt { namespace tests {
       starpu_data_unregister(sfront.hdl); // Node's symbolic handle
       starpu_data_unregister(front.contrib_hdl);
 
-      // starpu_data_unregister(spldlt::starpu::workspace_hdl);
+      starpu_data_unregister(spldlt::starpu::workspace_hdl);
 #endif
       
       // Deinitialize solver (including shutdown tasking system)

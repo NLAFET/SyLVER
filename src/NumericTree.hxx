@@ -87,6 +87,14 @@ namespace spldlt {
          for(int i = 0; i < nworkers; ++i)
             workspaces.emplace_back(PAGE_SIZE);
 
+         // Register worksapce handle which is currently only used for
+         // CUDA kernels
+         starpu_matrix_data_register (
+               &spldlt::starpu::workspace_hdl,
+               -1, (uintptr_t) NULL,
+               blksz, blksz, blksz,
+               sizeof(T));
+
 #if defined(SPLDLT_USE_STARPU)
          if (posdef) {
             spldlt::starpu::codelet_init<T, FactorAllocator, PoolAllocator>();
@@ -99,6 +107,7 @@ namespace spldlt {
             spldlt::starpu::codelet_init_assemble<T, PoolAllocator>();
          }
 #endif
+         printf("[NumericTree] nnodes = %d\n", symb_.nnodes_);
          auto start = std::chrono::high_resolution_clock::now();
          if (posdef) factor_mf_posdef(aval, child_contrib, workspaces,
                                       options, worker_stats);
@@ -111,6 +120,8 @@ namespace spldlt {
 #if defined(SPLDLT_USE_STARPU)
          starpu_task_wait_for_all();
 #endif
+
+         starpu_data_unregister(spldlt::starpu::workspace_hdl);
 
          // Reduce thread_stats
          stats = ThreadStats(); // initialise
@@ -162,7 +173,7 @@ namespace spldlt {
             struct spral::ssids::cpu::cpu_factor_options& options,
             std::vector<ThreadStats>& worker_stats) {
 
-         printf("[factor_mf_indef] posdef = %d\n", posdef);
+         // printf("[factor_mf_indef] posdef = %d\n", posdef);
          // printf("[factor_mf_indef] nparts = %d\n", symb_.nparts_);
          
          // Blocking size
@@ -171,7 +182,7 @@ namespace spldlt {
 #if defined(SPLDLT_USE_STARPU)
          // TODO move hdl registration to activate task
          // Register symbolic handles.
-         for(int ni = 0; ni < symb_.nnodes_; ++ni) {
+         for(int ni = 0; ni < symb_.nnodes_+1; ++ni) {
             starpu_void_data_register(&(symb_[ni].hdl)); // Node's symbolic handle
             starpu_void_data_register(&(fronts_[ni].contrib_hdl)); // Node's symbolic handle
          }
@@ -296,6 +307,10 @@ namespace spldlt {
 // #endif
 
          } // Loop over nodes
+
+         // Finish root node
+         fini_cnodes_task(fronts_[symb_.nnodes_]);
+
       }
 
       ////////////////////////////////////////////////////////////////////////////////   
