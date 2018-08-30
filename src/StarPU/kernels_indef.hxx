@@ -1,5 +1,9 @@
 #pragma once
 
+// TODO only load in debug mode
+#include <iostream>
+#include <iomanip>
+
 #if defined(SPLDLT_USE_GPU)
 #include "kernels/gpu/factor_indef.hxx"
 #endif
@@ -18,6 +22,16 @@
 namespace spldlt { namespace starpu {
 
       using namespace spldlt::ldlt_app_internal;
+
+      template<typename T>
+      void print_block(int m, int n, const T *a, int lda) {
+         for(int row=0; row<m; row++) {
+            printf("%d:",row);
+            for(int col=0; col<n; col++)
+               printf(" %.2e", a[col*lda+row]);
+            printf("\n");
+         }
+      }
 
       /* factor_block_app StarPU task
          
@@ -38,6 +52,9 @@ namespace spldlt { namespace starpu {
 
          T *a_kk = (T *)STARPU_MATRIX_GET_PTR(buffers[0]); // Get block pointer
          unsigned lda = STARPU_MATRIX_GET_LD(buffers[0]); // Get leading dimensions
+         // Debug
+         unsigned m_a_kk = STARPU_MATRIX_GET_NX(buffers[0]); // Get leading dimensions
+         unsigned n_a_kk = STARPU_MATRIX_GET_NY(buffers[0]); // Get leading dimensions
 
          int m, n; // dimension of node
          int blk; // block index
@@ -62,6 +79,9 @@ namespace spldlt { namespace starpu {
                &cdata, &backup,
                &options, &work, &alloc);
 
+         printf("[factor_block_app_cpu_func]\n");
+         print_block(m_a_kk, n_a_kk, a_kk, lda);
+
          spldlt::ldlt_app_internal::Block<T, INNER_BLOCK_SIZE, IntAlloc> dblk(blk, blk, m, n, *cdata, a_kk, lda, options->cpu_block_size);
 
          // printf("[factor_block_app_cpu_func] iblksz: %d, blksz: %d\n", iblksz, options->cpu_block_size);
@@ -77,6 +97,11 @@ namespace spldlt { namespace starpu {
                );
          if(nelim<0) 
             abort=true;
+
+         // Debug
+         // d = (*cdata)[blk].d;
+         // for(int i=0; i<nelim; i++)
+         //    printf("[factor_block_app_cpu_func] d(%d) = %.2e\n", i, d[i]);
 
          // Init threshold check (non locking => task dependencies)
          (*cdata)[blk].init_passed(nelim);
@@ -145,6 +170,8 @@ namespace spldlt { namespace starpu {
 
          T *a_ik = (T *)STARPU_MATRIX_GET_PTR(buffers[1]); // Get subdiagonal block pointer
          unsigned ld_a_ik = STARPU_MATRIX_GET_LD(buffers[1]); // Get leading dimensions
+         unsigned m_a_ik = STARPU_MATRIX_GET_NX(buffers[1]); // Get leading dimensions
+         unsigned n_a_ik = STARPU_MATRIX_GET_NY(buffers[1]); // Get leading dimensions
          
          int m, n; // node's dimensions
          int blk; // column index
@@ -177,6 +204,9 @@ namespace spldlt { namespace starpu {
          int blkpass = rblk.apply_pivot_app(dblk, options->u, options->small);
                   // Update column's passed pivot count
          (*cdata)[blk].update_passed(blkpass);
+
+         printf("[applyN_block_app_cpu_func] blk = %d, nelim = %d\n", blk, (*cdata)[blk].nelim);
+         print_block(m_a_ik, n_a_ik, a_ik, ld_a_ik);
       }
 
       ////////////////////////////////////////
@@ -433,6 +463,12 @@ namespace spldlt { namespace starpu {
          T *d_ld = (T *)STARPU_MATRIX_GET_PTR(buffers[4]); // Get pointer on scratch memory
          unsigned ldld = STARPU_MATRIX_GET_LD(buffers[4]); // Get leading dimensions
 
+         // for (int i=0; i<d_dimn; i++)
+         //    printf("d(i) = %f.3\n", d_d[i]);
+            
+         // std::cout << std::setw(8) << d_d[i];
+         // std::cout << std::endl;
+               
          int id = starpu_worker_get_id();
          
          // printf("[updateN_block_app_gpu_func] workerid = %d\n", id);
@@ -471,15 +507,15 @@ namespace spldlt { namespace starpu {
          // printf("[updateN_block_app_cpu_func] iblk = %d, jblk = %d, blk = %d, cnelim = %d\n", iblk, jblk, blk, cnelim);
          if (cnelim == 0) return;
 
-         // printf("[updateN_block_app_gpu_func] udpate (%d,%d,%d), updm = %d, updn = %d, cnelim = %d\n", blk, iblk, jblk, updm, updn, cnelim);
-         // printf("[updateN_block_app_gpu_func] ld_lij = %d, ld_lik = %d, ld_lkj = %d\n", ld_lij, ld_lik, ld_ljk);
+         printf("[updateN_block_app_gpu_func] udpate (%d,%d,%d), updm = %d, updn = %d, cnelim = %d\n", blk, iblk, jblk, updm, updn, cnelim);
+         printf("[updateN_block_app_gpu_func] ld_lij = %d, ld_lik = %d, ld_lkj = %d\n", ld_lij, ld_lik, ld_ljk);
 
          cudaStream_t stream = starpu_cuda_get_local_stream();
          cublasHandle_t handle = starpu_cublas_get_local_handle();
 
          // T* d_ld;
          // cudaError_t cerr;
-         // int ldld = blksz;
+         // ldld = blksz;
          // cerr = cudaMalloc((void **) &d_ld, ldld*blksz*sizeof(T));
 
          spldlt::gpu::update_block(
@@ -492,9 +528,20 @@ namespace spldlt { namespace starpu {
                false,
                &d_d[idx],
                d_ld, ldld);
- 
+         
+         // cudaDeviceSynchronize();
+
+         // // Debug
          // cudaStreamSynchronize(stream);
-         // cerr = cudaFree((void*)d_ld);
+         // T* d_lij_copy;
+         // T* lij_copy;
+         // cudaMalloc((void **) &d_lij_copy, updm*updn*sizeof(T));
+         // lij_copy = calloc(updm*updn, sizeof(T));
+         // cudaMemcpy(lij_copy, d_lij_copy, updm*updn*sizeof(T), cudaMemcpyDeviceToHost);
+
+         // // cudaStreamSynchronize(stream);
+         // // cerr = cudaFree((void*)d_ld);
+         // cudaDeviceSynchronize();
 
       }
 
@@ -520,6 +567,10 @@ namespace spldlt { namespace starpu {
 
          T *a_ij = (T *)STARPU_MATRIX_GET_PTR(buffers[2]); // Get diagonal block pointer
          unsigned ld_a_ij = STARPU_MATRIX_GET_LD(buffers[2]); // Get leading dimensions
+         // Debug
+         unsigned m_a_ij = STARPU_MATRIX_GET_NX(buffers[2]);
+         unsigned n_a_ij = STARPU_MATRIX_GET_NY(buffers[2]);
+
          
          int id = starpu_worker_get_id();
 
@@ -549,9 +600,17 @@ namespace spldlt { namespace starpu {
          // printf("[updateN_block_app_cpu_func] iblk = %d, jblk = %d, blk = %d\n", iblk, jblk, blk);
          // printf("[updateN_block_app_cpu_func] beta = %f\n", beta);
 
+         printf("[updateN_block_app_cpu_func] pre\n");
+         print_block(m_a_ij, n_a_ij, a_ij, ld_a_ij);
+
          BlockSpec ublk(iblk, jblk, m, n, *cdata, a_ij, ld_a_ij, blksz);
          BlockSpec isrc(iblk, blk, m, n, *cdata, a_ik, ld_a_ik, blksz);
          BlockSpec jsrc(jblk, blk, m, n, *cdata, a_jk, ld_a_jk, blksz);
+
+         // Debug
+         // T *d = (*cdata)[blk].d;
+         // for(int i=0; i<(*cdata)[blk].nelim; i++)
+         //    printf("[udpateN_block_app_cpu_func] d(%d) = %.2e\n", i, d[i]);
 
 #if !defined(SPLDLT_USE_GPU)
          // If we're on the block col we've just eliminated, restore
@@ -561,6 +620,10 @@ namespace spldlt { namespace starpu {
          // Perform actual update
          ublk.update(
                isrc, jsrc, (*work)[id], beta, upd, ldupd);
+
+         printf("[updateN_block_app_cpu_func] post\n");
+         print_block(m_a_ij, n_a_ij, a_ij, ld_a_ij);
+
       }
 
       template<typename T, 
@@ -1357,8 +1420,8 @@ namespace spldlt { namespace starpu {
 
          starpu_codelet_init(&cl_updateN_block_app);
 #if defined(SPLDLT_USE_GPU)
-         cl_updateN_block_app.where = STARPU_CPU; // DEBUG
-         // cl_updateN_block_app.where = STARPU_CUDA; // DEBUG
+         // cl_updateN_block_app.where = STARPU_CPU; // DEBUG
+         cl_updateN_block_app.where = STARPU_CUDA; // DEBUG
          // cl_updateN_block_app.where = STARPU_CPU | STARPU_CUDA;
 #else
          cl_updateN_block_app.where = STARPU_CPU;
@@ -1405,8 +1468,8 @@ namespace spldlt { namespace starpu {
 
          starpu_codelet_init(&cl_update_contrib_block_app);
 #if defined(SPLDLT_USE_GPU)
-         // cl_update_contrib_block_app.where = STARPU_CPU;
-         cl_update_contrib_block_app.where = STARPU_CUDA; // Debug
+         cl_update_contrib_block_app.where = STARPU_CPU;
+         // cl_update_contrib_block_app.where = STARPU_CUDA; // Debug
          // cl_update_contrib_block_app.where = STARPU_CPU | STARPU_CUDA;
 #else
          cl_update_contrib_block_app.where = STARPU_CPU;

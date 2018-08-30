@@ -24,10 +24,13 @@ namespace /* anon */ {
       int tx = threadIdx.x;
       int ty = threadIdx.y;
 
+      // if (tx == 0 && ty == 0)
+      //    printf("[cu_calc_ld] m = %d, n = %d\n", m, n);
+
       for (int col = ty + by * blockDim.y; col < n; col += blockDim.y * gridDim.y) {
 
          // if (tx == 0) {
-         //    printf("[cu_calc_ld] col = %d, d[2*col] = %f\n", col, d[2*col]);
+         //    printf("[cu_calc_ld] col = %d, d[2*col] = %.2e\n", col, d[col]);
          // }
          
          // Check if we are halfway trhough a 2x2 pivot

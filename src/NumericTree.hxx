@@ -87,6 +87,7 @@ namespace spldlt {
          for(int i = 0; i < nworkers; ++i)
             workspaces.emplace_back(PAGE_SIZE);
 
+#if defined(SPLDLT_USE_STARPU)
          // Register worksapce handle which is currently only used for
          // CUDA kernels
          starpu_matrix_data_register (
@@ -94,6 +95,11 @@ namespace spldlt {
                -1, (uintptr_t) NULL,
                blksz, blksz, blksz,
                sizeof(T));
+
+#if defined(SPLDLT_USE_GPU)
+         starpu_cublas_init();
+#endif
+#endif
 
 #if defined(SPLDLT_USE_STARPU)
          if (posdef) {
@@ -119,9 +125,13 @@ namespace spldlt {
 
 #if defined(SPLDLT_USE_STARPU)
          starpu_task_wait_for_all();
-#endif
 
          starpu_data_unregister(spldlt::starpu::workspace_hdl);
+
+#if defined(SPLDLT_USE_GPU)
+      starpu_cublas_shutdown();
+#endif
+#endif
 
          // Reduce thread_stats
          stats = ThreadStats(); // initialise

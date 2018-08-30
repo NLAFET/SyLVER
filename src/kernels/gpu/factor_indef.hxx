@@ -33,6 +33,8 @@ namespace spldlt { namespace gpu {
             T * const d_d, // Diagonal for block-column k
             T *d_ld, int d_ldld  // Workspace
             ) {
+
+         // printf("[update_block] m = %d, n = %d, k = %d\n", m, n, k);
          
          T ralpha = -1.0;         
          T rbeta = zero_upd ? 0.0 : 1.0;
