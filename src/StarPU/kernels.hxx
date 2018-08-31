@@ -130,18 +130,32 @@ namespace spldlt { namespace starpu {
       
       template <typename T, typename PoolAlloc>
       void insert_fini_node(
-            starpu_data_handle_t node_hdl, 
+            starpu_data_handle_t node_hdl,
+            starpu_data_handle_t *hdls, int nhdl, // Children node's symbolic handles
             NumericFront<T, PoolAlloc> *node,
             int prio) {
 
          int ret;
+         int nh = 0;
+         
+         struct starpu_data_descr *descrs = new starpu_data_descr[nhdl+1];
+
+         for (int i=0; i<nhdl; i++) {
+            descrs[nh].handle = hdls[i]; descrs[nh].mode = STARPU_RW;
+            ++nh;
+         }
+
+         descrs[nh].handle = node_hdl; descrs[nh].mode = STARPU_RW;
+         ++nh;
          
          ret = starpu_insert_task(
                &cl_fini_node,
-               STARPU_RW, node_hdl,
+               STARPU_DATA_MODE_ARRAY, descrs, nh,
                STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
                STARPU_PRIORITY, prio,
                0);
+
+         delete[] descrs;
       }
 
       ////////////////////////////////////////////////////////////////////////////////
@@ -1097,10 +1111,12 @@ namespace spldlt { namespace starpu {
             starpu_data_handle_t cnode_hdl,
             int prio) {
 
+         assert(ndest > 0);
+
          int ret;
          int nh = 0;
          
-         struct starpu_data_descr *descrs = new starpu_data_descr[ndest+3];
+         struct starpu_data_descr *descrs = new starpu_data_descr[ndest+2];
 
          descrs[nh].handle = bc_hdl; descrs[nh].mode = STARPU_R;
          nh++;
@@ -1185,10 +1201,12 @@ namespace spldlt { namespace starpu {
             std::vector<spral::ssids::cpu::Workspace> *workspaces,
             int prio) {
 
+         assert(ndest > 0);
+
          int ret;
          int nh = 0;
          
-         struct starpu_data_descr *descrs = new starpu_data_descr[ndest+4];
+         struct starpu_data_descr *descrs = new starpu_data_descr[ndest+3];
 
          descrs[nh].handle = bc_hdl; descrs[nh].mode = STARPU_R;
          nh++;
@@ -1305,6 +1323,8 @@ namespace spldlt { namespace starpu {
                                   STARPU_VALUE, &blksz, sizeof(int),
                                   STARPU_VALUE, &factor_alloc, sizeof(FactorAlloc*),
                                   0);
+
+         delete[] descrs;
       }
 
       ////////////////////////////////////////////////////////////////////////////////

@@ -18,9 +18,22 @@ namespace spldlt {
 
 #if defined(SPLDLT_USE_STARPU)
 
-      spldlt::starpu::insert_fini_cnodes(
-            node.get_hdl(), &node);
+      int nchild = 0;
+      for (auto* child=node.first_child; child!=NULL; child=child->next_child)
+         nchild++;
 
+      starpu_data_handle_t *cnode_hdls = new starpu_data_handle_t[nchild];
+
+      int i = 0;
+      for (auto* child=node.first_child; child!=NULL; child=child->next_child) {
+         cnode_hdls[i] = child->symb.hdl;
+         ++i;
+      }
+      
+      spldlt::starpu::insert_fini_cnodes(
+            node.get_hdl(), cnode_hdls, nchild, &node);
+
+      delete[] cnode_hdls;
 #else
 
       fini_cnodes(node);

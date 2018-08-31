@@ -129,7 +129,7 @@ namespace spldlt {
          starpu_data_unregister(spldlt::starpu::workspace_hdl);
 
 #if defined(SPLDLT_USE_GPU)
-      starpu_cublas_shutdown();
+         starpu_cublas_shutdown();
 #endif
 #endif
 
@@ -236,7 +236,7 @@ namespace spldlt {
             // Skip iteration if node is in a subtree
             if (sfront.exec_loc != -1) continue;
 
-            // printf("[factor_mf_indef] ni = %d\n", ni);
+            // printf("[factor_mf_indef] ni = %d, exec_loc = %d\n", ni, sfront.exec_loc);
 
 // #if defined(SPLDLT_USE_STARPU)
 //             starpu_task_wait_for_all();
@@ -317,6 +317,12 @@ namespace spldlt {
 // #endif
 
          } // Loop over nodes
+
+// #if defined(SPLDLT_USE_STARPU)
+//          starpu_task_wait_for_all();
+// #endif
+
+         // printf("[factor_mf_indef] exec_loc = %d\n", fronts_[symb_.nnodes_].symb.exec_loc);
 
          // Finish root node
          fini_cnodes_task(fronts_[symb_.nnodes_]);

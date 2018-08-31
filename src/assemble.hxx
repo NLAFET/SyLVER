@@ -193,7 +193,7 @@ namespace spldlt {
             // }
 
             // assemble_delays(*child, delay_col, node);
-            assemble_delays_task(*child, delay_col, node);            
+            assemble_delays_task(*child, delay_col, node);
 // #if defined(SPLDLT_USE_STARPU)
 //             starpu_task_wait_for_all();
 // #endif      

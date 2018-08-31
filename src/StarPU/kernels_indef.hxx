@@ -79,8 +79,8 @@ namespace spldlt { namespace starpu {
                &cdata, &backup,
                &options, &work, &alloc);
 
-         printf("[factor_block_app_cpu_func]\n");
-         print_block(m_a_kk, n_a_kk, a_kk, lda);
+         // printf("[factor_block_app_cpu_func]\n");
+         // print_block(m_a_kk, n_a_kk, a_kk, lda);
 
          spldlt::ldlt_app_internal::Block<T, INNER_BLOCK_SIZE, IntAlloc> dblk(blk, blk, m, n, *cdata, a_kk, lda, options->cpu_block_size);
 
@@ -205,8 +205,8 @@ namespace spldlt { namespace starpu {
                   // Update column's passed pivot count
          (*cdata)[blk].update_passed(blkpass);
 
-         printf("[applyN_block_app_cpu_func] blk = %d, nelim = %d\n", blk, (*cdata)[blk].nelim);
-         print_block(m_a_ik, n_a_ik, a_ik, ld_a_ik);
+         // printf("[applyN_block_app_cpu_func] blk = %d, nelim = %d\n", blk, (*cdata)[blk].nelim);
+         // print_block(m_a_ik, n_a_ik, a_ik, ld_a_ik);
       }
 
       ////////////////////////////////////////
@@ -507,8 +507,8 @@ namespace spldlt { namespace starpu {
          // printf("[updateN_block_app_cpu_func] iblk = %d, jblk = %d, blk = %d, cnelim = %d\n", iblk, jblk, blk, cnelim);
          if (cnelim == 0) return;
 
-         printf("[updateN_block_app_gpu_func] udpate (%d,%d,%d), updm = %d, updn = %d, cnelim = %d\n", blk, iblk, jblk, updm, updn, cnelim);
-         printf("[updateN_block_app_gpu_func] ld_lij = %d, ld_lik = %d, ld_lkj = %d\n", ld_lij, ld_lik, ld_ljk);
+         // printf("[updateN_block_app_gpu_func] udpate (%d,%d,%d), updm = %d, updn = %d, cnelim = %d\n", blk, iblk, jblk, updm, updn, cnelim);
+         // printf("[updateN_block_app_gpu_func] ld_lij = %d, ld_lik = %d, ld_lkj = %d\n", ld_lij, ld_lik, ld_ljk);
 
          cudaStream_t stream = starpu_cuda_get_local_stream();
          cublasHandle_t handle = starpu_cublas_get_local_handle();
@@ -600,8 +600,8 @@ namespace spldlt { namespace starpu {
          // printf("[updateN_block_app_cpu_func] iblk = %d, jblk = %d, blk = %d\n", iblk, jblk, blk);
          // printf("[updateN_block_app_cpu_func] beta = %f\n", beta);
 
-         printf("[updateN_block_app_cpu_func] pre\n");
-         print_block(m_a_ij, n_a_ij, a_ij, ld_a_ij);
+         // printf("[updateN_block_app_cpu_func] pre\n");
+         // print_block(m_a_ij, n_a_ij, a_ij, ld_a_ij);
 
          BlockSpec ublk(iblk, jblk, m, n, *cdata, a_ij, ld_a_ij, blksz);
          BlockSpec isrc(iblk, blk, m, n, *cdata, a_ik, ld_a_ik, blksz);
@@ -621,8 +621,8 @@ namespace spldlt { namespace starpu {
          ublk.update(
                isrc, jsrc, (*work)[id], beta, upd, ldupd);
 
-         printf("[updateN_block_app_cpu_func] post\n");
-         print_block(m_a_ij, n_a_ij, a_ij, ld_a_ij);
+         // printf("[updateN_block_app_cpu_func] post\n");
+         // print_block(m_a_ij, n_a_ij, a_ij, ld_a_ij);
 
       }
 
@@ -1288,6 +1288,9 @@ namespace spldlt { namespace starpu {
             void **child_contrib, int contrib_idx,
             int delay_col) {
 
+         assert(delay_col > 0);
+         assert(nhdl > 0);
+
          int ret;
          int nh = 0;
 
@@ -1297,6 +1300,8 @@ namespace spldlt { namespace starpu {
             descrs[nh].handle = hdls[i]; descrs[nh].mode = STARPU_RW;
             nh++;
          }
+
+         assert(nh > 0);
 
          // Handle on subtree
          descrs[nh].handle = root_hdl; descrs[nh].mode = STARPU_R;
@@ -1312,6 +1317,7 @@ namespace spldlt { namespace starpu {
                STARPU_VALUE, &delay_col, sizeof(int),
                0);
 
+         delete[] descrs;
       }
          
       ////////////////////////////////////////
@@ -1342,6 +1348,10 @@ namespace spldlt { namespace starpu {
             int delay_col,
             NumericFront<T, PoolAlloc> *node) {
 
+         assert(nchdl > 0);
+         assert(nhdl > 0);
+         assert(delay_col > 0);
+
          int ret;
 
          struct starpu_data_descr *descrs = new starpu_data_descr[nchdl+nhdl];
@@ -1368,6 +1378,7 @@ namespace spldlt { namespace starpu {
                0);
          STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
 
+         delete[] descrs;
       }
 
       ////////////////////////////////////////////////////////////////////////////////
@@ -1420,8 +1431,8 @@ namespace spldlt { namespace starpu {
 
          starpu_codelet_init(&cl_updateN_block_app);
 #if defined(SPLDLT_USE_GPU)
-         // cl_updateN_block_app.where = STARPU_CPU; // DEBUG
-         cl_updateN_block_app.where = STARPU_CUDA; // DEBUG
+         cl_updateN_block_app.where = STARPU_CPU; // DEBUG
+         // cl_updateN_block_app.where = STARPU_CUDA; // DEBUG
          // cl_updateN_block_app.where = STARPU_CPU | STARPU_CUDA;
 #else
          cl_updateN_block_app.where = STARPU_CPU;

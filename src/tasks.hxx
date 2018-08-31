@@ -83,7 +83,7 @@ namespace spldlt {
       
    }
 
-   ////////////////////////////////////////////////////////////////////////////////
+   ////////////////////////////////////////////////////////////
    // Initialize node.
    template <typename T, typename PoolAlloc>
    void init_node_task(
@@ -105,7 +105,7 @@ namespace spldlt {
 
    }
 
-   ////////////////////////////////////////////////////////////////////////////////
+   ////////////////////////////////////////////////////////////
    // Terminate node
    template <typename T, typename PoolAlloc>
    void fini_node_task(
@@ -113,9 +113,23 @@ namespace spldlt {
 
 #if defined(SPLDLT_USE_STARPU)
 
-      spldlt::starpu::insert_fini_node(
-            node.get_hdl(), &node, INIT_PRIO);
+      int nh = 0;
+      int nr = node.get_nr();
+      int nc = node.get_nc();
+      
+      starpu_data_handle_t *hdls = new starpu_data_handle_t[nr*nc];
 
+      for(int j = 0; j < nc; ++j) {
+         for(int i = j; i < nr; ++i) {
+            hdls[nh] = node.blocks[j*nr+i].get_hdl();
+            ++nh;
+         }
+      }
+      
+      spldlt::starpu::insert_fini_node(
+            node.get_hdl(), hdls, nh, &node, INIT_PRIO);
+
+      delete[] hdls;
 #else
 
       fini_node(node);
@@ -153,7 +167,7 @@ namespace spldlt {
       }
       // printf("[activate_init_front_task] node = %d, nchild = %d\n", snode.idx+1, nchild);
       spldlt::starpu::insert_activate_init_node(
-            snode.hdl, cnode_hdls, nchild,
+            node.get_hdl(), cnode_hdls, nchild,
             posdef, &snode, &node, child_contrib, blksz, &factor_alloc, 
             &pool_alloc, aval);
       

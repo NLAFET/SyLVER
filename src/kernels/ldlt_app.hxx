@@ -1367,7 +1367,7 @@ public:
 
 #if defined(SPLDLT_USE_STARPU)
    /* return StarPU on block */
-   starpu_data_handle_t get_hdl() { return hdl_; }
+   starpu_data_handle_t get_hdl() const { return hdl_; }
 
    /// @brief Register data handle in StarPU
    void register_handle() {

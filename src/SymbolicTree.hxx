@@ -24,11 +24,11 @@ namespace spldlt {
            nsubtrees_(nsubtrees), subtrees_(subtrees)
            // nparts_(nparts), part_(part)
       {
-         printf("[SymbolicTree] nsubtrees = %d\n", nsubtrees);
-
+         // printf("[SymbolicTree] nsubtrees = %d\n", nsubtrees);
+         // printf("[SymbolicTree] root parent = %d\n", sparent[nnodes_]-1);
          // for(int ni=0; ni<nnodes_; ++ni) 
          //    fronts_[ni].least_desc = ni;
-
+         
          maxfront_ = 0;
          for(int ni=0; ni<nnodes_; ++ni) {
             // SymbolicNode info
@@ -99,6 +99,10 @@ namespace spldlt {
             fronts_[idx].part = p;
             fronts_[idx].contrib_idx = p;
          }
+
+         // Init symbolic root
+         fronts_[nnodes_].idx = nnodes_;
+         fronts_[nnodes_].exec_loc = -1;
       }
 
       SymbolicFront& operator[](int idx) {

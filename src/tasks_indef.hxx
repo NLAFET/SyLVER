@@ -184,6 +184,8 @@ namespace spldlt {
          int delay_col,
          NumericFront<T,PoolAlloc>& node) {
 
+      // printf("[assemble_delays_task] idx = %d, cidx = %d, cnode.ndelay_out = %d\n", 
+      //        node.symb.idx+1 , cnode.symb.idx+1 ,cnode.ndelay_out);
       if (cnode.ndelay_out <= 0) return; // No task to submit if no delays
 
 #if defined(SPLDLT_USE_STARPU)
@@ -236,9 +238,11 @@ namespace spldlt {
             rr = r / blksz; // Destination block-row
             
             if (r < ncol) {
+               assert(cc <= nr && rr <= nc);
                hdls[nh] = node.blocks[rr*nr+cc].get_hdl();
             }
             else {
+               assert(rr <= nr && cc <= nc);
                hdls[nh] = node.blocks[cc*nr+rr].get_hdl();
             }
             nh++;
