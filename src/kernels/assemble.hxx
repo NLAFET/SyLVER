@@ -284,10 +284,8 @@ namespace spldlt {
    template <typename T, typename FactorAlloc, typename PoolAlloc>
    void activate_front(
          bool posdef,
-         SymbolicFront &sfront,
          NumericFront<T, PoolAlloc> &front,
          void** child_contrib,
-         int blksz,
          FactorAlloc& factor_alloc) {
 
       // Allocate frontal matrix
@@ -416,20 +414,71 @@ namespace spldlt {
       front.alloc_blocks();
    }
 
+   // Taken from SSIDS for debugging purpose
+   /**
+    * \brief Add \f$A\f$ to a given block column of a node.
+    *
+    * \param from First column of target block column.
+    * \param to One more than last column of target block column.
+    * \param node Supernode to add to.
+    * \param aval Values of \f$A\f$.
+    * \param ldl Leading dimension of node.
+    * \param scaling Scaling to apply (none if null).
+    */
+   template <typename T, typename NumericNode>
+   void init_a_block(int from, int to, NumericNode& node, T const* aval,
+                    T const* scaling) {
+      SymbolicNode const& snode = node.symb;
+      size_t ldl = node.get_ldl();
+      if(scaling) {
+         /* Scaling to apply */
+         for(int i=from; i<to; ++i) {
+            long src  = snode.amap[2*i+0] - 1; // amap contains 1-based values
+            long dest = snode.amap[2*i+1] - 1; // amap contains 1-based values
+            int c = dest / snode.nrow;
+            int r = dest % snode.nrow;
+            long k = c*ldl + r;
+            if(r >= snode.ncol) k += node.ndelay_in;
+            T rscale = scaling[ snode.rlist[r]-1 ];
+            T cscale = scaling[ snode.rlist[c]-1 ];
+            node.lcol[k] = rscale * aval[src] * cscale;
+         }
+      } else {
+         /* No scaling to apply */
+         for(int i=from; i<to; ++i) {
+            long src  = snode.amap[2*i+0] - 1; // amap contains 1-based values
+            long dest = snode.amap[2*i+1] - 1; // amap contains 1-based values
+            int c = dest / snode.nrow;
+            int r = dest % snode.nrow;
+            assert(c < node.get_ncol());
+            assert(r < node.get_nrow());
+            long k = c*ldl + r;
+            // printf("[init_a_block] k = %d, src = %d\n", k, src);
+            if(r >= snode.ncol) k += node.ndelay_in;
+            // if(node.ndelay_in>0) printf("[init_a_block] ndelay_in = %d\n", node.ndelay_in);
+            // printf("[init_a_block] ldl = %d\n", ldl);
+            node.lcol[k] = aval[src];
+         }
+      }
+   }
+
+
    ////////////////////////////////////////////////////////////////////////////////
    template <typename T,
              typename PoolAlloc>
    void init_node(
-         SymbolicFront const& sfront,
          NumericFront<T,PoolAlloc>& front,
          T const* aval) {
 
-      bool posdef = true;
-      T *scaling = NULL;
+      T *scaling = nullptr;
+      SymbolicFront const& sfront = front.symb;
 
+      // printf("[init_node] node idx = %d, num_a = %d\n", sfront.idx+1, sfront.num_a);
       /* Add A */
       // add_a_block<T, NumericNode<T,PoolAlloc>>(0, snode.num_a, node, aval, NULL);  
-      spral::ssids::cpu::add_a_block(0, sfront.num_a, front, aval, scaling);
+      // spral::ssids::cpu::add_a_block(0, sfront.num_a, front, aval, scaling);
+      spldlt::init_a_block(0, sfront.num_a, front, aval, scaling);
+
    }
    
    // Terminate node.

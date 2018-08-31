@@ -77,7 +77,7 @@ namespace spldlt { namespace starpu {
                &front,
                &aval);
 
-         init_node(*sfront, *front, aval);
+         init_node(*front, aval);
       }
 
       // init_node codelet
@@ -820,13 +820,13 @@ namespace spldlt { namespace starpu {
                &options,
                &worker_stats);
 
+         printf("[factor_subtree_cpu_func] subtree: %d\n", p+1);
+
          int workerid = starpu_worker_get_id();
          ThreadStats& stats = (*worker_stats)[workerid];
 
-         // printf("[factor_subtree_cpu_func]\n");
          // printf("[factor_subtree_cpu_func] akeep = %p, fkeep = %p\n", akeep, fkeep);
-         // printf("[factor_subtree_cpu_func] subtree: %d, child_contrib: %p\n", p+1, child_contrib);
-            spldlt_factor_subtree_c(akeep, fkeep, p, aval, child_contrib, options, &stats);
+         spldlt_factor_subtree_c(akeep, fkeep, p, aval, child_contrib, options, &stats);
       }
 
       // factor_subtree StarPU codelet
@@ -1281,8 +1281,7 @@ namespace spldlt { namespace starpu {
                cl_arg, &posdef, &snode, &node, &child_contrib, &blksz,
                &factor_alloc);
 
-         activate_front(posdef, *snode, *node, child_contrib, blksz, 
-                        *factor_alloc);
+         activate_front(posdef, *node, child_contrib, *factor_alloc);
          
       }
 
@@ -1334,25 +1333,24 @@ namespace spldlt { namespace starpu {
       void activate_init_node_cpu_func(void *buffers[], void *cl_arg) {
          
          bool posdef;
-         SymbolicFront *snode;
          NumericFront<T, PoolAlloc> *node;
          void** child_contrib;
-         int blksz;
          FactorAlloc *factor_alloc;
          PoolAlloc *pool_alloc;
          T *aval;
 
          starpu_codelet_unpack_args(
-               cl_arg, &posdef, &snode, &node, &child_contrib, &blksz,
+               cl_arg, &posdef, &node, &child_contrib, 
                &factor_alloc, &pool_alloc, &aval);
-         
 
+         printf("[activate_init_node_cpu_func] node idx = %d\n", node->symb.idx+1);
+         
          // Allocate data structures
          activate_front(
-               posdef, *snode, *node, child_contrib, blksz, *factor_alloc);
+               posdef, *node, child_contrib, *factor_alloc);
       
          // Add coefficients from original matrix
-         init_node(*snode, *node, aval);
+         init_node(*node, aval);
       }
 
       // activate_init_node StarPU codelet
@@ -1363,10 +1361,8 @@ namespace spldlt { namespace starpu {
             starpu_data_handle_t node_hdl, // Node's symbolic handle
             starpu_data_handle_t *cnode_hdls, int nhdl, // Children node's symbolic handles
             bool posdef,
-            SymbolicFront *snode,
             NumericFront<T, PoolAlloc> *node,
             void** child_contrib,
-            int blksz,
             FactorAlloc *factor_alloc,
             PoolAlloc *pool_alloc,
             T *aval
@@ -1389,10 +1385,8 @@ namespace spldlt { namespace starpu {
          ret = starpu_task_insert(&cl_activate_init_node,
                                   STARPU_DATA_MODE_ARRAY, descrs, nh,
                                   STARPU_VALUE, &posdef, sizeof(bool),
-                                  STARPU_VALUE, &snode, sizeof(SymbolicFront*),
                                   STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
                                   STARPU_VALUE, &child_contrib, sizeof(void**),
-                                  STARPU_VALUE, &blksz, sizeof(int),
                                   STARPU_VALUE, &factor_alloc, sizeof(FactorAlloc*),
                                   STARPU_VALUE, &pool_alloc, sizeof(PoolAlloc*),
                                   STARPU_VALUE, &aval, sizeof(T*),

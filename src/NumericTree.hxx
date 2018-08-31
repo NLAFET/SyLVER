@@ -194,7 +194,7 @@ namespace spldlt {
          // Register symbolic handles.
          for(int ni = 0; ni < symb_.nnodes_+1; ++ni) {
             starpu_void_data_register(&(symb_[ni].hdl)); // Node's symbolic handle
-            starpu_void_data_register(&(fronts_[ni].contrib_hdl)); // Node's symbolic handle
+            starpu_void_data_register(&(fronts_[ni].contrib_hdl)); // Symbolic handle for contribution blocks
          }
 #endif
 
@@ -223,9 +223,9 @@ namespace spldlt {
             //       symb_.akeep_, fkeep_, p, aval, child_contrib, &options, 
             //       &worker_stats[0]);
          }
-// #if defined(SPLDLT_USE_STARPU)
-//          starpu_task_wait_for_all();
-// #endif         
+#if defined(SPLDLT_USE_STARPU)
+         starpu_task_wait_for_all();
+#endif         
 
          // Allocate mapping array
          // int *map = new int[symb_.n+1];
@@ -247,11 +247,17 @@ namespace spldlt {
             //       false, sfront, fronts_[ni], child_contrib, blksz, factor_alloc_,
             //       pool_alloc_);
             activate_init_front_task(
-                  false, sfront, fronts_[ni], child_contrib, blksz, 
-                  factor_alloc_, pool_alloc_, aval);
+                  false, fronts_[ni], child_contrib, factor_alloc_, 
+                  pool_alloc_, aval);
+
+//          }
 // #if defined(SPLDLT_USE_STARPU)
 //             starpu_task_wait_for_all();
 // #endif
+//          for(int ni = 0; ni < symb_.nnodes_; ++ni) {
+//             SymbolicFront& sfront = symb_[ni];
+//             // Skip iteration if node is in a subtree
+//             if (sfront.exec_loc != -1) continue;
             
             // assemble contributions from children fronts and subtreess
             // assemble_notask(symb_.n, fronts_[ni], child_contrib, pool_alloc_);
@@ -292,25 +298,7 @@ namespace spldlt {
 //             starpu_task_wait_for_all();
 // #endif
 
-            fini_cnodes_task(fronts_[ni]);
-            
-//             // Deactivate children fronts
-//             for (auto* child=fronts_[ni].first_child; child!=NULL; child=child->next_child) {
-
-//                SymbolicFront const& csnode = child->symb;
-
-//                if (csnode.exec_loc == -1) {
-//                   // fini_node(*child);
-//                   fini_node_task(*child, INIT_PRIO);
-// // #if defined(SPLDLT_USE_STARPU)
-// //             starpu_task_wait_for_all();
-// // #endif
-//                }
-// #if defined(SPLDLT_USE_STARPU)
-//                // Unregister symbolic handle on child node
-//                starpu_data_unregister_submit(csnode.hdl);
-// #endif
-//             } // Loop over child nodes
+            // fini_cnodes_task(fronts_[ni]);
 
 // #if defined(SPLDLT_USE_STARPU)
 //             starpu_task_wait_for_all();
@@ -322,10 +310,8 @@ namespace spldlt {
 //          starpu_task_wait_for_all();
 // #endif
 
-         // printf("[factor_mf_indef] exec_loc = %d\n", fronts_[symb_.nnodes_].symb.exec_loc);
-
          // Finish root node
-         fini_cnodes_task(fronts_[symb_.nnodes_]);
+         // fini_cnodes_task(fronts_[symb_.nnodes_]);
 
       }
 
@@ -394,8 +380,7 @@ namespace spldlt {
             
             // Activate frontal matrix
             activate_front(
-                  posdef, sfront, fronts_[ni], child_contrib, blksz, 
-                  factor_alloc_);
+                  posdef, fronts_[ni], child_contrib, factor_alloc_);
 
             // Initialize frontal matrix 
             // init_node(sfront, fronts_[ni], aval); // debug

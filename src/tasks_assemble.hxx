@@ -24,10 +24,10 @@ namespace spldlt {
 
       starpu_data_handle_t *cnode_hdls = new starpu_data_handle_t[nchild];
 
-      int i = 0;
+      int nc = 0;
       for (auto* child=node.first_child; child!=NULL; child=child->next_child) {
-         cnode_hdls[i] = child->symb.hdl;
-         ++i;
+         cnode_hdls[nc] = child->symb.hdl;
+         ++nc;
       }
       
       spldlt::starpu::insert_fini_cnodes(

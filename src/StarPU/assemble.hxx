@@ -32,11 +32,11 @@ namespace spldlt { namespace starpu {
          struct starpu_data_descr *descrs = new starpu_data_descr[nhdl+1];
 
          int nh = 0;
-         descrs[nh].handle = node_hdl; descrs[nh].mode = STARPU_RW; // FIXME isn't STARPU_R sufficient 
+         descrs[nh].handle = node_hdl; descrs[nh].mode = STARPU_R; // FIXME isn't STARPU_R sufficient 
          nh++;
 
          for (int i=0; i<nhdl; i++) {
-            descrs[nh].handle = cnode_hdls[i]; descrs[nh].mode = STARPU_RW;
+            descrs[nh].handle = cnode_hdls[i]; descrs[nh].mode = STARPU_R;
             nh++;
          }
 

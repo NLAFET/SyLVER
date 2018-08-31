@@ -143,10 +143,8 @@ namespace spldlt {
    template <typename T, typename FactorAlloc, typename PoolAlloc>
    void activate_init_front_task(
          bool posdef,
-         SymbolicFront& snode,
          NumericFront<T, PoolAlloc>& node,
          void** child_contrib,
-         int blksz,
          FactorAlloc& factor_alloc,
          PoolAlloc& pool_alloc,
          T *aval
@@ -160,15 +158,17 @@ namespace spldlt {
 
       starpu_data_handle_t *cnode_hdls = new starpu_data_handle_t[nchild];
       
-      int i = 0;
+      int nc = 0;
       for (auto* child=node.first_child; child!=NULL; child=child->next_child) {
-         cnode_hdls[i] = child->symb.hdl;
-         ++i;
+         cnode_hdls[nc] = child->get_hdl();
+         ++nc;
       }
-      // printf("[activate_init_front_task] node = %d, nchild = %d\n", snode.idx+1, nchild);
+
+      // printf("[activate_init_front_task] node = %d, nchild = %d, nc = %d\n", node.symb.idx+1, nchild, nc);
+
       spldlt::starpu::insert_activate_init_node(
-            node.get_hdl(), cnode_hdls, nchild,
-            posdef, &snode, &node, child_contrib, blksz, &factor_alloc, 
+            node.get_hdl(), cnode_hdls, nc,
+            posdef, &node, child_contrib, &factor_alloc, 
             &pool_alloc, aval);
       
       delete[] cnode_hdls;
@@ -176,10 +176,10 @@ namespace spldlt {
 #else
       // Allocate data structures
       activate_front(
-            posdef, snode, node, child_contrib, blksz, factor_alloc); 
+            posdef, node, child_contrib, factor_alloc); 
 
       // Add coefficients from original matrix
-      init_node(snode, node, aval);
+      init_node(node, aval);
 #endif
 
    }
