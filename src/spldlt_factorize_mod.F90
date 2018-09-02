@@ -314,8 +314,8 @@ contains
     use spral_ssids_contrib, only : contrib_type
     implicit none
 
-    type(c_ptr), intent(in), value :: cakeep
-    type(c_ptr), intent(in), value :: cfkeep
+    type(c_ptr), value :: cakeep
+    type(c_ptr), value :: cfkeep
     integer(c_int), value :: p ! Partition number, C-indexed
     real(c_double), dimension(*), intent(in) :: val
     type(c_ptr), dimension(*), intent(inout) :: child_contrib_c
@@ -348,7 +348,7 @@ contains
 
     !if (akeep%contrib_idx(part) .le. akeep%nparts) then
     ! There is a parent subtree to contribute to
-    ! print *, "[spldlt_factor_subtree_c] part = ", part, ", contrib to = ",  akeep%contrib_idx(part)
+    ! print *, "[spldlt_factor_subtree_c] part = ", part
     contrib = fkeep%subtree(part)%ptr%get_contrib()
     contrib%ready = .true.
     !end if

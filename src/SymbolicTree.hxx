@@ -26,8 +26,8 @@ namespace spldlt {
       {
          // printf("[SymbolicTree] nsubtrees = %d\n", nsubtrees);
          // printf("[SymbolicTree] root parent = %d\n", sparent[nnodes_]-1);
-         // for(int ni=0; ni<nnodes_; ++ni) 
-         //    fronts_[ni].least_desc = ni;
+         for(int ni=0; ni<nnodes_; ++ni) 
+            fronts_[ni].least_desc = ni;
          
          maxfront_ = 0;
          for(int ni=0; ni<nnodes_; ++ni) {
@@ -49,10 +49,10 @@ namespace spldlt {
             // nodes_[ni].sa = sptr[ni];
             // nodes_[ni].en = sptr[ni+1]-1;
             
-            // // Setup least_desc for easily traverse subtrees
-            // nodes_[nodes_[ni].parent].least_desc = std::min(
-            //       nodes_[nodes_[ni].parent].least_desc,
-            //       nodes_[ni].least_desc);
+            // Setup least_desc for easily traverse subtrees
+            fronts_[fronts_[ni].parent].least_desc = std::min(
+                  fronts_[fronts_[ni].parent].least_desc,
+                  fronts_[ni].least_desc);
 
          }
 

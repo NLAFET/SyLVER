@@ -115,7 +115,7 @@ namespace spldlt { namespace starpu {
          
          starpu_codelet_unpack_args(cl_arg, &node);
 
-         // printf("[fini_node_cpu_func]\n");
+         // printf("[fini_node_cpu_func] node idx = %d\n", node->symb.idx+1);
 
          // FIXME: implement posdef case
          // unregister_node_submit(*node);
@@ -805,10 +805,10 @@ namespace spldlt { namespace starpu {
          void *akeep;
          void *fkeep;
          int p;
-         const T *aval;
+         T *aval;
          void **child_contrib;
          struct spral::ssids::cpu::cpu_factor_options *options;
-         std::vector<ThreadStats>* worker_stats;
+         std::vector<ThreadStats> *worker_stats;
 
          starpu_codelet_unpack_args(
                cl_arg,
@@ -820,7 +820,7 @@ namespace spldlt { namespace starpu {
                &options,
                &worker_stats);
 
-         printf("[factor_subtree_cpu_func] subtree: %d\n", p+1);
+         // printf("[factor_subtree_cpu_func] subtree: %d\n", p+1);
 
          int workerid = starpu_worker_get_id();
          ThreadStats& stats = (*worker_stats)[workerid];
@@ -836,12 +836,12 @@ namespace spldlt { namespace starpu {
       template <typename T>
       void insert_factor_subtree(
             starpu_data_handle_t root_hdl, // Symbolic handle on root node
-            const void *akeep,
+            void *akeep,
             void *fkeep,
             int p,
-            const T *aval,
+            T *aval,
             void **child_contrib,
-            const struct spral::ssids::cpu::cpu_factor_options *options,
+            struct spral::ssids::cpu::cpu_factor_options *options,
             std::vector<ThreadStats> *worker_stats) {
 
          int ret;
@@ -1172,11 +1172,11 @@ namespace spldlt { namespace starpu {
 
          // printf("[assemble_contrib_block_cpu_func]\n");
 
-         int workerid = starpu_worker_get_id();
-         spral::ssids::cpu::Workspace &work = (*workspaces)[workerid];
+         // int workerid = starpu_worker_get_id();
+         // spral::ssids::cpu::Workspace &work = (*workspaces)[workerid];
 
 #if defined(MEMLAYOUT_1D)
-         assemble_contrib_block_1d(*node, *cnode, ii, jj, map, work);
+         assemble_contrib_block_1d(*node, *cnode, ii, jj, map);
 #else
          assemble_contrib_block(*node, *cnode, ii, jj, map);
 #endif
@@ -1343,7 +1343,7 @@ namespace spldlt { namespace starpu {
                cl_arg, &posdef, &node, &child_contrib, 
                &factor_alloc, &pool_alloc, &aval);
 
-         printf("[activate_init_node_cpu_func] node idx = %d\n", node->symb.idx+1);
+         // printf("[activate_init_node_cpu_func] node idx = %d\n", node->symb.idx+1);
          
          // Allocate data structures
          activate_front(

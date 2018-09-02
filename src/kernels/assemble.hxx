@@ -153,13 +153,16 @@ namespace spldlt {
             for(int i = j; i < nr; ++i) {
                int blkm = std::min(blksz, m - i*blksz);
 
+               // TODO remove sfront.handles registration for indef case
                starpu_matrix_data_register(
                      &(sfront.handles[i + j*nr]), // StarPU handle ptr 
                      STARPU_MAIN_RAM, // memory 
                      reinterpret_cast<uintptr_t>(&a[(j*blksz)*lda+(i*blksz)]),
                      lda, blkm, blkn,
                      sizeof(T));
-               // printf("[register_front] blk idx = %d, hdl = %p\n", i + j*nr, &(sfront.handles[i + j*nr]));
+
+               // register StarPU handle for block (i, j)
+               front.blocks[j*nr+i].register_handle(); 
 
             }
          }
@@ -668,7 +671,7 @@ namespace spldlt {
       int cnrow = cnode.get_nrow();
 
       int csa = cncol / blksz; // Index of first block in contrib
-      int cnr = (cnrow-1) / blksz + 1; // number of block rows in child node
+      int cnr = cnode.get_nr(); // Number of block rows in child node
       int cncontrib = cnr-csa;
       Tile<T, PoolAlloc> const& src_blk = cnode.contrib_blocks[(ii-csa)+(jj-csa)*cncontrib];
       int src_blk_lda = src_blk.lda;
@@ -677,7 +680,7 @@ namespace spldlt {
 
       // Destination block
       int sa = ncol / blksz; // Index of first block in contrib
-      int nr = (nrow-1) / blksz + 1;
+      int nr = node.get_nr(); // Number of block rows in node
       int ncontrib = nr-sa;
       
       // Colum indexes
@@ -739,8 +742,9 @@ namespace spldlt {
    void assemble_contrib_block_1d(
          NumericFront<T,PoolAlloc>& node, 
          NumericFront<T,PoolAlloc>& cnode, 
-         int ii, int jj, int const* cmap,
-         spral::ssids::cpu::Workspace &work) {
+         int ii, int jj, int const* cmap
+         // spral::ssids::cpu::Workspace &work
+         ) {
       
       // printf("[assemble_contrib_block_1d]\n");
 
@@ -1305,8 +1309,7 @@ namespace spldlt {
    template <typename T, typename PoolAlloc>
    void assemble_contrib_notask(
          NumericFront<T,PoolAlloc>& node,
-         void** child_contrib,
-         int blksz) {
+         void** child_contrib) {
 
       // Assemble front: non fully-summed columns i.e. contribution block 
       for (auto* child=node.first_child; child!=NULL; child=child->next_child) {
@@ -1324,23 +1327,27 @@ namespace spldlt {
                // fully-summed coefficients
                assemble_contrib_subtree(
                      node, child_sfront, child_contrib, 
-                     child_sfront.contrib_idx, blksz);
+                     child_sfront.contrib_idx);
 
             }
             else {                     
 
                int cncol = child->get_ncol();
                int cnrow = child->get_nrow();
-
+               int blksz = child->blksz;
+               
                int csa = cncol / blksz;
                // Number of block rows in child node
-               int cnr = (cnrow-1) / blksz + 1; 
+               int cnr = child->get_nr();
                // Lopp over blocks in contribution blocks
                for (int jj = csa; jj < cnr; ++jj) {                     
                   for (int ii = jj; ii < cnr; ++ii) {
-                     assemble_contrib_block(
-                           node, *child, ii, jj, child_sfront.map, 
-                           blksz);
+
+#if defined(MEMLAYOUT_1D)
+         assemble_contrib_block_1d(node, *child, ii, jj, child_sfront.map);
+#else
+         assemble_contrib_block(node, *child, ii, jj, child_sfront.map);
+#endif
                   }
                }
             }

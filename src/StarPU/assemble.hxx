@@ -15,7 +15,7 @@ namespace spldlt { namespace starpu {
 
          starpu_codelet_unpack_args(cl_arg, &node);
       
-         printf("[fini_cnodes_cpu_func] idx = %d, exec_loc = %d\n", node->symb.idx, node->symb.exec_loc);
+         // printf("[fini_cnodes_cpu_func] idx = %d, exec_loc = %d\n", node->symb.idx, node->symb.exec_loc);
 
          fini_cnodes(*node);
       }
@@ -32,11 +32,11 @@ namespace spldlt { namespace starpu {
          struct starpu_data_descr *descrs = new starpu_data_descr[nhdl+1];
 
          int nh = 0;
-         descrs[nh].handle = node_hdl; descrs[nh].mode = STARPU_R; // FIXME isn't STARPU_R sufficient 
+         descrs[nh].handle = node_hdl; descrs[nh].mode = STARPU_R; 
          nh++;
 
          for (int i=0; i<nhdl; i++) {
-            descrs[nh].handle = cnode_hdls[i]; descrs[nh].mode = STARPU_R;
+            descrs[nh].handle = cnode_hdls[i]; descrs[nh].mode = STARPU_R; // FIXME shouldn't it be STARPU_RW
             nh++;
          }
 

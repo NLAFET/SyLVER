@@ -213,6 +213,7 @@ namespace spldlt {
          // }
          for(int p = 0; p < symb_.nsubtrees_; ++p) {
             int root = symb_.subtrees_[p]-1; // subtrees is 1-indexed
+            // printf("[factor_mf_indef] root idx = %d\n", root+1);
             factor_subtree_task(
                   symb_.akeep_, fkeep_, symb_[root], aval, p, child_contrib, 
                   &options, worker_stats);
@@ -223,9 +224,9 @@ namespace spldlt {
             //       symb_.akeep_, fkeep_, p, aval, child_contrib, &options, 
             //       &worker_stats[0]);
          }
-#if defined(SPLDLT_USE_STARPU)
-         starpu_task_wait_for_all();
-#endif         
+// #if defined(SPLDLT_USE_STARPU)
+//          starpu_task_wait_for_all();
+// #endif         
 
          // Allocate mapping array
          // int *map = new int[symb_.n+1];
@@ -254,7 +255,8 @@ namespace spldlt {
 // #if defined(SPLDLT_USE_STARPU)
 //             starpu_task_wait_for_all();
 // #endif
-//          for(int ni = 0; ni < symb_.nnodes_; ++ni) {
+//             return;
+//             for(int ni = 0; ni < symb_.nnodes_; ++ni) {
 //             SymbolicFront& sfront = symb_[ni];
 //             // Skip iteration if node is in a subtree
 //             if (sfront.exec_loc != -1) continue;
@@ -298,7 +300,7 @@ namespace spldlt {
 //             starpu_task_wait_for_all();
 // #endif
 
-            // fini_cnodes_task(fronts_[ni]);
+            fini_cnodes_task(fronts_[ni]);
 
 // #if defined(SPLDLT_USE_STARPU)
 //             starpu_task_wait_for_all();
@@ -311,7 +313,7 @@ namespace spldlt {
 // #endif
 
          // Finish root node
-         // fini_cnodes_task(fronts_[symb_.nnodes_]);
+         fini_cnodes_task(fronts_[symb_.nnodes_]);
 
       }
 

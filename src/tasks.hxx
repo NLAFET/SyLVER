@@ -467,12 +467,12 @@ namespace spldlt {
 
    template <typename T>
    inline void factor_subtree_task(
-         const void *akeep,
+         void *akeep,
          void *fkeep,
-         SymbolicFront const& root,
-         const T *aval,
+         SymbolicFront& root,
+         T *aval,
          int p, void **child_contrib,
-         const struct spral::ssids::cpu::cpu_factor_options *options,
+         struct spral::ssids::cpu::cpu_factor_options *options,
          std::vector<ThreadStats>& worker_stats) {
 
 #if defined(SPLDLT_USE_STARPU)

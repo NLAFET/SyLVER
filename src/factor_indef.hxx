@@ -6,6 +6,7 @@
 // SpLDLT
 #include "kernels/ldlt_app.hxx"
 #include "kernels/factor_indef.hxx"
+#include "kernels/assemble.hxx"
 #include "tasks_indef.hxx"
 #if defined(SPLDLT_USE_STARPU)
 #include "StarPU/kernels_indef.hxx"
@@ -14,7 +15,48 @@ using namespace spldlt::starpu;
 
 namespace spldlt {
 
-   ////////////////////////////////////////////////////////////////////////////////
+
+   template <typename T, typename FactorAlloc, typename PoolAlloc>
+   void factor_subtree_indef(
+         NumericFront<T, PoolAlloc>& root,
+         int n,
+         int nnodes,
+         std::vector<NumericFront<T,PoolAlloc>>& fronts,
+         void** child_contrib,
+         FactorAlloc& factor_alloc,
+         PoolAlloc& pool_alloc,
+         T const* aval
+         ) {
+
+      int least_desc = root.symb.least_desc;
+      int rootidx = root.symb.idx;
+      
+      // Traverse subtree from least descenent to root
+      for (int ni = least_desc; ni <= rootidx; ++ni) {
+
+         NumericFront<T, PoolAlloc>& front = fronts[ni];
+         
+         // Call alloc instead of activate because we don't need to
+         // register StarPU handles
+         alloc_front_indef(front, child_contrib, factor_alloc);
+
+         init_node(front, aval);
+
+         assemble_notask(n, front, child_contrib, pool_alloc);  
+
+         
+         
+         assemble_contrib_notask(front, child_contrib);
+
+         for (auto* child=front.first_child; child!=NULL; child=child->next_child) {
+            fini_node(*child);
+         }
+      }
+
+      
+   }
+   
+   ////////////////////////////////////////////////////////////
    // factor_front_indef
    //
    /// @brief Perform the LDLT factorization of front
@@ -1205,8 +1247,54 @@ namespace spldlt {
 
       }
 
-      ////////////////////////////////////////////////////////////////////////////////   
-      // factor_indef_app_async
+      ////////////////////////////////////////////////////////////
+      // factor_front_indef_app_notask
+      //
+      static
+      void factor_front_indef_app_notask(
+            NumericFront<T, Allocator> &front,
+            struct cpu_factor_options& options,
+            spral::ssids::cpu::Workspace& work,
+            Allocator const& alloc,
+            int& next_elim, int const from_blk=0) {
+
+         // Front info
+         int const nblk = front.get_nc();
+         int const mblk = front.get_nr();
+         
+         int const n = front.get_ncol();
+         T *lcol = front.lcol;
+         int ldl = front.get_ldl();
+         T *d = &front.lcol[n*ldl];
+         int* perm = front.perm;
+         std::vector<Block<T, iblksz, IntAlloc>>& blocks = front.blocks;
+         std::vector<spldlt::Tile<T, Allocator>>& contrib_blocks = front.contrib_blocks;
+         ColumnData<T, IntAlloc> &cdata = *front.cdata;
+         CopyBackup<T, Allocator> &backup = *front.backup;
+
+         // Loop over blocks
+         for(int blk=from_blk; blk<nblk; blk++) {
+
+            // Factor block APP
+            BlockSpec& dblk = blocks[blk*(mblk+1)]; 
+            dblk.backup(backup);
+            
+            // Perform actual factorization
+            int nelim = dblk.template factor<Allocator>(
+                  next_elim, perm, d, options, work, alloc
+                  );
+            
+            // Init threshold check (non locking => task dependencies)
+            cdata[blk].init_passed(nelim);      
+
+            
+         }
+         
+      }
+
+      
+      ////////////////////////////////////////////////////////////
+      // factor_front_indef_app
       //
       /// @brief Perform the LDLT factorization of a matrix using a
       /// APTP pivoting strategy. 

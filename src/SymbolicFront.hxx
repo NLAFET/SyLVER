@@ -13,7 +13,7 @@ namespace spldlt {
    struct SymbolicFront : spral::ssids::cpu::SymbolicNode {
       // int sa; // index of first column in node (pivotal order)
       // int en; // index of last column in node (pivotal order)
-      // int least_desc; // least descendants, to allow easy walk of subtrees
+      int least_desc; // least descendants, to allow easy walk of subtrees
 #if defined(SPLDLT_USE_STARPU)
       starpu_data_handle_t hdl; // symbolic handle representing the node
       std::vector<starpu_data_handle_t> handles; // array containing the block handles
