@@ -44,7 +44,7 @@ namespace spldlt {
 
          assemble_notask(n, front, child_contrib, pool_alloc);  
 
-         
+         // TODO factor front indef no task
          
          assemble_contrib_notask(front, child_contrib);
 
@@ -1275,17 +1275,12 @@ namespace spldlt {
          // Loop over blocks
          for(int blk=from_blk; blk<nblk; blk++) {
 
-            // Factor block APP
             BlockSpec& dblk = blocks[blk*(mblk+1)]; 
-            dblk.backup(backup);
+
+            // Factor block APP
+            factor_block_app(
+                  dblk, next_elim, perm, d, cdata, backup, options, work, alloc);
             
-            // Perform actual factorization
-            int nelim = dblk.template factor<Allocator>(
-                  next_elim, perm, d, options, work, alloc
-                  );
-            
-            // Init threshold check (non locking => task dependencies)
-            cdata[blk].init_passed(nelim);      
 
             
          }

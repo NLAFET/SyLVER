@@ -15,6 +15,7 @@
 
 namespace spldlt {
 
+   /// @brief Performs update of contribution block
    template <typename T>
    void update_contrib_block(
          int m, int n,
@@ -44,7 +45,38 @@ namespace spldlt {
             );
 
    }
-   
+
+   /// @brief Performs factorization of a block on the diagonal in the
+   /// LDLT factorization with APTP pivoting
+   template<
+      typename BlockSpec, 
+      typename T, 
+      typename IntAlloc,
+      typename Backup,
+      typename Allocator>
+   void factor_block_app(
+         BlockSpec& dblk, int& next_elim,
+         int* perm, T* d,
+         spldlt::ldlt_app_internal::ColumnData<T,IntAlloc>& cdata, Backup& backup,
+         struct cpu_factor_options& options,
+         std::vector<spral::ssids::cpu::Workspace>& work,
+         Allocator const& alloc) {
+
+      int blk = dblk.get_row();
+
+      dblk.backup(backup);
+            
+      // Perform actual factorization
+      int nelim = dblk.template factor<Allocator>(
+            next_elim, perm, d, options, work, alloc
+            );
+            
+      // Init threshold check (non locking => task dependencies)
+      cdata[blk].init_passed(nelim);      
+   }
+
+   /// @brief Performs update of contribution block in the LDLT with
+   /// APP factorization
    template <typename T, typename IntAlloc, typename PoolAlloc>
    void update_contrib_block_app(
          NumericFront<T, PoolAlloc>& node,

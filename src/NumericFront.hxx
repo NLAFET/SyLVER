@@ -344,10 +344,10 @@ namespace spldlt {
                blocks.emplace_back(iblk, jblk, m, n, *cdata, &lcol[jblk*blksz*ldl+iblk*blksz], ldl, blksz);
                // alternativel store pointer
                // blocks[jblk*mblk + iblk] = new BlockSpec(iblk, jblk, m, n, cdata, &a[jblk*block_size*lda+iblk*block_size], lda, block_size);
-#if defined(SPLDLT_USE_STARPU)
-               // register handle for block (iblk, jblk)
-               if (iblk >= jblk) blocks[jblk*mblk+iblk].register_handle(); 
-#endif
+// #if defined(SPLDLT_USE_STARPU)
+//                // register handle for block (iblk, jblk)
+//                if (iblk >= jblk) blocks[jblk*mblk+iblk].register_handle(); 
+// #endif
             }
          }
       }
