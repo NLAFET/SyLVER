@@ -213,23 +213,10 @@ namespace spldlt {
                FACTOR_APP_PRIO);
          
 #else
-         bool abort=false;
 
-         // BlockSpec dblk(blk, blk, m, n, cdata, &a[blk*block_size*lda+blk*block_size], lda, block_size);
-         // if(debug) printf("Factor(%d)\n", blk);
-         // Store a copy for recovery in case of a failed column
-         dblk.backup(backup);
-         int thread_num = 0;
-         // Perform actual factorization
-         int nelim = dblk.template factor<Allocator>(
-               next_elim, perm, d, options, work[0], alloc
-               );
-         if(nelim<0) 
-            abort=true;
-         if(debug) printf("Factor(%d) nelim: %d\n", blk, nelim);
-
-         // Init threshold check (non locking => task dependencies)
-         cdata[blk].init_passed(nelim);      
+         factor_block_app(
+               dblk, next_elim, perm, d, cdata, backup, options, work, alloc);
+            
 #endif
       }
       
@@ -244,11 +231,8 @@ namespace spldlt {
       static
       void applyN_block_app_task(
             BlockSpec& dblk, BlockSpec& rblk,
-            // int blk, int iblk,
-            // int const m, int const n, 
-            // T* a, int const lda,
             ColumnData<T,IntAlloc>& cdata, Backup& backup,
-            struct cpu_factor_options& options/*, int const block_size*/) {
+            struct cpu_factor_options& options) {
 
          int blk = dblk.get_col();
          int iblk = rblk.get_row();
@@ -264,18 +248,10 @@ namespace spldlt {
                APPLYN_APP_PRIO);
 
 #else
-         if(debug) printf("ApplyN(%d,%d)\n", iblk, blk);
-         // BlockSpec dblk(blk, blk, m, n, cdata, &a[blk*block_size*lda+blk*block_size], lda, block_size);
-         // BlockSpec rblk(iblk, blk, m, n, cdata, &a[blk*block_size*lda+iblk*block_size], lda, block_size);
-         // Apply column permutation from factorization of dblk and in
-         // the process, store a (permuted) copy for recovery in case of
-         // a failed column
-         rblk.apply_cperm_and_backup(backup);
-         // Perform elimination and determine number of rows in block
-         // passing a posteori threshold pivot test
-         int blkpass = rblk.apply_pivot_app(dblk, options.u, options.small);
-         // Update column's passed pivot count
-         cdata[blk].update_passed(blkpass);
+
+         applyN_block_app(
+               dblk, rblk, cdata, backup, options);
+
 #endif
       }
 
@@ -291,11 +267,8 @@ namespace spldlt {
       static 
       void applyT_block_app_task(
             BlockSpec& dblk, BlockSpec& cblk,
-            // int blk, int jblk,
-            // int const m, int const n, 
-            // T* a, int const lda,
             ColumnData<T,IntAlloc>& cdata, Backup& backup,
-            struct cpu_factor_options& options/*, int const block_size*/) {
+            struct cpu_factor_options& options) {
 
          int blk = dblk.get_col();
          int jblk = cblk.get_col();
@@ -311,20 +284,9 @@ namespace spldlt {
                APPLYT_APP_PRIO);
 
 #else
-         if(debug) printf("ApplyT(%d,%d)\n", blk, jblk);
-         // BlockSpec dblk(blk, blk, m, n, cdata, &a[blk*block_size*lda+blk*block_size], lda, block_size);
-         // BlockSpec cblk(blk, jblk, m, n, cdata, &a[jblk*block_size*lda+blk*block_size], lda, block_size);
-         // Apply row permutation from factorization of dblk and in
-         // the process, store a (permuted) copy for recovery in case of
-         // a failed column
-         cblk.apply_rperm_and_backup(backup);
-         // Perform elimination and determine number of rows in block
-         // passing a posteori threshold pivot test
-         int blkpass = cblk.apply_pivot_app(
-               dblk, options.u, options.small
-               );
-         // Update column's passed pivot count
-         cdata[blk].update_passed(blkpass);
+
+         applyT_block_app(
+               dblk, cblk, cdata, backup, options);
 #endif
       }
 
@@ -341,11 +303,7 @@ namespace spldlt {
       static 
       void updateN_block_app_task(
             BlockSpec& isrc, BlockSpec& jsrc, BlockSpec& ublk,
-            // int blk, int iblk, int jblk,
-            // int const m, int const n, 
-            // T* a, int const lda,
             ColumnData<T,IntAlloc>& cdata, Backup& backup, 
-            // int const block_size,
             T const beta, T* upd, int const ldupd,
             std::vector<spral::ssids::cpu::Workspace>& work
             ) {
@@ -367,18 +325,11 @@ namespace spldlt {
                UPDATEN_APP_PRIO);
 
 #else
-         if(debug) printf("UpdateN(%d,%d,%d)\n", iblk, jblk, blk);
-         // int thread_num = omp_get_thread_num();
-         int thread_num = 0;
-         // BlockSpec ublk(iblk, jblk, m, n, cdata, &a[jblk*block_size*lda+iblk*block_size], lda, block_size);
-         // BlockSpec isrc(iblk, blk, m, n, cdata, &a[blk*block_size*lda+iblk*block_size], lda, block_size);
-         // BlockSpec jsrc(jblk, blk, m, n, cdata, &a[blk*block_size*lda+jblk*block_size], lda, block_size);
-         // If we're on the block col we've just eliminated, restore
-         // any failed cols and release resources storing backup
-         ublk.restore_if_required(backup, blk);
-         // Perform actual update
-         ublk.update(isrc, jsrc, work[0],
-                     beta, upd, ldupd);
+
+         updateN_block_app(
+               isrc, jsrc, ublk, cdata, backup,
+               beta, upd, ldupd, work[0]);
+
 #endif
       }
       
@@ -426,21 +377,11 @@ namespace spldlt {
                UPDATET_APP_PRIO);
 
 #else
-         if(debug) printf("UpdateT(%d,%d,%d)\n", iblk, jblk, blk);
-         // int thread_num = omp_get_thread_num();
-         int thread_num = 0;
-         // BlockSpec ublk(iblk, jblk, m, n, cdata, &a[jblk*block_size*lda+iblk*block_size], lda, block_size);
-         // int isrc_row = (blk<=iblk) ? iblk : blk;
-         // int isrc_col = (blk<=iblk) ? blk : iblk;
-         // BlockSpec isrc(isrc_row, isrc_col, m, n, cdata, &a[isrc_col*block_size*lda+isrc_row*block_size], lda,
-         //                block_size);
-         // BlockSpec jsrc(blk, jblk, m, n, cdata, &a[jblk*block_size*lda+blk*block_size], lda, block_size);
 
-         // If we're on the block row we've just eliminated, restore
-         // any failed rows and release resources storing backup
-         ublk.restore_if_required(backup, blk);
-         // Perform actual update
-         ublk.update(isrc, jsrc, work[0]);
+         updateT_block_app(
+               isrc, jsrc, ublk,
+               backup, work[0]);
+         
 #endif
       }
       
@@ -451,19 +392,19 @@ namespace spldlt {
             BlockSpec& dblk,
             int& next_elim,
             ColumnData<T,IntAlloc>& cdata) {
-         
+
          int blk = dblk.get_col();
 
 #if defined(SPLDLT_USE_STARPU)
+
          spldlt::starpu::insert_adjust(
                cdata[blk].get_hdl(), blk,
                &next_elim, &cdata,
                ADJUST_APP_PRIO);
 #else
-         // Adjust column once all applys have finished and we know final
-         // number of passed columns.
-         if(debug) printf("Adjust(%d)\n", blk);
-         cdata[blk].adjust(next_elim);
+
+         adjust_app(blk, next_elim, cdata);
+
 #endif
 
       }
@@ -492,7 +433,7 @@ namespace spldlt {
 
       /// Restore ny failed row and release backup
       static 
-      void restore_failed_block_task(
+      void restore_failed_block_app_task(
             int elim_col,
             BlockSpec& jblk,
             BlockSpec& blk,
@@ -510,15 +451,17 @@ namespace spldlt {
 
 #else
 
-         blk.restore_if_required(backup, elim_col);
-
+         restore_failed_block_app(elim_col, jblk, blk, cdata, backup);
+         
 #endif
       } 
 
-      ////////////////////////////////////////////////////////////////////////////////
+      ////////////////////////////////////////////////////////////
       // factorize_indef_app_notask
-      // Sequential factorization routine for indefinite matrices implementing an
-      // APTP strategy. Failed entires are left in place.
+      //
+      // Sequential factorization routine for indefinite matrices
+      // implementing an APTP strategy. Failed entires are left in
+      // place.
       static
       int factorize_indef_app_notask (
             int const m, int const n, int* perm, T* a,
@@ -1275,14 +1218,85 @@ namespace spldlt {
          // Loop over blocks
          for(int blk=from_blk; blk<nblk; blk++) {
 
-            BlockSpec& dblk = blocks[blk*(mblk+1)]; 
 
-            // Factor block APP
+            // Factor block on the diagonal
             factor_block_app(
-                  dblk, next_elim, perm, d, cdata, backup, options, work, alloc);
+                  blocks[blk*(mblk+1)], next_elim, perm, d, cdata, backup,
+                  options, work, alloc);
             
+            // Loop over off-diagonal blocks applying pivot
+            for(int jblk=0; jblk<blk; jblk++) {
+               
+               // Apply factorization on uneliminated entries of
+               // left-diagonal block
+               applyT_block_app(
+                     blocks[blk*(mblk+1)], blocks[jblk*mblk+blk], cdata, backup,
+                     options);               
+            }
+            for(int iblk=blk+1; iblk<mblk; iblk++) {
 
+               // Apply factorization on sub-diagonal block
+               applyN_block_app(
+                     blocks[blk*(mblk+1)], blocks[blk*mblk+iblk], cdata, backup,
+                     options);
+            }
+
+            // Adjust column once all applys have finished and we know final
+            // number of passed columns.
+            adjust_app(blk, next_elim, cdata);
+
+            for(int iblk=blk; iblk<mblk; iblk++) {
+
+               // Restore failed columns in current block-column
+               restore_failed_block_app(
+                     blk,
+                     blocks[blk*mblk+iblk], blocks[blk*(mblk+1)],
+                     blocks[blk*mblk+iblk],
+                     cdata, backup,
+                     work);
+            }
+
+            // Update uneliminated columns
             
+            // Loop over left-diagonal block-columns
+            for(int jblk=0; jblk<blk; jblk++) {
+
+               // Loop over block-rows
+               for(int iblk=jblk; iblk<mblk; iblk++) {
+
+                  int isrc_row = (blk<=iblk) ? iblk : blk;
+                  int isrc_col = (blk<=iblk) ? blk : iblk;
+
+                  // Update uneliminated entries in blocks on the left
+                  // of current block column
+                  updateT_block_app(
+                        // isrc, jsrc, ublk,
+                        blocks[isrc_col*mblk+isrc_row], blocks[jblk*mblk+blk], 
+                        blocks[jblk*mblk+iblk],
+                        backup, work);                  
+               }
+            }
+
+            // update trailing submatrix (fully-summed) 
+            
+            for(int jblk=blk+1; jblk<nblk; jblk++) {
+
+               for(int iblk=jblk; iblk<mblk; iblk++) {
+
+                  T const beta = 0.0;
+                  T* upd = nullptr;
+                  int const ldupd = 0;
+                     
+                  updateN_block_app (
+                        blocks[blk*mblk+iblk], blocks[blk*mblk+jblk],
+                        blocks[jblk*mblk+iblk],
+                        cdata, backup,
+                        beta, upd, ldupd,
+                        work);
+
+               }
+            }
+
          }
          
       }
@@ -1331,126 +1345,41 @@ namespace spldlt {
          // try {
          for(int blk=from_blk; blk<nblk; blk++) {
 
-            // printf("k = %d\n", blk);
-            // if(debug) {
-            //    printf("Bcol %d:\n", blk);
-            //    // print_mat(mblk, nblk, m, n, blkdata, cdata, lda);
-            // }
-
-            // Factor diagonal: depend on perm[blk*block_size] as we init npass
-            // {  
-            // BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
-            
             // Factorize block on diagonal
-
-            // BlockSpec dblk(blk, blk, m, n, cdata, &a[blk*block_size*lda+blk*block_size], lda, block_size);
-           
             factor_block_app_task(
-                  blocks[blk*(mblk+1)] /*dblk*/, next_elim,
-                  perm, d,
-                  cdata, backup,
-                  options/*, block_size*/, workspaces, alloc);
-            
-// #if defined(SPLDLT_USE_STARPU)
-//             starpu_task_wait_for_all();
-// #endif
-
-            // DEBUG
-            // {
-            //    if(debug) printf("Factor(%d)\n", blk);
-            //    BlockSpec dblk(blk, blk, m, n, cdata, &a[blk*block_size*lda+blk*block_size], lda, block_size);
-            //    // Store a copy for recovery in case of a failed column
-            //    dblk.backup(backup);
-            //    // Perform actual factorization
-            //    int nelim = dblk.template factor<Allocator>(
-            //          next_elim, perm, d, options, work[0], /*work,*/ alloc
-            //          );
-            //    if(nelim<0) return nelim;
-            //    // Init threshold check (non locking => task dependencies)
-            //    cdata[blk].init_passed(nelim);
-            // }
-            // END DEBUG
-
-            // }
-            
+                  blocks[blk*(mblk+1)], next_elim, perm, d, cdata, backup,
+                  options, workspaces, alloc);
+                        
             // Loop over off-diagonal blocks applying pivot
             for(int jblk=0; jblk<blk; jblk++) {
 
-               // BlockSpec cblk(blk, jblk, m, n, cdata, &a[jblk*block_size*lda+blk*block_size], lda, block_size);               
                // Apply factorization on uneliminated entries of
                // left-diagonal block
                applyT_block_app_task(
-                     /*dblk*/ blocks[blk*(mblk+1)], /*cblk*/blocks[jblk*mblk+blk],
+                     blocks[blk*(mblk+1)], blocks[jblk*mblk+blk],
                      cdata, backup,
                      options);
 
-// #if defined(SPLDLT_USE_STARPU)
-//                starpu_task_wait_for_all();
-// #endif
-
-               // DEBUG
-               // if(debug) printf("ApplyT(%d,%d)\n", blk, jblk);
-               // BlockSpec dblk(blk, blk, m, n, cdata, &a[blk*block_size*lda+blk*block_size], lda, block_size);
-               // BlockSpec cblk(blk, jblk, m, n, cdata, &a[jblk*block_size*lda+blk*block_size], lda, block_size);
-               // // Apply row permutation from factorization of dblk and in
-               // // the process, store a (permuted) copy for recovery in case of
-               // // a failed column
-               // cblk.apply_rperm_and_backup(backup);
-               // // Perform elimination and determine number of rows in block
-               // // passing a posteori threshold pivot test
-               // int blkpass = cblk.apply_pivot_app(
-               //       dblk, options.u, options.small
-               //       );
-               // // Update column's passed pivot count
-               // cdata[blk].update_passed(blkpass);
-               // END DEBUG
             }
             for(int iblk=blk+1; iblk<mblk; iblk++) {
 
-               // BlockSpec rblk(iblk, blk, m, n, cdata, &a[blk*block_size*lda+iblk*block_size], lda, block_size);
                // Apply factorization on sub-diagonal block
                applyN_block_app_task(
-                     /*dblk*/ blocks[blk*(mblk+1)], /*rblk*/ blocks[blk*mblk+iblk],
+                     blocks[blk*(mblk+1)], blocks[blk*mblk+iblk],
                      cdata, backup,
                      options);
 
-// #if defined(SPLDLT_USE_STARPU)
-//                starpu_task_wait_for_all();
-// #endif
-
-               // DEBUG
-               // if(debug) printf("ApplyN(%d,%d)\n", iblk, blk);
-               // BlockSpec dblk(blk, blk, m, n, cdata, &a[blk*block_size*lda+blk*block_size], lda, block_size);
-               // BlockSpec rblk(iblk, blk, m, n, cdata, &a[blk*block_size*lda+iblk*block_size], lda, block_size);
-               // // Apply column permutation from factorization of dblk and in
-               // // the process, store a (permuted) copy for recovery in case of
-               // // a failed column
-               // rblk.apply_cperm_and_backup(backup);
-               // // Perform elimination and determine number of rows in block
-               // // passing a posteori threshold pivot test
-               // int blkpass = rblk.apply_pivot_app(dblk, options.u, options.small);
-               // // Update column's passed pivot count
-               // cdata[blk].update_passed(blkpass);
-               // END DEBUG
             }
 
             // Adjust column once all applys have finished and we know final
             // number of passed columns.
-            adjust_task(/* dblk*/blocks[blk*(mblk+1)], next_elim, cdata);
-
-// #if defined(SPLDLT_USE_STARPU)
-//             starpu_task_wait_for_all();
-// #endif
-
-            // DEBUG
-            // if(debug) printf("Adjust(%d)\n", blk);
-            // cdata[blk].adjust(next_elim);
-            // END DEBUG
+            adjust_task(blocks[blk*(mblk+1)], next_elim, cdata);
 
 #if defined(SPLDLT_USE_GPU)            
 
+            // Restore failed columns in current block-column
             for(int iblk=blk; iblk<mblk; iblk++) {
-               restore_failed_block_task(
+               restore_failed_block_app_task(
                      blk, blocks[blk*(mblk+1)], blocks[blk*mblk+iblk], cdata, backup,
                      workspaces);
             }
@@ -1460,15 +1389,10 @@ namespace spldlt {
             // Update uneliminated columns
             for(int jblk=0; jblk<blk; jblk++) {
 
-               // BlockSpec jsrc(blk, jblk, m, n, cdata, &a[jblk*block_size*lda+blk*block_size], lda, block_size);
-
                for(int iblk=jblk; iblk<mblk; iblk++) {
 
                   int isrc_row = (blk<=iblk) ? iblk : blk;
                   int isrc_col = (blk<=iblk) ? blk : iblk;
-                  // BlockSpec isrc(isrc_row, isrc_col, m, n, cdata, &a[isrc_col*block_size*lda+isrc_row*block_size], lda,
-                  // block_size);
-                  // BlockSpec ublk(iblk, jblk, m, n, cdata, &a[jblk*block_size*lda+iblk*block_size], lda, block_size);
 
                   // Update uneliminated entries in blocks on the left
                   // of current block column
@@ -1479,32 +1403,8 @@ namespace spldlt {
                         cdata, backup, 
                         workspaces);
 
-// #if defined(SPLDLT_USE_STARPU)
-//                   starpu_task_wait_for_all();
-// #endif
-
-                  // DEBUG
-                  // if(debug) printf("UpdateT(%d,%d,%d)\n", iblk, jblk, blk);
-                  // int thread_num = omp_get_thread_num();
-                  // BlockSpec ublk(iblk, jblk, m, n, cdata, &a[jblk*block_size*lda+iblk*block_size], lda, block_size);
-                  // int isrc_row = (blk<=iblk) ? iblk : blk;
-                  // int isrc_col = (blk<=iblk) ? blk : iblk;
-                  // BlockSpec isrc(isrc_row, isrc_col, m, n, cdata, &a[isrc_col*block_size*lda+isrc_row*block_size], lda,
-                  //                block_size);
-                  // BlockSpec jsrc(blk, jblk, m, n, cdata, &a[jblk*block_size*lda+blk*block_size], lda, block_size);
-                  // // If we're on the block row we've just eliminated, restore
-                  // // any failed rows and release resources storing backup
-                  // ublk.restore_if_required(backup, blk);
-                  // // Perform actual update
-                  // ublk.update(isrc, jsrc, work[0]);
-                  // END DEBUG
                }
             }
-
-
-// #if defined(SPLDLT_USE_STARPU)
-//                   starpu_task_wait_for_all();
-// #endif
 
 #if defined(SPLDLT_USE_GPU)            
 
@@ -1513,7 +1413,6 @@ namespace spldlt {
                for(int iblk=jblk; iblk<mblk; iblk++) {
 
                   updateN_block_app_task (
-                        // isrc, jsrc, ublk,
                         blocks[blk*mblk+iblk], blocks[blk*mblk+jblk],
                         blocks[jblk*mblk+iblk],
                         cdata, backup,

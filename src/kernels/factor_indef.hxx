@@ -46,20 +46,21 @@ namespace spldlt {
 
    }
 
+   ////////////////////////////////////////////////////////////
+   // APTP factorization kernels
+   
    /// @brief Performs factorization of a block on the diagonal in the
    /// LDLT factorization with APTP pivoting
    template<
-      typename BlockSpec, 
-      typename T, 
-      typename IntAlloc,
-      typename Backup,
+      typename BlockSpec, typename T, typename IntAlloc, typename Backup,
       typename Allocator>
    void factor_block_app(
          BlockSpec& dblk, int& next_elim,
          int* perm, T* d,
-         spldlt::ldlt_app_internal::ColumnData<T,IntAlloc>& cdata, Backup& backup,
+         spldlt::ldlt_app_internal::ColumnData<T,IntAlloc>& cdata,
+         Backup& backup,
          struct cpu_factor_options& options,
-         std::vector<spral::ssids::cpu::Workspace>& work,
+         std::vector<spral::ssids::cpu::Workspace>& workspaces,
          Allocator const& alloc) {
 
       int blk = dblk.get_row();
@@ -68,13 +69,133 @@ namespace spldlt {
             
       // Perform actual factorization
       int nelim = dblk.template factor<Allocator>(
-            next_elim, perm, d, options, work, alloc
+            next_elim, perm, d, options, workspaces, alloc
             );
             
       // Init threshold check (non locking => task dependencies)
       cdata[blk].init_passed(nelim);      
    }
 
+   /// @brief Applies pivots on sub-diagonal block in the LDLT
+   /// factorization with APTP pivoting
+   template<
+      typename BlockSpec, typename T, typename IntAlloc, typename Backup>
+   void applyN_block_app(
+         BlockSpec& dblk, BlockSpec& rblk,
+         spldlt::ldlt_app_internal::ColumnData<T,IntAlloc>& cdata,
+         Backup& backup,
+         struct cpu_factor_options& options) {
+
+      int blk = dblk.get_col();
+
+      // Apply column permutation from factorization of dblk and in
+      // the process, store a (permuted) copy for recovery in case of
+      // a failed column
+      rblk.apply_cperm_and_backup(backup);
+      // Perform elimination and determine number of rows in block
+      // passing a posteori threshold pivot test
+      int blkpass = rblk.apply_pivot_app(dblk, options.u, options.small);
+      // Update column's passed pivot count
+      cdata[blk].update_passed(blkpass);      
+   }
+
+   
+   /// @brief Applies pivots on left-diagonal block in the LDLT
+   /// factorization with APTP pivoting
+   template<
+      typename BlockSpec, typename T, typename IntAlloc, typename Backup>
+   void applyT_block_app(
+         BlockSpec& dblk, BlockSpec& cblk,
+         spldlt::ldlt_app_internal::ColumnData<T,IntAlloc>& cdata,
+         Backup& backup,
+         struct cpu_factor_options& options) {
+
+      int blk = dblk.get_col();
+
+      // Apply row permutation from factorization of dblk and in
+      // the process, store a (permuted) copy for recovery in case of
+      // a failed column
+      cblk.apply_rperm_and_backup(backup);
+      // Perform elimination and determine number of rows in block
+      // passing a posteori threshold pivot test
+      int blkpass = cblk.apply_pivot_app(
+            dblk, options.u, options.small
+            );
+      // Update column's passed pivot count
+      cdata[blk].update_passed(blkpass);
+      
+   }
+
+   /// @brief Calculate the number of pivots passed in the LDLT
+   /// factorization with APTP pivoting
+   template<typename T, typename IntAlloc>
+   void adjust_app(
+         int blk,
+         int& next_elim,
+         spldlt::ldlt_app_internal::ColumnData<T,IntAlloc>& cdata) {
+
+      // Adjust column once all applys have finished and we know final
+      // number of passed columns.
+      cdata[blk].adjust(next_elim);
+
+   }
+
+   /// @brief Restore failed clomuns in the LDLT factorization with
+   /// APP
+   template<typename BlockSpec, typename T, typename IntAlloc, typename Backup>
+   void restore_failed_block_app(
+         int elim_col,
+         BlockSpec& isrc,
+         BlockSpec& jsrc,
+         BlockSpec& ublk,
+         spldlt::ldlt_app_internal::ColumnData<T,IntAlloc>& cdata,
+         Backup& backup, spral::ssids::cpu::Workspace& work) {
+
+      ublk.restore_if_required(backup, elim_col);
+
+      T beta = 0.0;
+      T *upd = nullptr;
+      int ldupd = 0;
+      // Update failed cols
+      ublk.update(
+            isrc, jsrc, work, beta, upd, ldupd);
+
+   }
+
+   /// @brief Update uneliminated block in the left-diagonal in the
+   /// LDLT factorization with APP
+   template<typename BlockSpec, typename T, typename IntAlloc, typename Backup>
+   void updateT_block_app(
+         BlockSpec& isrc, BlockSpec& jsrc, BlockSpec& ublk,
+         Backup& backup,
+         spral::ssids::cpu::Workspace& work) {
+
+      int blk = jsrc.get_row();
+      
+      // If we're on the block row we've just eliminated, restore
+      // any failed rows and release resources storing backup
+      ublk.restore_if_required(backup, blk);
+      // Perform actual update
+      ublk.update(isrc, jsrc, work);
+   }
+
+   
+   /// @brief Update block in the trailing submatrix in the LDLT
+   /// factorization with APP
+   template<typename BlockSpec, typename T, typename IntAlloc, typename Backup>
+   void updateN_block_app(
+         BlockSpec& isrc, BlockSpec& jsrc, BlockSpec& ublk,
+         spldlt::ldlt_app_internal::ColumnData<T,IntAlloc>& cdata,
+         Backup& backup,
+         T const beta, T* upd, int const ldupd,
+         spral::ssids::cpu::Workspace& work) {
+
+      // Perform actual update
+      ublk.update(isrc, jsrc, work, beta, upd, ldupd);
+
+   }
+
+   
    /// @brief Performs update of contribution block in the LDLT with
    /// APP factorization
    template <typename T, typename IntAlloc, typename PoolAlloc>
@@ -84,7 +205,7 @@ namespace spldlt {
          const T *lik, int ld_lik,
          const T *ljk, int ld_ljk,
          int updm, int updn, T *upd, int ldupd, 
-         spral::ssids::cpu::Workspace &work
+         spral::ssids::cpu::Workspace& work
          ) {
 
       int blksz = node.blksz;
