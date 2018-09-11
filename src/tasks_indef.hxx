@@ -17,8 +17,8 @@ namespace spldlt {
 
    template <typename T, typename PoolAlloc, typename BlockSpec>
    void update_contrib_block_app_task(
-         BlockSpec isrc, BlockSpec jsrc,
-         Tile<T, PoolAlloc>& upd, 
+         BlockSpec& isrc, BlockSpec& jsrc,
+         Tile<T, PoolAlloc>& upd,
          NumericFront<T, PoolAlloc>& node,
          int blk, int iblk, int jblk,
          std::vector<spral::ssids::cpu::Workspace>& workspaces,

@@ -1205,6 +1205,8 @@ namespace spldlt {
          int const nblk = front.get_nc();
          int const mblk = front.get_nr();
          
+         int const block_size = front.blksz;
+         int const m = front.get_nrow();
          int const n = front.get_ncol();
          T *lcol = front.lcol;
          int ldl = front.get_ldl();
@@ -1214,6 +1216,10 @@ namespace spldlt {
          std::vector<spldlt::Tile<T, Allocator>>& contrib_blocks = front.contrib_blocks;
          ColumnData<T, IntAlloc> &cdata = *front.cdata;
          CopyBackup<T, Allocator> &backup = *front.backup;
+
+         // Dimensions of contribution block
+         size_t contrib_dimn = m-n;
+         int rsa = n/block_size; // index of first block in contribution blocks  
 
          // Loop over blocks
          for(int blk=from_blk; blk<nblk; blk++) {
@@ -1275,10 +1281,11 @@ namespace spldlt {
                         blocks[jblk*mblk+iblk],
                         backup, work);                  
                }
-            }
+            } // Loop over left-diagonal block-columns
 
-            // update trailing submatrix (fully-summed) 
-            
+            // Update trailing submatrix (fully-summed) 
+
+            // Loop over trailing submatrix block-columns
             for(int jblk=blk+1; jblk<nblk; jblk++) {
 
                for(int iblk=jblk; iblk<mblk; iblk++) {
@@ -1295,8 +1302,31 @@ namespace spldlt {
                         work);
 
                }
-            }
+            } // Loop over trailing submatrix block-columns
 
+            // Update trailing submatrix (contribution blocks) 
+
+            if (contrib_dimn > 0) {
+
+               for (int jblk = rsa; jblk < mblk; ++jblk) {
+                  for (int iblk = jblk;  iblk < mblk; ++iblk) {
+
+                     Tile<T, Allocator>& upd = front.get_contrib_block(iblk, jblk);
+                     
+                     update_contrib_block_app(
+                           front,
+                           blk, iblk, jblk,
+                           blocks[blk*mblk+iblk].get_a(), blocks[blk*mblk+iblk].get_lda(),
+                           blocks[blk*mblk+jblk].get_a(), blocks[blk*mblk+jblk].get_lda(),
+                           upd.m, upd.n, upd.a, upd.lda,
+                           work);
+
+                  }    
+               }
+               
+            } // contrib_dimn > 0
+            
+            
          }
          
       }
@@ -1422,30 +1452,10 @@ namespace spldlt {
                }
             }
 
-// #if defined(SPLDLT_USE_STARPU)
-//          starpu_task_wait_for_all();
-// #endif
-
 #else
             for(int jblk=blk; jblk<nblk; jblk++) {
-               // Source block
-               // BlockSpec jsrc(jblk, blk, m, n, cdata, &a[blk*block_size*lda+jblk*block_size], lda, block_size);
 
                for(int iblk=jblk; iblk<mblk; iblk++) {
-
-// #if defined(SPLDLT_USE_GPU)
-                  
-//                   if (jblk == blk)
-//                      restore_failed_block_task(
-//                            blk, blocks[jblk*mblk+iblk], cdata, backup);
-
-
-// #endif
-
-                  // Source block
-                  // BlockSpec isrc(iblk, blk, m, n, cdata, &a[blk*block_size*lda+iblk*block_size], lda, block_size);
-                  // Destination block
-                  // BlockSpec ublk(iblk, jblk, m, n, cdata, &a[jblk*block_size*lda+iblk*block_size], lda, block_size);
 
                   // If we are on the current block column, restore
                   // any failed columns and release backups.
@@ -1457,10 +1467,6 @@ namespace spldlt {
                         cdata, backup,
                         beta, upd, ldupd,
                         workspaces);
-
-// #if defined(SPLDLT_USE_STARPU)
-//                   starpu_task_wait_for_all();
-// #endif
 
                }
             }

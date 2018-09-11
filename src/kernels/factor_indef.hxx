@@ -60,7 +60,7 @@ namespace spldlt {
          spldlt::ldlt_app_internal::ColumnData<T,IntAlloc>& cdata,
          Backup& backup,
          struct cpu_factor_options& options,
-         std::vector<spral::ssids::cpu::Workspace>& workspaces,
+         spral::ssids::cpu::Workspace& work,
          Allocator const& alloc) {
 
       int blk = dblk.get_row();
@@ -69,8 +69,7 @@ namespace spldlt {
             
       // Perform actual factorization
       int nelim = dblk.template factor<Allocator>(
-            next_elim, perm, d, options, workspaces, alloc
-            );
+            next_elim, perm, d, options, work, alloc);
             
       // Init threshold check (non locking => task dependencies)
       cdata[blk].init_passed(nelim);      
