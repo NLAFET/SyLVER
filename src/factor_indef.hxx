@@ -55,10 +55,17 @@ namespace spldlt {
 
       
    }
+
+   ////////////////////////////////////////////////////////////
+   // factor_front_indef_notask
+   /// @brief Perform the LDLT factorization of front in sequential
+   template <typename T, typename PoolAlloc>
+   void factor_front_indef_notask() {}
+
    
    ////////////////////////////////////////////////////////////
    // factor_front_indef
-   //
+
    /// @brief Perform the LDLT factorization of front
    template <typename T, typename PoolAlloc>
    void factor_front_indef(
@@ -1193,6 +1200,8 @@ namespace spldlt {
       ////////////////////////////////////////////////////////////
       // factor_front_indef_app_notask
       //
+      // TODO: deactivate speculative execution and backing up as we
+      // run in sequential.
       static
       void factor_front_indef_app_notask(
             NumericFront<T, Allocator> &front,
