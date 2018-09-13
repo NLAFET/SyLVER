@@ -25,7 +25,9 @@ namespace spldlt {
          void** child_contrib,
          FactorAlloc& factor_alloc,
          PoolAlloc& pool_alloc,
-         T const* aval
+         T const* aval,
+         spral::ssids::cpu::Workspace& work,
+         struct cpu_factor_options& options
          ) {
 
       int least_desc = root.symb.least_desc;
@@ -45,6 +47,7 @@ namespace spldlt {
          assemble_notask(n, front, child_contrib, pool_alloc);  
 
          // TODO factor front indef no task
+         factor_front_indef_notask(front, options, work, pool_alloc);
          
          assemble_contrib_notask(front, child_contrib);
 
@@ -58,9 +61,53 @@ namespace spldlt {
 
    ////////////////////////////////////////////////////////////
    // factor_front_indef_notask
+   
    /// @brief Perform the LDLT factorization of front in sequential
    template <typename T, typename PoolAlloc>
-   void factor_front_indef_notask() {}
+   void factor_front_indef_notask(
+         NumericFront<T, Allocator>& front,
+         struct cpu_factor_options& options,
+         spral::ssids::cpu::Workspace& work,
+         PoolAlloc& pool_alloc
+         ) {
+
+      // Start from first column
+      node.nelim = 0; // TODO add parameter from;
+
+      // LDLT with APTP strategy
+      if (options.pivot_method==PivotMethod::app_block) {
+
+         typedef spldlt::ldlt_app_internal::CopyBackup<T, PoolAlloc> Backup;
+         bool const debug = false;
+         typedef
+            FactorSymIndef<T, INNER_BLOCK_SIZE, Backup, debug, PoolAlloc>
+            FactorSymIndefSpec;
+
+         // Factor front
+         FactorSymIndefSpec::factor_front_indef_app_notask(
+               front, options, work, pool_alloc, node.nelim);
+
+         int nrow = front.get_nrow();
+         int ncol = front.get_ncol();
+         int ldl = front.get_ldl();
+         
+         if (node.nelim < ncol) { // Some columns remain uneliminated
+
+            ColumnData<T, IntAlloc> &cdata = *front.cdata; // Colmun data            
+            // Realease backup and permute failed at the back of the front
+            Backup& backup = *front.backup; 
+            backup.release_all_memory(); // Release backup associated to this front
+            FactorSymIndefSpec::permute_failed (
+                  nrow, ncol, front.perm, front.lcol, ldl,
+                  node.nelim, cdata, front.blksz,
+                  pool_alloc);
+         }
+         
+      } // PivotMethod::app_block
+
+      
+      
+   }
 
    
    ////////////////////////////////////////////////////////////
@@ -103,11 +150,13 @@ namespace spldlt {
 
          typedef spldlt::ldlt_app_internal::CopyBackup<T, PoolAlloc> Backup;
          typedef FactorSymIndef<T, INNER_BLOCK_SIZE, Backup, debug, PoolAlloc> FactorSymIndefSpec;
-         
+
+         // Factor fully-summed columns and form contrib blocks
          FactorSymIndefSpec::factor_front_indef_app(
                node, options, 0.0, upd, 0, workspaces, pool_alloc,
                node.nelim);
-         
+
+         // Release backup and permute failed columns 
          FactorSymIndefSpec::release_permute_failed_task (
                node, pool_alloc);
       }
