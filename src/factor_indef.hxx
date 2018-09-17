@@ -15,7 +15,7 @@ using namespace spldlt::starpu;
 
 namespace spldlt {
 
-
+   /// @brief Factor subtree
    template <typename T, typename FactorAlloc, typename PoolAlloc>
    void factor_subtree_indef(
          NumericFront<T, PoolAlloc>& root,
@@ -62,17 +62,21 @@ namespace spldlt {
    ////////////////////////////////////////////////////////////
    // factor_front_indef_notask
    
-   /// @brief Perform the LDLT factorization of front in sequential
+   /// @brief Perform the LDLT factorization of front as in
+   /// factor_front_indef but using a STF model.
    template <typename T, typename PoolAlloc>
    void factor_front_indef_notask(
-         NumericFront<T, Allocator>& front,
+         NumericFront<T, PoolAlloc>& front,
          struct cpu_factor_options& options,
+         spral::ssids::cpu::ThreadStats& stats,
          spral::ssids::cpu::Workspace& work,
          PoolAlloc& pool_alloc
          ) {
 
+      typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
+
       // Start from first column
-      node.nelim = 0; // TODO add parameter from;
+      front.nelim = 0; // TODO add parameter from;
 
       // LDLT with APTP strategy
       if (options.pivot_method==PivotMethod::app_block) {
@@ -85,27 +89,35 @@ namespace spldlt {
 
          // Factor front
          FactorSymIndefSpec::factor_front_indef_app_notask(
-               front, options, work, pool_alloc, node.nelim);
+               front, options, work, pool_alloc, 
+               front.nelim // Return the number of succesfully
+                           // eliminated columns
+               );
 
          int nrow = front.get_nrow();
          int ncol = front.get_ncol();
          int ldl = front.get_ldl();
          
-         if (node.nelim < ncol) { // Some columns remain uneliminated
+         if (front.nelim < ncol) { 
+            // Some columns remain uneliminated after the first pass
 
             ColumnData<T, IntAlloc> &cdata = *front.cdata; // Colmun data            
-            // Realease backup and permute failed at the back of the front
+            // Realease backup and permute failed at the back of the
+            // front
             Backup& backup = *front.backup; 
-            backup.release_all_memory(); // Release backup associated to this front
+            backup.release_all_memory(); // Release backup associated
+                                         // to this front
+            // Permute failed entries at the back of the front
             FactorSymIndefSpec::permute_failed (
                   nrow, ncol, front.perm, front.lcol, ldl,
-                  node.nelim, cdata, front.blksz,
+                  front.nelim, cdata, front.blksz,
                   pool_alloc);
          }
          
       } // PivotMethod::app_block
 
-      
+      // Process uneliminated columns 
+      factor_front_indef_failed(front, work, options, stats);
       
    }
 
@@ -117,7 +129,7 @@ namespace spldlt {
    template <typename T, typename PoolAlloc>
    void factor_front_indef(
          NumericFront<T, PoolAlloc> &node,
-         std::vector<spral::ssids::cpu::Workspace> &workspaces,
+         std::vector<spral::ssids::cpu::Workspace>& workspaces,
          PoolAlloc& pool_alloc,
          struct cpu_factor_options& options,
          std::vector<ThreadStats>& worker_stats) {
