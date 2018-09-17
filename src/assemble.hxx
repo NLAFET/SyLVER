@@ -192,11 +192,15 @@ namespace spldlt {
             //    delay_col++;
             // }
 
-            // assemble_delays(*child, delay_col, node);
-            assemble_delays_task(*child, delay_col, node);
 // #if defined(SPLDLT_USE_STARPU)
 //             starpu_task_wait_for_all();
 // #endif      
+
+            // assemble_delays(*child, delay_col, node);
+            assemble_delays_task(*child, delay_col, node);
+#if defined(SPLDLT_USE_STARPU)
+            starpu_task_wait_for_all();
+#endif      
             delay_col += child->ndelay_out;
 
             // Handle expected contributions (only if something there)
@@ -205,7 +209,6 @@ namespace spldlt {
                // spral::ssids::cpu::assemble_expected(0, cm, node, *child, map, cache);
                // delete cache;
 
-               int cnrow = child->get_nrow();
                int cncol = child->get_ncol();
                   
                int csa = cncol / blksz;
@@ -216,6 +219,9 @@ namespace spldlt {
                      // assemble_block(node, *child, ii, jj, csnode.map);
                      assemble_block_task(
                            node, *child, ii, jj, csnode.map, ASSEMBLE_PRIO);
+#if defined(SPLDLT_USE_STARPU)
+                     starpu_task_wait_for_all();
+#endif
                   }
                }
 // #if defined(SPLDLT_USE_STARPU)
@@ -226,6 +232,8 @@ namespace spldlt {
          }
          else {
             // Assemble contributions from subtree
+
+            // printf("[assemble] TETETET");
 
             // Assemble delays
             // assemble_delays_subtree(

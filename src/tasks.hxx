@@ -682,7 +682,7 @@ namespace spldlt {
    template <typename T, typename PoolAlloc>   
    void assemble_block_task(
          NumericFront<T,PoolAlloc>& node, 
-         NumericFront<T,PoolAlloc> const& cnode, 
+         NumericFront<T,PoolAlloc>& cnode, 
          int ii, int jj, int *cmap, int prio) {
 
 #if defined(SPLDLT_USE_STARPU)
@@ -730,26 +730,37 @@ namespace spldlt {
                int r = cmap[ i ];
                if (rr == (r / blksz)) continue;
                rr = r/blksz;
-               
+
+               assert(rr < nr);
+               assert(cc < nc);
+               assert(nh < (nr*nc));
+
                // hdls[nh] = snode.handles[cc*nr+rr];
                hdls[nh] = node.blocks[cc*nr+rr].get_hdl();
                nh++;
             }
          }
       }
-      
+
+      if (nh <= 0)
+         printf("[assemble_block_task] nh = %d, ii = %d, jj = %d\n", nh, ii, jj);
+
       // Insert assembly tasks if there are contributions
       if (nh > 0) {
          
-         int cnr = (csnode.nrow-1)/blksz+1;  
-         int crsa = csnode.ncol/blksz;
-         int cncontrib = cnr-crsa;
-      
-         spldlt::starpu::insert_assemble_block(&node, &cnode, ii, jj, cmap, 
-                               // csnode.contrib_handles[(jj-crsa)*cncontrib+(ii-crsa)],
-                               cnode.contrib_blocks[(jj-crsa)*cncontrib+(ii-crsa)].hdl,
-                               hdls, nh, snode.hdl, csnode.hdl,
-                               prio);
+         // int cnr =  cnode.get_nr();
+         // int crsa = cnode.get_ncol()/blksz;
+         // int cncontrib = cnr-crsa;
+         
+         // Contrib block to be assembled into current node
+         Tile<T, PoolAlloc>& cb = cnode.get_contrib_block(ii, jj);
+
+         spldlt::starpu::insert_assemble_block(
+               &node, &cnode, ii, jj, cmap,
+               // cnode.contrib_blocks[(jj-crsa)*cncontrib+(ii-crsa)].hdl,
+               cb.hdl,
+               hdls, nh, snode.hdl, csnode.hdl,
+               prio);
       }
 
       delete[] hdls;
@@ -758,6 +769,7 @@ namespace spldlt {
 #else
 
       assemble_block(node, cnode, ii, jj, cmap);
+
 #endif
    }
 
@@ -822,9 +834,12 @@ namespace spldlt {
                int r = cmap[ i ];
                if (rr == (r/blksz)) continue;
                rr = r/blksz;
+
+               assert(nh < (ncontrib*ncontrib));
                
                // hdls[nh] = snode.contrib_handles[(cc-rsa)*ncontrib+(rr-rsa)];
-               hdls[nh] = node.contrib_blocks[(cc-rsa)*ncontrib+(rr-rsa)].hdl;
+               // hdls[nh] = node.contrib_blocks[(cc-rsa)*ncontrib+(rr-rsa)].hdl;
+               hdls[nh] = node.get_contrib_block(rr, cc).hdl;
                nh++;
             }
          }
@@ -832,19 +847,23 @@ namespace spldlt {
 
       // Insert assembly tasks if there are contribution
       if (nh>0) {
-
-         // printf("[assemble_contrib_block_task] nh = %d\n", nh);
          
-         int cnr = (csnode.nrow-1)/blksz+1;  
-         int crsa = csnode.ncol/blksz;
-         int cncontrib = cnr-crsa;
+         // int cnr = (csnode.nrow-1)/blksz+1;  
+         // int crsa = csnode.ncol/blksz;
+         // int cncontrib = cnr-crsa;
+
+         // Contrib block to be assembled into current node
+         Tile<T, PoolAlloc>& cb = cnode.get_contrib_block(ii, jj);
 
          spldlt::starpu::insert_assemble_contrib_block(
                &node, &cnode, ii, jj, cmap, 
-               cnode.contrib_blocks[(jj-crsa)*cncontrib+(ii-crsa)].hdl,
+               // cnode.contrib_blocks[(jj-crsa)*cncontrib+(ii-crsa)].hdl,
+               cb.hdl,
                hdls, nh, snode.hdl, node.contrib_hdl, csnode.hdl,
                &workspaces, prio);
+
       }
+
       delete[] hdls;
 
       // assemble_contrib_block(node, cnode, ii, jj, cmap, blksz);

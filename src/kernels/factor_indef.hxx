@@ -163,7 +163,7 @@ namespace spldlt {
 
    /// @brief Update uneliminated block in the left-diagonal in the
    /// LDLT factorization with APP
-   template<typename BlockSpec, typename T, typename IntAlloc, typename Backup>
+   template<typename BlockSpec, typename Backup>
    void updateT_block_app(
          BlockSpec& isrc, BlockSpec& jsrc, BlockSpec& ublk,
          Backup& backup,

@@ -252,28 +252,32 @@ namespace spldlt {
                   pool_alloc_, aval);
 
 //          }
-// #if defined(SPLDLT_USE_STARPU)
-//             starpu_task_wait_for_all();
-// #endif
+#if defined(SPLDLT_USE_STARPU)
+            starpu_task_wait_for_all();
+#endif
 //             return;
 //             for(int ni = 0; ni < symb_.nnodes_; ++ni) {
 //             SymbolicFront& sfront = symb_[ni];
 //             // Skip iteration if node is in a subtree
 //             if (sfront.exec_loc != -1) continue;
             
-            // assemble contributions from children fronts and subtreess
+            // Assemble contributions from children fronts and
+            // subtreess into the fully summed columns
             // assemble_notask(symb_.n, fronts_[ni], child_contrib, pool_alloc_);
-            // assemble(symb_.n, fronts_[ni], child_contrib, pool_alloc_);
-            assemble_task(symb_.n, fronts_[ni], child_contrib, pool_alloc_);
-// #if defined(SPLDLT_USE_STARPU)
-//             starpu_task_wait_for_all();
-// #endif
+            assemble(symb_.n, fronts_[ni], child_contrib, pool_alloc_);
+            // assemble_task(symb_.n, fronts_[ni], child_contrib, pool_alloc_);
 
+#if defined(SPLDLT_USE_STARPU)
+            starpu_task_wait_for_all();
+#endif
             // factor_front_posdef(sfront, fronts_[ni], options);
 
-            factor_front_indef_task(
-                  fronts_[ni], workspaces,  pool_alloc_, options, 
-                  worker_stats);
+            factor_front_indef_notask(
+                  options, pool_alloc_, fronts_[ni], workspaces[0], worker_stats[0]);
+
+//             factor_front_indef_task(
+//                   fronts_[ni], workspaces,  pool_alloc_, options, 
+//                   worker_stats);
 // #if defined(SPLDLT_USE_STARPU)
 //             starpu_task_wait_for_all();
 // #endif
@@ -283,7 +287,6 @@ namespace spldlt {
 
             // Assemble contributions from children nodes into non
             // fully-summed columns
-
             assemble_contrib_task(fronts_[ni], child_contrib, workspaces);
             // assemble_contrib(fronts_[ni], child_contrib);
 

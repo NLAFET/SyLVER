@@ -66,12 +66,11 @@ namespace spldlt {
    /// factor_front_indef but using a STF model.
    template <typename T, typename PoolAlloc>
    void factor_front_indef_notask(
-         NumericFront<T, PoolAlloc>& front,
          struct cpu_factor_options& options,
-         spral::ssids::cpu::ThreadStats& stats,
+         PoolAlloc& pool_alloc,
+         NumericFront<T, PoolAlloc>& front,
          spral::ssids::cpu::Workspace& work,
-         PoolAlloc& pool_alloc
-         ) {
+         spral::ssids::cpu::ThreadStats& stats) {
 
       typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
 
@@ -1346,7 +1345,6 @@ namespace spldlt {
                   // Update uneliminated entries in blocks on the left
                   // of current block column
                   updateT_block_app(
-                        // isrc, jsrc, ublk,
                         blocks[isrc_col*mblk+isrc_row], blocks[jblk*mblk+blk], 
                         blocks[jblk*mblk+iblk],
                         backup, work);                  
@@ -1383,13 +1381,14 @@ namespace spldlt {
 
                      Tile<T, Allocator>& upd = front.get_contrib_block(iblk, jblk);
                      
-                     update_contrib_block_app(
-                           front,
-                           blk, iblk, jblk,
-                           blocks[blk*mblk+iblk].get_a(), blocks[blk*mblk+iblk].get_lda(),
-                           blocks[blk*mblk+jblk].get_a(), blocks[blk*mblk+jblk].get_lda(),
-                           upd.m, upd.n, upd.a, upd.lda,
-                           work);
+                     update_contrib_block_app
+                        <T, IntAlloc, Allocator>
+                        (front,
+                         blk, iblk, jblk,
+                         blocks[blk*mblk+iblk].get_a(), blocks[blk*mblk+iblk].get_lda(),
+                         blocks[blk*mblk+jblk].get_a(), blocks[blk*mblk+jblk].get_lda(),
+                         upd.m, upd.n, upd.a, upd.lda,
+                         work);
 
                   }    
                }
