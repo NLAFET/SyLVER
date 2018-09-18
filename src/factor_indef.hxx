@@ -99,8 +99,10 @@ namespace spldlt {
          
          if (front.nelim < ncol) { 
             // Some columns remain uneliminated after the first pass
+            
+            spldlt::ldlt_app_internal::
+               ColumnData<T, IntAlloc> &cdata = *front.cdata;
 
-            ColumnData<T, IntAlloc> &cdata = *front.cdata; // Colmun data            
             // Realease backup and permute failed at the back of the
             // front
             Backup& backup = *front.backup; 
