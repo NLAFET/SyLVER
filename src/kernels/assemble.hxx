@@ -241,7 +241,8 @@ namespace spldlt {
 
          assert(node.cdata); // Make sure cdata is allocated
 
-         spldlt::ldlt_app_internal::ColumnData<T, IntAlloc>& cdata = *node.cdata;
+         spldlt::ldlt_app_internal::
+            ColumnData<T, IntAlloc>& cdata = *node.cdata;
          
          // Unregister block handles in the factors
          for(int j = 0; j < nc; ++j) {
@@ -1143,9 +1144,9 @@ namespace spldlt {
 
    }
 
-   ///////////////////////////////////////////////////////////   
-   // @brief Assemble contributions from children node and subtrees
-   // into the fully-summed columns
+   ///////////////////////////////////////////////////////////
+   /// @brief Assemble contributions from children node and subtrees
+   /// into the fully-summed columns
    template <typename T, typename PoolAlloc>
    void assemble_notask(
          int n,

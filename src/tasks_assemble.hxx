@@ -112,7 +112,7 @@ namespace spldlt {
       
 #else
 
-      assemble_notask(n, node, child_contrib, pool_alloc, blksz);
+      assemble_notask(n, node, child_contrib, pool_alloc);
 
 #endif      
    }
