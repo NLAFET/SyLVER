@@ -99,7 +99,7 @@ namespace spldlt {
             aval, prio);
 #else
 
-      init_node(sfront, front, aval);
+      init_node(front, aval);
 
 #endif
 
@@ -670,7 +670,7 @@ namespace spldlt {
       
 #else
 
-      assemble_contrib_subtree(node, csnode, child_contrib, contrib_idx, blksz);
+      assemble_contrib_subtree(node, csnode, child_contrib, contrib_idx);
 
 #endif
    }
@@ -687,29 +687,38 @@ namespace spldlt {
 
 #if defined(SPLDLT_USE_STARPU)
 
+      // Node info
       SymbolicFront const& snode = node.symb;
-      SymbolicFront const& csnode = cnode.symb;
-      int blksz = node.blksz;
-      
+      int blksz = node.blksz;      
       int nrow = node.get_nrow();
       int ncol = node.get_ncol();
       int nr = node.get_nr(); // Number of block-rows in destination node
       int nc = node.get_nc(); // Number of block-columns in destination node
 
-      starpu_data_handle_t *hdls = new starpu_data_handle_t[nr*nc];
+      // StarPU handle array holding destination blocks handles
+      starpu_data_handle_t *hdls = new starpu_data_handle_t[nr*nc]; // Upperbound nr*nc handles 
       int nh = 0;
-      int cm = csnode.nrow - csnode.ncol;
+
+      // Children node info
+      // SymbolicFront const& csnode = cnode.symb;
+      int cnrow = cnode.get_nrow();
+      int cncol = cnode.get_ncol();
+      int cm = cnrow-cncol;
+
       // colum indexes
-      int c_sa = (csnode.ncol > jj*blksz) ? 0 : (jj*blksz-csnode.ncol); // first col in block
-      int c_en = std::min((jj+1)*blksz-csnode.ncol, cm); // last col in block
+      // int c_sa = (csnode.ncol > jj*blksz) ? 0 : (jj*blksz-csnode.ncol); // first col in block
+      // int c_en = std::min((jj+1)*blksz-csnode.ncol, cm); // last col in block
+      int c_sa = (cncol > jj*blksz) ? 0 : (jj*blksz-cncol); // first col in block
+      int c_en = std::min((jj+1)*blksz-cncol, cm); // last col in block
       // row indexes
-      int r_en = std::min((ii+1)*blksz-csnode.ncol, cm); // last row in block
+      // int r_en = std::min((ii+1)*blksz-csnode.ncol, cm); // last row in block
+      int r_en = std::min((ii+1)*blksz-cncol, cm); // last row in block
 
       int cc = -1; // Block column index in destination node
       int rr = -1; // Block row index in destination node
 
       // loop over column in block
-      for (int j=c_sa; j<c_en; j++) {
+      for (int j=c_sa; j<c_en; ++j) {
          
          // Column index in parent node.
          // int c = map[ csnode.rlist[csnode.ncol+j] ];
@@ -722,9 +731,10 @@ namespace spldlt {
             cc = c/blksz;
             rr = -1;
 
-            int r_sa = (ii == jj) ? j : (ii*blksz-csnode.ncol); // first row in block
+            // int r_sa = (ii == jj) ? j : (ii*blksz-csnode.ncol); // first row in block
+            int r_sa = (ii == jj) ? j : (ii*blksz-cncol); // first row in block
 
-            for (int i=r_sa; i<r_en; i++) {
+            for (int i=r_sa; i<r_en; ++i) {
 
                // int r = map[ csnode.rlist[csnode.ncol+i] ];
                int r = cmap[ i ];
@@ -742,9 +752,9 @@ namespace spldlt {
          }
       }
 
-      if (nh <= 0)
-         printf("[assemble_block_task] nh = %d, ii = %d, jj = %d, delay_out = %d, delay_in = %d\n", 
-                nh, ii, jj, cnode.ndelay_out, cnode.ndelay_in);
+      // if (nh <= 0)
+      //    printf("[assemble_block_task] nh = %d, ii = %d, jj = %d, delay_out = %d, delay_in = %d\n", 
+      //           nh, ii, jj, cnode.ndelay_out, cnode.ndelay_in);
 
       // Insert assembly tasks if there are contributions
       if (nh > 0) {
@@ -760,7 +770,7 @@ namespace spldlt {
                &node, &cnode, ii, jj, cmap,
                // cnode.contrib_blocks[(jj-crsa)*cncontrib+(ii-crsa)].hdl,
                cb.hdl,
-               hdls, nh, snode.hdl, csnode.hdl,
+               hdls, nh, node.get_hdl(), cnode.get_hdl(),
                prio);
       }
 
@@ -790,9 +800,8 @@ namespace spldlt {
 
 #if defined(SPLDLT_USE_STARPU)
 
-      SymbolicFront const& snode = node.symb;
-      SymbolicFront const& csnode = cnode.symb;
-   
+      // Node info
+      SymbolicFront const& snode = node.symb;   
       int nrow = node.get_nrow();
       int ncol = node.get_ncol();
       int nr = node.get_nr(); // Number of block-rows in destination node
@@ -800,17 +809,25 @@ namespace spldlt {
       int rsa = ncol/blksz; // rows/cols index of first block in contrib 
       int ncontrib = nr-rsa; // number of block rows/cols in contrib
 
-      // Array of block handles in parent front
+      // StarPU handle array holding handles of destination block in parent front
       starpu_data_handle_t *hdls = new starpu_data_handle_t[ncontrib*ncontrib];
       int nh = 0;
 
-      int cm = csnode.nrow - csnode.ncol;
+      // Children node info
+      // SymbolicFront const& csnode = cnode.symb;
+      int cnrow = cnode.get_nrow();
+      int cncol = cnode.get_ncol();
+
+      int cm = cnrow-cncol;
 
       // colum indexes
-      int c_sa = (csnode.ncol > jj*blksz) ? 0 : (jj*blksz-csnode.ncol); // first col in block
-      int c_en = std::min((jj+1)*blksz-csnode.ncol, cm); // last col in block
+      // int c_sa = (csnode.ncol > jj*blksz) ? 0 : (jj*blksz-csnode.ncol); // first col in block
+      // int c_en = std::min((jj+1)*blksz-csnode.ncol, cm); // last col in block
+      int c_sa = (cncol > jj*blksz) ? 0 : (jj*blksz-cncol); // First col in block
+      int c_en = std::min((jj+1)*blksz-cncol, cm); // Last col in block
       // row indexes
-      int r_en = std::min((ii+1)*blksz-csnode.ncol, cm); // last row in block
+      // int r_en = std::min((ii+1)*blksz-csnode.ncol, cm); // last row in block
+      int r_en = std::min((ii+1)*blksz-cncol, cm); // Last row in block
 
       int cc = -1;
       int rr = -1;
@@ -828,7 +845,7 @@ namespace spldlt {
             cc = c/blksz;
             rr = -1;
 
-            int r_sa = (ii == jj) ? j : (ii*blksz-csnode.ncol); // first row in block
+            int r_sa = (ii == jj) ? j : (ii*blksz-cncol); // first row in block
 
             for (int i = r_sa; i < r_en; i++) {
 
@@ -860,7 +877,7 @@ namespace spldlt {
                &node, &cnode, ii, jj, cmap, 
                // cnode.contrib_blocks[(jj-crsa)*cncontrib+(ii-crsa)].hdl,
                cb.hdl,
-               hdls, nh, snode.hdl, node.contrib_hdl, csnode.hdl,
+               hdls, nh, node.get_hdl(), node.contrib_hdl, cnode.get_hdl(),
                &workspaces, prio);
 
       }
