@@ -8,6 +8,8 @@
 #include "ssids/cpu/cpu_iface.hxx"
 #include "ssids/cpu/kernels/assemble.hxx"
 
+#include <assert.h>
+
 #include "kernels/ldlt_app.hxx"
 #include "NumericFront.hxx"
 

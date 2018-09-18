@@ -743,7 +743,8 @@ namespace spldlt {
       }
 
       if (nh <= 0)
-         printf("[assemble_block_task] nh = %d, ii = %d, jj = %d\n", nh, ii, jj);
+         printf("[assemble_block_task] nh = %d, ii = %d, jj = %d, delay_out = %d, delay_in = %d\n", 
+                nh, ii, jj, cnode.ndelay_out, cnode.ndelay_in);
 
       // Insert assembly tasks if there are contributions
       if (nh > 0) {
