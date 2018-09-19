@@ -89,8 +89,10 @@ public:
    void* allocate(size_t sz) {
       void* ptr;
 
+#if defined(SPLDLT_USE_STARPU)
       std::lock_guard<std::mutex> lock(mtx_);
-
+#endif
+      
       ptr = top_page_->allocate(sz);
       if(!ptr) { // Insufficient space on current top page, make a new one
          top_page_ = new Page(std::max(PAGE_SIZE, sz), top_page_);
@@ -101,7 +103,9 @@ public:
    }
 private:
    Page* top_page_;
+#if defined(SPLDLT_USE_STARPU)
    std::mutex mtx_;
+#endif
 };
 
 } /* namespace spldlt::append_alloc_internal */
