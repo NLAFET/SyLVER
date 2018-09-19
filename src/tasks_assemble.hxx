@@ -1,5 +1,7 @@
 #pragma once
 
+#include <assert.h>
+
 #include "assemble.hxx"
 
 #if defined(SPLDLT_USE_STARPU)
@@ -29,6 +31,8 @@ namespace spldlt {
          cnode_hdls[nc] = child->symb.hdl;
          ++nc;
       }
+
+      assert(nchild==nc);
       
       spldlt::starpu::insert_fini_cnodes(
             node.get_hdl(), cnode_hdls, nchild, &node);
@@ -103,6 +107,9 @@ namespace spldlt {
          cnode_hdls[i] = child->symb.hdl;
          ++i;
       }
+
+      assert(nchild==i);
+      
       // printf("[assemble_task] node = %d, nchild = %d\n", snode.idx+1, nchild);
       spldlt::starpu::insert_assemble(
             node.get_hdl(), cnode_hdls, nchild,

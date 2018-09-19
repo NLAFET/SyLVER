@@ -401,10 +401,17 @@ namespace spldlt {
       size_t len =  (ldl+2) * ncol; // indef (includes D)
 
       front.lcol = FADoubleTraits::allocate(factor_alloc_double, len);
-
+      // front.lcol = new T[len];
+      // DEBUG
+      // TODO remove explicit zeroing
+      for(int i=0; i<len; ++i)
+         front.lcol[i] = 0.0;
+      
       // Get space for contribution block + (explicitly do not zero it!)
       front.alloc_contrib_blocks();
-
+      // DEBUG
+      // TODO remove explicit zeroing      
+      front.zero_contrib_blocks();
       /* Alloc + set perm for expected eliminations at this node (delays are set
          * when they are imported from children) */
       front.perm = FAIntTraits::allocate(factor_alloc_int, ncol); // ncol fully summed variables
@@ -1162,7 +1169,7 @@ namespace spldlt {
 
       int nrow = node.get_nrow();
       int ncol = node.get_ncol();
-      size_t ldl = align_lda<double>(nrow);
+      size_t ldl = node.get_ldl();
 
       /*
        * Add children

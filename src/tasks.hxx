@@ -1,5 +1,7 @@
 #pragma once
 
+#include <assert.h>
+
 // SpLDLT
 #include "SymbolicFront.hxx"
 #include "kernels/assemble.hxx"
@@ -147,8 +149,7 @@ namespace spldlt {
          void** child_contrib,
          FactorAlloc& factor_alloc,
          PoolAlloc& pool_alloc,
-         T *aval
-         ){
+         T *aval) {
 
 #if defined(SPLDLT_USE_STARPU)
 
@@ -164,7 +165,10 @@ namespace spldlt {
          ++nc;
       }
 
-      // printf("[activate_init_front_task] node = %d, nchild = %d, nc = %d\n", node.symb.idx+1, nchild, nc);
+      assert(nchild==nc);
+      
+      // printf("[activate_init_front_task] node = %d, nchild = %d, fc = %d\n",
+      //        node.symb.idx+1, nchild, (node.first_child) ? node.first_child->symb.idx+1 : 0);
 
       spldlt::starpu::insert_activate_init_node(
             node.get_hdl(), cnode_hdls, nc,

@@ -63,9 +63,14 @@ namespace spldlt { namespace starpu {
          // printf("[assemble_contrib_cpu_func]\n");
       
          starpu_codelet_unpack_args(
-               cl_arg, &node, &child_contrib, &workspaces);
+               cl_arg,
+               &node, &child_contrib, &workspaces);
       
-         assemble_contrib(*node, child_contrib, *workspaces);
+         // assemble_contrib(*node, child_contrib, *workspaces);
+
+         assemble_contrib_notask(*node, child_contrib);
+         // spldlt::starpu::insert_assemble_contrib_sync(
+         //       node->contrib_hdl, node->symb.idx);
       }
 
       // assemble_contrib StarPU codelet
@@ -137,7 +142,8 @@ namespace spldlt { namespace starpu {
          starpu_codelet_unpack_args(
                cl_arg, &n, &node, &child_contrib, &pool_alloc);
 
-         assemble(n, *node, child_contrib, *pool_alloc);         
+         // assemble(n, *node, child_contrib, *pool_alloc);         
+         assemble_notask(n, *node, child_contrib, *pool_alloc);
       }      
 
       // assemble StarPU codelet

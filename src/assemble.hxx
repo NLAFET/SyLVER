@@ -84,7 +84,7 @@ namespace spldlt {
 
                int csa = cncol / blksz;
                // Number of block rows in child node
-               int cnr = (cnrow-1) / blksz + 1; 
+               int cnr = child->get_nr();
                // Lopp over blocks in contribution blocks
                for (int jj = csa; jj < cnr; ++jj) {                     
                   for (int ii = jj; ii < cnr; ++ii) {
@@ -198,9 +198,9 @@ namespace spldlt {
 
             // assemble_delays(*child, delay_col, node);
             assemble_delays_task(*child, delay_col, node);
-#if defined(SPLDLT_USE_STARPU)
-            starpu_task_wait_for_all();
-#endif      
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif      
             delay_col += child->ndelay_out;
 
             // Handle expected contributions (only if something there)
@@ -210,7 +210,7 @@ namespace spldlt {
                // delete cache;
 
                int cncol = child->get_ncol();
-                  
+
                int csa = cncol / blksz;
                int cnr = child->get_nr(); // number of block rows
                // Loop over blocks in contribution blocks
@@ -219,16 +219,16 @@ namespace spldlt {
                      // assemble_block(node, *child, ii, jj, csnode.map);
                      assemble_block_task(
                            node, *child, ii, jj, csnode.map, ASSEMBLE_PRIO);
-#if defined(SPLDLT_USE_STARPU)
-                     starpu_task_wait_for_all();
-#endif
+// #if defined(SPLDLT_USE_STARPU)
+//                      starpu_task_wait_for_all();
+// #endif
                   }
                }
 // #if defined(SPLDLT_USE_STARPU)
 //                starpu_task_wait_for_all();
 // #endif
             }
- 
+
          }
          else {
             // Assemble contributions from subtree

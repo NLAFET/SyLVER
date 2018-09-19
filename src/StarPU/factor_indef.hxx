@@ -23,8 +23,14 @@ namespace spldlt { namespace starpu {
                cl_arg, &node, &workspaces, &pool_alloc, &options, 
                &worker_stats);
 
-         factor_front_indef(
-               *node, *workspaces, *pool_alloc, *options, *worker_stats);
+         // factor_front_indef(
+         //       *node, *workspaces, *pool_alloc, *options, *worker_stats);
+         
+         int workerid = starpu_worker_get_id();
+         // printf("[factor_front_indef_cpu_func] workerid = %d\n", workerid);
+         factor_front_indef_notask(
+               *options, *pool_alloc, *node,
+               (*workspaces)[workerid], (*worker_stats)[workerid]);
       }      
 
       // SarPU codelet

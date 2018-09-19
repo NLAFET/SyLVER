@@ -2,16 +2,21 @@
 #include "ssids/cpu/cpu_iface.hxx"
 
 #include "NumericTree.hxx"
+#include "AppendAlloc.hxx"
 
-#include "ssids/cpu/AppendAlloc.hxx"
+// #include "ssids/cpu/AppendAlloc.hxx"
+
+#include <memory>
 
 using namespace spldlt;
 
 namespace {
    typedef double T;
    const int PAGE_SIZE = 8*1024*1024; // 8MB
-   typedef NumericTree<T, PAGE_SIZE, spral::ssids::cpu::AppendAlloc<T>, true> NumericTreePosdefDbl; // posdef = true
-   typedef NumericTree<T, PAGE_SIZE, spral::ssids::cpu::AppendAlloc<T>, false> NumericTreeIndefDbl; // posdef = false
+   typedef NumericTree<T, PAGE_SIZE, spldlt::AppendAlloc<T>, true> NumericTreePosdefDbl; // posdef = true
+   typedef NumericTree<T, PAGE_SIZE, spldlt::AppendAlloc<T>, false> NumericTreeIndefDbl; // posdef = false
+   // typedef NumericTree<T, PAGE_SIZE, std::allocator<T>, true> NumericTreePosdefDbl; // posdef = true
+   // typedef NumericTree<T, PAGE_SIZE, std::allocator<T>, false> NumericTreeIndefDbl; // posdef = false
 }
 
 // Double precision wrapper around templated routines
