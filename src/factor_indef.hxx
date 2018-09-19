@@ -284,7 +284,8 @@ namespace spldlt {
 #else
 
          factor_block_app(
-               dblk, next_elim, perm, d, cdata, backup, options, work, alloc);
+               dblk, next_elim, perm, d, cdata, backup, options, work[0],
+               alloc);
             
 #endif
       }
