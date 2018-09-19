@@ -313,12 +313,12 @@ contains
     subtree_sa = 0
     spldlt_akeep%subtree_en = 0
 
-    ! call prune_tree(akeep%nnodes, akeep%sptr, akeep%sparent, akeep%rptr, nth, &
-    !      spldlt_akeep%nsubtrees, small, contrib_dest, subtree_sa, spldlt_akeep%subtree_en)
+    call prune_tree(akeep%nnodes, akeep%sptr, akeep%sparent, akeep%rptr, nth, &
+         spldlt_akeep%nsubtrees, small, contrib_dest, subtree_sa, spldlt_akeep%subtree_en)
 
     print *, "[analyse_core] nsubtrees = ", spldlt_akeep%nsubtrees
-    print *, "[analyse_core] contrib_dest = ", contrib_dest(1:spldlt_akeep%nsubtrees)
-    print *, "[analyse_core] subtrees = ", spldlt_akeep%subtree_en(1:spldlt_akeep%nsubtrees)
+    ! print *, "[analyse_core] contrib_dest = ", contrib_dest(1:spldlt_akeep%nsubtrees)
+    ! print *, "[analyse_core] subtrees = ", spldlt_akeep%subtree_en(1:spldlt_akeep%nsubtrees)
     
     ! dump atree in a dot file
     call spldlt_print_atree(akeep%nnodes, akeep%sptr, akeep%sparent, akeep%rptr, small)

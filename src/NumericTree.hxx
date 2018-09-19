@@ -296,11 +296,11 @@ namespace spldlt {
 //             starpu_task_wait_for_all();
 // #endif
             
-// #if defined(SPLDLT_USE_STARPU)
-//             spldlt::starpu::
-//                insert_nelim_sync(
-//                   fronts_[ni].get_hdl(), sfront.idx);
-// #endif
+#if defined(SPLDLT_USE_STARPU)
+            spldlt::starpu::
+               insert_nelim_sync(
+                  fronts_[ni].get_hdl(), sfront.idx);
+#endif
 
 // #if defined(SPLDLT_USE_STARPU)
 //             starpu_task_wait_for_all();
