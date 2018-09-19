@@ -177,7 +177,6 @@ namespace spldlt {
       // Perform actual update
       ublk.update(isrc, jsrc, work);
    }
-
    
    /// @brief Update block in the trailing submatrix in the LDLT
    /// factorization with APP
