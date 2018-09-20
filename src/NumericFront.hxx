@@ -401,8 +401,14 @@ namespace spldlt {
       // }
 
 #if defined(SPLDLT_USE_STARPU)
+      /// @brief Return StarPU symbolic handle
       starpu_data_handle_t get_hdl() const {
          return symb.hdl;
+      }
+
+      /// @brief Return StarPU symbolic handle on contribution blocks 
+      starpu_data_handle_t get_contrib_hdl() const {
+         return contrib_hdl; 
       }
 #endif
       

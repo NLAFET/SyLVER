@@ -1065,6 +1065,7 @@ namespace spldlt { namespace starpu {
          STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
 
          delete[] descrs;
+
       }
 
 
@@ -1098,6 +1099,7 @@ namespace spldlt { namespace starpu {
       void insert_factor_front_indef_failed(
             starpu_data_handle_t col_hdl,
             starpu_data_handle_t contrib_hdl,
+            starpu_data_handle_t *hdls, int nhdl,
             NumericFront<T, PoolAlloc> *node,
             std::vector<spral::ssids::cpu::Workspace> *workspaces,
             struct cpu_factor_options *options,
@@ -1105,11 +1107,26 @@ namespace spldlt { namespace starpu {
             ) {
 
          int ret;
+
+         struct starpu_data_descr *descrs = new starpu_data_descr[nhdl+2];
+
+         int nh = 0;
+         for (int i=0; i<nhdl; i++) {
+            descrs[nh].handle = hdls[i]; descrs[nh].mode = STARPU_R;
+            nh++;
+         }
+
+         descrs[nh].handle = col_hdl; descrs[nh].mode = STARPU_RW;
+         nh++;
+
+         descrs[nh].handle = contrib_hdl; descrs[nh].mode = STARPU_RW;
+         nh++;
          
          ret = starpu_insert_task(
                &cl_factor_front_indef_failed,
-               STARPU_RW, col_hdl,
-               STARPU_RW, contrib_hdl,
+               // STARPU_RW, col_hdl,
+               // STARPU_RW, contrib_hdl,
+               STARPU_DATA_MODE_ARRAY, descrs, nh,
                STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
                STARPU_VALUE, &workspaces, sizeof(std::vector<spral::ssids::cpu::Workspace>*),
                STARPU_VALUE, &options, sizeof(struct cpu_factor_options*),
@@ -1117,6 +1134,8 @@ namespace spldlt { namespace starpu {
                0);
          STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
                
+         delete[] descrs;
+
       }
 
       ////////////////////////////////////////
@@ -1479,8 +1498,8 @@ namespace spldlt { namespace starpu {
 
          starpu_codelet_init(&cl_update_contrib_block_app);
 #if defined(SPLDLT_USE_GPU)
-         // cl_update_contrib_block_app.where = STARPU_CPU;
-         cl_update_contrib_block_app.where = STARPU_CUDA; // Debug
+         cl_update_contrib_block_app.where = STARPU_CPU;
+         // cl_update_contrib_block_app.where = STARPU_CUDA; // Debug
          // cl_update_contrib_block_app.where = STARPU_CPU | STARPU_CUDA;
 #else
          cl_update_contrib_block_app.where = STARPU_CPU;

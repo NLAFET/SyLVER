@@ -29,10 +29,10 @@ namespace spldlt {
       
 #if defined(SPLDLT_USE_STARPU)
 
-      int ncol = node.get_ncol();
-      int rsa = ncol / blksz; // index of first block in contribution blocks
-      int nr = node.get_nr(); // number of block rows
-      int ncontrib = nr-rsa;
+      // int ncol = node.get_ncol();
+      // int rsa = ncol / blksz; // index of first block in contribution blocks
+      // int nr = node.get_nr(); // number of block rows
+      // int ncontrib = nr-rsa;
 
       spldlt::ldlt_app_internal::ColumnData<T, IntAlloc> &cdata = *node.cdata;
       int const nblk = node.get_nc(); // number of block columns in factors      
@@ -81,12 +81,27 @@ namespace spldlt {
       spldlt::ldlt_app_internal::ColumnData<T, IntAlloc> &cdata = *node.cdata;
       int n = node.get_ncol();
       int const nblk = node.get_nc(); // Number of block-columns
-      
+      int rsa = n / blksz; // index of first block in contribution blocks
+      int nr = node.get_nr(); // number of block rows
+      int ncb = nr-rsa;
+
+      starpu_data_handle_t *hdls = new starpu_data_handle_t[ncb*ncb];
+      int nh = 0;
+
+      for (int j=rsa; j<nr; ++j){
+         for (int i=j; i<nr; ++i){
+            hdls[nh] = node.get_contrib_block(i, j).hdl;
+            ++nh;
+         }
+      }
+
       spldlt::starpu::insert_factor_front_indef_failed(
-            cdata[nblk-1].get_hdl(), node.contrib_hdl,
+            cdata[nblk-1].get_hdl(), node.get_contrib_hdl(),
+            hdls, nh,
             &node, &workspaces, &options, &worker_stats
             );
 
+      delete[] hdls;
 #else
       spral::ssids::cpu::Workspace& work = workspaces[0];
       ThreadStats& stats = worker_stats[0];
