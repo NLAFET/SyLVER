@@ -1451,8 +1451,8 @@ namespace spldlt { namespace starpu {
          starpu_codelet_init(&cl_updateN_block_app);
 #if defined(SPLDLT_USE_GPU)
          // cl_updateN_block_app.where = STARPU_CPU; // DEBUG
-         cl_updateN_block_app.where = STARPU_CUDA; // DEBUG
-         // cl_updateN_block_app.where = STARPU_CPU | STARPU_CUDA;
+         // cl_updateN_block_app.where = STARPU_CUDA; // DEBUG
+         cl_updateN_block_app.where = STARPU_CPU | STARPU_CUDA;
 #else
          cl_updateN_block_app.where = STARPU_CPU;
 #endif
@@ -1499,8 +1499,8 @@ namespace spldlt { namespace starpu {
          starpu_codelet_init(&cl_update_contrib_block_app);
 #if defined(SPLDLT_USE_GPU)
          // cl_update_contrib_block_app.where = STARPU_CPU;
-         cl_update_contrib_block_app.where = STARPU_CUDA; // Debug
-         // cl_update_contrib_block_app.where = STARPU_CPU | STARPU_CUDA;
+         // cl_update_contrib_block_app.where = STARPU_CUDA; // Debug
+         cl_update_contrib_block_app.where = STARPU_CPU | STARPU_CUDA;
 #else
          cl_update_contrib_block_app.where = STARPU_CPU;
 #endif

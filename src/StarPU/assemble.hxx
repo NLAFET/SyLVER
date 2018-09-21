@@ -200,14 +200,14 @@ namespace spldlt { namespace starpu {
          starpu_codelet_init(&cl_assemble_contrib);
          cl_assemble_contrib.where = STARPU_CPU;
          cl_assemble_contrib.nbuffers = STARPU_VARIABLE_NBUFFERS;
-         cl_assemble_contrib.name = "ASSEMBLE_CONTRIB";
+         cl_assemble_contrib.name = "AssembleContrib";
          cl_assemble_contrib.cpu_funcs[0] = assemble_contrib_cpu_func<T, PoolAlloc>;
 
          // fini_cnodes StarPU codelet
          starpu_codelet_init(&cl_fini_cnodes);
          cl_fini_cnodes.where = STARPU_CPU;
          cl_fini_cnodes.nbuffers = STARPU_VARIABLE_NBUFFERS;
-         cl_fini_cnodes.name = "FINI_CNODES";
+         cl_fini_cnodes.name = "FiniCnodes";
          cl_fini_cnodes.cpu_funcs[0] = fini_cnodes_cpu_func<T, PoolAlloc>;
 
       }

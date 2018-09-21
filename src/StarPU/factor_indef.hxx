@@ -69,7 +69,7 @@ namespace spldlt { namespace starpu {
          starpu_codelet_init(&cl_factor_front_indef);
          cl_factor_front_indef.where = STARPU_CPU;
          cl_factor_front_indef.nbuffers = STARPU_VARIABLE_NBUFFERS;
-         cl_factor_front_indef.name = "FACTOR_FRONT";
+         cl_factor_front_indef.name = "FactorFront";
          cl_factor_front_indef.cpu_funcs[0] = factor_front_indef_cpu_func<T, PoolAlloc>;
 
       }
