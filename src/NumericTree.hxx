@@ -176,8 +176,9 @@ namespace spldlt {
          }
       }
       
-      ////////////////////////////////////////////////////////////////////////////////   
+      ////////////////////////////////////////////////////////////
       // factor_mf_indef
+
       void factor_mf_indef(
             T *aval, void** child_contrib, 
             std::vector<spral::ssids::cpu::Workspace>& workspaces,
@@ -327,8 +328,9 @@ namespace spldlt {
 
       }
 
-      ////////////////////////////////////////////////////////////////////////////////   
+      ////////////////////////////////////////////////////////////
       // factor_mf_posdef
+      
       void factor_mf_posdef(
             T *aval, void** child_contrib,
             std::vector<spral::ssids::cpu::Workspace>& workspaces,

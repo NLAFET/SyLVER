@@ -9,6 +9,8 @@
 #include "SymbolicFront.hxx"
 #include "kernels/ldlt_app.hxx"
 
+#include <cassert>
+
 // SSIDS
 #include "ssids/cpu/cpu_iface.hxx"
 
@@ -382,6 +384,10 @@ namespace spldlt {
       /// @param j column index of block in the frontal matrix
       inline Tile<T, PoolAllocator>& get_contrib_block(int i, int j) {
 
+         // No bound checks when accessing the element in the
+         // contrib_blocks vector
+         assert(symb.nrow > symb.ncol);
+         
          int n = get_ncol();
          int sa = n/blksz;
          int nr = get_nr();

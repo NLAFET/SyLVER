@@ -76,25 +76,30 @@ namespace spldlt {
 #if defined(SPLDLT_USE_STARPU)
 
       typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
-      int blksz = options.cpu_block_size;
-
+      int blksz = node.blksz;
       spldlt::ldlt_app_internal::ColumnData<T, IntAlloc> &cdata = *node.cdata;
-      int n = node.get_ncol();
       int const nblk = node.get_nc(); // Number of block-columns
-      int rsa = n / blksz; // index of first block in contribution blocks
-      int nr = node.get_nr(); // number of block rows
-      int ncb = nr-rsa;
-
-      starpu_data_handle_t *hdls = new starpu_data_handle_t[ncb*ncb];
+      starpu_data_handle_t *hdls = nullptr;
       int nh = 0;
+      int n = node.get_ncol();
+      int m = node.get_nrow();
 
-      for (int j=rsa; j<nr; ++j){
-         for (int i=j; i<nr; ++i){
-            hdls[nh] = node.get_contrib_block(i, j).hdl;
-            ++nh;
+      if ((m-n) > 0) {         
+         // In case there is a contribution block (non-root nodes)
+         
+         int rsa = n / blksz; // index of first block in contribution blocks
+         int nr = node.get_nr(); // number of block rows
+         int ncb = nr-rsa;      
+         hdls = new starpu_data_handle_t[ncb*ncb];
+      
+         for (int j=rsa; j<nr; ++j){
+            for (int i=j; i<nr; ++i){
+               hdls[nh] = node.get_contrib_block(i, j).hdl;
+               ++nh;
+            }
          }
       }
-
+      
       spldlt::starpu::insert_factor_front_indef_failed(
             cdata[nblk-1].get_hdl(), node.get_contrib_hdl(),
             hdls, nh,
@@ -102,6 +107,7 @@ namespace spldlt {
             );
 
       delete[] hdls;
+
 #else
       spral::ssids::cpu::Workspace& work = workspaces[0];
       ThreadStats& stats = worker_stats[0];
