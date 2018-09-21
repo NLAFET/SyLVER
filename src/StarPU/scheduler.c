@@ -47,7 +47,7 @@ void init_heteroprio(unsigned sched_ctx) {
    starpu_heteroprio_set_mapping(sched_ctx, STARPU_CUDA_IDX, 0, updaten_prio);
 
    starpu_heteroprio_set_faster_arch(sched_ctx, STARPU_CUDA_IDX, updaten_prio);
-   starpu_heteroprio_set_arch_slow_factor(sched_ctx, STARPU_CPU_IDX, updaten_prio, 40.0f);
+   starpu_heteroprio_set_arch_slow_factor(sched_ctx, STARPU_CPU_IDX, updaten_prio, 30.0f);
 
 }
 

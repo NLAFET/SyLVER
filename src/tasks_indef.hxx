@@ -62,8 +62,8 @@ namespace spldlt {
    }
 
 
-   ////////////////////////////////////////////////////////////////////////////////
-   // factor_front_indef_secondpass_nocontrib_task
+   ////////////////////////////////////////////////////////////
+   // factor_front_indef_failed_task
 
    template <typename T, typename PoolAlloc>
    void factor_front_indef_failed_task(

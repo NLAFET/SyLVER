@@ -876,6 +876,8 @@ namespace spldlt { namespace starpu {
       template <typename T, typename IntAlloc, typename PoolAlloc>
       void update_contrib_block_app_gpu_func(void *buffers[], void *cl_arg) {
 
+         // printf("[update_contrib_block_app_gpu_func]\n");
+
          T *upd = (T *)STARPU_MATRIX_GET_PTR(buffers[0]);
          unsigned ldupd = STARPU_MATRIX_GET_LD(buffers[0]); // Leading dimensions
          unsigned updm = STARPU_MATRIX_GET_NX(buffers[0]);
