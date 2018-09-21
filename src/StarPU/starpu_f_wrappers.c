@@ -43,6 +43,17 @@ int starpu_f_init_c(
   info = starpu_init(&conf);
   STARPU_CHECK_RETURN_VALUE(info, "starpu_init");
 
+#if defined(SPLDLT_USE_GPU)
+  
+  /* auto t_starpu_cublas_init_start = std::chrono::high_resolution_clock::now(); */
+  starpu_cublas_init();
+  /* auto t_starpu_cublas_init_end = std::chrono::high_resolution_clock::now(); */
+  /* long t_starpu_cublas_init = std::chrono::duration_cast */
+     /* <std::chrono::nanoseconds>(t_starpu_cublas_init_end-t_starpu_cublas_init_start).count(); */
+  /* printf("[NumericTree] StarPU cuBLAS init = %e\n", 1e-9*t_starpu_cublas_init); */
+#endif
+
+
   return info;
 }
 

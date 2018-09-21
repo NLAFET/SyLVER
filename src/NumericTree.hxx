@@ -96,10 +96,6 @@ namespace spldlt {
                -1, (uintptr_t) NULL,
                blksz, blksz, blksz,
                sizeof(T));
-
-#if defined(SPLDLT_USE_GPU)
-         starpu_cublas_init();
-#endif
 #endif
 
 #if defined(SPLDLT_USE_STARPU)
@@ -114,6 +110,8 @@ namespace spldlt {
             spldlt::starpu::codelet_init_assemble<T, PoolAllocator>();
          }
 #endif
+         // starpu_task_wait_for_all();
+         // starpu_fxt_trace_user_event();
          printf("[NumericTree] nnodes = %d\n", symb_.nnodes_);
          auto start = std::chrono::high_resolution_clock::now();
          if (posdef) factor_mf_posdef(aval, child_contrib, workspaces,
@@ -187,17 +185,18 @@ namespace spldlt {
 
          // printf("[factor_mf_indef] posdef = %d\n", posdef);
          // printf("[factor_mf_indef] nparts = %d\n", symb_.nparts_);
-         
-         // Blocking size
-         int blksz = options.cpu_block_size;
 
 #if defined(SPLDLT_USE_STARPU)
          // TODO move hdl registration to activate task
          // Register symbolic handles.
+         // auto start = std::chrono::high_resolution_clock::now();
          for(int ni = 0; ni < symb_.nnodes_+1; ++ni) {
             starpu_void_data_register(&(symb_[ni].hdl)); // Node's symbolic handle
             starpu_void_data_register(&(fronts_[ni].contrib_hdl)); // Symbolic handle for contribution blocks
          }
+         // auto end = std::chrono::high_resolution_clock::now();
+         // long t_reg = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count();
+         // printf("[factor_mf_indef] StarPU handle register: %e\n", 1e-9*t_reg);
 #endif
 
          // for(int p = 0; p < symb_.nparts_; ++p) {
@@ -213,6 +212,7 @@ namespace spldlt {
          //             &options);
          //    }
          // }
+         // starpu_pause();
          for(int p = 0; p < symb_.nsubtrees_; ++p) {
             int root = symb_.subtrees_[p]-1; // subtrees is 1-indexed
             // printf("[factor_mf_indef] root idx = %d\n", root+1);
@@ -321,6 +321,7 @@ namespace spldlt {
 
          // Finish root node
          fini_cnodes_task(fronts_[symb_.nnodes_]);
+         // starpu_resume();
 
 // #if defined(SPLDLT_USE_STARPU)
 //          starpu_task_wait_for_all();
