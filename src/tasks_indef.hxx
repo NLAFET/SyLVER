@@ -1,8 +1,7 @@
 #pragma once
 
-#include <assert.h>
-#include "ssids/cpu/cpu_iface.hxx"
-
+// SpLDLT
+#include "factor_failed.hxx"
 #include "kernels/ldlt_app.hxx"
 #include "kernels/factor_indef.hxx"
 
@@ -10,6 +9,11 @@
 #include "StarPU/kernels_indef.hxx"
 #include "StarPU/factor_indef.hxx"
 #endif
+
+#include <assert.h>
+
+// SSIDS 
+#include "ssids/cpu/cpu_iface.hxx"
 
 namespace spldlt {
 
@@ -87,13 +91,13 @@ namespace spldlt {
       if ((m-n) > 0) {         
          // In case there is a contribution block (non-root nodes)
          
-         int rsa = n / blksz; // index of first block in contribution blocks
-         int nr = node.get_nr(); // number of block rows
-         int ncb = nr-rsa;      
+         int rsa = n / blksz; // Index of first block in contribution blocks
+         int nr = node.get_nr(); // Number of block rows
+         int ncb = nr-rsa;
          hdls = new starpu_data_handle_t[ncb*ncb];
       
-         for (int j=rsa; j<nr; ++j){
-            for (int i=j; i<nr; ++i){
+         for (int j=rsa; j<nr; ++j) {
+            for (int i=j; i<nr; ++i) {
                hdls[nh] = node.get_contrib_block(i, j).hdl;
                ++nh;
             }

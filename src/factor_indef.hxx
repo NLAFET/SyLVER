@@ -126,7 +126,7 @@ namespace spldlt {
    ////////////////////////////////////////////////////////////
    // factor_front_indef
 
-   /// @brief Perform the LDLT factorization of front
+   /// @brief Perform the LDLT factorization of a front
    template <typename T, typename PoolAlloc>
    void factor_front_indef(
          NumericFront<T, PoolAlloc> &node,
