@@ -38,11 +38,11 @@ namespace spldlt { namespace starpu {
       // permute_failed StarPU codelet
       struct starpu_codelet cl_permute_failed;
 
-      // factor_front_indef_secondpass_nocontrib StarPU codelet
+      // cl_factor_front_indef_failed StarPU codelet
       struct starpu_codelet cl_factor_front_indef_failed;
 
-      // // factor_sync StarPU codelet
-      // struct starpu_codelet cl_factor_sync;
+      // cl_form_contrib StarPU codelet
+      struct starpu_codelet cl_form_contrib;
 
       ////////////////////////////////////////
       // assemble_contrib_sync
@@ -61,8 +61,8 @@ namespace spldlt { namespace starpu {
 
          int ret;
 
-         starpu_tag_t tag1 = (starpu_tag_t) (2*nodeidx);
-         starpu_tag_t tag2 = (starpu_tag_t) (2*nodeidx+1);
+         starpu_tag_t tag_assemble_contrib = (starpu_tag_t) (3*nodeidx+1);
+         // starpu_tag_t tag2 = (starpu_tag_t) (2*nodeidx+1);
          // starpu_tag_declare_deps(tag2, 1, tag1);
 
          // printf("[insert_assemble_contrib_sync] nodeidx = %d, tag1 = %d, , tag2 = %d\n", 
@@ -78,7 +78,7 @@ namespace spldlt { namespace starpu {
          struct starpu_task *task = starpu_task_create();
          task->cl = &cl_assemble_contrib_sync; 
          task->use_tag = 1;
-         task->tag_id = tag1;
+         task->tag_id = tag_assemble_contrib;
          task->handles[0] = contrib_hdl;
          ret = starpu_task_submit(task);
          STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_submit");
@@ -101,9 +101,16 @@ namespace spldlt { namespace starpu {
 
          int ret;
          
-         starpu_tag_t tag1 = (starpu_tag_t) (2*nodeidx);
-         starpu_tag_t tag2 = (starpu_tag_t) (2*nodeidx+1);
-         starpu_tag_declare_deps(tag2, 1, tag1);
+         starpu_tag_t tag_assemble_contrib = (starpu_tag_t) (3*nodeidx+1);
+         starpu_tag_t tag_factor_failed = (starpu_tag_t) (3*nodeidx+2);
+         // starpu_tag_t tag1 = (starpu_tag_t) (3*nodeidx);
+         // starpu_tag_t tag2 = (starpu_tag_t) (2*nodeidx+1);
+         starpu_tag_t tag_nelim = (starpu_tag_t) (3*nodeidx);
+         starpu_tag_declare_deps(
+               tag_nelim, 1,
+               tag_assemble_contrib// ,
+               // tag_factor_failed
+               );
          // starpu_tag_declare_deps(tag2, 1, 0);
 
          // printf("[insert_nelim_sync] nodeidx = %d, tag1 = %d, , tag2 = %d\n", 
@@ -119,13 +126,36 @@ namespace spldlt { namespace starpu {
          struct starpu_task *task = starpu_task_create();
          task->cl = &cl_nelim_sync; 
          task->use_tag = 1;
-         task->tag_id = tag2;
+         task->tag_id = tag_nelim;
          task->handles[0] = node_hdl;
          ret = starpu_task_submit(task);
          STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_submit");
 
       }
 
+      ////////////////////////////////////////
+      // factor_failed_sync
+
+      void factor_failed_sync_cpu_func(void *buffers[], void *cl_arg) {}
+
+      // factor_failed_sync StarPU codelet
+      struct starpu_codelet cl_factor_failed_sync;
+      
+      void insert_factor_failed_sync(int nodeidx) {
+
+         int ret;
+
+         starpu_tag_t tag_factor_failed = (starpu_tag_t) (3*nodeidx+2);
+
+         struct starpu_task *task = starpu_task_create();
+         task->cl = &cl_factor_failed_sync; 
+         task->use_tag = 1;
+         task->tag_id = tag_factor_failed;
+         ret = starpu_task_submit(task);
+         STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_submit");
+
+      }
+      
       ////////////////////////////////////////
       // assemble_delays
       

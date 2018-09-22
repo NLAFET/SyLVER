@@ -1073,7 +1073,7 @@ namespace spldlt { namespace starpu {
 
 
       ////////////////////////////////////////
-      // factor_front_indef_secondpass_nocontrib
+      // factor_front_indef_failed
 
       // CPU kernel      
       template <typename T, typename PoolAlloc>      
@@ -1095,7 +1095,7 @@ namespace spldlt { namespace starpu {
 
       }
 
-      // SarPU kernel
+      // SarPU codelet
       extern struct starpu_codelet cl_factor_front_indef_failed;
 
       template <typename T, typename PoolAlloc>
@@ -1140,10 +1140,62 @@ namespace spldlt { namespace starpu {
          delete[] descrs;
 
       }
+      
+      ////////////////////////////////////////
+      // form_contrib
 
+      // CPU kernel      
+      template <typename T, typename PoolAlloc>
+      void form_contrib_cpu_func(void *buffers[], void *cl_arg) {
+
+         NumericFront<T, PoolAlloc> *node = nullptr;
+         spral::ssids::cpu::Workspace *work = nullptr;
+         int nelim_from;
+         int nelim_to;
+
+         starpu_codelet_unpack_args(
+               cl_arg, &node, &work, &nelim_from, &nelim_to);
+
+         form_contrib_notask(*node, *work, nelim_from, nelim_to);
+
+      }
+
+      // SarPU codelet
+      extern struct starpu_codelet cl_form_contrib;
+
+      template <typename T, typename PoolAlloc>
+      void insert_form_contrib(
+            starpu_data_handle_t *hdls, int nhdl,
+            NumericFront<T, PoolAlloc> *node,
+            spral::ssids::cpu::Workspace *work,
+            int nelim_from, int nelim_to) {
+
+         int ret;
+         struct starpu_data_descr *descrs = new starpu_data_descr[nhdl];
+         
+         int nh = 0;
+         for (int i=0; i<nhdl; i++) {
+            descrs[nh].handle = hdls[i]; descrs[nh].mode = STARPU_RW;
+            nh++;
+         }
+
+         ret = starpu_insert_task(
+               &cl_form_contrib,
+               STARPU_DATA_MODE_ARRAY, descrs, nh,
+               STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
+               STARPU_VALUE, &work, sizeof(spral::ssids::cpu::Workspace),
+               STARPU_VALUE, &nelim_from, sizeof(int),
+               STARPU_VALUE, &nelim_to, sizeof(int),
+               0);
+         
+         delete[] descrs;
+         
+      }
+      
       ////////////////////////////////////////
       // nelim_sync
 
+      // CPU kernel
       extern void nelim_sync_cpu_func(void *buffers[], void *cl_arg);
 
       // template <typename T, typename PoolAlloc>
@@ -1275,6 +1327,16 @@ namespace spldlt { namespace starpu {
       //    // STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
          
       // }
+
+      ////////////////////////////////////////
+      // factor_failed_sync
+
+      extern void factor_failed_sync_cpu_func(void *buffers[], void *cl_arg);
+
+      // StarPU kernel
+      extern struct starpu_codelet cl_factor_failed_sync;
+
+      void insert_factor_failed_sync(int nodeidx);
 
       ////////////////////////////////////////
       // assemble_delays_subtree
@@ -1526,7 +1588,8 @@ namespace spldlt { namespace starpu {
          cl_permute_failed.where = STARPU_CPU;
          cl_permute_failed.nbuffers = STARPU_VARIABLE_NBUFFERS;
          cl_permute_failed.name = "PermuteFailed";
-         cl_permute_failed.cpu_funcs[0] = permute_failed_cpu_func<T, IntAlloc, Allocator>;
+         cl_permute_failed.cpu_funcs[0] =
+            permute_failed_cpu_func<T, IntAlloc, Allocator>;
 
          ////////////////////////////////////////////////////////////
          // factor_front_indef_failed StarPU codelet
@@ -1535,8 +1598,19 @@ namespace spldlt { namespace starpu {
          cl_factor_front_indef_failed.where = STARPU_CPU;
          cl_factor_front_indef_failed.nbuffers = STARPU_VARIABLE_NBUFFERS;
          cl_factor_front_indef_failed.name = "FactorFrontFailed";
-         cl_factor_front_indef_failed.cpu_funcs[0] = factor_front_indef_failed_cpu_func<T, Allocator>;
+         cl_factor_front_indef_failed.cpu_funcs[0] =
+            factor_front_indef_failed_cpu_func<T, Allocator>;
 
+         ////////////////////////////////////////////////////////////
+         // form_contrib StarPU codelet
+
+         starpu_codelet_init(&cl_form_contrib);
+
+         cl_form_contrib.where = STARPU_CPU;
+         cl_form_contrib.nbuffers = STARPU_VARIABLE_NBUFFERS;
+         cl_form_contrib.name = "FormContrib";
+         cl_form_contrib.cpu_funcs[0] = form_contrib_cpu_func<T, Allocator>;
+         
          // // Initialize factor_sync StarPU codelet
          // starpu_codelet_init(&cl_factor_sync);
          // // cl_factor_sync.where = STARPU_NOWHERE;
@@ -1581,7 +1655,8 @@ namespace spldlt { namespace starpu {
          cl_restore_failed_block_app.where = STARPU_CPU;
          cl_restore_failed_block_app.nbuffers = STARPU_VARIABLE_NBUFFERS;
          cl_restore_failed_block_app.name = "RestoreFailedBlock";
-         cl_restore_failed_block_app.cpu_funcs[0] = restore_failed_block_app_cpu_func<T, iblksz, Backup, IntAlloc>;
+         cl_restore_failed_block_app.cpu_funcs[0] =
+            restore_failed_block_app_cpu_func<T, iblksz, Backup, IntAlloc>;
 
          ////////////////////////////////////////////////////////////
          // assemble_delays StarPU codelet
@@ -1597,7 +1672,8 @@ namespace spldlt { namespace starpu {
          cl_assemble_delays_subtree.where = STARPU_CPU;
          cl_assemble_delays_subtree.nbuffers = STARPU_VARIABLE_NBUFFERS;
          cl_assemble_delays_subtree.name = "AssembleDelaysSubtree";
-         cl_assemble_delays_subtree.cpu_funcs[0] = assemble_delays_subtree_cpu_func<T, Allocator>;
+         cl_assemble_delays_subtree.cpu_funcs[0] =
+            assemble_delays_subtree_cpu_func<T, Allocator>;
       }
       
    }} /* namespaces spldlt::starpu  */

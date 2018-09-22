@@ -1,5 +1,8 @@
 #pragma once
 
+// SpLDLT
+#include "kernels/factor_indef.hxx"
+
 #include <assert.h>
 
 // SSIDS
