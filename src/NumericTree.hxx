@@ -16,8 +16,7 @@
 #include "tasks_factor_indef.hxx"
 #include "tasks_assemble.hxx"
 #if defined(SPLDLT_USE_STARPU)
-#include "StarPU/kernels.hxx"
-#include "StarPU/factor_indef.hxx"
+#include "StarPU/codelets.hxx"
 #endif
 
 #include <vector>
@@ -99,20 +98,15 @@ namespace spldlt {
 #endif
 
 #if defined(SPLDLT_USE_STARPU)
-         if (posdef) {
-            spldlt::starpu::codelet_init<T, FactorAllocator, PoolAllocator>();
-         } else {
-            // Init StarPU codelets
-            // TODO Put codelet initialisation in one routine
-            spldlt::starpu::codelet_init<T, FactorAllocator, PoolAllocator>();
-            spldlt::starpu::codelet_init_indef<T, INNER_BLOCK_SIZE, Backup, PoolAllocator>();
-            spldlt::starpu::codelet_init_factor_indef<T, PoolAllocator>();
-            spldlt::starpu::codelet_init_assemble<T, PoolAllocator>();
-         }
+         // Initialize StarPU codelets
+         spldlt::starpu::codelets_init
+            <T, INNER_BLOCK_SIZE, Backup, FactorAllocator, PoolAllocator>
+            (posdef);
 #endif
+         
          // starpu_task_wait_for_all();
          // starpu_fxt_trace_user_event();
-         printf("[NumericTree] nnodes = %d\n", symb_.nnodes_);
+         // printf("[NumericTree] nnodes = %d\n", symb_.nnodes_);
          auto start = std::chrono::high_resolution_clock::now();
          if (posdef) factor_mf_posdef(aval, child_contrib, workspaces,
                                       options, worker_stats);
