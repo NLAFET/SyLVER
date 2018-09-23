@@ -5,9 +5,9 @@
 #include "StarPU/kernels_indef.hxx"
 #include "StarPU/factor_indef.hxx"
 #include "StarPU/assemble.hxx"
+#include "StarPU/factor_failed.hxx"
 
 namespace spldlt { namespace starpu {
-
 
       template <typename T,
                 int iblksz,
@@ -22,6 +22,7 @@ namespace spldlt { namespace starpu {
             codelet_init_indef<T, iblksz, Backup, PoolAlloc>();            
             codelet_init_factor_indef<T, PoolAlloc>();
             codelet_init_assemble<T, PoolAlloc>();
+            codelet_init_factor_failed<T, PoolAlloc>();
          }
 
       }

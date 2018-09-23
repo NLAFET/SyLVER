@@ -38,8 +38,6 @@ namespace spldlt { namespace starpu {
       // permute_failed StarPU codelet
       struct starpu_codelet cl_permute_failed;
 
-      // cl_factor_front_indef_failed StarPU codelet
-      struct starpu_codelet cl_factor_front_indef_failed;
 
       // cl_form_contrib StarPU codelet
       struct starpu_codelet cl_form_contrib;
@@ -106,11 +104,15 @@ namespace spldlt { namespace starpu {
          // starpu_tag_t tag1 = (starpu_tag_t) (3*nodeidx);
          // starpu_tag_t tag2 = (starpu_tag_t) (2*nodeidx+1);
          starpu_tag_t tag_nelim = (starpu_tag_t) (3*nodeidx);
+
          starpu_tag_declare_deps(
-               tag_nelim, 1,
-               tag_assemble_contrib// ,
-               // tag_factor_failed
-               );
+               tag_nelim, 1, tag_assemble_contrib);
+         
+         // starpu_tag_declare_deps(
+         //       tag_nelim, 2,
+         //       tag_assemble_contrib ,
+         //       tag_factor_failed
+         //       );
          // starpu_tag_declare_deps(tag2, 1, 0);
 
          // printf("[insert_nelim_sync] nodeidx = %d, tag1 = %d, , tag2 = %d\n", 
