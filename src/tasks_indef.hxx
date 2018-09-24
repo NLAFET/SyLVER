@@ -89,21 +89,21 @@ namespace spldlt {
       int n = node.get_ncol();
       int m = node.get_nrow();
 
-      if ((m-n) > 0) {         
-         // In case there is a contribution block (non-root nodes)
+      // if ((m-n) > 0) {         
+      //    // In case there is a contribution block (non-root nodes)
          
-         int rsa = n / blksz; // Index of first block in contribution blocks
-         int nr = node.get_nr(); // Number of block rows
-         int ncb = nr-rsa;
-         hdls = new starpu_data_handle_t[ncb*ncb];
+      //    int rsa = n / blksz; // Index of first block in contribution blocks
+      //    int nr = node.get_nr(); // Number of block rows
+      //    int ncb = nr-rsa;
+      //    hdls = new starpu_data_handle_t[ncb*ncb];
       
-         for (int j=rsa; j<nr; ++j) {
-            for (int i=j; i<nr; ++i) {
-               hdls[nh] = node.get_contrib_block(i, j).hdl;
-               ++nh;
-            }
-         }
-      }
+      //    for (int j=rsa; j<nr; ++j) {
+      //       for (int i=j; i<nr; ++i) {
+      //          hdls[nh] = node.get_contrib_block(i, j).hdl;
+      //          ++nh;
+      //       }
+      //    }
+      // }
       
       spldlt::starpu::insert_factor_front_indef_failed(
             cdata[nblk-1].get_hdl(), node.get_contrib_hdl(),

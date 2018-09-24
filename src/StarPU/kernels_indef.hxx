@@ -1090,6 +1090,11 @@ namespace spldlt { namespace starpu {
 
          form_contrib_notask(*node, *work, nelim_from, nelim_to);
 
+         // int nodeidx = node->symb.idx;
+         // starpu_tag_t tag_factor_failed = (starpu_tag_t) (3*nodeidx+2);
+         // // starpu_tag_notify_from_apps(tag_factor_failed);
+         // starpu_tag_remove(tag_factor_failed);            
+
       }
 
       // SarPU codelet
@@ -1115,13 +1120,58 @@ namespace spldlt { namespace starpu {
                &cl_form_contrib,
                STARPU_DATA_MODE_ARRAY, descrs, nh,
                STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
-               STARPU_VALUE, &work, sizeof(spral::ssids::cpu::Workspace),
+               STARPU_VALUE, &work, sizeof(spral::ssids::cpu::Workspace*),
                STARPU_VALUE, &nelim_from, sizeof(int),
                STARPU_VALUE, &nelim_to, sizeof(int),
                0);
          
          delete[] descrs;
          
+      }
+
+      ////////////////////////////////////////
+      // zero_contrib_blocks
+
+      // CPU kernel      
+      template <typename T, typename PoolAlloc>
+      void zero_contrib_blocks_cpu_func(void *buffers[], void *cl_arg) {
+
+         printf("[zero_contrib_blocks_cpu_func]\n");
+         
+         NumericFront<T, PoolAlloc> *node = nullptr;
+
+         starpu_codelet_unpack_args(
+               cl_arg, &node);
+
+         node->zero_contrib_blocks();
+     
+      }
+
+      // SarPU codelet
+      extern struct starpu_codelet cl_zero_contrib_blocks;
+
+      template <typename T, typename PoolAlloc>
+      void insert_zero_contrib_blocks(
+            starpu_data_handle_t *hdls, int nhdl,
+            NumericFront<T, PoolAlloc> *node) {
+
+         int ret;
+         struct starpu_data_descr *descrs = new starpu_data_descr[nhdl];
+         
+         int nh = 0;
+         for (int i=0; i<nhdl; i++) {
+            descrs[nh].handle = hdls[i]; descrs[nh].mode = STARPU_RW;
+            nh++;
+         }
+
+         ret = starpu_insert_task(
+               &cl_zero_contrib_blocks,
+               STARPU_DATA_MODE_ARRAY, descrs, nh,
+               STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
+               0);
+         
+         delete[] descrs;
+
       }
       
       ////////////////////////////////////////
@@ -1495,8 +1545,8 @@ namespace spldlt { namespace starpu {
 
          starpu_codelet_init(&cl_update_contrib_block_app);
 #if defined(SPLDLT_USE_GPU)
-         // cl_update_contrib_block_app.where = STARPU_CPU;
-         cl_update_contrib_block_app.where = STARPU_CUDA; // Debug
+         cl_update_contrib_block_app.where = STARPU_CPU;
+         // cl_update_contrib_block_app.where = STARPU_CUDA; // Debug
          // cl_update_contrib_block_app.where = STARPU_CPU | STARPU_CUDA;
 #else
          cl_update_contrib_block_app.where = STARPU_CPU;
@@ -1532,6 +1582,15 @@ namespace spldlt { namespace starpu {
          cl_form_contrib.nbuffers = STARPU_VARIABLE_NBUFFERS;
          cl_form_contrib.name = "FormContrib";
          cl_form_contrib.cpu_funcs[0] = form_contrib_cpu_func<T, Allocator>;
+
+         ////////////////////////////////////////////////////////////
+         // zero_contrib_blocks StarPU codelet
+
+         starpu_codelet_init(&cl_zero_contrib_blocks);
+         cl_zero_contrib_blocks.where = STARPU_CPU;
+         cl_zero_contrib_blocks.nbuffers = STARPU_VARIABLE_NBUFFERS;
+         cl_zero_contrib_blocks.name = "ZeroContrib";
+         cl_zero_contrib_blocks.cpu_funcs[0] = zero_contrib_blocks_cpu_func<T, Allocator>;
          
          // // Initialize factor_sync StarPU codelet
          // starpu_codelet_init(&cl_factor_sync);
