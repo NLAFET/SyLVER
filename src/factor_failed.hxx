@@ -64,6 +64,7 @@ namespace spldlt {
                   (node.nelim > nelim) // We've eliminated columns at second pass
                   ) {
 
+#if defined(SPLDLT_USE_GPU)
                printf("[factor_front_indef_failed] form contrib\n");
                // formcb = true;
                // Compute contribution blocks
@@ -73,6 +74,9 @@ namespace spldlt {
 
                // auto end = std::chrono::high_resolution_clock::now();
                // t_form_contrib = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count();
+#else
+               form_contrib_notask(node, work, nelim, node.nelim-1);
+#endif
             }
 
             // printf("[factor_front_indef_failed] m = %d, n = %d, LDLT TPP = %e, form contrib = %e\n", m-nelim, n-nelim, 1e-9*t_factor, 1e-9*t_form_contrib);
@@ -92,7 +96,7 @@ namespace spldlt {
 
       if (node.nelim == 0) {
 #if defined(SPLDLT_USE_GPU)
-         printf("[factor_front_indef_failed] TODO: no eliminated columns, zero contrib blocks\n");
+         printf("[factor_front_indef_failed] TODO: no eliminated columns, must zero contrib blocks\n");
 #endif
          node.zero_contrib_blocks();
          // zero_contrib_blocks_task(node);

@@ -276,9 +276,9 @@ namespace spldlt {
             factor_front_indef_task(
                   fronts_[ni], workspaces,  pool_alloc_, options, 
                   worker_stats);
-#if defined(SPLDLT_USE_STARPU)
-            starpu_task_wait_for_all();
-#endif
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
             // factor_front_indef(
             //       fronts_[ni], workspaces, pool_alloc_, options, 
             //       worker_stats);
