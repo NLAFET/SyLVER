@@ -1103,6 +1103,7 @@ namespace spldlt { namespace starpu {
       template <typename T, typename PoolAlloc>
       void insert_form_contrib(
             starpu_data_handle_t *hdls, int nhdl,
+            starpu_data_handle_t contrib_hdl,
             NumericFront<T, PoolAlloc> *node,
             spral::ssids::cpu::Workspace *work,
             int nelim_from, int nelim_to) {
@@ -1115,6 +1116,9 @@ namespace spldlt { namespace starpu {
             descrs[nh].handle = hdls[i]; descrs[nh].mode = STARPU_RW;
             nh++;
          }
+
+         // descrs[nh].handle = contrib_hdl; descrs[nh].mode = STARPU_RW;
+         // nh++;
 
          ret = starpu_insert_task(
                &cl_form_contrib,

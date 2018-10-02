@@ -32,6 +32,8 @@ namespace spldlt {
       int nh = 0;
       int n = node.get_ncol();
       int m = node.get_nrow();
+      
+      // if (node.first_child == nullptr) printf("[form_contrib_task] leaf!\n");
 
       if ((m-n) > 0) {         
          // In case there is a contribution block (non-root nodes)
@@ -41,6 +43,8 @@ namespace spldlt {
          int nr = node.get_nr(); // Number of block rows
          int ncb = nr-rsa;
          hdls = new starpu_data_handle_t[ncb*ncb];
+
+         printf("[form_contrib_task] nr = %d\n", nr);
       
          for (int j=rsa; j<nr; ++j) {
             for (int i=j; i<nr; ++i) {
@@ -51,7 +55,7 @@ namespace spldlt {
       }
 
       spldlt::starpu::insert_form_contrib(
-            hdls, nh,
+            hdls, nh, node.get_contrib_hdl(),
             &node, &work, nelim_from, nelim_to);
 
       delete[] hdls;

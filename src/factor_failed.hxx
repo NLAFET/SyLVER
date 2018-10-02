@@ -65,7 +65,7 @@ namespace spldlt {
                   ) {
 
 #if defined(SPLDLT_USE_GPU)
-               printf("[factor_front_indef_failed] form contrib\n");
+               // printf("[factor_front_indef_failed] form contrib\n");
                // formcb = true;
                // Compute contribution blocks
                // auto start = std::chrono::high_resolution_clock::now();
