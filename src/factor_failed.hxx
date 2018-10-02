@@ -29,7 +29,7 @@ namespace spldlt {
       int *perm = node.perm;
          
       int nelim = 0;
-      // bool formcb = false;
+      bool formcb = false;
       
       // Record the number of columns eliminated during the first pass
       node.nelim1 = node.nelim; 
@@ -65,8 +65,8 @@ namespace spldlt {
                   ) {
 
 #if defined(SPLDLT_USE_GPU)
-               // printf("[factor_front_indef_failed] form contrib\n");
-               // formcb = true;
+               printf("[factor_front_indef_failed] form contrib, from = %d\n", nelim);
+               formcb = true;
                // Compute contribution blocks
                // auto start = std::chrono::high_resolution_clock::now();
                // form_contrib_notask(node, work, nelim, node.nelim-1);
@@ -74,6 +74,12 @@ namespace spldlt {
 
                // auto end = std::chrono::high_resolution_clock::now();
                // t_form_contrib = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count();
+
+               // int nodeidx = node.symb.idx;
+               // starpu_tag_t tag_factor_failed = (starpu_tag_t) (3*nodeidx+2);
+               // // starpu_tag_notify_from_apps(tag_factor_failed);
+               // starpu_tag_remove(tag_factor_failed);
+
 #else
                form_contrib_notask(node, work, nelim, node.nelim-1);
 #endif
@@ -102,14 +108,14 @@ namespace spldlt {
          // zero_contrib_blocks_task(node);
       }
 
-// #if defined(SPLDLT_USE_GPU)
-//       if(!formcb) {
-//          int nodeidx = node.symb.idx;
-//          starpu_tag_t tag_factor_failed = (starpu_tag_t) (3*nodeidx+2);
-//          // starpu_tag_notify_from_apps(tag_factor_failed);
-//          starpu_tag_remove(tag_factor_failed);
-//       }
-// #endif
+#if defined(SPLDLT_USE_GPU)
+      if(!formcb) {
+         int nodeidx = node.symb.idx;
+         starpu_tag_t tag_factor_failed = (starpu_tag_t) (3*nodeidx+2);
+         // starpu_tag_notify_from_apps(tag_factor_failed);
+         starpu_tag_remove(tag_factor_failed);
+      }
+#endif
   
    }
 

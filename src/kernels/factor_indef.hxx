@@ -255,6 +255,7 @@ namespace spldlt {
 
       assert(nelim_to >= nelim_from);
       assert(nelim_from >= 0);
+      // node.zero_contrib_blocks();
 
       int m = node.get_nrow();
       int n = node.get_ncol();
@@ -270,7 +271,7 @@ namespace spldlt {
       int lc = nelim_to/blksz; // Last block-column
       int nr = node.get_nr();
       int rsa = n/blksz;
-      int ncontrib = nr-rsa;
+      // int ncontrib = nr-rsa;
 
       // printf("[form_contrib] fc = %d, lc = %d\n", fc, lc);
 
@@ -292,6 +293,7 @@ namespace spldlt {
       //        k, first_col, last_col, nelim_from, nelim_to, nelim_col);
          
       // printf("k = %d, first_col = %d, last_col = %d\n", k, first_col, last_col);
+      // return;
 
       for (int j = rsa; j < nr; ++j) {
 
@@ -304,7 +306,8 @@ namespace spldlt {
             int lik_first_row = std::max(i*blksz, n);
             T *lik = &lcol[first_col*ldl+lik_first_row];
 
-            Tile<T, PoolAlloc>& upd = node.contrib_blocks[(j-rsa)*ncontrib+(i-rsa)];
+            // Tile<T, PoolAlloc>& upd = node.contrib_blocks[(j-rsa)*ncontrib+(i-rsa)];
+            Tile<T, PoolAlloc>& upd = node.get_contrib_block(i, j);
                            
             int ldld = spral::ssids::cpu::align_lda<T>(blksz);
             T *ld = work.get_ptr<T>(blksz*ldld);

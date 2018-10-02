@@ -107,15 +107,15 @@ namespace spldlt { namespace starpu {
          // starpu_tag_t tag2 = (starpu_tag_t) (2*nodeidx+1);
          starpu_tag_t tag_nelim = (starpu_tag_t) (3*nodeidx);
 
-         starpu_tag_declare_deps(
-               tag_nelim, 1, 
-               tag_assemble_contrib);
-         
          // starpu_tag_declare_deps(
-         //       tag_nelim, 2,
-         //       tag_assemble_contrib,
-         //       tag_factor_failed
-         //       );
+         //       tag_nelim, 1, 
+         //       tag_assemble_contrib);
+         
+         starpu_tag_declare_deps(
+               tag_nelim, 2,
+               tag_assemble_contrib,
+               tag_factor_failed
+               );
 
          // printf("[insert_nelim_sync] nodeidx = %d, tag1 = %d, , tag2 = %d\n", 
          //        nodeidx, tag1, tag2);

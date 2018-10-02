@@ -1088,12 +1088,15 @@ namespace spldlt { namespace starpu {
          starpu_codelet_unpack_args(
                cl_arg, &node, &work, &nelim_from, &nelim_to);
 
+         // printf("[form_contrib_cpu_func] nodeidx = %d\n", node->symb.idx);
+         // printf("[form_contrib_cpu_func] nelim_from = %d, nelim_to = %d\n", nelim_from, nelim_to);
          form_contrib_notask(*node, *work, nelim_from, nelim_to);
+         // form_contrib_notask(*node, *work, nelim_from, nelim_from);
 
-         // int nodeidx = node->symb.idx;
-         // starpu_tag_t tag_factor_failed = (starpu_tag_t) (3*nodeidx+2);
-         // // starpu_tag_notify_from_apps(tag_factor_failed);
-         // starpu_tag_remove(tag_factor_failed);            
+         int nodeidx = node->symb.idx;
+         starpu_tag_t tag_factor_failed = (starpu_tag_t) (3*nodeidx+2);
+         // starpu_tag_notify_from_apps(tag_factor_failed);
+         starpu_tag_remove(tag_factor_failed);            
 
       }
 
@@ -1103,7 +1106,7 @@ namespace spldlt { namespace starpu {
       template <typename T, typename PoolAlloc>
       void insert_form_contrib(
             starpu_data_handle_t *hdls, int nhdl,
-            starpu_data_handle_t contrib_hdl,
+            // starpu_data_handle_t col_hdl,
             NumericFront<T, PoolAlloc> *node,
             spral::ssids::cpu::Workspace *work,
             int nelim_from, int nelim_to) {
@@ -1117,7 +1120,7 @@ namespace spldlt { namespace starpu {
             nh++;
          }
 
-         // descrs[nh].handle = contrib_hdl; descrs[nh].mode = STARPU_RW;
+         // descrs[nh].handle = col_hdl; descrs[nh].mode = STARPU_R;
          // nh++;
 
          ret = starpu_insert_task(

@@ -32,7 +32,9 @@ namespace spldlt {
       int nh = 0;
       int n = node.get_ncol();
       int m = node.get_nrow();
-      
+      int nc = node.get_nc();
+      // printf("[form_contrib_task]\n");
+
       // if (node.first_child == nullptr) printf("[form_contrib_task] leaf!\n");
 
       if ((m-n) > 0) {         
@@ -44,7 +46,8 @@ namespace spldlt {
          int ncb = nr-rsa;
          hdls = new starpu_data_handle_t[ncb*ncb];
 
-         printf("[form_contrib_task] nr = %d\n", nr);
+         // printf("[form_contrib_task] nrow = %d, ncol = %d\n", m, n);
+         // printf("[form_contrib_task] nr = %d, rsa = %d\n", nr, rsa);
       
          for (int j=rsa; j<nr; ++j) {
             for (int i=j; i<nr; ++i) {
@@ -55,7 +58,8 @@ namespace spldlt {
       }
 
       spldlt::starpu::insert_form_contrib(
-            hdls, nh, node.get_contrib_hdl(),
+            hdls, nh, 
+            // (*node.cdata)[nc-1].get_hdl(),
             &node, &work, nelim_from, nelim_to);
 
       delete[] hdls;
