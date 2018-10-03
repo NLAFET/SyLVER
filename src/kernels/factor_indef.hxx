@@ -311,8 +311,10 @@ namespace spldlt {
                            
             int ldld = spral::ssids::cpu::align_lda<T>(blksz);
             T *ld = work.get_ptr<T>(blksz*ldld);
+            // T *ld = new T[blksz*ldld];
 
             // printf("[form_contrib] updm = %d, updn = %d\n", upd.m, upd.n);
+            // printf("[form_contrib] nelim_from = %d\n", nelim_from);
 
             update_contrib_block(
                   upd.m, upd.n, upd.a, upd.lda,

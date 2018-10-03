@@ -227,7 +227,7 @@ namespace spldlt {
 
       ////////////////////////////////////////
       // Task priorities
-      
+
 #if defined(SPLDLT_USE_GPU)
 
       // Heteroprio

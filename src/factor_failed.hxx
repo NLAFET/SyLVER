@@ -17,7 +17,8 @@ namespace spldlt {
    template <typename T, typename PoolAlloc>
    void factor_front_indef_failed(
          NumericFront<T, PoolAlloc>& node,
-         spral::ssids::cpu::Workspace& work,
+         std::vector<spral::ssids::cpu::Workspace>& workspaces, 
+         // spral::ssids::cpu::Workspace& work,
          const struct cpu_factor_options& options,
          spral::ssids::cpu::ThreadStats& stats) {
 
@@ -29,7 +30,16 @@ namespace spldlt {
       int *perm = node.perm;
          
       int nelim = 0;
-      bool formcb = false;
+      // bool formcb = false;
+
+      // Setup workspace
+      int workerid = 0;
+#if defined(SPLDLT_USE_STARPU)
+      workerid = starpu_worker_get_id();
+      if (workerid < 0) // current context is not a StarPU worker
+         workerid = 0;
+#endif
+      spral::ssids::cpu::Workspace& work = workspaces[workerid];
       
       // Record the number of columns eliminated during the first pass
       node.nelim1 = node.nelim; 
@@ -65,12 +75,14 @@ namespace spldlt {
                   ) {
 
 #if defined(SPLDLT_USE_GPU)
-               printf("[factor_front_indef_failed] form contrib, from = %d\n", nelim);
-               formcb = true;
+               // printf("[factor_front_indef_failed] workerid = %d\n", workerid);
+               // printf("[factor_front_indef_failed] form contrib, nodeidx = %d\n", node.symb.idx);
+               // formcb = true;
                // Compute contribution blocks
                // auto start = std::chrono::high_resolution_clock::now();
-               // form_contrib_notask(node, work, nelim, node.nelim-1);
-               form_contrib_task(node, work, nelim, node.nelim-1);
+               form_contrib_notask(node, work, nelim, node.nelim-1);
+               // form_contrib_task(node, workspaces, nelim, node.nelim-1);
+               starpu_fxt_trace_user_event(node.symb.idx); // DEBUG
 
                // auto end = std::chrono::high_resolution_clock::now();
                // t_form_contrib = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count();
@@ -101,21 +113,21 @@ namespace spldlt {
       stats.num_delay += node.ndelay_out;
 
       if (node.nelim == 0) {
-#if defined(SPLDLT_USE_GPU)
-         printf("[factor_front_indef_failed] TODO: no eliminated columns, must zero contrib blocks\n");
-#endif
+// #if defined(SPLDLT_USE_GPU)
+//          printf("[factor_front_indef_failed] TODO: no eliminated columns, must zero contrib blocks\n");
+// #endif
          node.zero_contrib_blocks();
          // zero_contrib_blocks_task(node);
       }
 
-#if defined(SPLDLT_USE_GPU)
-      if(!formcb) {
-         int nodeidx = node.symb.idx;
-         starpu_tag_t tag_factor_failed = (starpu_tag_t) (3*nodeidx+2);
-         // starpu_tag_notify_from_apps(tag_factor_failed);
-         starpu_tag_remove(tag_factor_failed);
-      }
-#endif
+// #if defined(SPLDLT_USE_GPU)
+      // if(!formcb) {
+      int nodeidx = node.symb.idx;
+      starpu_tag_t tag_factor_failed = (starpu_tag_t) (3*nodeidx+2);
+      // starpu_tag_notify_from_apps(tag_factor_failed);
+      starpu_tag_remove(tag_factor_failed);
+      // }
+// #endif
   
    }
 

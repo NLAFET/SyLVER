@@ -1081,22 +1081,32 @@ namespace spldlt { namespace starpu {
       void form_contrib_cpu_func(void *buffers[], void *cl_arg) {
 
          NumericFront<T, PoolAlloc> *node = nullptr;
-         spral::ssids::cpu::Workspace *work = nullptr;
+         // spral::ssids::cpu::Workspace *work = nullptr;
+         std::vector<spral::ssids::cpu::Workspace> *workspaces = nullptr;
          int nelim_from;
          int nelim_to;
 
          starpu_codelet_unpack_args(
-               cl_arg, &node, &work, &nelim_from, &nelim_to);
+               cl_arg, &node, &workspaces, &nelim_from, &nelim_to);
 
          // printf("[form_contrib_cpu_func] nodeidx = %d\n", node->symb.idx);
          // printf("[form_contrib_cpu_func] nelim_from = %d, nelim_to = %d\n", nelim_from, nelim_to);
-         form_contrib_notask(*node, *work, nelim_from, nelim_to);
-         // form_contrib_notask(*node, *work, nelim_from, nelim_from);
+         // int nodeidx = node->symb.idx;
+         // starpu_fxt_trace_user_event(node->symb.idx); // DEBUG
 
-         int nodeidx = node->symb.idx;
-         starpu_tag_t tag_factor_failed = (starpu_tag_t) (3*nodeidx+2);
-         // starpu_tag_notify_from_apps(tag_factor_failed);
-         starpu_tag_remove(tag_factor_failed);            
+         int workerid = starpu_worker_get_id();
+         spral::ssids::cpu::Workspace& work = (*workspaces)[workerid];
+
+         // printf("[form_contrib_cpu_func] workerid = %d\n", workerid);
+
+         form_contrib_notask(*node, work, nelim_from, nelim_to);
+
+         // node->zero_contrib_blocks();
+
+         // int nodeidx = node->symb.idx;
+         // starpu_tag_t tag_factor_failed = (starpu_tag_t) (3*nodeidx+2);
+         // // starpu_tag_notify_from_apps(tag_factor_failed);
+         // starpu_tag_remove(tag_factor_failed);            
 
       }
 
@@ -1108,7 +1118,8 @@ namespace spldlt { namespace starpu {
             starpu_data_handle_t *hdls, int nhdl,
             // starpu_data_handle_t col_hdl,
             NumericFront<T, PoolAlloc> *node,
-            spral::ssids::cpu::Workspace *work,
+            // spral::ssids::cpu::Workspace *work,
+            std::vector<spral::ssids::cpu::Workspace> *workspaces, 
             int nelim_from, int nelim_to) {
 
          int ret;
@@ -1127,7 +1138,8 @@ namespace spldlt { namespace starpu {
                &cl_form_contrib,
                STARPU_DATA_MODE_ARRAY, descrs, nh,
                STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
-               STARPU_VALUE, &work, sizeof(spral::ssids::cpu::Workspace*),
+               // STARPU_VALUE, &work, sizeof(spral::ssids::cpu::Workspace*),
+               STARPU_VALUE, &workspaces, sizeof(std::vector<spral::ssids::cpu::Workspace>*),
                STARPU_VALUE, &nelim_from, sizeof(int),
                STARPU_VALUE, &nelim_to, sizeof(int),
                0);
@@ -1552,8 +1564,8 @@ namespace spldlt { namespace starpu {
 
          starpu_codelet_init(&cl_update_contrib_block_app);
 #if defined(SPLDLT_USE_GPU)
-         cl_update_contrib_block_app.where = STARPU_CPU;
-         // cl_update_contrib_block_app.where = STARPU_CUDA; // Debug
+         // cl_update_contrib_block_app.where = STARPU_CPU;
+         cl_update_contrib_block_app.where = STARPU_CUDA; // Debug
          // cl_update_contrib_block_app.where = STARPU_CPU | STARPU_CUDA;
 #else
          cl_update_contrib_block_app.where = STARPU_CPU;

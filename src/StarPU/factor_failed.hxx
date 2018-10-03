@@ -29,13 +29,13 @@ namespace spldlt { namespace starpu {
                cl_arg, &node, &workspaces, &options, &worker_stats);
 
          int workerid = starpu_worker_get_id();
-         spral::ssids::cpu::Workspace& work = (*workspaces)[workerid];
+         // spral::ssids::cpu::Workspace& work = (*workspaces)[workerid];
          spral::ssids::cpu::ThreadStats& stats = (*worker_stats)[workerid];
 
-         factor_front_indef_failed(*node, work, *options, stats);
+         factor_front_indef_failed(*node, *workspaces, *options, stats);
 
-         int nodeidx = node->symb.idx;
-         starpu_tag_t tag_factor_failed = (starpu_tag_t) (3*nodeidx+2);
+         // int nodeidx = node->symb.idx;
+         // starpu_tag_t tag_factor_failed = (starpu_tag_t) (3*nodeidx+2);
          // starpu_tag_notify_from_apps(tag_factor_failed);
          // starpu_tag_remove(tag_factor_failed);            
       }

@@ -20,7 +20,8 @@ namespace spldlt {
    template <typename T, typename PoolAlloc>
    void form_contrib_task(
          NumericFront<T, PoolAlloc>& node,
-         spral::ssids::cpu::Workspace& work,
+         // spral::ssids::cpu::Workspace& work,
+         std::vector<spral::ssids::cpu::Workspace>& workspaces, 
          int nelim_from, // First column in factors
          int nelim_to // Last column in factors
          ) {
@@ -60,12 +61,13 @@ namespace spldlt {
       spldlt::starpu::insert_form_contrib(
             hdls, nh, 
             // (*node.cdata)[nc-1].get_hdl(),
-            &node, &work, nelim_from, nelim_to);
+            &node, &workspaces, nelim_from, nelim_to);
 
       delete[] hdls;
       
 #else
 
+      spral::ssids::cpu::Workspace& work = workspaces[0];
       form_contrib_notask(node, work, nelim_from, nelim_to);
 
 #endif
