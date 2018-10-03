@@ -123,9 +123,10 @@ namespace spldlt {
 // #if defined(SPLDLT_USE_GPU)
       // if(!formcb) {
       int nodeidx = node.symb.idx;
+      // printf("[factor_front_indef_failed] nodeidx = %d\n", nodeidx);
       starpu_tag_t tag_factor_failed = (starpu_tag_t) (3*nodeidx+2);
-      // starpu_tag_notify_from_apps(tag_factor_failed);
-      starpu_tag_remove(tag_factor_failed);
+      starpu_tag_notify_from_apps(tag_factor_failed);
+      // starpu_tag_remove(tag_factor_failed);
       // }
 // #endif
   

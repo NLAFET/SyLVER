@@ -106,11 +106,11 @@ namespace spldlt {
          }
       } // Loop over child nodes
 
-#if defined(SPLDLT_USE_STARPU)
-      // Insert synchronization task
-      spldlt::starpu::insert_assemble_contrib_sync(
-            node.contrib_hdl, node.symb.idx);
-#endif
+// #if defined(SPLDLT_USE_STARPU)
+//       // Synchronize assembly tasks
+//       spldlt::starpu::insert_assemble_contrib_sync(
+//             node.contrib_hdl, node.symb.idx);
+// #endif
 
    } // assemble_contrib
 

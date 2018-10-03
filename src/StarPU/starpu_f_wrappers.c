@@ -37,7 +37,7 @@ int starpu_f_init_c(
 #else
   /* conf.sched_policy_name = "eager"; */
   conf.sched_policy_name = "ws"; // Use WS because LWS is currently buggy
-  /* conf->sched_policy_name = "lws"; */
+  /* conf.sched_policy_name = "lws"; */
   /* conf->sched_policy_name = "prio"; */
 #endif
 
