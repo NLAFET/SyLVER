@@ -16,6 +16,8 @@ extern "C" {
    
 void init_heteroprio(unsigned sched_ctx) {
 
+   /* printf("[init_heteroprio]\n"); */
+
    int nprio = 4;
          
    // Create queues for CPU tasks

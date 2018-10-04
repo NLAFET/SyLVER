@@ -129,9 +129,8 @@ namespace spldlt {
          int nc = front.get_nc(); // number of block columns
          spldlt::ldlt_app_internal::ColumnData<T, IntAlloc>& cdata = *front.cdata;
 
-         // Register diagonal
+         // Block diagonal matrix 
          T *d = &a[n*lda];
-         // cdata.register_d_hdl(d);
 
          // // Register worksapce handle
          // starpu_matrix_data_register (
