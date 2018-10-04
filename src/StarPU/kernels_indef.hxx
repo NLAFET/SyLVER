@@ -652,7 +652,7 @@ namespace spldlt { namespace starpu {
                &cl_updateN_block_app,
                STARPU_R, a_ik_hdl,
                STARPU_R, a_jk_hdl,
-               STARPU_RW, a_ij_hdl,
+               STARPU_RW | STARPU_COMMUTE, a_ij_hdl,
                STARPU_R, d_hdl,
                STARPU_SCRATCH, workspace_hdl,
                STARPU_R, col_hdl,
@@ -982,7 +982,7 @@ namespace spldlt { namespace starpu {
 
          ret = starpu_insert_task(
                &cl_update_contrib_block_app,
-               STARPU_RW, upd_hdl,
+               STARPU_RW | STARPU_COMMUTE, upd_hdl,
                STARPU_R, lik_hdl,
                STARPU_R, ljk_hdl,
                STARPU_R, d_hdl,
@@ -1565,8 +1565,8 @@ namespace spldlt { namespace starpu {
          starpu_codelet_init(&cl_update_contrib_block_app);
 #if defined(SPLDLT_USE_GPU)
          // cl_update_contrib_block_app.where = STARPU_CPU;
-         cl_update_contrib_block_app.where = STARPU_CUDA; // Debug
-         // cl_update_contrib_block_app.where = STARPU_CPU | STARPU_CUDA;
+         // cl_update_contrib_block_app.where = STARPU_CUDA; // Debug
+         cl_update_contrib_block_app.where = STARPU_CPU | STARPU_CUDA;
 #else
          cl_update_contrib_block_app.where = STARPU_CPU;
 #endif

@@ -28,11 +28,11 @@ int starpu_f_init_c(
 
 #if defined(SPLDLT_USE_GPU)
   /* conf->sched_policy_name = "dmdas"; */
-  conf.sched_policy_name = "eager";
+  /* conf.sched_policy_name = "eager"; */
   /* conf->sched_policy_name = "lws"; */
 
-  /* conf.sched_policy_name = "heteroprio"; */
-  /* conf.sched_policy_init = &init_heteroprio; */
+  conf.sched_policy_name = "heteroprio";
+  conf.sched_policy_init = &init_heteroprio;
 
 #else
   /* conf.sched_policy_name = "eager"; */

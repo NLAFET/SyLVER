@@ -150,7 +150,8 @@ namespace spldlt {
             // Register cdata for APP factorization.
             // FIXME: Only if pivot_method is APP
             cdata[j].register_handle(); // Symbolic handle on column j
-            cdata[j].register_d_hdl(d, 2*n); // Handle on diagonal D 
+            cdata[j].register_d_hdl(d, 2*std::min((j+1)*blksz, n)); // Handle on diagonal D 
+            // cdata[j].register_d_hdl(d, 2*n); // Handle on diagonal D 
 
             for(int i = j; i < nr; ++i) {
                int blkm = std::min(blksz, m - i*blksz);
