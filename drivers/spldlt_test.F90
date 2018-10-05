@@ -313,6 +313,12 @@ program spldlt_test
            argnum = argnum + 1
            read( argval, * ) matfile
            print *, 'Matrix = ', matfile
+       case("--failed-pivot-method=tpp")
+          options%failed_pivot_method = 1
+          print *, 'Failed pivot method TPP'
+       case("--failed-pivot-method=pass")
+          options%failed_pivot_method = 2
+          print *, 'Failed pivot method PASS'
         case default
            print *, "Unrecognised command line argument: ", argval
            stop

@@ -24,7 +24,7 @@ namespace spldlt {
 
       int m = node.get_nrow();
       int n = node.get_ncol();
-      size_t ldl = align_lda<T>(m);
+      size_t ldl = node.get_ldl();
       T *lcol = node.lcol;
       T *d = &lcol[n*ldl];
       int *perm = node.perm;
@@ -111,10 +111,13 @@ namespace spldlt {
       // Update number of delayed columns
       node.ndelay_out = n - node.nelim;         
       stats.num_delay += node.ndelay_out;
-
+      if (node.ndelay_out > 0)
+         // printf("[factor_front_indef_failed] nodeidx = %d, ndelay_out = %d\n",
+                // node.symb.idx, node.ndelay_out);
+         
       if (node.nelim == 0) {
 // #if defined(SPLDLT_USE_GPU)
-//          printf("[factor_front_indef_failed] TODO: no eliminated columns, must zero contrib blocks\n");
+         // printf("[factor_front_indef_failed] zero contrib blocks\n");
 // #endif
          node.zero_contrib_blocks();
          // zero_contrib_blocks_task(node);

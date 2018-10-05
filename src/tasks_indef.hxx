@@ -167,7 +167,9 @@ namespace spldlt {
       int ncol = node.get_ncol();
       int nr = node.get_nr(); // Number of block-rows in destination node
       int nc = node.get_nc(); // Number of block-columns in destination node
-      starpu_data_handle_t *hdls = new starpu_data_handle_t[nr*nc];
+      // starpu_data_handle_t *hdls = new starpu_data_handle_t[nr*nc];
+      // FIXME: check upper bound on number of StarPU handles for this array
+      starpu_data_handle_t *hdls = new starpu_data_handle_t[nr*nr];
       int nh = 0; // Number of handles/blocks in node
       
       // Child node info
@@ -187,6 +189,7 @@ namespace spldlt {
       // rows which must be delayed in the parent
       for (int jj=csa; jj<cnc; jj++) {
          for (int ii=jj; ii<cnr; ii++) {
+            assert(nch < cnr*cnc);
             chdls[nch] = cnode.blocks[jj*cnr+ii].get_hdl();
             nch++;
          }
@@ -209,12 +212,18 @@ namespace spldlt {
             if (rr == (r/blksz)) continue;
             rr = r / blksz; // Destination block-row
             
-            if (r < ncol) {
+            if (r < snode.ncol) {
+            // if (r < ncol) {
+               assert(cc >= rr);
                assert(cc <= nr && rr <= nc);
+               assert(nh < nr*nc);
                hdls[nh] = node.blocks[rr*nr+cc].get_hdl();
             }
             else {
+               assert(rr >= cc);
                assert(rr <= nr && cc <= nc);
+               // assert(nh < nr*nc);
+               assert(nh < nr*nr);
                hdls[nh] = node.blocks[cc*nr+rr].get_hdl();
             }
             nh++;

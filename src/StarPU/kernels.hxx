@@ -820,11 +820,14 @@ namespace spldlt { namespace starpu {
                &options,
                &worker_stats);
 
-         // printf("[factor_subtree_cpu_func] subtree: %d\n", p+1);
+         // printf("[factor_subtree_cpu_func] failed_pivot_method: %d\n",
+               // options->failed_pivot_method);
 
          int workerid = starpu_worker_get_id();
          ThreadStats& stats = (*worker_stats)[workerid];
 
+         // options->failed_pivot_method = FailedPivotMethod::tpp;
+         
          // printf("[factor_subtree_cpu_func] akeep = %p, fkeep = %p\n", akeep, fkeep);
          spldlt_factor_subtree_c(akeep, fkeep, p, aval, child_contrib, options, &stats);
       }
