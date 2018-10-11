@@ -19,10 +19,11 @@ set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
 ########################################
 # CXX flags
 # STD C++11
-# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-set(CMAKE_CXX_STANDARD 11) # C++11...
-set(CMAKE_CXX_STANDARD_REQUIRED ON) #...is required...
-set(CMAKE_CXX_EXTENSIONS OFF) #...without compiler extensions like gnu++11
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+# Note: Not supported feature for Intel compilers in CMake version < 3.6
+# set(CMAKE_CXX_STANDARD 11) # C++11...
+# set(CMAKE_CXX_STANDARD_REQUIRED ON) #...is required...
+# set(CMAKE_CXX_EXTENSIONS OFF) #...without compiler extensions like gnu++11
 
 # Optimization flags
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native")
