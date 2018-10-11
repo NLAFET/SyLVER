@@ -4,6 +4,10 @@
 #include "kernels/factor_indef.hxx"
 #include "tasks/form_contrib.hxx"
 
+#if defined(SPLDLT_USE_STARPU)
+#include <starpu.h>
+#endif
+
 #include <assert.h>
 
 // SSIDS
@@ -123,6 +127,7 @@ namespace spldlt {
          // zero_contrib_blocks_task(node);
       }
 
+#if defined(SPLDLT_USE_STARPU)
 // #if defined(SPLDLT_USE_GPU)
       // if(!formcb) {
       int nodeidx = node.symb.idx;
@@ -132,6 +137,7 @@ namespace spldlt {
       // starpu_tag_remove(tag_factor_failed);
       // }
 // #endif
+#endif
   
    }
 
