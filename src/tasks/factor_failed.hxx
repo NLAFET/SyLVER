@@ -51,9 +51,11 @@ namespace spldlt {
       delete[] hdls;
 
 #else
-      spral::ssids::cpu::Workspace& work = workspaces[0];
+
+      // spral::ssids::cpu::Workspace& work = workspaces[0];
       ThreadStats& stats = worker_stats[0];
-      factor_front_indef_failed(node, work, options, stats);
+      factor_front_indef_failed(node, workspaces, options, stats);
+
 #endif
       
    }
