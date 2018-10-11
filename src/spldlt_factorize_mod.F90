@@ -164,41 +164,41 @@ module spldlt_factorize_mod
   
 contains
 
-  ! Print useful information for debugging
-  subroutine spldlt_print_debuginfo_c(cakeep, cfkeep, p) bind(C)
-    use, intrinsic :: iso_c_binding
-    use spral_ssids_akeep, only : ssids_akeep
-    use spral_ssids_fkeep, only : ssids_fkeep
-    use spral_ssids_subtree, only : numeric_subtree_base
-    use spral_ssids_cpu_subtree, only : cpu_numeric_subtree
-    implicit none
+  ! ! Print useful information for debugging
+  ! subroutine spldlt_print_debuginfo_c(cakeep, cfkeep, p) bind(C)
+  !   use, intrinsic :: iso_c_binding
+  !   use spral_ssids_akeep, only : ssids_akeep
+  !   use spral_ssids_fkeep, only : ssids_fkeep
+  !   use spral_ssids_subtree, only : numeric_subtree_base
+  !   use spral_ssids_cpu_subtree, only : cpu_numeric_subtree
+  !   implicit none
 
-    type(c_ptr), value :: cakeep
-    type(c_ptr), value :: cfkeep
-    integer(c_int), value :: p ! Partition number, C-indexed
+  !   type(c_ptr), value :: cakeep
+  !   type(c_ptr), value :: cfkeep
+  !   integer(c_int), value :: p ! Partition number, C-indexed
     
-    type(ssids_akeep), pointer :: akeep => null()
-    type(ssids_fkeep), pointer :: fkeep => null()
-    integer :: part ! Partition number, Fortran-indexed
-    class(numeric_subtree_base), pointer :: numeric_subtree_ptr => null()
+  !   type(ssids_akeep), pointer :: akeep => null()
+  !   type(ssids_fkeep), pointer :: fkeep => null()
+  !   integer :: part ! Partition number, Fortran-indexed
+  !   class(numeric_subtree_base), pointer :: numeric_subtree_ptr => null()
 
-    call c_f_pointer(cakeep, akeep)
-    call c_f_pointer(cfkeep, fkeep)
+  !   call c_f_pointer(cakeep, akeep)
+  !   call c_f_pointer(cfkeep, fkeep)
 
-    part = p+1
+  !   part = p+1
 
-    ! print *, "[spldlt_print_debuginfo_c] part = ",  part
+  !   ! print *, "[spldlt_print_debuginfo_c] part = ",  part
 
-    select type(subtree_ptr => fkeep%subtree(part)%ptr)
-    class is(cpu_numeric_subtree) ! factorize subtree on CPU
+  !   select type(subtree_ptr => fkeep%subtree(part)%ptr)
+  !   class is(cpu_numeric_subtree) ! factorize subtree on CPU
 
-       ! print *, "[spldlt_print_debuginfo_c] size(fkeep%subtree) = ", size(fkeep%subtree) 
-       ! write(*, '("[spldlt_print_debuginfo_c] c_loc(csubtree) = ", z16)') c_loc(subtree_ptr%csubtree)
-       write(*, '("[spldlt_print_debuginfo_c] part = ", i5, " csubtree = ", z16)') part, subtree_ptr%csubtree
+  !      ! print *, "[spldlt_print_debuginfo_c] size(fkeep%subtree) = ", size(fkeep%subtree) 
+  !      ! write(*, '("[spldlt_print_debuginfo_c] c_loc(csubtree) = ", z16)') c_loc(subtree_ptr%csubtree)
+  !      write(*, '("[spldlt_print_debuginfo_c] part = ", i5, " csubtree = ", z16)') part, subtree_ptr%csubtree
 
-    end select
+  !   end select
     
-  end subroutine spldlt_print_debuginfo_c
+  ! end subroutine spldlt_print_debuginfo_c
 
   subroutine spldlt_get_contrib_c(cakeep, cfkeep, p, child_contrib_c) bind(C)
     use, intrinsic :: iso_c_binding
