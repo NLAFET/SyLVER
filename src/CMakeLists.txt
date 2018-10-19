@@ -20,6 +20,11 @@ file(
 
 file(
   GLOB 
+  sources_iface
+  ../interfaces/C/*.F90)
+
+file(
+  GLOB 
   to_remove
   debug.cxx)
 
@@ -28,7 +33,7 @@ list(REMOVE_ITEM sources ${to_remove})
 list(REMOVE_ITEM kernel_sources ${to_remove})
 
 # message(STATUS "Kernel sources: ${kernel_sources}")
-set(sources ${sources} ${kernel_sources})
+set(sources ${sources} ${kernel_sources} ${sources_iface})
 
 if(${RUNTIME} MATCHES "StarPU")
 
