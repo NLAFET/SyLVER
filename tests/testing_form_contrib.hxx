@@ -122,7 +122,7 @@ namespace spldlt { namespace tests {
 
       memcpy(front.lcol, l, lda*n*sizeof(T)); // Copy factors into front
       copy_a_to_cb(l, lda, front); // Copy constribution blocks into front      
-      form_contrib(front, work, nelim1, nelim-1);
+      form_contrib_notask(front, work, nelim1, nelim-1);
       copy_cb_to_a(front, l, lda); // Copy constribution blocks back into l
       
       // Update trailing sub-matrix
