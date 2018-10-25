@@ -14,8 +14,12 @@ int main(int argc, char** argv) {
    opts.parse_opts(argc, argv);
 
    printf("[factor_node_test] Matrix m = %d, n = %d\n", opts.m, opts.n);
+   printf("[factor_node_test] Number of CPUs = %d\n", opts.ncpu);
    printf("[factor_node_test] blksz = %d\n", opts.nb);
    printf("[factor_node_test] ncpu = %d\n", opts.ncpu);
+#if defined(SPLDLT_USE_GPU)
+   printf("[factor_node_test] ngpu = %d\n", opts.ngpu);
+#endif
    printf("[factor_node_test] posdef = %d\n", opts.posdef);
 
    if (opts.chol) {
