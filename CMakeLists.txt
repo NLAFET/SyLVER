@@ -12,7 +12,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/" 
 
 ########################################
 # C flags
-# set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O2" )
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O2 -std=c99 " )
 # set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O2 -ffpe-trap=underflow,denormal" )
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
 
@@ -99,14 +99,35 @@ option(KERNEL_TESTS "Kernel test" OFF)
 MESSAGE( STATUS "Kernel tests: " ${KERNEL_TESTS})
 
 # spral
-set(SPRAL_DIR $ENV{SPRALDIR} CACHE PATH "Location of Spral Library")
-include_directories(${SPRAL_DIR})
+if( DEFINED ENV{SPRALDIR})
+  set(SPRAL_DIR $ENV{SPRALDIR} CACHE PATH "Location of Spral Library")
+  message(STATUS "SPRAL directory : ${SPRAL_DIR}")
+elseif( DEFINED ENV{SPRAL_DIR})
+  set(SPRAL_DIR $ENV{SPRAL_DIR} CACHE PATH "Location of Spral Library")
+  message(STATUS "SPRAL directory : ${SPRAL_DIR}")
+else()
+  message(ERROR " SPRAL directory is not provided. Please create either SPRALDIR or SPRAL_DIR env variable with the right path")
+endif()
 
-set(SPRAL_SRC_DIR $ENV{SPRALSRCDIR} CACHE PATH "Location of Spral sources")
+include_directories(${SPRAL_DIR}/include)
+message(STATUS "Include directory : ${SPRAL_DIR}/include")
+
+if( DEFINED ENV{SPRALSRCDIR})
+  set(SPRAL_SRC_DIR $ENV{SPRALSRCDIR} CACHE PATH "Location of Spral sources")
+  message(STATUS "SPRAL src directory : ${SPRAL_SRC_DIR}")
+elseif( DEFINED ENV{SPRAL_SRC_DIR})
+  set(SPRAL_SRC_DIR $ENV{SPRAL_SRC_DIR} CACHE PATH "Location of Spral sources")
+  message(STATUS "SPRAL src directory : ${SPRAL_SRC_DIR}")
+else()
+  message(ERROR " SPRAL src directory is not provided. Please create either SPRALSRCDIR or SPRAL_SRC_DIR env variable with the right path")
+endif()
+#set(SPRAL_SRC_DIR $ENV{SPRALSRCDIR} CACHE PATH "Location of Spral sources")
 include_directories(${SPRAL_SRC_DIR})
 include_directories(${SPRAL_SRC_DIR}/src)
+message(STATUS "Include src directory : ${SPRAL_SRC_DIR}")
+message(STATUS "Include src directory : ${SPRAL_SRC_DIR}/src")
 
-MESSAGE(STATUS "spral source dir: " ${SPRAL_SRC_DIR})
+#MESSAGE(STATUS "spral source dir: " ${SPRAL_SRC_DIR})
 
 # Get object files 
 file(
@@ -130,6 +151,43 @@ option(USE_PROFILING "Activate profiling info" OFF)
 MESSAGE( STATUS "Profiling: " ${USE_PROFILING})
 if (${USE_PROFILING} MATCHES "ON")
   add_definitions(-DSPLDLT_USE_PROFILING)
+endif()
+
+option(C_IFACE_TEST "Compile the C examples" OFF)
+if(C_IFACE_TEST MATCHES "ON")
+  MESSAGE( STATUS "C Interface test: " ${C_IFACE_TEST} )
+
+  include_directories("include/")
+  list(APPEND c_iface_test "example/C/simple.c")
+
+  if(DEFINED ENV{CPALAMEM_LIB})
+    set(CPALAMEM_LIB $ENV{CPALAMEM_LIB} CACHE PATH "Location of CPALAMEM library")
+  endif()
+  if(DEFINED ENV{CPALAMEM_INC})
+    set(CPALAMEM_INC $ENV{CPALAMEM_INC} CACHE PATH "Location of CPALAMEM include")
+  endif()
+
+  if(CPALAMEM_INC AND CPALAMEM_LIB)
+    message(STATUS "CPALAMEM_INC used : " ${CPALAMEM_INC})
+    message(STATUS "CPALAMEM_LIB used : " ${CPALAMEM_LIB})
+    include_directories(${CPALAMEM_INC})
+
+    set(LIB_TO_FIND "cpalamem_core")
+
+    find_library(CPALAMEM_LIBRARIES NAMES ${LIB_TO_FIND} PATHS ${CPALAMEM_LIB})
+
+    if(CPALAMEM_LIBRARIES)
+      set(LIBS ${LIBS} ${CPALAMEM_LIBRARIES})
+    else(CPALAMEM_LIBRARIES)
+      message(FATAL_ERROR "${CPALAMEM_LIB_PATH} does not contain lib${LIB_TO_FIND}")
+    endif(CPALAMEM_LIBRARIES)
+
+    unset(LIB_TO_FIND)
+    list(APPEND c_iface_test "example/C/cpalamem_simple.c")
+  else()
+    message(WARNING "Can not set CPALAMEM.")
+  endif()
+
 endif()
 
 ################################################################################
@@ -156,7 +214,7 @@ MESSAGE( STATUS "hwloc libs: " ${HWLOC_LIBRARIES})
 ########################################
 # Metis
 set(METIS_DIR $ENV{METISDIR} CACHE PATH "Location of Metis Library")
-find_library(METIS_LIBRARIES metis PATHS ${METIS_DIR} NO_DEFAULT_PATH)
+find_library(METIS_LIBRARIES metis PATHS ${METIS_DIR}/lib NO_DEFAULT_PATH)
 set(LIBS ${LIBS} ${METIS_LIBRARIES})
 MESSAGE( STATUS "metis libs: " ${METIS_LIBRARIES})
 
@@ -327,9 +385,12 @@ target_link_libraries(spldlt_test spldlt)
 # endif()
 
 ## spral
+#set(SPRAL_DIR $ENV{SPRAL_DIR})
 target_include_directories(spldlt_test PUBLIC ${SPRAL_DIR})
+message(STATUS "SPRAL_DIR : ${SPRAL_DIR}")
 # target_include_directories(spldlt_test_debug PUBLIC ${SPRAL_DIR})
-find_library(SPRAL_LIBRARY spral PATHS ${SPRAL_DIR} ${SPRAL_DIR})
+find_library(SPRAL_LIBRARY spral PATHS ${SPRAL_DIR}/lib ${SPRAL_DIR})
+message(STATUS "SPRAL_LIBRARY : ${SPRAL_LIBRARY}")
 target_link_libraries(spldlt_test ${SPRAL_LIBRARY})
 # target_link_libraries(spldlt_test_debug ${SPRAL_LIBRARY})
 
@@ -399,6 +460,23 @@ foreach(test_driver ${test_drivers})
 
 endforeach()
 
+########################################
+# Setup list of C example
+foreach(c_iface_test ${c_iface_test})
+  
+  get_filename_component(c_iface_test_name ${c_iface_test} NAME_WE)
+  add_executable(${c_iface_test_name} ${c_iface_test})
+
+  ########################################
+  # Link test drivers with external libraries
+  target_include_directories(${c_iface_test_name} PUBLIC ${SPRAL_DIR})
+  target_link_libraries(${c_iface_test_name} spldlt)
+  target_link_libraries(${c_iface_test_name} ${obj})
+  target_link_libraries(${c_iface_test_name} ${SPRAL_LIBRARY})
+  target_link_libraries(${c_iface_test_name} ${LIBS})
+
+endforeach()
+
 ################################################################################
 # Print summary
 
@@ -432,4 +510,9 @@ if(${USE_GPU} MATCHES ON)
     )
   message(" ")
 endif()
+message("CMAKE_LINKER : ${CMAKE_LINKER}" )
+message("CMAKE_LINKER Fortran : ${CMAKE_Fortran_LINK_EXECUTABLE}" )
+message("CMAKE_LINKER C : ${CMAKE_C_LINK_EXECUTABLE}" )
+message("CMAKE_LINKER CXX : ${CMAKE_CXX_LINK_EXECUTABLE}" )
+message("CMAKE_Fortran_COMPILER : ${CMAKE_Fortran_COMPILER}" )
 message("--------------------------------------------------------------------------------")

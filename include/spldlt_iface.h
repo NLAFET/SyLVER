@@ -1,7 +1,7 @@
-!> \file
-!> \copyright 2018 The Science and Technology Facilities Council (STFC)
-!> \licence   BSD licence, see LICENCE file for details
-!> \author    Sebastien Cayrols
+//!> \file
+//!> \copyright 2018 The Science and Technology Facilities Council (STFC)
+//!> \licence   BSD licence, see LICENCE file for details
+//!> \author    Sebastien Cayrols
 #ifndef SPLDLT_IFACE_H
 #define SPLDLT_IFACE_H
 
@@ -68,33 +68,40 @@ typedef struct{
   int prune_tree;
 } spldlt_options_t;
 
-#define SPLDLT_OPTIONS_NULL(){.options={  \
-                                .array_base=0,              \
-                                .print_level=0,             \
-                                .unit_diagnostics=0,        \
-                                .unit_error=0,              \
-                                .unit_warning=0,            \
-                                .ordering=0,                \
-                                .nemin=32,                  \
-                                .ignore_numa=0,             \
-                                .use_gpu=0,                 \
-                                .min_gpu_work=0,            \
-                                .max_load_inbalance=0,      \
-                                .gpu_perf_coeff=0,          \
-                                .scaling=0,                 \
-                                .small_subtree_threshold=0, \
-                                .cpu_block_size=32,         \
-                                .action=0,                  \
-                                .pivot_method=0,            \
-                                .small=0.0,                 \
-                                .u=0.0,                     \
-                                },        \
-                                .prune_tree=1}
+//#define SPLDLT_OPTIONS_NULL(){.options={  \
+//                                .array_base=0,              \
+//                                .print_level=0,             \
+//                                .unit_diagnostics=0,        \
+//                                .unit_error=0,              \
+//                                .unit_warning=0,            \
+//                                .ordering=0,                \
+//                                .nemin=32,                  \
+//                                .ignore_numa=0,             \
+//                                .use_gpu=0,                 \
+//                                .min_gpu_work=0,            \
+//                                .max_load_inbalance=0,      \
+//                                .gpu_perf_coeff=0,          \
+//                                .scaling=0,                 \
+//                                .small_subtree_threshold=0, \
+//                                .cpu_block_size=32,         \
+//                                .action=0,                  \
+//                                .pivot_method=0,            \
+//                                .small=0.0,                 \
+//                                .u=0.0,                     \
+//                                },        \
+//                                .prune_tree=1}
+
+extern void spldlt_init(int ncpu, int ngpu);
+
+extern void spldlt_finalize();
+
+extern void spldlt_default_options(spldlt_options_t *options);
 
 extern void spldlt_analyse( int               n,
-                            int               *ptr,
+                            long              *ptr,
                             int               *row,
                             double            *val, //Optional here
+                            int               ncpu,
                             void              **akeep,
                             spldlt_options_t  *options,
                             spldlt_inform_t   *info);
@@ -102,7 +109,7 @@ extern void spldlt_analyse( int               n,
 extern void spldlt_factor(int               posdef, //Boolean 
                           double            *val,
                           void              *akeep,
-                          void              *fkeep,
+                          void              **fkeep,
                           spldlt_options_t  *options,
                           spldlt_inform_t   *info);
 
@@ -114,8 +121,16 @@ extern void spldlt_solve( int             job,
                           void            *fkeep,
                           spldlt_inform_t *info);
 
-extern int spllt_deallocate_akeep(void  **akeep);
+extern void spldlt_chkerr(int n,
+                          long *ptr,
+                          int *row,
+                          double *val,
+                          int nrhs,
+                          double *x,
+                          double *rhs);
 
-extern int spllt_deallocate_fkeep(void  **fkeep);
+extern int spldlt_free_akeep(void  **akeep);
+
+extern int spldlt_free_fkeep(void  **fkeep);
                         
 #endif
