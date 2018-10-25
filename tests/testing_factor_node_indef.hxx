@@ -29,6 +29,7 @@
 #include "StarPU/scheduler.h"
 #include "StarPU/kernels.hxx"
 #include "StarPU/kernels_indef.hxx"
+#include "StarPU/factor_failed.hxx"
 #endif
 
 namespace spldlt { namespace tests {
@@ -182,6 +183,7 @@ namespace spldlt { namespace tests {
       spldlt::starpu::codelet_init<T, FactorAllocator, PoolAllocator>();
       spldlt::starpu::codelet_init_indef<T, iblksz, Backup, PoolAllocator>();
       spldlt::starpu::codelet_init_factor_indef<T, PoolAllocator>();
+      spldlt::starpu::codelet_init_factor_failed<T, PoolAllocator>();
 
       // extern struct starpu_codelet cl_update_contrib_block_app;
 
