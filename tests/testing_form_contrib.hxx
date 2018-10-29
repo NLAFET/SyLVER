@@ -4,6 +4,7 @@
 #include "SymbolicFront.hxx"
 #include "NumericFront.hxx"
 #include "kernels/factor_indef.hxx"
+#include "kernels/ldlt_app.hxx"
 // SpLDLT tests
 #include "common.hxx"
 
