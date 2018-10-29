@@ -5,16 +5,12 @@
 #ifndef SPLDLT_IFACE_H
 #define SPLDLT_IFACE_H
 
-//typedef struct{
-//  void *akeep;
-//  void *fkeep;
-//} spldlt_data_t;
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #include <stdbool.h>
+
 
 /************************************
  * Derived types
@@ -68,28 +64,12 @@ typedef struct{
   int prune_tree;
 } spldlt_options_t;
 
-//#define SPLDLT_OPTIONS_NULL(){.options={  \
-//                                .array_base=0,              \
-//                                .print_level=0,             \
-//                                .unit_diagnostics=0,        \
-//                                .unit_error=0,              \
-//                                .unit_warning=0,            \
-//                                .ordering=0,                \
-//                                .nemin=32,                  \
-//                                .ignore_numa=0,             \
-//                                .use_gpu=0,                 \
-//                                .min_gpu_work=0,            \
-//                                .max_load_inbalance=0,      \
-//                                .gpu_perf_coeff=0,          \
-//                                .scaling=0,                 \
-//                                .small_subtree_threshold=0, \
-//                                .cpu_block_size=32,         \
-//                                .action=0,                  \
-//                                .pivot_method=0,            \
-//                                .small=0.0,                 \
-//                                .u=0.0,                     \
-//                                },        \
-//                                .prune_tree=1}
+typedef struct{
+  void              *akeep;
+  void              *fkeep;
+  spldlt_options_t  options;
+  spldlt_inform_t   info;
+} spldlt_data_t;
 
 extern void spldlt_init(int ncpu, int ngpu);
 
@@ -132,5 +112,9 @@ extern void spldlt_chkerr(int n,
 extern int spldlt_free_akeep(void  **akeep);
 
 extern int spldlt_free_fkeep(void  **fkeep);
+
+#ifdef __cplusplus
+}
+#endif
                         
 #endif

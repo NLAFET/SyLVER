@@ -271,6 +271,7 @@ subroutine spldlt_c_analyse(n, cptr, crow, cval, ncpu, cakeep, coptions, cinform
   type(spldlt_akeep_type),  pointer :: fakeep
   type(spldlt_options)              :: foptions
   type(ssids_inform)                :: finform
+  integer                           :: st
 
   logical :: cindexed
 
@@ -279,36 +280,41 @@ subroutine spldlt_c_analyse(n, cptr, crow, cval, ncpu, cakeep, coptions, cinform
 
   ! Translate arguments
   if (C_ASSOCIATED(cptr)) then
-     call C_F_POINTER(cptr, fptr, shape=(/ n+1 /))
+    call C_F_POINTER(cptr, fptr, shape=(/ n+1 /))
   else
-     nullify(fptr)
+    print *, "Error, cptr is not associated"
+    nullify(fptr)
   end if
+
   if (C_ASSOCIATED(crow)) then
-     call C_F_POINTER(crow, frow, shape=(/ fptr(n+1)-1 /))
+    call C_F_POINTER(crow, frow, shape=(/ fptr(n+1)-1 /))
   else
-     nullify(frow)
+    print *, "Error, crow is not associated"
+    nullify(frow)
   end if
+
   if (C_ASSOCIATED(cval)) then
-     call C_F_POINTER(cval, fval, shape=(/ fptr(n+1)-1 /))
+    call C_F_POINTER(cval, fval, shape=(/ fptr(n+1)-1 /))
   else
-     nullify(fval)
+    print *, "Warning, cval is not associated"
+    nullify(fval)
   end if
   if (C_ASSOCIATED(cakeep)) then
-     ! Reuse old pointer
-     call C_F_POINTER(cakeep, fakeep)
+    ! Reuse old pointer
+    call C_F_POINTER(cakeep, fakeep)
   else
-     ! Create new pointer
-     allocate(fakeep)
-     cakeep = C_LOC(fakeep)
+    ! Create new pointer
+    allocate(fakeep, stat=st)
+    cakeep = C_LOC(fakeep)
   end if
 
   print *, "Call analyse"
   ! Call Fortran routine
-   if (ASSOCIATED(fval)) then
-      call spldlt_analyse(fakeep, n, fptr, frow, foptions%options, finform, ncpu, val=fval)
-   else
-      call spldlt_analyse(fakeep, n, fptr, frow, foptions%options, finform, ncpu)
-   end if
+  if (ASSOCIATED(fval)) then
+    call spldlt_analyse(fakeep, n, fptr, frow, foptions%options, finform, ncpu, val=fval)
+  else
+    call spldlt_analyse(fakeep, n, fptr, frow, foptions%options, finform, ncpu)
+  end if
 
   ! Copy arguments out
   call copy_inform_out(finform, cinform)
