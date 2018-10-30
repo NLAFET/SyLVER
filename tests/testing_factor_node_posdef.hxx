@@ -115,7 +115,9 @@ namespace spldlt { namespace tests {
 #if defined(SPLDLT_USE_STARPU)
          spldlt::starpu::codelet_init<T, FactorAllocator, PoolAllocator>();
 
+#if defined(SPLDLT_USE_GPU)
          cl_update_block.where = STARPU_CPU|STARPU_CUDA;
+#endif
          
          // Register symbolic handles
          starpu_void_data_register(&(sfront.hdl)); // Symbolic handle on node
