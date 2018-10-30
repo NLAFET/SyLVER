@@ -135,11 +135,13 @@ endif()
 ################################################################################
 # Low-level options
 
-SET(MEMLAYOUT "2D" CACHE STRING "Memory layout")
+SET(MEMLAYOUT "1D" CACHE STRING "Memory layout")
 set_property(CACHE MEMLAYOUT PROPERTY STRINGS 2D 1D)
 MESSAGE( STATUS "Memory layout: " ${MEMLAYOUT})
 if (${MEMLAYOUT} MATCHES "1D")
   add_definitions(-DMEMLAYOUT_1D)
+elseif (${MEMLAYOUT} MATCHES "2D")
+  add_definitions(-DMEMLAYOUT_2D)
 endif()
 
 ################################################################################
