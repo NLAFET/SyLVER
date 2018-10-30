@@ -187,18 +187,13 @@ namespace spldlt { namespace tests {
 
       // extern struct starpu_codelet cl_update_contrib_block_app;
 
-#if defined(SPLDLT_USE_STARPU)
-
       // Force update_contrib taks on the CPU/GPU
       // cl_update_contrib_block_app.where = STARPU_CPU;
       cl_update_contrib_block_app.where = STARPU_CUDA;
       
       // Force UpdateN taks on the CPU/GPU
       cl_updateN_block_app.where = STARPU_CPU; 
-      // cl_updateN_block_app.where = STARPU_CUDA; 
-
-#endif
-
+      // cl_updateN_block_app.where = STARPU_CUDA;
 #endif
 
 #if defined(SPLDLT_USE_STARPU)
