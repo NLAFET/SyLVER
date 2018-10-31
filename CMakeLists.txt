@@ -119,18 +119,22 @@ MESSAGE(STATUS "object files: " ${obj})
 
 # Use GPUs
 option(USE_GPU "Use GPU" OFF)
-MESSAGE( STATUS "Use GPU:         " ${USE_GPU} )
+MESSAGE(STATUS "Use GPU: " ${USE_GPU} )
 
 # Use MPI
 option(USE_MPI "Use MPI" OFF)
-MESSAGE( STATUS "Use MPI:         " ${USE_MPI} )   
+MESSAGE(STATUS "Use MPI: " ${USE_MPI} )   
 
 # Profiling
 option(USE_PROFILING "Activate profiling info" OFF)
-MESSAGE( STATUS "Profiling: " ${USE_PROFILING})
+MESSAGE(STATUS "Profiling: " ${USE_PROFILING})
 if (${USE_PROFILING} MATCHES "ON")
   add_definitions(-DSPLDLT_USE_PROFILING)
 endif()
+
+# Use OpenMP
+option(USE_OMP "Use OpenMP" OFF)
+MESSAGE(STATUS "Use OpenMP: " ${USE_OMP} )
 
 ################################################################################
 # Low-level options
@@ -221,8 +225,20 @@ else()
   message(FATAL_ERROR "LAPACK library NOT found")
 endif (LAPACK_FOUND)
 
+########################################
+# OpenMP
+if (${USE_OMP} MATCHES ON)
+  find_package(OpenMP)
+  if (OPENMP_FOUND)
+    # message(STATUS "OpenMP Lib: " ${OpenMP_CXX_LIBRARIES})
+    set(LIBS ${LIBS} ${OpenMP_CXX_LIBRARIES})
+  else()
+    message(FATAL_ERROR "OpenMP library NOT found")
+  endif()
+endif()
+
 # GPU
-if(${USE_GPU} MATCHES ON)
+if (${USE_GPU} MATCHES ON)
 
   # Use GPU
   add_definitions(-DSPLDLT_USE_GPU)
@@ -422,8 +438,8 @@ message(" ")
 if(${RUNTIME} MATCHES "StarPU")
   message("Runtime system: StarPU")
   message("StarPU libraries: ${STARPU_LIBRARIES}")
+  message(" ")
 endif()
-message(" ")
 if(${USE_GPU} MATCHES ON)
   message(
     "CUDA host compiler: ${CUDA_HOST_COMPILER}\n"
@@ -433,5 +449,11 @@ if(${USE_GPU} MATCHES ON)
     "NVCC FLAGS: ${CUDA_NVCC_FLAGS}\n"
     )
   message(" ")
+endif()
+if (${USE_OMP} MATCHES ON)
+  message(
+    "OpenMP CXX libraries: ${OpenMP_CXX_LIBRARIES}\n"
+    "OpenMP Fortran libraries: ${OpenMP_Fortran_LIBRARIES}\n"
+    )
 endif()
 message("--------------------------------------------------------------------------------")
