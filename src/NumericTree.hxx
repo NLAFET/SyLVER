@@ -206,6 +206,18 @@ namespace spldlt {
          //             &options);
          //    }
          // }
+
+#if defined(SPLDLT_USE_STARPU)
+
+#if defined(SPLDLT_USE_OMP)
+         struct starpu_cluster_machine *clusters;
+         clusters = starpu_cluster_machine(HWLOC_OBJ_SOCKET, 0);
+         starpu_cluster_print(clusters);
+         starpu_uncluster_machine(clusters);
+#endif
+
+#endif
+
          // starpu_pause();
          for(int p = 0; p < symb_.nsubtrees_; ++p) {
             int root = symb_.subtrees_[p]-1; // subtrees is 1-indexed

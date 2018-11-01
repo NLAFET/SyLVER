@@ -15,9 +15,6 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/" 
 
 set(LINKER_LANGUAGE "Fortran")
 set(CMAKE_Fortran_LINKER_PREFERENCE 50)
-message(STATUS "Fortran_LINKER_PREFERENCE: ${CMAKE_Fortran_LINKER_PREFERENCE}")
-message(STATUS "CXX_LINKER_PREFERENCE: ${CMAKE_CXX_LINKER_PREFERENCE}")
-message(STATUS "C_LINKER_PREFERENCE: ${CMAKE_C_LINKER_PREFERENCE}")
 
 ################################################################################
 # Compiler options
@@ -245,6 +242,7 @@ if (${USE_OMP} MATCHES ON)
     message(STATUS "OpenMP CXX Flags: " ${OpenMP_Fortran_FLAGS})
     set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_Fortran_FLAGS}")
     # set(LIBS ${LIBS} ${OpenMP_CXX_LIBRARIES})
+    add_definitions(-DSPLDLT_USE_OMP)
   else()
     message(FATAL_ERROR "OpenMP library NOT found")
   endif()
