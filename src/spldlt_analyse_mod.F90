@@ -1645,12 +1645,12 @@ contains
              m = int(akeep%rptr(node+1) - akeep%rptr(node))
              weight = real(flops(node)) / tot_weight 
 
-             ! node id
+             ! Node id
              write(2, '(i10)', advance="no") node
              write(2, '(" ")', advance="no")
              write(2, '("[")', advance="no")
 
-             ! node info
+             ! Node info
              write(2, '("label=""")', advance="no")
              write(2, '("node:", i5,"\n")', advance="no")node
              write(2, '("m:", i5,"\n")', advance="no")m

@@ -4,8 +4,20 @@ enable_language(Fortran)
 enable_language(C)
 enable_language(CXX)
 
+# CMake version
+message(STATUS "CMake version: ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}")
+
 # Include our own cmake modules
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/" )
+
+################################################################################
+# Linker options
+
+set(LINKER_LANGUAGE "Fortran")
+set(CMAKE_Fortran_LINKER_PREFERENCE 50)
+message(STATUS "Fortran_LINKER_PREFERENCE: ${CMAKE_Fortran_LINKER_PREFERENCE}")
+message(STATUS "CXX_LINKER_PREFERENCE: ${CMAKE_CXX_LINKER_PREFERENCE}")
+message(STATUS "C_LINKER_PREFERENCE: ${CMAKE_C_LINKER_PREFERENCE}")
 
 ################################################################################
 # Compiler options
@@ -230,8 +242,9 @@ endif (LAPACK_FOUND)
 if (${USE_OMP} MATCHES ON)
   find_package(OpenMP)
   if (OPENMP_FOUND)
-    # message(STATUS "OpenMP Lib: " ${OpenMP_CXX_LIBRARIES})
-    set(LIBS ${LIBS} ${OpenMP_CXX_LIBRARIES})
+    message(STATUS "OpenMP CXX Flags: " ${OpenMP_Fortran_FLAGS})
+    set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_Fortran_FLAGS}")
+    # set(LIBS ${LIBS} ${OpenMP_CXX_LIBRARIES})
   else()
     message(FATAL_ERROR "OpenMP library NOT found")
   endif()
@@ -351,6 +364,8 @@ find_library(SPRAL_LIBRARY spral PATHS ${SPRAL_DIR} ${SPRAL_DIR})
 target_link_libraries(spldlt_test ${SPRAL_LIBRARY})
 # target_link_libraries(spldlt_test_debug ${SPRAL_LIBRARY})
 
+set_property(TARGET spldlt_test PROPERTY LINKER_LANGUAGE Fortran)
+
 ################################################################################
 # Test drivers
 
@@ -430,7 +445,10 @@ message(
   "C compiler:  ${CMAKE_C_COMPILER} (${CMAKE_C_COMPILER_ID})\n"
   "C compiler flags: ${CMAKE_Fortran_FLAGS_ALL}\n"
   "CXX compiler:  ${CMAKE_CXX_COMPILER} (${CMAKE_CXX_COMPILER_ID})\n"
-  "CXX compiler flags: ${CMAKE_CXX_FLAGS_ALL}")
+  "CXX compiler flags: ${CMAKE_CXX_FLAGS_ALL}\n"
+  "Linker Flags: ${CMAKE_EXE_LINKER_FLAGS}\n"
+  # "Linker lang: ${LINKER_LANGUAGE}"
+  )
 message(" ")
 message("BLAS libraries: ${BLAS_LIBRARIES}")
 message("LAPACK libraries: ${LAPACK_LIBRARIES}")
@@ -450,10 +468,10 @@ if(${USE_GPU} MATCHES ON)
     )
   message(" ")
 endif()
-if (${USE_OMP} MATCHES ON)
-  message(
-    "OpenMP CXX libraries: ${OpenMP_CXX_LIBRARIES}\n"
-    "OpenMP Fortran libraries: ${OpenMP_Fortran_LIBRARIES}\n"
-    )
-endif()
+# if (${USE_OMP} MATCHES ON)
+#   message(
+#     "OpenMP CXX libraries: ${OpenMP_CXX_LIBRARIES}\n"
+#     "OpenMP Fortran libraries: ${OpenMP_Fortran_LIBRARIES}\n"
+#     )
+# endif()
 message("--------------------------------------------------------------------------------")
