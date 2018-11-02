@@ -818,7 +818,7 @@ namespace spldlt { namespace starpu {
 
          starpu_codelet_unpack_args(
                cl_arg,
-               &akeep, 
+               &akeep,
                &fkeep,
                &p,
                &aval,
@@ -828,6 +828,11 @@ namespace spldlt { namespace starpu {
 
          // printf("[factor_subtree_cpu_func] failed_pivot_method: %d\n",
                // options->failed_pivot_method);
+
+         struct spral::ssids::cpu::cpu_factor_options subtree_opts;
+         subtree_opts = *options;
+         subtree_opts.cpu_block_size = 256; // TODO add new parameter for blksz in subtrees
+         // printf("[factor_subtree_cpu_func] cpu_block_size = %d\n", subtree_opts.cpu_block_size);
 
          int workerid = starpu_worker_get_id();
          // printf("[factor_subtree_cpu_func] workerid: %d\n", workerid);
@@ -843,7 +848,7 @@ namespace spldlt { namespace starpu {
 #pragma omp single
             {
                // printf("[factor_subtree_cpu_func] nth: %d\n", nth);
-               spldlt_factor_subtree_c(akeep, fkeep, p, aval, child_contrib, options, &stats);
+               spldlt_factor_subtree_c(akeep, fkeep, p, aval, child_contrib, &subtree_opts, &stats);
             }
          }
 

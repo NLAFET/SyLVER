@@ -300,8 +300,13 @@ contains
 
     nth = size(akeep%topology)
     ! nth = 1 ! debug
-    nth = 2 ! debug
+    ! nth = 4 ! debug
 
+#if defined(SPLDLT_USE_STARPU)
+#if defined(SPLDLT_USE_OMP)
+    nth = 2 ! debug
+#endif
+#endif
     ! Allocate structures and init for tree prunning
     allocate(small(akeep%nnodes+1))
     allocate(contrib_dest(akeep%nnodes+1))
