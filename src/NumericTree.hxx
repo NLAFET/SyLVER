@@ -208,14 +208,17 @@ namespace spldlt {
          // }
 
 #if defined(SPLDLT_USE_STARPU)
-
 #if defined(SPLDLT_USE_OMP)
          struct starpu_cluster_machine *clusters;
-         clusters = starpu_cluster_machine(HWLOC_OBJ_SOCKET, 0);
-         starpu_cluster_print(clusters);
-         starpu_uncluster_machine(clusters);
+         clusters = starpu_cluster_machine(
+               HWLOC_OBJ_SOCKET, 
+               // STARPU_CLUSTER_PARTITION_ONE, STARPU_CLUSTER_NB, 2,
+               STARPU_CLUSTER_TYPE, STARPU_CLUSTER_OPENMP,
+               0);
+         // starpu_cluster_print(clusters);
+         // starpu_uncluster_machine(clusters);
+         auto subtree_start = std::chrono::high_resolution_clock::now();                  
 #endif
-
 #endif
 
          // starpu_pause();
@@ -229,7 +232,7 @@ namespace spldlt {
 //             starpu_task_wait_for_all();
 // #endif
             // spldlt_factor_subtree_c(
-            //       symb_.akeep_, fkeep_, p, aval, child_contrib, &options, 
+            //       symb_.akeep_, fkeep_, p, aval, child_contrib, &options,
             //       &worker_stats[0]);
          }
          // printf("[factor_mf_indef] nsubtree = %d\n", symb_.nsubtrees_);
@@ -237,6 +240,18 @@ namespace spldlt {
 // #if defined(SPLDLT_USE_STARPU)
 //          starpu_task_wait_for_all();
 // #endif         
+
+#if defined(SPLDLT_USE_STARPU)
+         starpu_task_wait_for_all();         
+#if defined(SPLDLT_USE_OMP)
+         
+         starpu_uncluster_machine(clusters);
+         auto subtree_end = std::chrono::high_resolution_clock::now();                  
+         long t_subtree = std::chrono::duration_cast<std::chrono::nanoseconds>(subtree_end-subtree_start).count();
+         printf("[factor_mf_indef] process subtrees: %e\n", 1e-9*t_subtree);
+
+#endif
+#endif
 
          // Allocate mapping array
          // int *map = new int[symb_.n+1];

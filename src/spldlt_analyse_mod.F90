@@ -299,7 +299,8 @@ contains
     ! print *, " contrib_dest = ", contrib_dest(1:akeep%nparts)
 
     nth = size(akeep%topology)
-    ! nth = 2 ! debug
+    ! nth = 1 ! debug
+    nth = 2 ! debug
 
     ! Allocate structures and init for tree prunning
     allocate(small(akeep%nnodes+1))

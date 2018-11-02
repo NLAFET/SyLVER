@@ -240,8 +240,17 @@ if (${USE_OMP} MATCHES ON)
   find_package(OpenMP)
   if (OPENMP_FOUND)
     message(STATUS "OpenMP CXX Flags: " ${OpenMP_Fortran_FLAGS})
+    # Linker flags
     set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_Fortran_FLAGS}")
     # set(LIBS ${LIBS} ${OpenMP_CXX_LIBRARIES})
+
+    # Compiler flags
+    list(APPEND CMAKE_Fortran_FLAGS_ALL ${OpenMP_Fortran_FLAGS})
+    list(APPEND CMAKE_CXX_FLAGS_ALL ${OpenMP_Fortran_FLAGS})
+    
+    set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${OpenMP_Fortran_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_Fortran_FLAGS}")
+
     add_definitions(-DSPLDLT_USE_OMP)
   else()
     message(FATAL_ERROR "OpenMP library NOT found")

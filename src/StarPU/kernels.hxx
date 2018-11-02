@@ -13,6 +13,10 @@
 #include <starpu_cublas_v2.h>
 #endif
 
+#if defined(SPLDLT_USE_OMP)
+#include "omp.hxx"
+#endif
+
 namespace spldlt { namespace starpu {
 
       // unregister handles for a node in StarPU
@@ -798,6 +802,8 @@ namespace spldlt { namespace starpu {
       // Factor subtree task
 
       // CPU kernel
+
+#if defined(SPLDLT_USE_OMP)
       template <typename T>
       void factor_subtree_cpu_func(void *buffers[], void *cl_arg) {
 
@@ -824,6 +830,54 @@ namespace spldlt { namespace starpu {
                // options->failed_pivot_method);
 
          int workerid = starpu_worker_get_id();
+         // printf("[factor_subtree_cpu_func] workerid: %d\n", workerid);
+         ThreadStats& stats = (*worker_stats)[workerid];
+
+         // options->failed_pivot_method = FailedPivotMethod::tpp;
+         
+         // printf("[factor_subtree_cpu_func] akeep = %p, fkeep = %p\n", akeep, fkeep);
+#pragma omp parallel default(shared)
+         {
+            int nth = 0;
+            nth = omp_get_num_threads();
+#pragma omp single
+            {
+               // printf("[factor_subtree_cpu_func] nth: %d\n", nth);
+               spldlt_factor_subtree_c(akeep, fkeep, p, aval, child_contrib, options, &stats);
+            }
+         }
+
+      }
+
+#else
+
+      template <typename T>
+      void factor_subtree_cpu_func(void *buffers[], void *cl_arg) {
+
+         // bool posdef;
+         void *akeep;
+         void *fkeep;
+         int p;
+         T *aval;
+         void **child_contrib;
+         struct spral::ssids::cpu::cpu_factor_options *options;
+         std::vector<ThreadStats> *worker_stats;
+
+         starpu_codelet_unpack_args(
+               cl_arg,
+               &akeep, 
+               &fkeep,
+               &p,
+               &aval,
+               &child_contrib,
+               &options,
+               &worker_stats);
+
+         // printf("[factor_subtree_cpu_func] failed_pivot_method: %d\n",
+               // options->failed_pivot_method);
+
+         int workerid = starpu_worker_get_id();
+         // printf("[factor_subtree_cpu_func] workerid: %d\n", workerid);
          ThreadStats& stats = (*worker_stats)[workerid];
 
          // options->failed_pivot_method = FailedPivotMethod::tpp;
@@ -831,7 +885,7 @@ namespace spldlt { namespace starpu {
          // printf("[factor_subtree_cpu_func] akeep = %p, fkeep = %p\n", akeep, fkeep);
          spldlt_factor_subtree_c(akeep, fkeep, p, aval, child_contrib, options, &stats);
       }
-
+#endif
       // factor_subtree StarPU codelet
       extern struct starpu_codelet cl_factor_subtree;
 

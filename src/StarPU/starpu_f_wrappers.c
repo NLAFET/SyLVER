@@ -18,13 +18,16 @@ int starpu_f_init_c(
 
   if(ncpu >= 0)
     conf.ncpus = ncpu;
+  
+  printf("[starpu_f_init_c] conf.ncpus = %d\n", conf.ncpus);
+
 #if defined(SPLDLT_USE_GPU)
   if(ngpu >= 0)
      conf.ncuda = ngpu;
+  printf("[starpu_f_init_c] conf.ncuda = %d\n", conf.ncuda);
 #else
      conf.ncuda = 0;
 #endif
-  printf("[starpu_f_init_c], conf.ncpus = %d, conf.ncuda = %d\n", conf.ncpus, conf.ncuda);
 
 #if defined(SPLDLT_USE_GPU)
   /* conf->sched_policy_name = "dmdas"; */
@@ -36,9 +39,9 @@ int starpu_f_init_c(
 
 #else
   /* conf.sched_policy_name = "eager"; */
-  conf.sched_policy_name = "ws"; // Use WS because LWS is currently buggy
+  conf.sched_policy_name = "ws";
   /* conf.sched_policy_name = "lws"; */
-  /* conf->sched_policy_name = "prio"; */
+  /* conf.sched_policy_name = "prio"; */
 #endif
 
   info = starpu_init(&conf);
