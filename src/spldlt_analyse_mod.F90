@@ -1178,6 +1178,7 @@ contains
     logical :: found
     integer, allocatable :: nchild(:) ! nchild(i) contains the number of child nodes for node i
     type(node_type), allocatable :: nodes(:)
+    integer, allocatable :: loc(:) ! locality of node
 
     print *, "[prune_tree] nth = ", nth
 
@@ -1193,7 +1194,9 @@ contains
     allocate(lzero_w (nnodes+1))
     allocate(lzero   (nnodes+1))
     allocate(proc_w  (nth))
+    allocate(loc     (nnodes+1))
 
+    
     ! count number of children per node
     allocate(nchild(nnodes+1))
     nchild = 0
@@ -1273,10 +1276,11 @@ contains
        call sort(lzero_w, nlz, map=lzero)
        ! write(*,*) 'lzero_w: ', lzero_w(1:nlz)
        ! map subtrees to threads round-robin 
-       do node=1, nlz
+       do i=1, nlz
           ! find the least loaded proc
           p = minloc(proc_w,1)
-          proc_w(p) = proc_w(p) + abs(lzero_w(node))
+          proc_w(p) = proc_w(p) + abs(lzero_w(i))
+          loc(lzero(i)) = p
        end do
        !write(*,*)'minval(proc_w) = ', minval(proc_w)
        ! write(*,*)'nlz: ', nlz       
@@ -1369,6 +1373,8 @@ contains
     do i=1, nlz
        n = lzero(i)
 
+       print *, "node ", n, ", loc = ", loc(n)
+       
        ! small(nodes(n)%least_desc:n) = -n
        ! small(n) = 1
        ! nsubtrees = nsubtrees + 1 ! add new partition                 

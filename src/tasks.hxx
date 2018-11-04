@@ -893,7 +893,7 @@ namespace spldlt {
 
       spral::ssids::cpu::Workspace& work = workspaces[0];
 #if defined(MEMLAYOUT_1D)
-      assemble_contrib_block_1d(node, cnode, ii, jj, cmap, work);
+      assemble_contrib_block_1d(node, cnode, ii, jj, cmap);
 #else
       assemble_contrib_block(node, cnode, ii, jj, cmap);
 #endif
