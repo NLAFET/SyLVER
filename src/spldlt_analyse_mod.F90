@@ -1340,7 +1340,7 @@ contains
 
     end do godown
 
-    print *, "[prune_tree] load balance: ", rm
+    write(*, '("[prune_tree] load balance =", es10.3)') rm
     ! write(*,*)'nlz: ', nlz
     ! write(*,*)'final lzero: ', lzero(1:nlz)
 

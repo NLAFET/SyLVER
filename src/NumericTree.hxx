@@ -78,7 +78,8 @@ namespace spldlt {
          // nworkers = starpu_cpu_worker_get_count();
          nworkers = starpu_worker_get_count();
 #endif
-         printf("[NumericTree] blksz = %d, nworkers = %d\n", blksz, nworkers);         
+         printf("[NumericTree] nworkers = %d\n", nworkers);         
+         printf("[NumericTree] blksz = %d\n", blksz);         
 
          std::vector<ThreadStats> worker_stats(nworkers);
          std::vector<spral::ssids::cpu::Workspace> workspaces;
@@ -242,8 +243,8 @@ namespace spldlt {
 // #endif         
 
 #if defined(SPLDLT_USE_STARPU)
-         starpu_task_wait_for_all();         
 #if defined(SPLDLT_USE_OMP)
+         starpu_task_wait_for_all();         
          
          starpu_uncluster_machine(clusters);
          auto subtree_end = std::chrono::high_resolution_clock::now();                  
