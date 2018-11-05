@@ -586,15 +586,17 @@ contains
     use spral_ssids_subtree, only : numeric_subtree_base
     use spral_ssids_cpu_subtree, only : cpu_numeric_subtree
     use spldlt_analyse_mod
+    use spldlt_datatypes_mod, only: spldlt_options
     implicit none
     
     type(spldlt_akeep_type), intent(in) :: spldlt_akeep
     type(spldlt_fkeep_type), target, intent(inout) :: spldlt_fkeep
     logical, intent(in) :: posdef 
     real(wp), dimension(*), target, intent(in) :: val ! A values (lwr triangle)
-    type(ssids_options), intent(in) :: options
+    type(spldlt_options), target, intent(in) :: options
     type(ssids_inform), intent(inout) :: inform
 
+    type(ssids_options), pointer :: ssids_opts ! SSIDS options 
     ! type(ssids_akeep), pointer :: akeep
     type(ssids_fkeep), pointer :: fkeep => null()
     integer :: i
@@ -607,6 +609,7 @@ contains
 
     fkeep => spldlt_fkeep%fkeep
     fkeep%pos_def = posdef
+    ssids_opts => options%super
 
     !
     ! Perform scaling if required
@@ -640,7 +643,7 @@ contains
     end if
 
     ! Call main factorization routine
-    call factor_core(spldlt_akeep, spldlt_fkeep, val, options, inform)
+    call factor_core(spldlt_akeep, spldlt_fkeep, val, ssids_opts, inform)
 
     return
 100 continue

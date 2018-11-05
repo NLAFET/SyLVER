@@ -3,7 +3,7 @@ module spldlt_datatypes_mod
   implicit none
   
   type spldlt_options
-     type(ssids_options) :: options
+     type(ssids_options) :: super
      logical :: prune_tree = .true.
   end type spldlt_options
 

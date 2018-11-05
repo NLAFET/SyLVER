@@ -6,11 +6,13 @@ program spldlt_test
    use spldlt_analyse_mod
    use spldlt_factorize_mod
    use spldlt_mod
+   use spldlt_datatypes_mod, only: spldlt_options 
    implicit none
 
    ! FIXME use the one defined in ssids for now
    ! integer, parameter :: wp = kind(0d0)
 
+   type(spldlt_options) :: options
    type(ssids_options) :: ssids_opt
    logical :: pos_def ! if true, assume matrix is posdef
 
@@ -72,7 +74,8 @@ program spldlt_test
 
    pos_def = .false. ! Matrix assumed indef by default
    
-   call proc_args(ssids_opt, nrhs, pos_def, ncpu, ngpu, matfile)
+   call proc_args(options, nrhs, pos_def, ncpu, ngpu, matfile)
+   ! options%super = ssids_opt
 
    ! ssids_opt%print_level = 1 ! enable printing
    ssids_opt%print_level = 0 ! disable printing
@@ -145,7 +148,7 @@ program spldlt_test
    ! smafact = real(inform%num_factor)
 
    ! Perform spldlt analysis
-   call spldlt_analyse(spldlt_akeep, n, ptr, row, ssids_opt, inform, ncpu, val=val)
+   call spldlt_analyse(spldlt_akeep, n, ptr, row, options, inform, ncpu, val=val)
    ! print atree
    ! call spldlt_print_atree(akeep)
    ! print atree with partitions
@@ -179,7 +182,7 @@ program spldlt_test
 
    ! Factorize (SpLDLT)
    call system_clock(start_t, rate_t)
-   call spldlt_factor(spldlt_akeep, spldlt_fkeep, pos_def, val, ssids_opt, inform)
+   call spldlt_factor(spldlt_akeep, spldlt_fkeep, pos_def, val, options, inform)
    call system_clock(stop_t)
    write(*, "(a)") "ok"
    print *, "Factor took ", (stop_t - start_t)/real(rate_t)
@@ -252,9 +255,10 @@ program spldlt_test
    ! Get argument from command line
    subroutine proc_args(options, nrhs, pos_def, ncpu, ngpu, matfile)
      use spral_ssids
+     use spldlt_datatypes_mod, only: spldlt_options
      implicit none
 
-     type(ssids_options), intent(inout) :: options
+     type(spldlt_options), target, intent(inout) :: options
      integer, intent(inout) :: nrhs
      logical, intent(inout) :: pos_def
      integer, intent(inout) :: ncpu
@@ -263,6 +267,9 @@ program spldlt_test
 
      integer :: argnum, narg
      character(len=200) :: argval
+     type(ssids_options), pointer :: ssids_opts
+     
+     ssids_opts => options%super
 
      ! default values
      nb = 2
@@ -291,13 +298,13 @@ program spldlt_test
         case("--nemin")
            call get_command_argument(argnum, argval)
            argnum = argnum + 1
-           read( argval, * ) options%nemin
-           print *, 'Supernode amalgamation nemin = ', options%nemin
+           read( argval, * ) ssids_opts%nemin
+           print *, 'Supernode amalgamation nemin = ', ssids_opts%nemin
         case("--nb")
            call get_command_argument(argnum, argval)
            argnum = argnum + 1
-           read( argval, * ) options%cpu_block_size
-           print *, 'CPU block size = ', options%cpu_block_size
+           read( argval, * ) ssids_opts%cpu_block_size
+           print *, 'CPU block size = ', ssids_opts%cpu_block_size
         case("--ncpu")
            call get_command_argument(argnum, argval)
            argnum = argnum + 1
@@ -313,12 +320,12 @@ program spldlt_test
            argnum = argnum + 1
            read( argval, * ) matfile
            print *, 'Matrix = ', matfile
-       case("--failed-pivot-method=tpp")
-          options%failed_pivot_method = 1
-          print *, 'Failed pivot method TPP'
-       case("--failed-pivot-method=pass")
-          options%failed_pivot_method = 2
-          print *, 'Failed pivot method PASS'
+        case("--failed-pivot-method=tpp")
+           ssids_opts%failed_pivot_method = 1
+           print *, 'Failed pivot method TPP'
+        case("--failed-pivot-method=pass")
+           ssids_opts%failed_pivot_method = 2
+           print *, 'Failed pivot method PASS'
         case default
            print *, "Unrecognised command line argument: ", argval
            stop

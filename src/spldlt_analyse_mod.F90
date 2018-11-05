@@ -211,6 +211,7 @@ contains
        options, inform)
     use spral_core_analyse, only : basic_analyse
     use spral_ssids_cpu_subtree, only : construct_cpu_symbolic_subtree
+    use spldlt_datatypes_mod, only: spldlt_options
     implicit none
 
     type(spldlt_akeep_type), target, intent(inout) :: spldlt_akeep ! spldlt akeep structure 
@@ -224,11 +225,12 @@ contains
     integer, dimension(n), intent(out) :: invp 
       ! Work array. Used to hold inverse of order but
       ! is NOT set to inverse for the final order that is returned.
-    type(ssids_options), intent(in) :: options
+    type(spldlt_options), target, intent(in) :: options
     type(ssids_inform), intent(inout) :: inform
 
     character(50)  :: context ! Procedure name (used when printing).
     type(ssids_akeep), pointer :: akeep ! SSIDS akeep structure
+    type(ssids_options), pointer :: ssids_opts ! SSIDS options 
 
     integer :: nemin, flag
     integer :: i, j
@@ -244,9 +246,10 @@ contains
     
     context = 'ssids_analyse'
     akeep => spldlt_akeep%akeep
+    ssids_opts => options%super
 
     ! Check nemin and set to default if out of range.
-    nemin = options%nemin
+    nemin = ssids_opts%nemin
     if (nemin .lt. 1) nemin = nemin_default
 
     ! Perform basic analysis so we can figure out subtrees we want to construct
@@ -355,7 +358,7 @@ contains
             akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist,            &
             ! contrib_dest(akeep%contrib_ptr(i):akeep%contrib_ptr(i+1)-1), &
             contrib_dest(1:0), &
-            options)
+            ssids_opts)
     end do
 
     ! call C++ analyse routine
@@ -399,6 +402,7 @@ contains
     use spral_ssids_datatypes
     use spral_ssids_anal, only : expand_pattern
     ! use spral_ssids_cpu_subtree, only : construct_cpu_symbolic_subtree, cpu_symbolic_subtree
+    use spldlt_datatypes_mod, only: spldlt_options
     use, intrinsic :: iso_c_binding
     implicit none
     
@@ -406,20 +410,21 @@ contains
     integer, intent(in) :: n
     integer(long), intent(in) :: ptr(:)
     integer, intent(in) :: row(:)
-    type(ssids_options), intent(in) :: options
+    type(spldlt_options), target, intent(in) :: options
     type(ssids_inform), intent(inout) :: inform
     integer, intent(inout) :: ncpu ! number of CPU workers
     real(wp), optional, intent(in) :: val(:)
 
     character(50)  :: context      ! Procedure name (used when printing).
     logical :: check = .false. ! TODO input parameter
-    type(ssids_akeep), pointer :: akeep ! ssids akeep structure
+    type(ssids_akeep), pointer :: akeep ! SSIDS akeep structure
     integer nnodes
     type(cpu_factor_options) :: coptions
     integer :: i
     ! integer, dimension(:), allocatable :: contrib_dest, exec_loc
     integer :: st ! Error management
     integer(long) :: nz     ! entries in expanded matrix
+    type(ssids_options), pointer :: ssids_opts ! SSIDS options 
 
     ! Debug
     ! class(cpu_symbolic_subtree), pointer :: subtree_ptr => null()
@@ -434,7 +439,8 @@ contains
     
     ! Prepare analysis phase
     akeep => spldlt_akeep%akeep
-    
+    ssids_opts => options%super
+
     ! Initialize
     context = 'spldlt_analyse'
     call ssids_free(akeep, free_flag)
@@ -465,7 +471,7 @@ contains
 
     allocate(akeep%invp(n),order2(n),ptr2(n+1),row2(2*nz),stat=st)
 
-    select case(options%ordering)
+    select case(ssids_opts%ordering)
     case(0)
        print *, "Not implemented"
        ! TODO
@@ -1238,6 +1244,7 @@ contains
     totleaves = 0
     small = 0
     nsubtrees = 0
+    loc = nth+1 ! Global context by default
     
     totflops = weight(nnodes+1)
 !     ! write(*,*)'totflops: ', totflops
@@ -1276,9 +1283,10 @@ contains
     leaves = 0
 
     godown: do
+
        ! if (nth .eq. 1) exit ! serial execution process the whole tree as a subtree
        if (nlz .le. 0) exit ! only small nodes ! 
-       if(nlz .gt. nth*max(2.d0,(log(real(nth,kind(1.d0)))/log(2.d0))**2)) exit ! exit if already too many nodes in l0
+       ! if(nlz .gt. nth*max(2.d0,(log(real(nth,kind(1.d0)))/log(2.d0))**2)) exit ! exit if already too many nodes in l0       
 
        proc_w = 0
        
@@ -1292,12 +1300,17 @@ contains
           p = minloc(proc_w,1)
           proc_w(p) = proc_w(p) + abs(lzero_w(i))
           loc(lzero(i)) = p
+          ! print *, "node = ", lzero(i)
+          ! print *, "proc_w = ", proc_w
+          ! print *, "p = ", p
        end do
        !write(*,*)'minval(proc_w) = ', minval(proc_w)
        ! write(*,*)'nlz: ', nlz       
        ! all the subtrees have been mapped. Evaluate load balance
        rm = real(minval(proc_w))/real(maxval(proc_w))
        !print *, "rm: ", rm
+
+       if(nlz .gt. nth*max(2.d0,(log(real(nth,kind(1.d0)))/log(2.d0))**2)) exit ! exit if already too many nodes in l0
        if((rm .gt. 0.9) .and. (nlz .ge. 1*nth)) exit ! if balance is higher than 90%, we're happy
 
        ! if load is not balanced, replace heaviest node with its kids (if any)
@@ -1342,11 +1355,12 @@ contains
                 subtree_en(nsubtrees) = c
                 ! Put it on first proc
                 exec_loc(nsubtrees) = 1 ! FIXME small nodes should be re-mapped at the end
+                ! exec_loc(nsubtrees) = nth+1 ! Put it in the global context
              end if
 
           end do
           if(found) exit findn ! if at least one child was added then we redo the mapping
-          leaves = leaves+1          
+          leaves = leaves+1
        end do findn
        ! write(*,*) 'lzero: ', lzero(1:nlz)
 
@@ -1354,7 +1368,6 @@ contains
        lzero  (leaves+1) = lzero  (nlz)
        lzero_w(leaves+1) = lzero_w(nlz)
        nlz = nlz-1
-
     end do godown
 
     write(*, '("[prune_tree] load balance =", es10.3)') rm
@@ -1386,9 +1399,9 @@ contains
     do i=1, nlz
        n = lzero(i)
 
-#if defined(SPLDLT_USE_STARPU) && defined(SPLDLT_USE_OMP)
-       print *, "node ", n, ", loc = ", loc(n)
-#endif       
+! #if defined(SPLDLT_USE_STARPU) && defined(SPLDLT_USE_OMP)
+!        print *, "node ", n, ", loc = ", loc(n)
+! #endif       
        ! small(nodes(n)%least_desc:n) = -n
        ! small(n) = 1
        ! nsubtrees = nsubtrees + 1 ! add new partition                 
