@@ -900,27 +900,47 @@ namespace spldlt { namespace starpu {
             starpu_data_handle_t root_hdl, // Symbolic handle on root node
             void *akeep,
             void *fkeep,
-            int p,
+            int p, // Subtree index
             T *aval,
             void **child_contrib,
             struct spral::ssids::cpu::cpu_factor_options *options,
-            std::vector<ThreadStats> *worker_stats) {
+            std::vector<ThreadStats> *worker_stats,
+            int loc // Locality index
+            ) {
 
          int ret;
 
-         ret = starpu_task_insert(
-               &cl_factor_subtree,
-               STARPU_RW, root_hdl,
-               STARPU_VALUE, &akeep, sizeof(void*),
-               STARPU_VALUE, &fkeep, sizeof(void*),
-               STARPU_VALUE, &p, sizeof(int),
-               STARPU_VALUE, &aval, sizeof(T*),
-               STARPU_VALUE, &child_contrib, sizeof(void**),
-               STARPU_VALUE, &options, sizeof(struct spral::ssids::cpu::cpu_factor_options*),
-               STARPU_VALUE, &worker_stats, sizeof(std::vector<ThreadStats>*),
-               0);
+         if (loc > 0) {
+            ret = starpu_task_insert(
+                  &cl_factor_subtree,
+                  STARPU_RW, root_hdl,
+                  STARPU_VALUE, &akeep, sizeof(void*),
+                  STARPU_VALUE, &fkeep, sizeof(void*),
+                  STARPU_VALUE, &p, sizeof(int),
+                  STARPU_VALUE, &aval, sizeof(T*),
+                  STARPU_VALUE, &child_contrib, sizeof(void**),
+                  STARPU_VALUE, &options, sizeof(struct spral::ssids::cpu::cpu_factor_options*),
+                  STARPU_VALUE, &worker_stats, sizeof(std::vector<ThreadStats>*),
+                  STARPU_SCHED_CTX, loc,
+                  0);
+
+         }
+         else {
+            ret = starpu_task_insert(
+                  &cl_factor_subtree,
+                  STARPU_RW, root_hdl,
+                  STARPU_VALUE, &akeep, sizeof(void*),
+                  STARPU_VALUE, &fkeep, sizeof(void*),
+                  STARPU_VALUE, &p, sizeof(int),
+                  STARPU_VALUE, &aval, sizeof(T*),
+                  STARPU_VALUE, &child_contrib, sizeof(void**),
+                  STARPU_VALUE, &options, sizeof(struct spral::ssids::cpu::cpu_factor_options*),
+                  STARPU_VALUE, &worker_stats, sizeof(std::vector<ThreadStats>*),
+                  0);
+         }
 
          STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
+
       }
 
       // Get contrib task

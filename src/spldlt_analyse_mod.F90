@@ -49,7 +49,7 @@ module spldlt_analyse_mod
      ! Debug
      type(c_ptr) function spldlt_create_symbolic_tree( &
           akeep, n, nnodes, sptr, sparent, rptr, rlist, nptr, nlist, &
-          nsubtrees, subtrees, small, contrib_dest) &
+          nsubtrees, subtrees, small, contrib_dest, exec_loc) &
           ! nparts, part, contrib_idx, exec_loc, contrib_dest) &
           bind(C, name="spldlt_create_symbolic_tree")
        use, intrinsic :: iso_c_binding
@@ -67,6 +67,7 @@ module spldlt_analyse_mod
        integer(c_int), dimension(*), intent(in) :: subtrees
        integer(c_int), dimension(*), intent(in) :: small
        integer(c_int), dimension(*), intent(in) :: contrib_dest
+       integer(c_int), dimension(*), intent(in) :: exec_loc
        ! integer(c_int), value :: nparts
        ! integer(c_int), dimension(*), intent(in) :: part
        ! integer(c_int), dimension(*), intent(in) :: contrib_idx
@@ -298,21 +299,24 @@ contains
     ! print *, " contrib_idx = ", akeep%contrib_idx(1:akeep%nparts)
     ! print *, " contrib_dest = ", contrib_dest(1:akeep%nparts)
 
-    nth = size(akeep%topology)
+    nth = size(akeep%topology) ! FIXME Use (total) number of procs
     ! nth = 1 ! debug
     ! nth = 4 ! debug
 
-#if defined(SPLDLT_USE_STARPU)
-#if defined(SPLDLT_USE_OMP)
-    nth = 2 ! debug
-#endif
+#if defined(SPLDLT_USE_STARPU) && defined(SPLDLT_USE_OMP)
+
+    nth = 2 ! FIXME Use number of NUMA sockets
+
 #endif
     ! Allocate structures and init for tree prunning
     allocate(small(akeep%nnodes+1))
     allocate(contrib_dest(akeep%nnodes+1))
     allocate(subtree_sa(akeep%nnodes+1))
+    ! TODO Use temp array and copy result into subtree_en to save
+    ! memory
     allocate(spldlt_akeep%subtree_en(akeep%nnodes+1))
-
+    allocate(exec_loc(akeep%nnodes+1))
+    
     spldlt_akeep%nsubtrees = 0
     small = 0
     contrib_dest = 0
@@ -321,12 +325,15 @@ contains
 
     ! Find out sequential subtrees
     call prune_tree(akeep%nnodes, akeep%sptr, akeep%sparent, akeep%rptr, nth, &
-         spldlt_akeep%nsubtrees, small, contrib_dest, subtree_sa, spldlt_akeep%subtree_en)
+         spldlt_akeep%nsubtrees, small, contrib_dest, subtree_sa, &
+         spldlt_akeep%subtree_en, exec_loc)
 
     print *, "[analyse_core] nsubtrees = ", spldlt_akeep%nsubtrees
     ! print *, "[analyse_core] contrib_dest = ", contrib_dest(1:spldlt_akeep%nsubtrees)
     ! print *, "[analyse_core] subtrees = ", spldlt_akeep%subtree_en(1:spldlt_akeep%nsubtrees)
-    
+#if defined(SPLDLT_USE_STARPU) && defined(SPLDLT_USE_OMP)
+    print *, "[analyse_core] exec_loc = ", exec_loc(1:spldlt_akeep%nsubtrees)
+#endif    
     ! dump atree in a dot file
     call spldlt_print_atree(akeep%nnodes, akeep%sptr, akeep%sparent, akeep%rptr, small)
     
@@ -358,13 +365,16 @@ contains
 
     spldlt_akeep%symbolic_tree_c = &
          spldlt_create_symbolic_tree_c(cakeep, akeep%n, akeep%nnodes, & 
-         akeep%sptr, akeep%sparent, akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist, &
-         spldlt_akeep%nsubtrees, spldlt_akeep%subtree_en, small, contrib_dest)
+         akeep%sptr, akeep%sparent, akeep%rptr, akeep%rlist, akeep%nptr, &
+         akeep%nlist, spldlt_akeep%nsubtrees, spldlt_akeep%subtree_en, small, &
+         contrib_dest, exec_loc)
          !akeep%nparts, akeep%part, akeep%contrib_idx, exec_loc, contrib_dest)
 
+    ! Clean memory
     deallocate(small)
     deallocate(contrib_dest)
     deallocate(subtree_sa)
+    deallocate(exec_loc)
 
     return
     
@@ -1140,7 +1150,7 @@ contains
   ! Tree pruning method. Inspired by the strategy employed in qr_mumps
   ! for pruning the atree.
   subroutine prune_tree(nnodes, sptr, sparent, rptr, nth, nsubtrees, small, &
-       contrib_dest, subtree_sa, subtree_en)
+       contrib_dest, subtree_sa, subtree_en, exec_loc)
     use spldlt_utils_mod, only: sort
     implicit none
 
@@ -1153,12 +1163,13 @@ contains
     integer, dimension(nnodes+1), intent(in) :: sptr
     integer, dimension(nnodes), intent(in) :: sparent
     integer(long), dimension(nnodes+1), intent(in) :: rptr
-    integer, intent(in) :: nth ! number of workers
-    integer, intent(out) :: nsubtrees ! number of partititons: top part plus subtrees
-    integer, dimension(:), allocatable, intent(inout) :: small ! nodes below the lzero layer  
-    integer, dimension(:), allocatable, intent(inout) :: contrib_dest ! node to which each partition contrirbute
+    integer, intent(in) :: nth ! Number of workers
+    integer, intent(out) :: nsubtrees ! Number of partititons: top part plus subtrees
+    integer, dimension(:), allocatable, intent(inout) :: small ! Nodes below the lzero layer  
+    integer, dimension(:), allocatable, intent(inout) :: contrib_dest ! Node to which each partition contrirbute
     integer, dimension(:), allocatable, intent(inout) :: subtree_sa ! subtree_sa(i) is the first node in subtree i
     integer, dimension(:), allocatable, intent(inout) :: subtree_en ! subtree_sa(i) is the root node in subtree i
+    integer, dimension(:), allocatable, intent(inout) :: exec_loc ! Subtree i should be run on NUMA node exec_loc(i)
     
     integer(long), allocatable :: weight(:) ! weight(i) contains weight below node i 
     integer :: j
@@ -1329,6 +1340,8 @@ contains
                 if (n .le. nnodes) contrib_dest(nsubtrees) = n
                 subtree_sa(nsubtrees) = nodes(c)%least_desc
                 subtree_en(nsubtrees) = c
+                ! Put it on first proc
+                exec_loc(nsubtrees) = 1 ! FIXME small nodes should be re-mapped at the end
              end if
 
           end do
@@ -1373,8 +1386,9 @@ contains
     do i=1, nlz
        n = lzero(i)
 
+#if defined(SPLDLT_USE_STARPU) && defined(SPLDLT_USE_OMP)
        print *, "node ", n, ", loc = ", loc(n)
-       
+#endif       
        ! small(nodes(n)%least_desc:n) = -n
        ! small(n) = 1
        ! nsubtrees = nsubtrees + 1 ! add new partition                 
@@ -1398,6 +1412,7 @@ contains
              if (n .le. nnodes) contrib_dest(nsubtrees) = n
              subtree_sa(nsubtrees) = nodes(c)%least_desc
              subtree_en(nsubtrees) = c
+             exec_loc(nsubtrees) = loc(n) ! Inherit mapping from parent node 
           end if
        end do
     end do
@@ -1478,10 +1493,12 @@ contains
     ! end if
     ! subtree_sa(nsubtrees) = nodes(n)%least_desc
     ! subtree_en(nsubtrees) = n
-    
+
+    ! Clean memory
     deallocate(lzero_w)
     deallocate(lzero)
     deallocate(proc_w)
+    deallocate(loc)
     
     return
   end subroutine prune_tree

@@ -9,7 +9,8 @@ extern "C"
 void *spldlt_create_symbolic_tree(
       void* akeep, int n, int nnodes, int const* sptr, int const* sparent, 
       long const* rptr, int const* rlist, long const* nptr, long const* nlist, 
-      int nsubtrees, int const* subtrees, int const* small, int const* contrib_dest)
+      int nsubtrees, int const* subtrees, int const* small, int const* contrib_dest,
+      int const* exec_loc)
       // int nparts, int const* part, int const* contrib_idx, int const* exec_loc,
       // int const* contrib_dest)
    //    void* akeep,
@@ -30,6 +31,6 @@ void *spldlt_create_symbolic_tree(
 
    return (void *) new SymbolicTree(
          akeep, n, nnodes, sptr, sparent, rptr, rlist, nptr, nlist,
-         nsubtrees, subtrees, small, contrib_dest);
-         // nparts, part, contrib_idx, exec_loc, contrib_dest);
+         nsubtrees, subtrees, small, contrib_dest, exec_loc);
+
 }

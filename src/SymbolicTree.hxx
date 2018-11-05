@@ -17,7 +17,8 @@ namespace spldlt {
       SymbolicTree(
             void* akeep, int n, int nnodes, int const* sptr, int const* sparent,
             long const* rptr, int const* rlist, long const* nptr, long const* nlist, 
-            int nsubtrees, int const* subtrees, int const* small, int const* contrib_dest)
+            int nsubtrees, int const* subtrees, int const* small, int const* contrib_dest,
+            int const* exec_loc) // FIXME exec_loc and small are redundent
             // int nparts, int const* part, int const* contrib_idx, int const* exec_loc, 
             // int const* contrib_dest)
          : akeep_(akeep), n(n), nnodes_(nnodes), fronts_(nnodes_+1),
@@ -92,12 +93,16 @@ namespace spldlt {
          // Setup node partition and execution location information
          for(int ni=0; ni<nnodes_; ++ni) {
             fronts_[ni].part = -1;
-            (small[ni] == 0) ? fronts_[ni].exec_loc = -1 : fronts_[ni].exec_loc = 1;   
+            (small[ni] == 0) ?
+               fronts_[ni].exec_loc = -1 : fronts_[ni].exec_loc = 1;   
          }
          for(int p = 0; p < nsubtrees; ++p) {
-            int idx = subtrees[p]-1; // subtrees is Fortran
+            int idx = subtrees[p]-1; // subtrees is Fortran indexed
             fronts_[idx].part = p;
             fronts_[idx].contrib_idx = p;
+#if defined(SPLDLT_USE_STARPU) && defined(SPLDLT_USE_OMP)
+            fronts_[idx].exec_loc = exec_loc[p];
+#endif
          }
 
          // Init symbolic root

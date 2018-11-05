@@ -481,8 +481,14 @@ namespace spldlt {
 
 #if defined(SPLDLT_USE_STARPU)
 
+      int loc = 0;
+#if defined(SPLDLT_USE_STARPU)
+      loc = root.exec_loc;
+#endif
+      // printf("[factor_subtree_task] loc = %d\n", loc);
       spldlt::starpu::insert_factor_subtree(
-            root.hdl, akeep, fkeep, p, aval, child_contrib, options, &worker_stats);
+            root.hdl, akeep, fkeep, p, aval, child_contrib, options,
+            &worker_stats, loc);
 
 #else
       ThreadStats& stats = worker_stats[0];
