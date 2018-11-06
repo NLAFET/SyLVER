@@ -141,9 +141,17 @@ namespace spldlt { namespace tests {
 #if defined(SPLDLT_USE_GPU)
       conf->ncuda = ngpu;
       conf->sched_policy_name = "eager";
-
-      // conf->sched_policy_name = "heteroprio";
-      // conf->sched_policy_init = &init_heteroprio;
+//      if(getenv("USE_LAHETEROPRIO") != NULL
+//              && (strcmp(getenv("USE_LAHETEROPRIO"),"TRUE")==0||strcmp(getenv("USE_LAHETEROPRIO"),"true")==0)){
+//          printf("[starpu_f_init_c] use laheteroprio\n");
+//          conf->sched_policy_name = "laheteroprio";
+//          conf->sched_policy_init = &init_laheteroprio;
+//      }
+//      else{
+//          printf("[starpu_f_init_c] use heteroprio\n");
+//          conf->sched_policy_name = "heteroprio";
+//          conf->sched_policy_init = &init_heteroprio;
+//      }
 
 #else
       conf->sched_policy_name = "lws";
