@@ -482,7 +482,7 @@ namespace spldlt {
 #if defined(SPLDLT_USE_STARPU)
 
       int loc = 0;
-#if defined(SPLDLT_USE_STARPU)
+#if defined(SPLDLT_USE_OMP)
       loc = root.exec_loc;
 #endif
       // printf("[factor_subtree_task] loc = %d\n", loc);
