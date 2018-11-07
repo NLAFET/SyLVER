@@ -205,7 +205,7 @@ endif()
 
 ########################################
 # HWLOC
-set(HWLOC_DIR $ENV{HWLOCDIR} CACHE PATH "Location of HWLOC Library")
+set(HWLOC_DIR $ENV{HWLOC_DIR} CACHE PATH "Location of HWLOC Library")
 include_directories(${HWLOC_DIR}/include)
 find_library(HWLOC_LIBRARIES hwloc PATHS ${HWLOC_DIR}/lib NO_DEFAULT_PATH)
 set(LIBS ${LIBS} ${HWLOC_LIBRARIES})
@@ -213,7 +213,7 @@ MESSAGE( STATUS "hwloc libs: " ${HWLOC_LIBRARIES})
 
 ########################################
 # Metis
-set(METIS_DIR $ENV{METISDIR} CACHE PATH "Location of Metis Library")
+set(METIS_DIR $ENV{METIS_DIR} CACHE PATH "Location of Metis Library")
 find_library(METIS_LIBRARIES metis PATHS ${METIS_DIR}/lib NO_DEFAULT_PATH)
 set(LIBS ${LIBS} ${METIS_LIBRARIES})
 MESSAGE( STATUS "metis libs: " ${METIS_LIBRARIES})
