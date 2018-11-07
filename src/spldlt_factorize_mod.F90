@@ -501,7 +501,7 @@ contains
     type(cpu_factor_options) :: coptions
     logical(c_bool) :: posdef
     type(cpu_factor_stats) :: cstats
-    ! Error management    
+    ! Error management
     character(50)  :: context      ! Procedure name (used when printing).
     integer :: st
 
