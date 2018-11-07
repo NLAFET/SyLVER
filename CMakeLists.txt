@@ -1,4 +1,5 @@
 cmake_minimum_required (VERSION 2.6)
+include(CheckFortranFunctionExists)
 project (SpLDLT)
 enable_language(Fortran)
 enable_language(C)
@@ -12,7 +13,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/" 
 
 ########################################
 # C flags
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O2 -std=c99 " )
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O2" )
 # set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O2 -ffpe-trap=underflow,denormal" )
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
 
@@ -33,7 +34,8 @@ set(CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL} -march=native")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -ggdb")
 # set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=thread")
 # set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=leak")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=bounds -fbounds-check")
+#set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=bounds -fbounds-check")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -check-pointers=rw")
 # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -ffpe-trap=underflow,denormal" )
 
 ########################################
@@ -184,6 +186,7 @@ if(C_IFACE_TEST MATCHES "ON")
 
     unset(LIB_TO_FIND)
     list(APPEND c_iface_test "example/C/cpalamem_simple.c")
+    set_source_files_properties("example/C/cpalamem_simple.c" PROPERTIES COMPILE_FLAGS -std=c99)
   else()
     message(WARNING "Can not set CPALAMEM.")
   endif()
@@ -205,7 +208,7 @@ endif()
 
 ########################################
 # HWLOC
-set(HWLOC_DIR $ENV{HWLOCDIR} CACHE PATH "Location of HWLOC Library")
+set(HWLOC_DIR $ENV{HWLOC_DIR} CACHE PATH "Location of HWLOC Library")
 include_directories(${HWLOC_DIR}/include)
 find_library(HWLOC_LIBRARIES hwloc PATHS ${HWLOC_DIR}/lib NO_DEFAULT_PATH)
 set(LIBS ${LIBS} ${HWLOC_LIBRARIES})
@@ -213,7 +216,7 @@ MESSAGE( STATUS "hwloc libs: " ${HWLOC_LIBRARIES})
 
 ########################################
 # Metis
-set(METIS_DIR $ENV{METISDIR} CACHE PATH "Location of Metis Library")
+set(METIS_DIR $ENV{METIS_DIR} CACHE PATH "Location of Metis Library")
 find_library(METIS_LIBRARIES metis PATHS ${METIS_DIR}/lib NO_DEFAULT_PATH)
 set(LIBS ${LIBS} ${METIS_LIBRARIES})
 MESSAGE( STATUS "metis libs: " ${METIS_LIBRARIES})
@@ -474,6 +477,7 @@ foreach(c_iface_test ${c_iface_test})
   target_link_libraries(${c_iface_test_name} ${obj})
   target_link_libraries(${c_iface_test_name} ${SPRAL_LIBRARY})
   target_link_libraries(${c_iface_test_name} ${LIBS})
+  target_link_libraries(${c_iface_test_name} ${LIBS} -lgomp)
 
 endforeach()
 
