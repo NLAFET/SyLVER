@@ -147,10 +147,10 @@ MESSAGE(STATUS "Use OpenMP: " ${USE_OMP} )
 
 # Have la-hp scheduler
 option(HAVE_LAHP "LA-heteroprio scheduler available" OFF)
-MESSAGE(STATUS "LAHP: " ${USE_PROFILING})
 if (${HAVE_LAHP} MATCHES "ON")
   add_definitions(-DHAVE_LAHP)
 endif()
+MESSAGE(STATUS "LAHP: " ${HAVE_LAHP})
 
 ################################################################################
 # Low-level options
