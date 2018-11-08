@@ -58,11 +58,9 @@ namespace spldlt {
             }
             else if ( !strcmp("--posdef", argv[i]) ) {
                posdef = true;
-               ++i;
             }
             else if ( !strcmp("--no-check", argv[i]) ) {
                check = false;
-               ++i;
             }
 
             // Factorization method
@@ -70,7 +68,6 @@ namespace spldlt {
             // Use Cholesky factor
             else if ( !strcmp("--chol", argv[i]) ) {
                chol = true;
-               ++i;
             }
             
          }
