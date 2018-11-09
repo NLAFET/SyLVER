@@ -25,7 +25,7 @@
 namespace spldlt { namespace tests {
 
       template<typename T>
-      int factor_node_posdef_test(int m, int n, int blksz, int ncpu, int ngpu) {
+      int factor_node_posdef_test(int m, int n, int blksz, int ncpu, int ngpu, bool check) {
 
          bool failed = false;
          int ret;
@@ -37,13 +37,16 @@ namespace spldlt { namespace tests {
 
          // Generate test matrix
          int lda = spral::ssids::cpu::align_lda<T>(m);
-         T* a = new double[m*lda];
+         T* a = nullptr;
+         T* b = nullptr;
+         if (check) {
+            a = new double[m*lda];
+            gen_posdef(m, a, lda);
 
-         gen_posdef(m, a, lda);
-
-         // Generate a RHS based on x=1, b=Ax
-         T *b = new T[m];
-         gen_rhs(m, a, lda, b);
+            // Generate a RHS based on x=1, b=Ax
+            b = new T[m];
+            gen_rhs(m, a, lda, b);
+         }
 
          // Print out matrices if requested
          // if(debug) {
@@ -73,10 +76,21 @@ namespace spldlt { namespace tests {
          // Allocate factors
          size_t len = lda*m;
          // if (debug) printf("m = %d, n = %d, lda = %d, len = %zu\n", m, n, lda, len);
+
          front.lcol = allocT.allocate(len);
 
-         // Copy a into l
-         memcpy(front.lcol, a, lda*n*sizeof(T));
+         if (check) {
+            // Copy a into l
+            memcpy(front.lcol, a, lda*n*sizeof(T));
+         }
+         else {
+            ASSERT_TRUE(m == n); // FIXME: does not work for non square fronts
+            gen_posdef(m, front.lcol, lda);
+         }
+
+#if defined(SPLDLT_USE_STARPU)
+         starpu_memory_pin(front.lcol, lda*n*sizeof(T));
+#endif
 
          // Allocate contribution blocks
          front.alloc_contrib_blocks();
@@ -170,41 +184,46 @@ namespace spldlt { namespace tests {
          ////////////////////////////////////////
          // Check result
 
-         // Alloc L array for storing factors
-         T *l = allocT.allocate(lda*m);
-         // Initialize L with zeros
-         for (int j=0; j<m; ++j)
-            for (int i=j; i<m; ++i)
-               l[i+j*lda] = 0.0;
+         if (check) {
+            // Alloc L array for storing factors
+            T *l = allocT.allocate(lda*m);
+            // Initialize L with zeros
+            for (int j=0; j<m; ++j)
+               for (int i=j; i<m; ++i)
+                  l[i+j*lda] = 0.0;
       
-         // Copy factors from LCOL into L array
-         // Copy only factors (colmuns 1 to n)
-         memcpy(l, front.lcol, lda*n*sizeof(T)); // Copy a to l
+            // Copy factors from LCOL into L array
+            // Copy only factors (colmuns 1 to n)
+            memcpy(l, front.lcol, lda*n*sizeof(T)); // Copy a to l
          
-         // Eliminate remaining columns in L
-         if (m > n) {
+            // Eliminate remaining columns in L
+            if (m > n) {
 
-            // ...
-            // lapack_potrf<double>(FILL_MODE_LWR, m-n, &l[n*lda+n], lda);
+               // ...
+               // lapack_potrf<double>(FILL_MODE_LWR, m-n, &l[n*lda+n], lda);
+            }
+         
+            int nrhs = 1;
+            int ldsoln = m;
+            double *soln = new double[nrhs*ldsoln];
+            for(int r=0; r<nrhs; ++r)
+               memcpy(&soln[r*ldsoln], b, m*sizeof(double));
+
+            printf("[factor_node_posdef_test] Solve..\n");
+         
+            cholesky_solve_fwd(m, n, l, lda, nrhs, soln, ldsoln);
+            host_trsm<double>(SIDE_LEFT, FILL_MODE_LWR, OP_N, DIAG_NON_UNIT, m-n, nrhs, 1.0, &l[n*lda+n], lda, &soln[n], ldsoln);
+            host_trsm<double>(SIDE_LEFT, FILL_MODE_LWR, OP_T, DIAG_NON_UNIT, m-n, nrhs, 1.0, &l[n*lda+n], lda, &soln[n], ldsoln);
+            cholesky_solve_bwd(m, n, l, lda, nrhs, soln, ldsoln);
+
+            printf("[factor_node_posdef_test] Done\n");
+
+            T bwderr = backward_error(m, a, lda, b, 1, soln, m);
+            printf("bwderr = %le\n", bwderr);
+
+            delete[] l;
+            delete[] soln;
          }
-         
-         int nrhs = 1;
-         int ldsoln = m;
-         double *soln = new double[nrhs*ldsoln];
-         for(int r=0; r<nrhs; ++r)
-            memcpy(&soln[r*ldsoln], b, m*sizeof(double));
-
-         printf("[factor_node_posdef_test] Solve..\n");
-         
-         cholesky_solve_fwd(m, n, l, lda, nrhs, soln, ldsoln);
-         host_trsm<double>(SIDE_LEFT, FILL_MODE_LWR, OP_N, DIAG_NON_UNIT, m-n, nrhs, 1.0, &l[n*lda+n], lda, &soln[n], ldsoln);
-         host_trsm<double>(SIDE_LEFT, FILL_MODE_LWR, OP_T, DIAG_NON_UNIT, m-n, nrhs, 1.0, &l[n*lda+n], lda, &soln[n], ldsoln);
-         cholesky_solve_bwd(m, n, l, lda, nrhs, soln, ldsoln);
-
-         printf("[factor_node_posdef_test] Done\n");
-
-         T bwderr = backward_error(m, a, lda, b, 1, soln, m);
-         printf("bwderr = %le\n", bwderr);
 
          double flops = ((double)m*n*n)/3.0;
          printf("factor time (s) = %e\n", 1e-9*ttotal);
@@ -213,10 +232,10 @@ namespace spldlt { namespace tests {
          ////////////////////////////////////////
          // Cleanup memory
 
-         delete[] a;
-         delete[] b;
-         delete[] l;
-         delete[] soln;
+         if (check) {
+            delete[] a;
+            delete[] b;
+         }
 
       }
 
