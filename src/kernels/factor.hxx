@@ -1,8 +1,12 @@
 #pragma once
 
 // SSIDS
-#include "ssids/cpu/kernels/common.hxx"
-#include "ssids/cpu/kernels/wrappers.hxx"
+// #include "ssids/cpu/kernels/common.hxx"
+// #include "ssids/cpu/kernels/wrappers.hxx"
+
+// SpLDLT
+#include "kernels/common.hxx"
+#include "kernels/wrappers.hxx"
 
 using namespace spral::ssids::cpu;
 
@@ -25,12 +29,12 @@ namespace spldlt {
    template <typename T>
    void factorize_diag_block(int m, int n, T *a, int lda) {
 
-      int flag = lapack_potrf(FILL_MODE_LWR, n, a, lda);
+      int flag = spldlt::host_potrf(FILL_MODE_LWR, n, a, lda);
       if(m > n) {
          // Diagonal block factored OK, handle some rectangular part of block
-         host_trsm(SIDE_RIGHT, FILL_MODE_LWR, OP_T, DIAG_NON_UNIT,
-                   m-n, n, 1.0, a, lda,
-                   &a[n], lda);
+         spldlt::host_trsm(SIDE_RIGHT, FILL_MODE_LWR, OP_T, DIAG_NON_UNIT,
+                           m-n, n, 1.0, a, lda,
+                           &a[n], lda);
       }
    }
 
@@ -46,12 +50,12 @@ namespace spldlt {
          T* upd, int ldupd,
          bool zero_upd) {
 
-      int flag = lapack_potrf(FILL_MODE_LWR, n, a, lda);
+      int flag = spldlt::host_potrf(FILL_MODE_LWR, n, a, lda);
       if(m > n) {
          // Diagonal block factored OK, handle some rectangular part of block
-         host_trsm(SIDE_RIGHT, FILL_MODE_LWR, OP_T, DIAG_NON_UNIT,
-                   m-n, n, 1.0, a, lda,
-                   &a[n], lda);
+         spldlt::host_trsm(SIDE_RIGHT, FILL_MODE_LWR, OP_T, DIAG_NON_UNIT,
+                           m-n, n, 1.0, a, lda,
+                           &a[n], lda);
          
          if(upd) {
             
@@ -62,12 +66,12 @@ namespace spldlt {
             // printf("[factorize_diag_block] updm: %d, k: %d\n", m-n, n);
             // printf("[factorize_diag_block] upd: %p\n", upd);
 
-            host_syrk(FILL_MODE_LWR, OP_N, 
-                      m-n, n, 
-                      -1.0,
-                      &a[n], lda, 
-                      rbeta, 
-                      upd, ldupd);
+            spldlt::host_syrk(FILL_MODE_LWR, OP_N, 
+                              m-n, n, 
+                              -1.0,
+                              &a[n], lda, 
+                              rbeta, 
+                              upd, ldupd);
          }
 
       }
@@ -82,8 +86,8 @@ namespace spldlt {
                     T *a_kk, int ld_a_kk, 
                     T *a_ik, int ld_a_ik) {
 
-      host_trsm(SIDE_RIGHT, FILL_MODE_LWR, OP_T, DIAG_NON_UNIT,
-                m, n, 1.0, a_kk, ld_a_kk, a_ik, ld_a_ik);
+      spldlt::host_trsm(SIDE_RIGHT, FILL_MODE_LWR, OP_T, DIAG_NON_UNIT,
+                        m, n, 1.0, a_kk, ld_a_kk, a_ik, ld_a_ik);
 
    }
 
@@ -102,8 +106,8 @@ namespace spldlt {
          int blksz
          ) {
 
-      host_trsm(SIDE_RIGHT, FILL_MODE_LWR, OP_T, DIAG_NON_UNIT,
-                m, n, 1.0, a_kk, ld_a_kk, a_ik, ld_a_ik);
+      spldlt::host_trsm(SIDE_RIGHT, FILL_MODE_LWR, OP_T, DIAG_NON_UNIT,
+                        m, n, 1.0, a_kk, ld_a_kk, a_ik, ld_a_ik);
 
       if (n<blksz && upd) {
 
@@ -113,13 +117,13 @@ namespace spldlt {
          // printf("[solve_block] blkm: %d\n", m);
          // printf("[solve_block] updn: %d\n", blksz-n);
 
-         host_gemm(OP_N, OP_T,
-                   m, blksz-n, n,
-                   -1.0,
-                   a_ik, ld_a_ik,
-                   &a_kk[n], ld_a_kk,
-                   rbeta,
-                   upd, ldupd);
+         spldlt::host_gemm(OP_N, OP_T,
+                           m, blksz-n, n,
+                           -1.0,
+                           a_ik, ld_a_ik,
+                           &a_kk[n], ld_a_kk,
+                           rbeta,
+                           upd, ldupd);
       }
    }
 
@@ -135,8 +139,8 @@ namespace spldlt {
                      T *a_ik, int ld_a_ik, 
                      T *a_kj, int ld_a_kj) {
       
-      host_gemm(OP_N, OP_T, m, n, k, -1.0, a_ik, ld_a_ik,
-                a_kj, ld_a_kj, 1.0, a_ij, ld_a_ij);
+      spldlt::host_gemm(OP_N, OP_T, m, n, k, -1.0, a_ik, ld_a_ik,
+                        a_kj, ld_a_kj, 1.0, a_ij, ld_a_ij);
 
    }
 
@@ -159,8 +163,8 @@ namespace spldlt {
          int blksz
          ) {
 
-      host_gemm(OP_N, OP_T, m, n, k, -1.0, a_ik, ld_a_ik,
-                a_kj, ld_a_kj, 1.0, a_ij, ld_a_ij);
+      spldlt::host_gemm(OP_N, OP_T, m, n, k, -1.0, a_ik, ld_a_ik,
+                        a_kj, ld_a_kj, 1.0, a_ij, ld_a_ij);
       
       if(n<blksz && upd) {
 
@@ -172,13 +176,13 @@ namespace spldlt {
 
          double rbeta = zero_upd ? 0.0 : 1.0;
 
-         host_gemm(OP_N, OP_T,
-                   updm, updn, k, 
-                   -1.0,
-                   &a_ik[m-updm], ld_a_ik, 
-                   &a_kj[n], ld_a_kj, 
-                   rbeta,
-                   upd, ldupd);
+         spldlt::host_gemm(OP_N, OP_T,
+                           updm, updn, k, 
+                           -1.0,
+                           &a_ik[m-updm], ld_a_ik, 
+                           &a_kj[n], ld_a_kj, 
+                           rbeta,
+                           upd, ldupd);
 
       }
    }
@@ -207,7 +211,7 @@ namespace spldlt {
 
       T rbeta = zero_upd ? 0.0 : 1.0;
 
-      host_gemm(
+      spldlt::host_gemm(
             OP_N, OP_T, 
             m, n, k,
             -1.0,
@@ -228,16 +232,16 @@ namespace spldlt {
          T *a_ik, int ld_a_ik, 
          T *a_kj, int ld_a_kj) {
       
-      host_syrk(FILL_MODE_LWR, OP_N, n, k, -1.0, 
-                a_ik, ld_a_ik,
-                1.0, 
-                a_ij, ld_a_ij);
+      spldlt::host_syrk(FILL_MODE_LWR, OP_N, n, k, -1.0, 
+                        a_ik, ld_a_ik,
+                        1.0, 
+                        a_ij, ld_a_ij);
 
       if (m > n) {
 
-         host_gemm(OP_N, OP_T, m-n, n, k, -1.0,
-                   &a_ik[n], ld_a_ik,
-                   a_kj, ld_a_kj, 1.0, &a_ij[n], ld_a_ij);
+         spldlt::host_gemm(OP_N, OP_T, m-n, n, k, -1.0,
+                           &a_ik[n], ld_a_ik,
+                           a_kj, ld_a_kj, 1.0, &a_ij[n], ld_a_ij);
       }      
    }
 

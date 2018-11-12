@@ -12,6 +12,7 @@
 
 // SSIDS
 #include "ssids/cpu/Workspace.hxx"
+#include "ssids/cpu/kernels/calc_ld.hxx"
 
 namespace spldlt {
 
@@ -33,7 +34,7 @@ namespace spldlt {
       // printf("[update_contrib_block] m = %d, n = %d, k = %d\n", m, n, k);
       
       // Compute Lik Dk in workspace W
-      spral::ssids::cpu::calcLD<OP_N>(
+      spral::ssids::cpu::calcLD<spral::ssids::cpu::OP_N>(
             m, k, lik, ld_lik, dk, ld, ldld);
       
       // Compute U = U - W L^{T}

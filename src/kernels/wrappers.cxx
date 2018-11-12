@@ -1,8 +1,13 @@
 #include "wrappers.hxx"
+#include <stdexcept>
 
 extern "C" {
    void daxpy_(const int *n, const double *a, const double *x, const int *incx, double *y, const int *incy);
    double dlange_(char *norm, int *m, int *n, const double *a, int *lda);
+   void dpotrf_(char *uplo, int *n, double *a, int *lda, int *info);
+   void dtrsm_(char *side, char *uplo, char *transa, char *diag, int *m, int *n, const double *alpha, const double *a, int *lda, double *b, int *ldb);
+   void dgemm_(char* transa, char* transb, int* m, int* n, int* k, double* alpha, const double* a, int* lda, const double* b, int* ldb, double *beta, double* c, int* ldc);
+   void dsyrk_(char *uplo, char *trans, int *n, int *k, double *alpha, const double *a, int *lda, double *beta, double *c, int *ldc);
 }
 
 namespace spldlt {
@@ -36,16 +41,53 @@ namespace spldlt {
 
    /* _POTRF */
    template<>
-   int lapack_potrf<double>(enum spral::ssids::cpu::fillmode uplo, int n, double* a, int lda) {
+   int host_potrf<double>(enum spldlt::fillmode uplo, int n, double* a, int lda) {
       char fuplo;
       switch(uplo) {
-      case spral::ssids::cpu::FILL_MODE_LWR: fuplo = 'L'; break;
-      case spral::ssids::cpu::FILL_MODE_UPR: fuplo = 'U'; break;
+      case spldlt::FILL_MODE_LWR: fuplo = 'L'; break;
+      case spldlt::FILL_MODE_UPR: fuplo = 'U'; break;
       default: throw std::runtime_error("Unknown fill mode");
       }
       int info;
       dpotrf_(&fuplo, &n, a, &lda, &info);
       return info;
+   }
+
+   /* _TRSM */
+   template <>
+   void host_trsm<double>(
+         enum spldlt::side side, enum spldlt::fillmode uplo,
+         enum spldlt::operation transa, enum spldlt::diagonal diag,
+         int m, int n,
+         double alpha, const double* a, int lda,
+         double* b, int ldb) {
+      char fside = (side==spldlt::SIDE_LEFT) ? 'L' : 'R';
+      char fuplo = (uplo==spldlt::FILL_MODE_LWR) ? 'L' : 'U';
+      char ftransa = (transa==spldlt::OP_N) ? 'N' : 'T';
+      char fdiag = (diag==spldlt::DIAG_UNIT) ? 'U' : 'N';
+      dtrsm_(&fside, &fuplo, &ftransa, &fdiag, &m, &n, &alpha, a, &lda, b, &ldb);
+   }
+
+   /* _GEMM */
+   template <>
+   void host_gemm<double>(
+         enum spldlt::operation transa, enum spldlt::operation transb,
+         int m, int n, int k, double alpha, const double* a, int lda,
+         const double* b, int ldb, double beta, double* c, int ldc) {
+      char ftransa = (transa==spldlt::OP_N) ? 'N' : 'T';
+      char ftransb = (transb==spldlt::OP_N) ? 'N' : 'T';
+      dgemm_(&ftransa, &ftransb, &m, &n, &k, &alpha, a, &lda, b, &ldb, &beta, c, &ldc);
+   }
+
+   /* _SYRK */
+   template <>
+   void host_syrk<double>(
+         enum spldlt::fillmode uplo, enum spldlt::operation trans,
+         int n, int k, double alpha, const double* a, int lda,
+         double beta, double* c, int ldc) {
+      char fuplo = (uplo==spldlt::FILL_MODE_LWR) ? 'L' : 'U';
+      char ftrans = (trans==spldlt::OP_N) ? 'N' : 'T';
+      dsyrk_(&fuplo, &ftrans, &n, &k, &alpha, a, &lda, &beta, c, &ldc);
    }
 
 } // end of namespace spldlt

@@ -1,4 +1,6 @@
-#include "kernels/common.hxx"
+#pragma once
+
+#include "common.hxx"
 
 namespace spldlt {
 
@@ -21,6 +23,23 @@ namespace spldlt {
 
    /* _POTRF */
    template <typename T>
-   int lapack_potrf(enum spldlt::fillmode uplo, int n, T* a, int lda);
+   int host_potrf(enum spldlt::fillmode uplo, int n, T* a, int lda);
+
+   /* _TRSM */
+   template <typename T>
+   void host_trsm(enum spldlt::side side,enum spldlt::fillmode uplo,
+                  enum spldlt::operation transa, enum spldlt::diagonal diag,
+                  int m, int n, T alpha, const T* a, int lda, T* b, int ldb);
+
+   /* _SYRK */
+   template <typename T>
+   void host_syrk(enum spldlt::fillmode uplo, enum spldlt::operation trans,
+                  int n, int k, T alpha, const T* a, int lda, T beta, T* c, int ldc);
+
+   /* _GEMM */
+   template <typename T>
+   void host_gemm(enum spldlt::operation transa, enum spldlt::operation transb,
+                  int m, int n, int k, T alpha, const T* a, int lda, const T* b,
+                  int ldb, T beta, T* c, int ldc);
 
 }

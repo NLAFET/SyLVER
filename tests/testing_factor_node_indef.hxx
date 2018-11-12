@@ -66,7 +66,7 @@ namespace spldlt { namespace tests {
       // Print out matrices if requested
       if(debug) {
          std::cout << "A:" << std::endl;
-         print_mat("%10.2e", m, a, lda);
+         spldlt::tests::print_mat("%10.2e", m, a, lda);
       }
 
       // Setup options
@@ -114,7 +114,7 @@ namespace spldlt { namespace tests {
       
       if (debug) {
          std::cout << "LCOL:" << std::endl;
-         print_mat("%10.2e", m, front.lcol, lda);
+         spldlt::tests::print_mat("%10.2e", m, front.lcol, lda);
       }
       
       // Setup permutation vector
@@ -264,7 +264,7 @@ namespace spldlt { namespace tests {
 
       if (debug) {
          std::cout << "LCOL:" << std::endl;
-         print_mat("%10.2e", m, front.lcol, lda, front.perm);                  
+         spldlt::tests::print_mat("%10.2e", m, front.lcol, lda, front.perm);                  
          // std::cout << "L:" << std::endl;
          // print_mat("%10.2e", m, l, lda, front.perm);
       }
@@ -287,7 +287,7 @@ namespace spldlt { namespace tests {
             std::cout << "D:" << std::endl;
             print_d(m, d);
             std::cout << "L:" << std::endl;
-            print_mat("%10.2e", m, l, lda, front.perm);
+            spldlt::tests::print_mat("%10.2e", m, l, lda, front.perm);
          }
 
          if (debug) std::cout << "Eliminate remaining columns using TPP.." << std::endl;
@@ -304,7 +304,7 @@ namespace spldlt { namespace tests {
          std::cout << "D:" << std::endl;
          print_d(m, d);
          std::cout << "L:" << std::endl;
-         print_mat("%10.2e", m, l, lda, front.perm);
+         spldlt::tests::print_mat("%10.2e", m, l, lda, front.perm);
       }
 
       if (debug) std::cout << "nelim = " << nelim << std::endl;

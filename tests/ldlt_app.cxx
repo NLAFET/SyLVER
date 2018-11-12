@@ -1,8 +1,9 @@
 // SpLDLT
 #include "kernels/ldlt_app.hxx"
 #include "ldlt_app.hxx"
+// SpLDLT tests
 #include "common.hxx"
-
+ 
 #include <cstring>
 #include <vector>
 
@@ -79,7 +80,7 @@ namespace spldlt { namespace tests {
       // Print out matrices if requested
       if(debug) {
          std::cout << "A:" << std::endl;
-         print_mat("%10.2e", m, a, lda);
+         spldlt::tests::print_mat("%10.2e", m, a, lda);
       }
 
       // Setup options
