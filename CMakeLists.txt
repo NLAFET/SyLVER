@@ -420,8 +420,8 @@ if (${KERNEL_TESTS} MATCHES "ON")
   target_link_libraries(spldlt_tests_factor_node spldlt)
   target_link_libraries(spldlt_tests_factor_node ${obj})
   target_link_libraries(spldlt_tests_factor_node ${SPRAL_LIBRARY})
-  target_link_libraries(spldlt_tests_factor_node ${LIBS})
   target_link_libraries(spldlt_tests_factor_node spldlt_tests)
+  target_link_libraries(spldlt_tests_factor_node ${LIBS})
 
   target_include_directories(spldlt_tests_kernels PUBLIC ${SpLDLT_SOURCE_DIR}/tests)
   target_include_directories(spldlt_tests_kernels PUBLIC ${SPRAL_DIR})
@@ -435,6 +435,7 @@ endif()
 
 ########################################
 # Setup list of test drivers
+MESSAGE( STATUS "Libs: " ${LIBS} )
 set(test_drivers)
 
 list(APPEND test_drivers "drivers/spldlt_test.F90")

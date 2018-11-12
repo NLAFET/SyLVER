@@ -6,6 +6,7 @@ extern "C" {
 }
 
 namespace spldlt {
+
    // _AXPY
    template <>
    void host_axpy<double>(const int n, double a, const double *x, int incx, double *y, int incy) {
@@ -32,4 +33,19 @@ namespace spldlt {
       }
       return dlange_(&fnorm, &m, &n, a, &lda);
    }
+
+   /* _POTRF */
+   template<>
+   int lapack_potrf<double>(enum spral::ssids::cpu::fillmode uplo, int n, double* a, int lda) {
+      char fuplo;
+      switch(uplo) {
+      case spral::ssids::cpu::FILL_MODE_LWR: fuplo = 'L'; break;
+      case spral::ssids::cpu::FILL_MODE_UPR: fuplo = 'U'; break;
+      default: throw std::runtime_error("Unknown fill mode");
+      }
+      int info;
+      dpotrf_(&fuplo, &n, a, &lda, &info);
+      return info;
+   }
+
 } // end of namespace spldlt
