@@ -1,4 +1,6 @@
 cmake_minimum_required (VERSION 2.6)
+include(CheckFunctionExists)
+include(CheckFortranFunctionExists)
 project (SpLDLT)
 enable_language(Fortran)
 enable_language(C)
@@ -170,6 +172,7 @@ endif()
 ########################################
 # HWLOC
 set(HWLOC_DIR $ENV{HWLOCDIR} CACHE PATH "Location of HWLOC Library")
+MESSAGE( STATUS "hwloc dir: " ${HWLOC_DIR})
 include_directories(${HWLOC_DIR}/include)
 find_library(HWLOC_LIBRARIES hwloc PATHS ${HWLOC_DIR}/lib NO_DEFAULT_PATH)
 set(LIBS ${LIBS} ${HWLOC_LIBRARIES})
