@@ -77,7 +77,13 @@ namespace spldlt { namespace tests {
          size_t len = lda*m;
          // if (debug) printf("m = %d, n = %d, lda = %d, len = %zu\n", m, n, lda, len);
 
+         auto start_alloc = std::chrono::high_resolution_clock::now();
          front.lcol = allocT.allocate(len);
+         auto end_alloc = std::chrono::high_resolution_clock::now();
+         long t_alloc = 
+            std::chrono::duration_cast<std::chrono::nanoseconds>
+            (end_alloc-start_alloc).count();
+         printf("[factor_node_posdef_test] memory alloc factor (s) = %e\n", 1e-9*t_alloc);
 
          if (check) {
             // Copy a into l
@@ -89,7 +95,13 @@ namespace spldlt { namespace tests {
          }
 
 #if defined(SPLDLT_USE_STARPU)
+         auto start_mem_pin = std::chrono::high_resolution_clock::now();
          starpu_memory_pin(front.lcol, lda*n*sizeof(T));
+         auto end_mem_pin = std::chrono::high_resolution_clock::now();
+         long t_mem_pin = 
+            std::chrono::duration_cast<std::chrono::nanoseconds>
+            (end_mem_pin-start_mem_pin).count();
+         printf("[factor_node_posdef_test] memory pin (s) = %e\n", 1e-9*t_mem_pin);
 #endif
 
          // Allocate contribution blocks
