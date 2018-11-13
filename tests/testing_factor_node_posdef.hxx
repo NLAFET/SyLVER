@@ -94,16 +94,6 @@ namespace spldlt { namespace tests {
             gen_posdef(m, front.lcol, lda);
          }
 
-#if defined(SPLDLT_USE_STARPU)
-         auto start_mem_pin = std::chrono::high_resolution_clock::now();
-         starpu_memory_pin(front.lcol, lda*n*sizeof(T));
-         auto end_mem_pin = std::chrono::high_resolution_clock::now();
-         long t_mem_pin = 
-            std::chrono::duration_cast<std::chrono::nanoseconds>
-            (end_mem_pin-start_mem_pin).count();
-         printf("[factor_node_posdef_test] memory pin (s) = %e\n", 1e-9*t_mem_pin);
-#endif
-
          // Allocate contribution blocks
          front.alloc_contrib_blocks();
 
@@ -144,6 +134,18 @@ namespace spldlt { namespace tests {
          int nworkers = 1;
 #if defined(SPLDLT_USE_STARPU)
          nworkers = starpu_worker_get_count();
+#endif
+
+#if defined(SPLDLT_USE_STARPU)
+#if defined(SPLDLT_USE_GPU)
+         auto start_mem_pin = std::chrono::high_resolution_clock::now();
+         starpu_memory_pin(front.lcol, lda*n*sizeof(T));
+         auto end_mem_pin = std::chrono::high_resolution_clock::now();
+         long t_mem_pin = 
+            std::chrono::duration_cast<std::chrono::nanoseconds>
+            (end_mem_pin-start_mem_pin).count();
+         printf("[factor_node_posdef_test] memory pin (s) = %e\n", 1e-9*t_mem_pin);
+#endif
 #endif
 
          ////////////////////////////////////////

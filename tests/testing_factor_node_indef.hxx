@@ -140,10 +140,11 @@ namespace spldlt { namespace tests {
       conf->ncpus = ncpu;
 #if defined(SPLDLT_USE_GPU)
       conf->ncuda = ngpu;
-      conf->sched_policy_name = "eager";
 
-      // conf->sched_policy_name = "heteroprio";
-      // conf->sched_policy_init = &init_heteroprio;
+      // conf->sched_policy_name = "eager";
+
+      conf->sched_policy_name = "heteroprio";
+      conf->sched_policy_init = &init_heteroprio;
 
 #else
       conf->sched_policy_name = "lws";
@@ -161,6 +162,18 @@ namespace spldlt { namespace tests {
       nworkers = starpu_worker_get_count();
 // #else
 //       nworkers = omp_get_num_threads();
+#endif
+
+#if defined(SPLDLT_USE_STARPU)
+#if defined(SPLDLT_USE_GPU)
+      auto start_mem_pin = std::chrono::high_resolution_clock::now();
+      starpu_memory_pin(front.lcol, lda*n*sizeof(T));
+      auto end_mem_pin = std::chrono::high_resolution_clock::now();
+      long t_mem_pin = 
+         std::chrono::duration_cast<std::chrono::nanoseconds>
+         (end_mem_pin-start_mem_pin).count();
+      printf("[factor_node_posdef_test] memory pin (s) = %e\n", 1e-9*t_mem_pin);
+#endif
 #endif
 
       // Setup workspaces and thread stats
@@ -192,8 +205,9 @@ namespace spldlt { namespace tests {
       cl_update_contrib_block_app.where = STARPU_CUDA;
       
       // Force UpdateN taks on the CPU/GPU
-      cl_updateN_block_app.where = STARPU_CPU; 
+      // cl_updateN_block_app.where = STARPU_CPU; 
       // cl_updateN_block_app.where = STARPU_CUDA;
+      cl_updateN_block_app.where = STARPU_CUDA | STARPU_CPU;
 #endif
 
 #if defined(SPLDLT_USE_STARPU)
