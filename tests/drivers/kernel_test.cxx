@@ -2,6 +2,7 @@
 #include "testing.hxx"
 #include "testing_factor_node_indef.hxx"
 #include "testing_form_contrib.hxx"
+#include "testing_lu_nopiv.hxx"
 
 #include <cstdio>
 
