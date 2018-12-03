@@ -538,6 +538,94 @@ namespace spldlt {
                a[j*lda+i] = 1.0 - (2.0*rand()) / RAND_MAX ;
       }
 
+      // Generates a random dense positive definte matrix. Off
+      // diagonal entries are Unif[-1,1]. Each diagonal entry a_ii =
+      // Unif[0.1,1.1] + sum_{i!=j} |a_ij|.
+      template<typename T>
+      void gen_unsym_diagdom(int m, int n, T* a, int lda) {
+         // Generate general unsym matrix
+         gen_mat(m, n, a, lda);
+         // Make it diagonally dominant*
+         for(int i=0; i<n; ++i) a[i*lda+i] = fabs(a[i*lda+i]) + 0.1;
+         for(int j=0; j<n; ++j) {
+            for(int i=0; i<m; ++i) {
+               if (i != j)
+                  a[i*lda+i] += fabs(a[j*lda+i]);
+            }
+         }
+      }
+
+      // Generate a single rhs corresponding to solution x = 1.0
+      template<typename T>
+      void gen_unsym_rhs(int m, int n, T* a, int lda, double* rhs) {
+         memset(rhs, 0, m*sizeof(T));
+         for (int i=0; i<m; i++) {
+            for (int j=0; j<n; j++) {
+               rhs[i] += a[j*lda+i] * 1.0; 
+            }
+         }
+      }
+
+      // Calculate scaled backward error ||Ax-b|| / ( ||A|| ||x|| + ||b|| ).
+      // All norms are infinity norms execpt for matrix A which is one norm.
+      template<typename T>
+      double unsym_backward_error(
+            int m,int n, T const* a, int lda, T const* rhs, int nrhs,
+            T const* soln, int ldsoln) {
+         
+         int const ldrhs = m; // Assume ldrhs = m
+         
+         /* Allocate memory */
+         double *resid = new double[m];
+         double *rowsum = new double[n];
+
+         // Calculate rowsums and anorm
+         memset(rowsum, 0, n*sizeof(double));
+         for(int j=0; j<n; ++j) {
+            for(int i=0; i<m; ++i) {
+               rowsum[j] += a[j*lda+i];
+            }
+         }
+
+         double anorm = 0.0;
+         for(int j=0; j<n; ++j)
+            anorm = std::max(anorm, rowsum[j]);
+         
+         /* Calculate residual vector and anorm */
+         double worstbwderr = 0.0;
+         for(int r=0; r<nrhs; ++r) {
+            memcpy(resid, rhs[r*ldrhs], m*sizeof(double));
+            
+            for(int j=0; j<n; ++j) {
+               for(int i=0; i<m; ++i) {
+                  resid[i] -= a[j*lda+i]*soln[r*ldsoln+j]; 
+               }
+            }
+
+            /* Check scaled backwards error */
+            double rhsnorm=0.0, residnorm=0.0, solnnorm=0.0;
+            for(int i=0; i<m; ++i) {
+               // Calculate max norms
+               rhsnorm = std::max(rhsnorm, fabs(rhs[r*ldrhs+i]));
+               residnorm = std::max(residnorm, fabs(resid[i]));
+               if(std::isnan(resid[i])) residnorm = resid[i]; 
+               solnnorm = std::max(solnnorm, fabs(r*ldsoln+soln[i]));
+               
+            }
+
+            worstbwderr = std::max(worstbwderr, residnorm/(anorm*solnnorm + rhsnorm));
+            if(std::isnan(residnorm)) worstbwderr = residnorm;
+         }
+
+         /* Cleanup */
+         delete[] resid;
+         delete[] rowsum;
+
+         // Return largest error
+         return worstbwderr;
+
+      }
+
       template<typename T>
       void print_mat(char const* format, int n, T const* a, int lda,
                      int *perm=nullptr) {

@@ -219,15 +219,15 @@ namespace spldlt { namespace tests {
          
             int nrhs = 1;
             int ldsoln = m;
-            double *soln = new double[nrhs*ldsoln];
+            T *soln = new T[nrhs*ldsoln];
             for(int r=0; r<nrhs; ++r)
-               memcpy(&soln[r*ldsoln], b, m*sizeof(double));
+               memcpy(&soln[r*ldsoln], b, m*sizeof(T));
 
             printf("[factor_node_posdef_test] Solve..\n");
          
             cholesky_solve_fwd(m, n, l, lda, nrhs, soln, ldsoln);
-            host_trsm<double>(SIDE_LEFT, FILL_MODE_LWR, OP_N, DIAG_NON_UNIT, m-n, nrhs, 1.0, &l[n*lda+n], lda, &soln[n], ldsoln);
-            host_trsm<double>(SIDE_LEFT, FILL_MODE_LWR, OP_T, DIAG_NON_UNIT, m-n, nrhs, 1.0, &l[n*lda+n], lda, &soln[n], ldsoln);
+            host_trsm<T>(SIDE_LEFT, FILL_MODE_LWR, OP_N, DIAG_NON_UNIT, m-n, nrhs, 1.0, &l[n*lda+n], lda, &soln[n], ldsoln);
+            host_trsm<T>(SIDE_LEFT, FILL_MODE_LWR, OP_T, DIAG_NON_UNIT, m-n, nrhs, 1.0, &l[n*lda+n], lda, &soln[n], ldsoln);
             cholesky_solve_bwd(m, n, l, lda, nrhs, soln, ldsoln);
 
             printf("[factor_node_posdef_test] Done\n");
