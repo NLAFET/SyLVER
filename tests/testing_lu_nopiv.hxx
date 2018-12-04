@@ -12,7 +12,8 @@ namespace spldlt {
 
          printf("[lu_nopiv_test] m = %d, n = %d\n", m, n);
          printf("[lu_nopiv_test] diagdom = %d, check = %d\n", diagdom, check);
-
+         ASSERT_TRUE(m >= n);
+         
          // Generate test matrix
          int lda = spral::ssids::cpu::align_lda<T>(m);
          T* a = nullptr;
@@ -56,6 +57,8 @@ namespace spldlt {
             double bwderr = unsym_backward_error(
                   m, n, a, lda, b, nrhs, soln, ldsoln);
 
+            printf("bwderr = %le\n", bwderr);
+            
          }
 
          if (check) {

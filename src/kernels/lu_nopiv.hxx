@@ -35,5 +35,9 @@ namespace spldlt {
                &a[(k+1)*lda+k+1], lda);
       }
    }
+
+   void lu_nopiv_fwd(int m, int n, T *a, int lda, int nrhs, T *x, int ldx) {
+      
+   }
    
 } // end of namespace spldlt
