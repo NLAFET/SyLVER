@@ -59,6 +59,7 @@ int main(int argc, char** argv) {
    // factor_node_indef_test<double, 32, false>(0.01, 1e-20, true, false, 64, 64, 32, 1);
 
    // Unsym matrices
+   lu_nopiv_test<double>(32, 32, true, true);
    
    int nerr = 0;
    

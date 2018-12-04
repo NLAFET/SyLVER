@@ -594,7 +594,7 @@ namespace spldlt {
          /* Calculate residual vector and anorm */
          double worstbwderr = 0.0;
          for(int r=0; r<nrhs; ++r) {
-            memcpy(resid, rhs[r*ldrhs], m*sizeof(double));
+            memcpy(resid, &rhs[r*ldrhs], m*sizeof(double));
             
             for(int j=0; j<n; ++j) {
                for(int i=0; i<m; ++i) {
