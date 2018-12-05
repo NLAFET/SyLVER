@@ -1,3 +1,5 @@
+#pragma once
+
 // SpLDLT
 #include "kernels/lu_nopiv.hxx"
 
@@ -83,6 +85,7 @@ namespace spldlt {
 
          delete[] lu;
 
+         return failed ? -1 : 0;
       }
 
    } // end of namespace tests

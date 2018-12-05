@@ -9,12 +9,13 @@ namespace spldlt {
    template <typename T>
    int find_col_abs_max(int from, int to, T const* a) {
       
+      assert(from>=0);
       assert(to>=from);
 
-      T maxval = 0.0; 
+      T maxval = fabs(a[from]); 
       int maxidx = from;
 
-      for (int idx=from; idx <= to; +idx) {
+      for (int idx=from; idx <= to; ++idx) {
          if (fabs(a[idx]) > maxval) {
             maxval = fabs(a[idx]);
             maxidx = idx;
@@ -27,8 +28,10 @@ namespace spldlt {
    /// @brief Permute rows r1 and r2
    /// @param m matrix order
    template <typename T>
-   void permute_rows(int r1, int r1, int m, int *perm, T *a, int lda) {
+   void permute_rows(int r1, int r2, int m, int *perm, T *a, int lda) {
 
+      if (r1==r2) return;
+      
       assert(r1 < m);
       assert(r2 < m);
       
@@ -52,10 +55,10 @@ namespace spldlt {
       for (int k=0; k<nelim; ++k) {
 
          // Find row with largest entry
-         int idx = find_col_abs_max(k, m-1, a[lda*k+k]);
+         int idx = find_col_abs_max(k, m-1, &a[lda*k+k]);
          // Permute rows (LAPACK style)
-         permute_rows(k, idx, m, perm, a, lda);
-
+         if(idx != k) permute_rows(k, idx, m, perm, a, lda);
+         // printf("[lu_pp_factor] k = %d, idx = %d\n", k, idx);
          T d = 1.0 / a[k*lda+k];
 
          for (int i=k+1; i<m; ++i)
@@ -73,3 +76,4 @@ namespace spldlt {
       }
       
    }
+} // end of namespace spldlt
