@@ -10,7 +10,7 @@ namespace spldlt {
    public:
       SpldltOpts():
          ncpu(1), ngpu(0), m(256), n(256), k(256), nb(256), ib(256), posdef(false), 
-         check(true), chol(false) {}
+         check(true), chol(false), diagdom(false) {}
 
       void parse_opts(int argc, char** argv) {
          
@@ -69,6 +69,9 @@ namespace spldlt {
             else if ( !strcmp("--chol", argv[i]) ) {
                chol = true;
             }
+            else if ( !strcmp("--diagdom", argv[i]) ) {
+               diagdom = true;
+            }
             
          }
          
@@ -84,6 +87,6 @@ namespace spldlt {
       bool posdef;
       bool check;
       bool chol; // Use Cholesky factorization
-
+      bool diagdom; // Diagonally dominant matrix (unsymmetric case)
    };
 }

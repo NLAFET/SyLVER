@@ -7,42 +7,52 @@
 namespace spldlt {
    namespace tests {
 
+      /// @param m matrix order
+      /// @param k number of rows/columns to be eliminated
       template<typename T>
-      int lu_nopiv_test(int m, int n, bool diagdom, bool check) {
+      int lu_nopiv_test(int m, int k, bool diagdom, bool check) {
 
-         printf("[lu_nopiv_test] m = %d, n = %d\n", m, n);
+         bool failed = false;
+
+         printf("[lu_nopiv_test] m = %d\n", m);
+         printf("[lu_nopiv_test] k = %d\n", k);
          printf("[lu_nopiv_test] diagdom = %d, check = %d\n", diagdom, check);
-         ASSERT_TRUE(m >= n);
+         ASSERT_TRUE(m >= k);
          
          // Generate test matrix
          int lda = spral::ssids::cpu::align_lda<T>(m);
          T* a = nullptr;
          T* b = nullptr;
 
-         if (check) {
-            a = new T[n*lda];
+         // Factors
+         T* lu = new T[m*lda]; 
 
-            if (diagdom) gen_unsym_diagdom(m, n, a, lda);
-            else         gen_mat(m, n, a, lda);
+         if (check) {
+            
+            a = new T[m*lda];
+
+            if (diagdom) gen_unsym_diagdom(m, a, lda);
+            else         gen_mat(m, m, a, lda);
 
             b = new T[m];
-            gen_unsym_rhs(m, n, a, lda, b);
-         }
+            gen_unsym_rhs(m, a, lda, b);
 
-         T* lu = new T[n*lda];
-
-         if (check) {
-            memcpy(lu, a, lda*n*sizeof(T));
+            memcpy(lu, a, lda*m*sizeof(T));
          }
          else {
 
-            if (diagdom) gen_unsym_diagdom(m, n, lu, lda);
-            else         gen_mat(m, n, lu, lda);
+            if (diagdom) gen_unsym_diagdom(m, lu, lda);
+            else         gen_mat(m, m, lu, lda);
          }
 
-         // Perform (point) LU factor without pivoting
-         lu_nopiv_factor(m, n, a, lda);
+         // Perform (partial) LU factor without pivoting
+         lu_nopiv_factor(m, k, lu, lda);
 
+         if (m > k) {
+            // Factor reminder
+            // ...
+         }
+         
          if (check) {
 
             int nrhs = 1;
@@ -53,21 +63,25 @@ namespace spldlt {
                memcpy(&soln[r*ldsoln], b, m*sizeof(T));
 
             // Perform solve
+            // Fwd substitutuion
+            lu_nopiv_fwd(m, k, lu, lda, nrhs, soln, ldsoln);
+            // Bwd substitutuion
+            lu_nopiv_bwd(m, k, lu, lda, nrhs, soln, ldsoln);
             
+            // Calculate bwd error
             double bwderr = unsym_backward_error(
-                  m, n, a, lda, b, nrhs, soln, ldsoln);
+                  m, k, a, lda, b, nrhs, soln, ldsoln);
 
             printf("bwderr = %le\n", bwderr);
-            
+            EXPECT_LE(bwderr, 5e-14);            
          }
 
          if (check) {
             delete[] a;
             delete[] b;
          }
-         else {
-            delete[] lu;
-         }
+
+         delete[] lu;
 
       }
 

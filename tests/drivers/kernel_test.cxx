@@ -17,6 +17,8 @@ int main(int argc, char** argv) {
    
    printf("[Tests] Test kernels\n");
 
+   int nerr = 0;
+      
    // int m = 128;
    // int lda = m;
    // double *a = new double[m*lda];
@@ -59,9 +61,13 @@ int main(int argc, char** argv) {
    // factor_node_indef_test<double, 32, false>(0.01, 1e-20, true, false, 64, 64, 32, 1);
 
    // Unsym matrices
-   lu_nopiv_test<double>(32, 32, true, true);
+   // lu_nopiv_test<double>(32, 32, true, true); // Diagonally dominant
+   // lu_nopiv_test<double>(128, 128, true, true);
+   // lu_nopiv_test<double>(32, 32, false, true); // General matrix
+   // lu_nopiv_test<double>(128, 128, false, true);
+   // lu_nopiv_test<double>(256, 256, false, true);
+
    
-   int nerr = 0;
    
    // nerr += run_factor_node_indef_tests();
    // nerr += run_form_contrib_tests();

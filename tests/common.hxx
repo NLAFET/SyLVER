@@ -541,13 +541,14 @@ namespace spldlt {
       // Generates a random dense positive definte matrix. Off
       // diagonal entries are Unif[-1,1]. Each diagonal entry a_ii =
       // Unif[0.1,1.1] + sum_{i!=j} |a_ij|.
+      /// @param m matrix order
       template<typename T>
-      void gen_unsym_diagdom(int m, int n, T* a, int lda) {
+      void gen_unsym_diagdom(int m, T* a, int lda) {
          // Generate general unsym matrix
-         gen_mat(m, n, a, lda);
+         gen_mat(m, m, a, lda);
          // Make it diagonally dominant*
-         for(int i=0; i<n; ++i) a[i*lda+i] = fabs(a[i*lda+i]) + 0.1;
-         for(int j=0; j<n; ++j) {
+         for(int i=0; i<m; ++i) a[i*lda+i] = fabs(a[i*lda+i]) + 0.1;
+         for(int j=0; j<m; ++j) {
             for(int i=0; i<m; ++i) {
                if (i != j)
                   a[i*lda+i] += fabs(a[j*lda+i]);
@@ -556,11 +557,12 @@ namespace spldlt {
       }
 
       // Generate a single rhs corresponding to solution x = 1.0
+      /// @param m matrix order
       template<typename T>
-      void gen_unsym_rhs(int m, int n, T* a, int lda, double* rhs) {
+      void gen_unsym_rhs(int m,  T* a, int lda, double* rhs) {
          memset(rhs, 0, m*sizeof(T));
          for (int i=0; i<m; i++) {
-            for (int j=0; j<n; j++) {
+            for (int j=0; j<m; j++) {
                rhs[i] += a[j*lda+i] * 1.0; 
             }
          }
