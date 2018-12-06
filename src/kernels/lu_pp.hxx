@@ -14,9 +14,12 @@ namespace spldlt {
 
       T maxval = fabs(a[from]); 
       int maxidx = from;
+      
+      // printf("[find_col_abs_max] from = %d, init maxval = %e\n", from, maxval);
 
       for (int idx=from; idx <= to; ++idx) {
          if (fabs(a[idx]) > maxval) {
+            // printf("[find_col_abs_max] fabs(a[idx]) = %e, maxval = %e\n", fabs(a[idx]), maxval);
             maxval = fabs(a[idx]);
             maxidx = idx;
          }
@@ -54,11 +57,13 @@ namespace spldlt {
 
       for (int k=0; k<nelim; ++k) {
 
+         // printf("[lu_pp_factor] piv = %e\n", a[k*lda+k]);
          // Find row with largest entry
-         int idx = find_col_abs_max(k, m-1, &a[lda*k+k]);
+         int idx = find_col_abs_max(k, m-1, &a[k*lda]);
          // Permute rows (LAPACK style)
-         if(idx != k) permute_rows(k, idx, m, perm, a, lda);
-         // printf("[lu_pp_factor] k = %d, idx = %d\n", k, idx);
+         permute_rows(k, idx, m, perm, a, lda);
+         // printf("[lu_pp_factor] perm piv = %e\n", a[k*lda+k]);
+         // printf("[lu_pp_factor] k = %d, idx = %d, piv = %d\n", k, idx, perm[k]);
          T d = 1.0 / a[k*lda+k];
 
          for (int i=k+1; i<m; ++i)

@@ -54,6 +54,12 @@ namespace spldlt {
          // Perform (partial) LU factor with partial pivoting
          lu_pp_factor(m, k, perm, lu, lda);
          // lu_nopiv_factor(m, k, lu, lda);
+         
+         // Print permutation matrix         
+         // printf("perm = \n");
+         // for (int i=0; i<m; ++i)
+         //    printf(" %d ", perm[i]);
+         // printf("\n");
 
          if (m > k) {
             // TODO
@@ -84,7 +90,7 @@ namespace spldlt {
                            
             // Calculate bwd error
             double bwderr = unsym_backward_error(
-                  m, k, a, lda, pb, nrhs, soln, ldsoln);
+                  m, k, a, lda, b, nrhs, soln, ldsoln);
 
             printf("bwderr = %le\n", bwderr);
             EXPECT_LE(bwderr, 5e-14);            

@@ -69,7 +69,13 @@ int main(int argc, char** argv) {
    // lu_nopiv_test<double>(256, 256, false, true);
 
    // Unsym matrices (partial pivoting)
-   lu_pp_test<double>(32, 32, true, true); // Diagonally dominant
+   // lu_pp_test<double>(8, 8, true, true); // Diagonally dominant
+   // lu_pp_test<double>(16, 16, true, true); // Diagonally dominant
+   // lu_pp_test<double>(32, 32, true, true); // Diagonally dominant
+   // lu_pp_test<double>(128, 128, true, true); // Diagonally dominant
+   // lu_pp_test<double>(32, 32, false, true); // General matrix
+   // lu_pp_test<double>(128, 128, false, true); // General matrix
+   lu_pp_test<double>(256, 256, false, true); // General matrix
    
    
    // nerr += run_factor_node_indef_tests();
