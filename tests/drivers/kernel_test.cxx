@@ -75,7 +75,7 @@ int main(int argc, char** argv) {
    // lu_pp_test<double>(128, 128, true, true); // Diagonally dominant
    // lu_pp_test<double>(32, 32, false, true); // General matrix
    // lu_pp_test<double>(128, 128, false, true); // General matrix
-   // lu_pp_test<double>(256, 256, false, true); // General matrix
+   lu_pp_test<double>(256, 256, false, true); // General matrix
    
    
    // nerr += run_factor_node_indef_tests();

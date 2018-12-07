@@ -1,32 +1,11 @@
 #pragma once
 
+#include "kernels/common.hxx"
+
 #include <cassert>
 #include <cmath>
 
 namespace spldlt {
-
-   /// @brief find index of max abs value in a column starting at a
-   template <typename T>
-   int find_col_abs_max(int from, int to, T const* a) {
-      
-      assert(from>=0);
-      assert(to>=from);
-
-      T maxval = fabs(a[from]); 
-      int maxidx = from;
-      
-      // printf("[find_col_abs_max] from = %d, init maxval = %e\n", from, maxval);
-
-      for (int idx=from; idx <= to; ++idx) {
-         if (fabs(a[idx]) > maxval) {
-            // printf("[find_col_abs_max] fabs(a[idx]) = %e, maxval = %e\n", fabs(a[idx]), maxval);
-            maxval = fabs(a[idx]);
-            maxidx = idx;
-         }
-      }
-
-      return maxidx;
-   }
 
    /// @brief Permute rows r1 and r2
    /// @param m matrix order

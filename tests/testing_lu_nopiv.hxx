@@ -3,6 +3,9 @@
 // SpLDLT
 #include "kernels/lu_nopiv.hxx"
 
+// STD
+#include <chrono>
+
 // SSIDS
 #include "ssids/cpu/cpu_iface.hxx"
 
@@ -47,8 +50,11 @@ namespace spldlt {
             else         gen_mat(m, m, lu, lda);
          }
 
+         auto start = std::chrono::high_resolution_clock::now();
          // Perform (partial) LU factor without pivoting
          lu_nopiv_factor(m, k, lu, lda);
+         auto end = std::chrono::high_resolution_clock::now();
+         long ttotal = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count();
 
          if (m > k) {
             // Factor reminder
@@ -76,6 +82,8 @@ namespace spldlt {
 
             printf("bwderr = %le\n", bwderr);
             EXPECT_LE(bwderr, 5e-14);            
+            printf("factor time (s) = %e\n", 1e-9*ttotal);
+
          }
 
          if (check) {

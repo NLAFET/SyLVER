@@ -2,7 +2,10 @@
 
 // SpLDLT
 #include "kernels/lu_pp.hxx"
-//#include "kernels/lu_nopiv.hxx"
+#include "kernels/lu_nopiv.hxx"
+
+// STD
+#include <chrono>
 
 // SSIDS
 #include "ssids/cpu/cpu_iface.hxx"
@@ -51,9 +54,12 @@ namespace spldlt {
          int *perm = new int[m];
          for (int i=0; i<m; ++i) perm[i] = i;
 
+         auto start = std::chrono::high_resolution_clock::now();
          // Perform (partial) LU factor with partial pivoting
          lu_pp_factor(m, k, perm, lu, lda);
          // lu_nopiv_factor(m, k, lu, lda);
+         auto end = std::chrono::high_resolution_clock::now();
+         long ttotal = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count();
          
          // Print permutation matrix         
          // printf("perm = \n");
@@ -94,6 +100,8 @@ namespace spldlt {
 
             printf("bwderr = %le\n", bwderr);
             EXPECT_LE(bwderr, 5e-14);            
+            printf("factor time (s) = %e\n", 1e-9*ttotal);
+
          }
 
          // Cleanup
