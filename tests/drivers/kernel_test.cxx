@@ -4,6 +4,7 @@
 #include "testing_form_contrib.hxx"
 #include "testing_lu_nopiv.hxx"
 #include "testing_lu_pp.hxx"
+#include "testing_lu_tpp.hxx"
 
 #include <cstdio>
 
@@ -62,6 +63,7 @@ int main(int argc, char** argv) {
    // factor_node_indef_test<double, 32, false>(0.01, 1e-20, true, false, 64, 64, 32, 1);
 
    // Unsym matrices (no piv)
+   // square matrices (m=k)
    // lu_nopiv_test<double>(32, 32, true, true); // Diagonally dominant
    // lu_nopiv_test<double>(128, 128, true, true);
    // lu_nopiv_test<double>(32, 32, false, true); // General matrix
@@ -69,6 +71,7 @@ int main(int argc, char** argv) {
    // lu_nopiv_test<double>(256, 256, false, true);
 
    // Unsym matrices (partial pivoting)
+   // square matrices (m=k)
    // lu_pp_test<double>(8, 8, true, true); // Diagonally dominant
    // lu_pp_test<double>(16, 16, true, true); // Diagonally dominant
    // lu_pp_test<double>(32, 32, true, true); // Diagonally dominant
@@ -76,7 +79,9 @@ int main(int argc, char** argv) {
    // lu_pp_test<double>(32, 32, false, true); // General matrix
    // lu_pp_test<double>(128, 128, false, true); // General matrix
    lu_pp_test<double>(256, 256, false, true); // General matrix
-   
+
+   // Unsym matrices (threshold partial pivoting)
+
    
    // nerr += run_factor_node_indef_tests();
    // nerr += run_form_contrib_tests();

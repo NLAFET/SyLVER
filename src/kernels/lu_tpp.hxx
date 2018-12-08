@@ -49,15 +49,18 @@ namespace spldlt {
          int maxidx;
          T maxc;
 
-         find_col_abs_max(nelim, m-1, &a[c*lda], maxidx, maxval);
+         // Find largest element in candidate column
+         find_col_abs_max(nelim, m-1, &a[c*lda], maxidx, maxc);
+         // TODO: manage zero pivots
 
+         // Try diagonal element as pivot in candidate column
          if (fabs(a[c*lda+c]) >= u*maxc) {
-            // Accept diagonal element as pivot
+            // Accept pivot and swap if necessary
             swap_rc(nelim, c, nelim, c, m, rperm, cperm, a, lda);
             
             T d = 1.0 / a[nelim*lda+nelim];
             for (int i=nelim+1; i<m; ++i)
-               a[k*lda+i] = a[nelim*lda+i]*d;
+               a[nelim*lda+i] = a[nelim*lda+i]*d;
 
             host_gemm(
                   OP_N, OP_N,
@@ -67,11 +70,47 @@ namespace spldlt {
                   &a[(nelim+1)*lda+nelim], lda,
                   1.0,
                   &a[(nelim+1)*lda+nelim+1], lda);
-            
-            c = nelim +1;
-         }
 
-         // TODO: manage zero pivots
+            nelim++;
+            c = nelim+1;
+         }
+         // Try largest off-diagonal element as pivot in candidate column
+         else {
+            int p;
+            T maxp;
+            
+            // Find largest element in fully-summed coefficients of
+            // candidate column
+            find_col_abs_max(nelim, k-1, &a[c*lda], p, maxp);
+            // Try largest off-diagonal element as pivot in candidate
+            // column
+            if (fabs(a[c*lda+p]) >= u*maxc) {
+               // Accept pivot and swap
+               swap_rc(nelim, p, nelim, c, m, rperm, cperm, a, lda);
+
+               T d = 1.0 / a[nelim*lda+nelim];
+               for (int i=nelim+1; i<m; ++i)
+                  a[nelim*lda+i] = a[nelim*lda+i]*d;
+
+               host_gemm(
+                     OP_N, OP_N,
+                     m-nelim-1, m-nelim-1, 1,
+                     -1.0,
+                     &a[nelim*lda+nelim+1], lda,
+                     &a[(nelim+1)*lda+nelim], lda,
+                     1.0,
+                     &a[(nelim+1)*lda+nelim+1], lda);
+
+               nelim++;
+               c = nelim+1;
+               
+            }
+            else {
+               // Move to next candidate column
+               c++;
+            }
+         }
+         
       }
 
    }
