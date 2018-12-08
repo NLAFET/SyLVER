@@ -52,12 +52,12 @@ namespace spldlt {
          // Find largest element in candidate column
          find_col_abs_max(nelim, m-1, &a[c*lda], maxidx, maxc);
          // TODO: manage zero pivots
-         printf("[lu_tpp_factor] maxc = %f, a(c,c) = %f\n", maxc, fabs(a[c*lda+c]));
+         // printf("[lu_tpp_factor] maxc = %f, a(c,c) = %f\n", maxc, fabs(a[c*lda+c]));
 
          // Try diagonal element as pivot in candidate column
          if (fabs(a[c*lda+c]) >= u*maxc) {
             // Accept pivot and swap if necessary
-            printf("[lu_tpp_factor] diag pivot c = %d\n", c);
+            // printf("[lu_tpp_factor] diag pivot c = %d\n", c);
             swap_rc(nelim, c, nelim, c, m, rperm, cperm, a, lda);
             
             T d = 1.0 / a[nelim*lda+nelim];
@@ -85,14 +85,14 @@ namespace spldlt {
             // Find largest element in fully-summed coefficients of
             // candidate column
             find_col_abs_max(nelim, k-1, &a[c*lda], p, maxp);
-            printf("[lu_tpp_factor] maxc = %f, maxc = %f, a(p,c) = %f\n",
-                   maxc, maxp, fabs(a[c*lda+p]));
+            // printf("[lu_tpp_factor] maxc = %f, maxc = %f, a(p,c) = %f\n",
+                   // maxc, maxp, fabs(a[c*lda+p]));
 
             // Try largest off-diagonal element as pivot in candidate
             // column
             if (fabs(a[c*lda+p]) >= u*maxc) {
                // Accept pivot and swap
-               printf("[lu_tpp_factor] offdiag pivot c = %d\n", c);
+               // printf("[lu_tpp_factor] offdiag pivot c = %d\n", c);
                swap_rc(nelim, p, nelim, c, m, rperm, cperm, a, lda);
 
                T d = 1.0 / a[nelim*lda+nelim];
