@@ -78,10 +78,10 @@ int main(int argc, char** argv) {
    // lu_pp_test<double>(128, 128, true, true); // Diagonally dominant
    // lu_pp_test<double>(32, 32, false, true); // General matrix
    // lu_pp_test<double>(128, 128, false, true); // General matrix
-   lu_pp_test<double>(256, 256, false, true); // General matrix
+   // lu_pp_test<double>(256, 256, false, true); // General matrix
 
    // Unsym matrices (threshold partial pivoting)
-
+   lu_tpp_test<double>(0.01, 8, 8, true, true); // Diagonally dominant
    
    // nerr += run_factor_node_indef_tests();
    // nerr += run_form_contrib_tests();
