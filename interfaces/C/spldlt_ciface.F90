@@ -308,7 +308,7 @@ subroutine spldlt_c_analyse(n, cptr, crow, cval, ncpu, cakeep, coptions, cinform
     cakeep = C_LOC(fakeep)
   end if
 
-  print *, "Call analyse"
+ !print *, "Call analyse"
   ! Call Fortran routine
   if (ASSOCIATED(fval)) then
     call spldlt_analyse(fakeep, n, fptr, frow, foptions%options, finform, ncpu, val=fval)
@@ -360,7 +360,7 @@ subroutine spldlt_c_factor(cposdef, val, cakeep, cfkeep, coptions, cinform) &
      cfkeep = C_LOC(ffkeep)
   end if
 
-  print *, "Call factor"
+ !print *, "Call factor"
   ! Call Fortran routine
   !spldlt_factor(spldlt_akeep, spldlt_fkeep, posdef, val, options, inform)
     call spldlt_factor(fakeep, ffkeep, fposdef, val, foptions%options, finform)
@@ -409,7 +409,7 @@ subroutine spldlt_c_solve(job, nrhs, cx, ldx, cakeep, cfkeep, cinform) &
      nullify(ffkeep)
   end if
 
-  print *, "Call solve"
+ !print *, "Call solve"
   ! Call Fortran routine
   call ffkeep%solve(fakeep, nrhs, fx, ldx, finform)
 
