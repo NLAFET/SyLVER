@@ -90,4 +90,10 @@ namespace spldlt {
       dsyrk_(&fuplo, &ftrans, &n, &k, &alpha, a, &lda, &beta, c, &ldc);
    }
 
+   // GETRF
+   template <>
+   int host_getrf<double>(int m, int n, double* a, int lda, int *ipiv) {
+      dgetrf_(&m, &n, a, &lda, ipiv);
+   }
+
 } // end of namespace spldlt

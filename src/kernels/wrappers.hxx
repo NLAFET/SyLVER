@@ -42,4 +42,7 @@ namespace spldlt {
                   int m, int n, int k, T alpha, const T* a, int lda, const T* b,
                   int ldb, T beta, T* c, int ldc);
 
+   // GETRF
+   template <typename T>
+   int host_getrf(int m, int n, T* a, int lda, int *ipiv);
 }
