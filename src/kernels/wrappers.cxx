@@ -8,18 +8,26 @@ extern "C" {
    void dtrsm_(char *side, char *uplo, char *transa, char *diag, int *m, int *n, const double *alpha, const double *a, int *lda, double *b, int *ldb);
    void dgemm_(char* transa, char* transb, int* m, int* n, int* k, double* alpha, const double* a, int* lda, const double* b, int* ldb, double *beta, double* c, int* ldc);
    void dsyrk_(char *uplo, char *trans, int *n, int *k, double *alpha, const double *a, int *lda, double *beta, double *c, int *ldc);
+   void dgetrf_(int *m, int *n, double* a, int *lda, int *ipiv, int *info);
+   void dlaswp_(int *n, double* a, int *lda, int *k1, int *k2, int *ipiv, const int *incx);
 }
 
 namespace spldlt {
 
+   // _LASWP
+   template<>
+   void host_laswp<double>(int n, double *a, int lda, int k1, int k2, int *perm, int incx) {
+      dlaswp_(&n, a, &lda, &k1, &k2, perm, &incx);
+   }
+
    // _AXPY
-   template <>
-   void host_axpy<double>(const int n, double a, const double *x, int incx, double *y, int incy) {
+   template<>
+   void host_axpy<double>(int n, double a, const double *x, int incx, double *y, int incy) {
       daxpy_(&n, &a, x, &incx, y, &incy);
    }
 
    // _LANGE
-   template <>
+   template<>
    double host_lange<double>(spldlt::norm norm, int m, int n, const double *a, int lda){
       char fnorm;
       switch(norm) {
@@ -93,7 +101,9 @@ namespace spldlt {
    // GETRF
    template <>
    int host_getrf<double>(int m, int n, double* a, int lda, int *ipiv) {
-      dgetrf_(&m, &n, a, &lda, ipiv);
+      int info;
+      dgetrf_(&m, &n, a, &lda, ipiv, &info);
+      return info;
    }
 
 } // end of namespace spldlt

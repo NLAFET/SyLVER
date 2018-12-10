@@ -15,8 +15,12 @@ namespace spldlt {
       NORM_FRO
    };
 
+   // _LASWP
    template <typename T> 
-   void host_axpy(const int n, const T a, const T *x, const int incx, T *y, const int incy);
+   void host_laswp(int n, T *a, int lda, int k1, int k2, int *perm, int incx);
+
+   template <typename T> 
+   void host_axpy(int n, const T a, const T *x, const int incx, T *y, const int incy);
 
    template <typename T> 
    double host_lange(spldlt::norm norm, const int m, const int n, const T *a, const int lda);

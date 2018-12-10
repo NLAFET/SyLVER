@@ -4,7 +4,8 @@
 #include "testing_form_contrib.hxx"
 #include "testing_lu_nopiv.hxx"
 #include "testing_lu_pp.hxx"
-#include "testing_lu_tpp.hxx"
+// #include "testing_lu_tpp.hxx"
+#include "testing_factor_node_unsym.hxx"
 
 #include <cstdio>
 
@@ -49,7 +50,7 @@ int main(int argc, char** argv) {
    // factor_node_indef_test<double, 32, true>(0.01, 1e-20, false, false, 8, 8, 8, 1);
    // factor_node_indef_test<double, 32, true>(0.01, 1e-20, false, false, 8, 8, 8, 1);
    
-   ////////////////////////////////////////////////////////////////////////////////
+   ////////////////////////////////////////////////////////////
    // Square matrices 
    // Sequential (1 worker)
    // No delays
@@ -62,6 +63,7 @@ int main(int argc, char** argv) {
    // factor_node_indef_test<double, 32, false>(0.01, 1e-20, true, false, 32, 32, 32, 1);
    // factor_node_indef_test<double, 32, false>(0.01, 1e-20, true, false, 64, 64, 32, 1);
 
+   ////////////////////////////////////////////////////////////
    // Unsym matrices (no piv)
    // square matrices (m=k)
    // lu_nopiv_test<double>(32, 32, true, true); // Diagonally dominant
@@ -81,8 +83,11 @@ int main(int argc, char** argv) {
    // lu_pp_test<double>(256, 256, false, true); // General matrix
 
    // Unsym matrices (threshold partial pivoting)
-   lu_tpp_test<double>(0.01, 8, 8, true, true); // Diagonally dominant
-   
+   // lu_tpp_test<double>(0.01, 8, 8, true, true); // Diagonally dominant
+
+   ////////////////////////////////////////////////////////////
+   // Unsym front
+
    // nerr += run_factor_node_indef_tests();
    // nerr += run_form_contrib_tests();
 

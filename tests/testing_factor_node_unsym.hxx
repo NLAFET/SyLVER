@@ -1,5 +1,8 @@
 #pragma once
 
+// SpLDLT
+#include "kernels/factor_unsym.hxx"
+
 // SSIDS
 #include "ssids/cpu/cpu_iface.hxx"
 
@@ -23,8 +26,28 @@ namespace spldlt {
 
          // Generate test matrix
          int lda = spral::ssids::cpu::align_lda<T>(m);
-         T* a = new double[m*lda];
+         T* a = nullptr;
+         T* b = nullptr;
+         
+         if (check) {
+            
+            a = new T[m*lda];
 
+            if (diagdom) gen_unsym_diagdom(m, a, lda);
+            else         gen_mat(m, m, a, lda);
+
+            b = new T[m];
+            gen_unsym_rhs(m, a, lda, b);
+
+            memcpy(lu, a, lda*m*sizeof(T));
+         }
+         else {
+            
+            ASSERT_TRUE(m == n); // FIXME: does not work for non square fronts
+            if (diagdom) gen_unsym_diagdom(m, lu, lda);
+            else         gen_mat(m, m, lu, lda);
+         }
+         
          
          return failed ? -1 : 0;
       }
