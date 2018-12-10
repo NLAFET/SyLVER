@@ -151,7 +151,7 @@ namespace spldlt {
          int n = get_ncol();
          size_t contrib_dimn = m-n; // Dimension of contribution block
          if (contrib_dimn>0) {
-            int nr = (m-1) / blksz + 1; // number of block rows in front amtrix
+            int nr = get_nr();; // number of block rows in front amtrix
             int rsa = n / blksz; // index of first block in contribution blocks  
             int ncontrib = nr-rsa;
 
@@ -212,12 +212,68 @@ namespace spldlt {
          }
       }
 
+      /// @brief Allocate memory for contribution blocks in the
+      /// unsymmetric case
+      // Use 1D memory layout by default
+      void alloc_contrib_blocks_unsym() {
+
+         int m = get_nrow();
+         int n = get_ncol();
+
+         size_t contrib_dimn = m-n; // Dimension of contribution block
+         if (contrib_dimn>0) {
+
+            int nr = get_nr();
+
+            int rsa = n / blksz; // index of first block in contribution blocks  
+            int ncontrib = nr-rsa;
+
+            contrib_blocks.reserve(ncontrib*ncontrib);
+
+            // Setup data structures for contribution block
+            for(int j = rsa; j < nr; j++) {
+               int first_col = std::max(j*blksz, n); // First col in contrib block
+               int blkn = std::min((j+1)*blksz, m) - first_col; // Tile width
+               for(int i = rsa; i < nr; i++) {
+                  int first_row = std::max(i*blksz, n); // First col in contrib block
+                  int blkm = std::min((i+1)*blksz, m) - first_row; // Tile height
+                  contrib_blocks.emplace_back(i-rsa, j-rsa, blkm, blkn, blkm, pool_alloc_);
+               }
+            }
+            
+            // Allocate memory using 1D memory layout
+            for(int j = rsa; j < nr; j++) {
+               // First col in contrib block
+               int first_col = std::max(j*blksz, n);
+               int blk_n = std::min((j+1)*blksz, m) - first_col; // Tile width
+               assert(blk_n > 0);
+               int col_m = m-n; // Column height
+               int col_ld = col_m;
+               size_t col_dimn = col_ld*blk_n;
+               T *col = (col_dimn>0) ? 
+                  PATraits::allocate(pool_alloc_, col_dimn) : nullptr;
+
+               for(int i = rsa; i < nr; i++) {
+
+                  int row = std::max(i*blksz, n) - n; // First row in block
+                  
+                  contrib_blocks[(j-rsa)*ncontrib+(i-rsa)].a = &col[row];
+                  contrib_blocks[(j-rsa)*ncontrib+(i-rsa)].lda = col_ld; 
+               }                  
+            }
+            
+         }         
+      }
+
+      /// @brief Cleanup memory associated with contribution blocks
       void free_contrib_blocks() {
          int m = get_nrow();
          int n = get_ncol();           
          int rsa = n / blksz; // index of first block in contribution blocks  
          size_t contrib_dimn = m-n; // Dimension of contribution block
+         
          if (contrib_dimn>0 && contrib_blocks.size()>0) {
+         
             int nr = get_nr(); // number of block rows in front amtrix
             int rsa = n / blksz; // index of first block in contribution blocks  
             int ncontrib = nr-rsa;
@@ -255,6 +311,46 @@ namespace spldlt {
                }
 #endif
             }
+
+            // TODO: free contrib block structure
+            // contrib_blocks.clear();
+
+         }
+      }
+
+      /// @brief Cleanup memory associated with contribution blocks in
+      /// non symmetric case
+      void free_contrib_blocks_unsym() {
+
+         int m = get_nrow();
+         int n = get_ncol();           
+         int rsa = n / blksz; // index of first block in contribution blocks  
+         size_t contrib_dimn = m-n; // Dimension of contribution block
+
+         if (contrib_dimn>0 && contrib_blocks.size()>0) {
+
+            int nr = get_nr(); // number of block rows in front amtrix
+            int rsa = n / blksz; // index of first block in contribution blocks  
+            int ncontrib = nr-rsa;
+            int col_m = m-n; // Column height
+            int col_ld = col_m;
+            for(int j = 0; j < ncontrib; j++) {
+               int jj = j + rsa; // Column index in the global matrix
+               int first_col = std::max(jj*blksz, n); // Index of first column in block-column
+               int blk_n = std::min((jj+1)*blksz, m) - first_col;
+               size_t col_dimn = col_ld*blk_n;
+               T *col = contrib_blocks[j*ncontrib].a;
+               assert(col != nullptr);
+               PATraits::deallocate(pool_alloc_, col, col_dimn); // Release memory for this block-column
+
+               for(int i = 0; i < ncontrib; i++) {
+                  // Nullify pointer on block
+                  contrib_blocks[j*ncontrib+i].a = nullptr;
+               }
+            }
+          
+            // Destroy contribution blocks data structures
+            contrib_blocks.clear();
          }
       }
 

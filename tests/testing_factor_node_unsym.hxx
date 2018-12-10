@@ -1,6 +1,8 @@
 #pragma once
 
 // SpLDLT
+#include "SymbolicFront.hxx"
+#include "NumericFront.hxx"
 #include "kernels/factor_unsym.hxx"
 
 // SSIDS
@@ -33,16 +35,21 @@ namespace spldlt {
 
          ASSERT_TRUE(m >= k);
 
+         ////////////////////////////////////////
+         // Init test problem
          // Generate test matrix
          int lda = spral::ssids::cpu::align_lda<T>(m);
          T* a = nullptr;
          T* b = nullptr;
 
+         ////////////////////////////////////////
+         // Setup front
+
          // Setup pool allocator
          typedef spral::ssids::cpu::BuddyAllocator<T, std::allocator<T>> PoolAllocator;
          PoolAllocator pool_alloc((m-k)*(m-k));
 
-         // Setup frontal matrix
+         // Setup symbolic front
          SymbolicFront sfront;
          sfront.nrow = m;
          sfront.ncol = k;
@@ -87,6 +94,9 @@ namespace spldlt {
             else         gen_mat(m, m, front.lcol, lda);
          }
 
+         // Allocate contribution blocks
+         front.alloc_contrib_blocks_unsym();
+
          ////////////////////////////////////////
          // Launch runtime system
 #if defined(SPLDLT_USE_STARPU)
@@ -109,7 +119,7 @@ namespace spldlt {
          // Perform factorization
 
          printf("[factor_node_unsym_test] Factor..\n");
-         auto start = std::chrono::high_resolution_clock::now();
+         auto start = std::chrono::high_resolution_clock::now();         
          
 
          // Wait for completion
@@ -122,12 +132,22 @@ namespace spldlt {
             (end-start).count();
 
          ////////////////////////////////////////
+         // Shutdown runtime system
+#if defined(SPLDLT_USE_STARPU)
+         starpu_shutdown();
+#endif
+
+         ////////////////////////////////////////
          // Print results
          printf("factor time (s) = %e\n", 1e-9*ttotal);
 
          ////////////////////////////////////////
          // Cleanup memory
 
+         // Cleanup contribution blocks
+         front.free_contrib_blocks_unsym();
+
+         // Cleanup factors
          factor_alloc.deallocate(front.lcol, lenL);
          factor_alloc.deallocate(front.ucol, lenU);
 
