@@ -130,7 +130,7 @@ namespace spldlt {
             PoolAllocator const& pool_alloc, int blksz)
          : symb(symb), contrib(nullptr), pool_alloc_(pool_alloc), blksz(blksz),
            backup(nullptr), cdata(nullptr), ndelay_in(0), ndelay_out(0),
-           lcol(nullptr), nelim1(0), nelim(0)
+           lcol(nullptr), ucol(nullptr), nelim1(0), nelim(0)
       {}
       
       /**
@@ -432,6 +432,7 @@ namespace spldlt {
       int nelim1; // Number of columns succesfully eliminated during first pass
       int nelim; // Number of columns succesfully eliminated
       T *lcol; // Pointer to start of factor data
+      T *ucol; // Factor U
       int *perm; // Pointer to permutation
       T *contrib; // Pointer to contribution block
       int blksz; // Tileing size

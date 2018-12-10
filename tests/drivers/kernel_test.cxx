@@ -10,8 +10,10 @@
 #include <cstdio>
 
 // SSIDS
-#include "tests/ssids/kernels/framework.hxx"
 #include "ssids/cpu/kernels/wrappers.hxx"
+// SSIDS test
+#include "tests/ssids/kernels/framework.hxx"
+#include "tests/ssids/kernels/AlignedAllocator.hxx"
 
 using namespace spldlt;
 using namespace spldlt::tests;
@@ -86,7 +88,11 @@ int main(int argc, char** argv) {
    // lu_tpp_test<double>(0.01, 8, 8, true, true); // Diagonally dominant
 
    ////////////////////////////////////////////////////////////
-   // Unsym front
+   // Unsym front (restricted pivoting)
+
+   struct spral::ssids::cpu::cpu_factor_options options;
+   options.cpu_block_size = 8;
+   factor_node_unsym_test<double, spral::test::AlignedAllocator<double>>(options, 8, 8, 1, 0, true, true); // Diagonally dominant
 
    // nerr += run_factor_node_indef_tests();
    // nerr += run_form_contrib_tests();
