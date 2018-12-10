@@ -13,7 +13,7 @@ namespace spldlt {
          struct cpu_factor_options& options,
          NumericFront<T, PoolAlloc> &node) {
 
-      // Extract info about front
+      // Extract front info
       int m = node.get_nrow();
       int n = node.get_ncol();
       int nr = node.get_nr(); // number of block rows
@@ -21,6 +21,7 @@ namespace spldlt {
       
       for(int j = 0; j < nc; ++j) {
       
+         
       }
 
    }
