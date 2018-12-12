@@ -125,9 +125,9 @@ namespace spldlt { namespace tests {
       // Setup backup
       typedef spldlt::ldlt_app_internal::CopyBackup<T, PoolAllocator> Backup;
       // CopyBackup<T, PoolAllocator> backup(m, n, blksz);
-      front.alloc_backup();
+      front.alloc_backup(); // TODO only if piv strategy is APTP
       // Setup cdata
-      front.alloc_cdata();
+      front.alloc_cdata(); // TODO only if piv strategy is APTP
       // Allocate block structure
       front.alloc_blocks();
       // Allocate contribution blocks

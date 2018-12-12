@@ -3,7 +3,8 @@
 // SpLDLT
 #include "SymbolicFront.hxx"
 #include "NumericFront.hxx"
-#include "kernels/factor_unsym.hxx"
+#include "factor_unsym.hxx"
+#include "kernels/lu_nopiv.hxx"
 
 // SSIDS
 #include "ssids/cpu/cpu_iface.hxx"
@@ -46,8 +47,9 @@ namespace spldlt {
          // Setup front
 
          // Setup pool allocator
-         typedef spral::ssids::cpu::BuddyAllocator<T, std::allocator<T>> PoolAllocator;
-         PoolAllocator pool_alloc((m-k)*(m-k));
+         typedef spldlt::BuddyAllocator<T,std::allocator<T>> PoolAllocator;
+         // typedef spral::ssids::cpu::BuddyAllocator<T, std::allocator<T>> PoolAllocator;
+         PoolAllocator pool_alloc(m*m);
 
          // Setup symbolic front
          SymbolicFront sfront;
@@ -57,7 +59,7 @@ namespace spldlt {
          front.ndelay_in = 0; // No incoming delayed columns      
          front.ndelay_out = 0;
 
-         // Allocate facotrs
+         // Allocate factors
          FactorAllocator factor_alloc;
          size_t lenL = lda*k; // Size of L
          // Allocate L factor (size m x k). Contains U factors in the upper triangular part 
@@ -94,9 +96,21 @@ namespace spldlt {
             else         gen_mat(m, m, front.lcol, lda);
          }
 
+         // Alloc blocks in the factors
+         front.alloc_blocks_unsym();
+         
          // Allocate contribution blocks
          front.alloc_contrib_blocks_unsym();
 
+         // Setup permutation vector
+         // Row permutation
+         front.perm = new int[m];
+         for(int i=0; i<m; i++) front.perm[i] = i;
+         // Column permutation
+         front.cperm = new int[m];
+         for(int i=0; i<m; i++) front.cperm[i] = i;
+
+         
          ////////////////////////////////////////
          // Launch runtime system
 #if defined(SPLDLT_USE_STARPU)
@@ -110,7 +124,7 @@ namespace spldlt {
 #endif         
 
          ////////////////////////////////////////
-         // Setup factor
+         // Register data in runtime system
 #if defined(SPLDLT_USE_STARPU)
          // TODO
 #endif
@@ -120,8 +134,10 @@ namespace spldlt {
 
          printf("[factor_node_unsym_test] Factor..\n");
          auto start = std::chrono::high_resolution_clock::now();         
-         
 
+         // Front factorization using restricted pivoting
+         factor_front_unsym_rp(front);
+         
          // Wait for completion
 #if defined(SPLDLT_USE_STARPU)
          starpu_task_wait_for_all();      
@@ -138,14 +154,81 @@ namespace spldlt {
 #endif
 
          ////////////////////////////////////////
+         // Check solution results
+
+         if (check) {
+
+            int *rperm = front.perm;
+            int *cperm = front.cperm;
+            
+            // Print permutation matrix         
+            printf("perm = \n");
+            for (int i=0; i<m; ++i)
+               printf(" %d ", rperm[i]);
+            printf("\n");
+
+            // Alloc lu array for storing factors
+            T *lu = factor_alloc.allocate(lda*m);
+            // Initialize array with zeros
+            for (int j=0; j<m; ++j)
+               for (int i=0; i<m; ++i)
+                  lu[i+j*lda] = 0.0;
+
+            // Copy factors from lcol into lu array
+            // Copy only factors (colmuns 1 to k)
+            memcpy(lu, front.lcol, lda*k*sizeof(T)); // Copy lcol to lu
+
+            if (m > k) {
+               
+               // TODO
+            }
+
+            int nrhs = 1;
+            int ldsoln = m;
+            T *soln = new T[nrhs*ldsoln];
+
+            
+            // Setup permuted rhs 
+            T *pb = new T[m];
+            for (int i=0; i<m; ++i)
+               for (int r=0; r<nrhs; ++r)
+                  pb[r*ldsoln+i] = b[r*ldsoln+rperm[i]];
+
+            // Copy rhs into solution vector
+            for(int r=0; r<nrhs; ++r)
+               memcpy(&soln[r*ldsoln], pb, m*sizeof(T));
+
+            // Perform solve
+            // Fwd substitutuion
+            lu_nopiv_fwd(m, k, lu, lda, nrhs, soln, ldsoln);
+            // Bwd substitutuion
+            lu_nopiv_bwd(m, k, lu, lda, nrhs, soln, ldsoln);
+
+            // Permute x
+            T *psoln = new T[m];
+            for (int i=0; i<m; ++i)
+               for (int r=0; r<nrhs; ++r)
+                  psoln[r*ldsoln+i] = soln[r*ldsoln+cperm[i]];
+
+            // Calculate bwd error
+            double bwderr = unsym_backward_error(
+                  m, k, a, lda, b, nrhs, psoln, ldsoln);
+
+            printf("bwderr = %le\n", bwderr);
+
+         }
+         
+         ////////////////////////////////////////
          // Print results
          printf("factor time (s) = %e\n", 1e-9*ttotal);
 
          ////////////////////////////////////////
          // Cleanup memory
 
-         // Cleanup contribution blocks
+         // Cleanup data structures
          front.free_contrib_blocks_unsym();
+         
+         front.free_blocks_unsym();
 
          // Cleanup factors
          factor_alloc.deallocate(front.lcol, lenL);

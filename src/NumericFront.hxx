@@ -6,6 +6,7 @@
 #pragma once
 
 // SpLDLT
+#include "Block.hxx"
 #include "SymbolicFront.hxx"
 #include "kernels/ldlt_app.hxx"
 
@@ -17,8 +18,10 @@
 namespace spldlt {
 
    // static const int INNER_BLOCK_SIZE = 32;
-   
-   template<typename T, typename PoolAllocator>
+
+   // FIXME: Allocator is not used as both factors and contribution
+   // blocks are allocated beforehand
+   template<typename T, typename PoolAllocator> 
    class Tile {
       typedef std::allocator_traits<PoolAllocator> PATraits;
    public:
@@ -130,7 +133,7 @@ namespace spldlt {
             PoolAllocator const& pool_alloc, int blksz)
          : symb(symb), contrib(nullptr), pool_alloc_(pool_alloc), blksz(blksz),
            backup(nullptr), cdata(nullptr), ndelay_in(0), ndelay_out(0),
-           lcol(nullptr), ucol(nullptr), nelim1(0), nelim(0)
+           lcol(nullptr), ucol(nullptr), nelim1(0), nelim(0), blocks_unsym_(nullptr)
       {}
       
       /**
@@ -141,6 +144,7 @@ namespace spldlt {
          free_contrib_blocks();
          free_backup();
          free_cdata();
+         free_blocks_unsym();
       }
 
       /// \brief Allocate block structures and memory space for
@@ -290,7 +294,7 @@ namespace spldlt {
                int col_m = m - first_col;
                int col_ld = col_m;
                // Column width
-               int blk_n = std::min((jj+1)*blksz, m) - first_col;
+               int blk_n = std::min((jj+1)*blksz, m) - first_col; // TODO check & test blk_n 
                size_t col_dimn = col_ld*blk_n;
 
                // Diagonal block holding the data for the block-column
@@ -321,6 +325,8 @@ namespace spldlt {
       /// @brief Cleanup memory associated with contribution blocks in
       /// non symmetric case
       void free_contrib_blocks_unsym() {
+
+         printf("[free_contrib_blocks_unsym]\n");
 
          int m = get_nrow();
          int n = get_ncol();           
@@ -449,6 +455,86 @@ namespace spldlt {
             }
          }
       }
+
+      void alloc_blocks_unsym() {
+         
+         typedef typename std::allocator_traits<PoolAllocator>::template rebind_traits<BlockUnsym<T>> BlkAllocTraits;
+         typename BlkAllocTraits::allocator_type blkAlloc(pool_alloc_);
+         
+         int const m = get_nrow(); // Number of fully summed rows and columns
+         int const n = get_ncol(); // Number of fully summed rows and columns
+         int const mblk = get_nr();
+         // FIXME: overestimation but it might be better to use the
+         // same array for fully-summed and contrib blocks
+         int const num_blocks = mblk*mblk;
+         blocks_unsym_ = BlkAllocTraits::allocate(blkAlloc, num_blocks);
+         int const ldl = get_ldl();
+         int const ldu = get_ldu();
+
+         printf("[alloc_blocks_unsym] blksz = %d\n", blksz);
+
+         for(int jblk=0; jblk<mblk; jblk++) {
+
+            int first_col = jblk*blksz; // Global index of first column in block
+            int last_col = std::min((jblk+1)*blksz, m)-1;
+            int blk_n = last_col-first_col+1; 
+            assert(blk_n > 0);
+            for(int iblk=0; iblk<mblk; iblk++) {
+
+               int first_row = iblk*blksz; // First col in current block
+               int last_row = std::min((iblk+1)*blksz, m)-1; // First col in current block
+               int blk_m = last_row-first_row+1;
+               assert(blk_m > 0);
+               
+               // Loop if we are in the contributution block
+               if ((first_col >= n) && (first_row >= n)) continue;
+
+               if (last_col < n) {
+                  // Block is in lcol
+                  BlkAllocTraits::construct(
+                        blkAlloc, &blocks_unsym_[iblk+jblk*mblk],
+                        iblk, jblk, blk_m, blk_n,
+                        &lcol[first_col*ldl+first_row], ldl);
+               }
+               else if (first_col >= n) {
+                  // Block is in ucol
+                  BlkAllocTraits::construct(
+                        blkAlloc, &blocks_unsym_[iblk+jblk*mblk],
+                        iblk, jblk, blk_m, blk_n,
+                        &ucol[(first_col-n)*ldl+first_row], ldu);
+
+               }
+               else {
+                  // Block is split between lcol and ucol
+                  // first_col < n and last_col >= n
+                  int mb = std::min((iblk+1)*blksz, n) - first_row;
+                  int nb = last_col-n+1;
+                  BlkAllocTraits::construct(
+                        blkAlloc, &blocks_unsym_[iblk+jblk*mblk],
+                        iblk, jblk, blk_m, blk_n,
+                        &lcol[first_col*ldl+first_row], ldl,
+                        mb, nb, &lcol[first_row], ldu);
+               }
+               
+            }
+         }
+
+      }
+
+      /// @brief Release meemory associated with block data structures
+      void free_blocks_unsym() {
+
+         if (!blocks_unsym_) return;
+         
+         typedef typename std::allocator_traits<PoolAllocator>::template rebind_traits<BlockUnsym<T>> BlkAllocTraits;
+         typename BlkAllocTraits::allocator_type blkAlloc(pool_alloc_);
+
+         int const mblk = get_nr();
+         int const num_blocks = mblk*mblk;
+         BlkAllocTraits::deallocate(blkAlloc, blocks_unsym_, num_blocks);
+         blocks_unsym_ = nullptr;
+         
+      }
       
       /// @brief Return the number of rows in the node
       inline int get_nrow() const {
@@ -473,6 +559,11 @@ namespace spldlt {
       /** \brief Return leading dimension of node's lcol member. */
       inline size_t get_ldl() const {
          return spral::ssids::cpu::align_lda<T>(symb.nrow + ndelay_in);
+      }
+
+      /** \brief Return leading dimension of node's ucol member. */
+      inline size_t get_ldu() const {
+         return spral::ssids::cpu::align_lda<T>(symb.ncol + ndelay_in);
       }
 
       /// @Brief Return block (i,j) in the contribution block
@@ -502,6 +593,17 @@ namespace spldlt {
       //    return blocks[i+j*nr];
       // }
 
+      inline BlockUnsym<T>& get_block_unsym(int i, int j) {
+
+         int nr = get_nr();
+         
+         assert(i < nr);
+         assert(j < get_nc());
+
+         return blocks_unsym_[i+nr*j];
+         
+      }
+      
 #if defined(SPLDLT_USE_STARPU)
       /// @brief Return StarPU symbolic handle
       starpu_data_handle_t get_hdl() const {
@@ -522,25 +624,30 @@ namespace spldlt {
       NumericFront<T, PoolAllocator>* first_child; // Pointer to our first child
       NumericFront<T, PoolAllocator>* next_child; // Pointer to parent's next child
 
+      int blksz; // Tileing size
+
       /* Data that changes during factorize */
       int ndelay_in; // Number of delays arising from children
       int ndelay_out; // Number of delays arising to push into parent
       int nelim1; // Number of columns succesfully eliminated during first pass
       int nelim; // Number of columns succesfully eliminated
+      // Factors
       T *lcol; // Pointer to start of factor data
       T *ucol; // Factor U
+      // Permutations
       int *perm; // Pointer to permutation
+      int *cperm; // Pointer to permutation (column)
       T *contrib; // Pointer to contribution block
-      int blksz; // Tileing size
       std::vector<spldlt::Tile<T, PoolAllocator>> contrib_blocks; // Tile structures containing contrib
       spldlt::ldlt_app_internal::CopyBackup<T, PoolAllocator> *backup; // Stores backups of matrix blocks
       // Structures for indef factor
       spldlt::ldlt_app_internal::ColumnData<T, IntAlloc> *cdata;
-      std::vector<BlockSpec> blocks;
+      std::vector<BlockSpec> blocks; // FIXME use array instead, using vector isn't really necessary here
 #if defined(SPLDLT_USE_STARPU)
       starpu_data_handle_t contrib_hdl; // Symbolic handle for contribution blocks
 #endif
    private:
+      BlockUnsym<T> *blocks_unsym_; // Block array (unsym case) 
       PoolAllocator pool_alloc_; // Our own version of pool allocator for freeing
       // contrib
    };

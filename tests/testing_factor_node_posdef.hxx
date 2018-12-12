@@ -59,6 +59,7 @@ namespace spldlt { namespace tests {
          options.cpu_block_size = blksz;
 
          // Setup pool allocator
+         // typedef spldlt::BuddyAllocator<T,std::allocator<T>> PoolAllocator;
          typedef spral::ssids::cpu::BuddyAllocator<T, std::allocator<T>> PoolAllocator;
          PoolAllocator pool_alloc(lda*n);
          
