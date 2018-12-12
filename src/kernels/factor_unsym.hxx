@@ -39,7 +39,8 @@ namespace spldlt {
    /// @brief Apply row permutation to block a
    /// @param work Workspace
    template<typename T>
-   void apply_rperm_block(int m, int n, int *rperm, T* a, int lda, T *work, int ldw) {
+   void apply_rperm_block(
+         int m, int n, int *rperm, T* a, int lda, T *work, int ldw) {
       
       // Copy to work permuted matrix a
       for (int c=0; c<n; ++c) {
@@ -76,11 +77,14 @@ namespace spldlt {
 
    /// @brief Apply row permutation perm and apply L factor
    template<typename T>
-   void applyL_block(int m, int n, T *l_kk, int ld_l_kk, int *perm, T *a_kj, int ld_a_kj) {
+   void applyL_block(
+         int m, int n, T *l_kk, int ld_l_kk, int *perm, T *a_kj, int ld_a_kj,
+         T *work, int ldw) {
       
       // Row permuation
-      spldlt::host_laswp(m, a_kj, ld_a_kj, 1, m, perm, 1);
-
+      apply_rperm_block(
+            m, n, perm, a_kj, ld_a_kj, work, ldw);
+      
       // Apply L
       applyL_block(m, n, l_kk, ld_l_kk, a_kj, ld_a_kj);
    }

@@ -124,6 +124,23 @@ namespace spldlt {
 #endif         
 
          ////////////////////////////////////////
+         // Create workspaces
+         int nworkers = 1;
+#if defined(SPLDLT_USE_STARPU)
+         nworkers = starpu_worker_get_count();
+         // #else
+         //       nworkers = omp_get_num_threads();
+#endif
+         std::vector<ThreadStats> worker_stats(nworkers);
+         std::vector<spral::ssids::cpu::Workspace> workspaces;
+         const int PAGE_SIZE = 8*1024*1024; // 8 MB
+
+         workspaces.reserve(nworkers);
+         for(int i = 0; i < nworkers; ++i)
+            workspaces.emplace_back(PAGE_SIZE);
+         printf("[factor_node_indef_test] nworkers =  %d\n", nworkers);
+
+         ////////////////////////////////////////
          // Register data in runtime system
 #if defined(SPLDLT_USE_STARPU)
          // TODO
@@ -136,7 +153,7 @@ namespace spldlt {
          auto start = std::chrono::high_resolution_clock::now();         
 
          // Front factorization using restricted pivoting
-         factor_front_unsym_rp(front);
+         factor_front_unsym_rp(front, workspaces);
          
          // Wait for completion
 #if defined(SPLDLT_USE_STARPU)
