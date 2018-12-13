@@ -13,10 +13,12 @@ namespace spldlt {
          int m, int n, int *perm, T *a, int lda, T *b, int ldb) {
 
       // printf("[factor_block_lu_pp] lda = %d\n", lda);
-      
+
+      // int *tmp = new int[n];
       // Factor triangular part
       int info = host_getrf(n, n, a, lda, perm);
       // 0-index perm
+      // for (int i=0; i < n; ++i) perm[i] = perm[tmp[i]-1]; 
       for (int i=0; i < n; ++i) perm[i] = perm[i]-1; 
       
       if (m > n) {

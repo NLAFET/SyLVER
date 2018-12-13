@@ -32,14 +32,15 @@ namespace spldlt {
       for(int k = 0; k < nc; ++k) {
 
          BlockUnsym<T>& dblk = node.get_block_unsym(k, k);
+         int *perm = &node.perm[k*blksz];
          
-         factor_block_lu_pp_task(dblk, &node.perm[k*blksz]);
+         factor_block_lu_pp_task(dblk, perm);
 
          // Apply permutation
          for (int j = 0; j < k; ++j) {
             BlockUnsym<T>& rblk = node.get_block_unsym(k, j);
             // Apply row permutation on left-diagonal blocks 
-            apply_rperm_block_task(&node.perm[k*blksz], rblk, workspaces);
+            apply_rperm_block_task(perm, rblk, workspaces);
          }
 
          // Apply permutation and compute U factors
@@ -47,7 +48,7 @@ namespace spldlt {
 
             BlockUnsym<T>& ublk = node.get_block_unsym(k, j);
 
-            applyL_block_task(&node.perm[k*blksz], dblk, ublk, workspaces);
+            applyL_block_task(perm, dblk, ublk, workspaces);
          }
 
          // Compute L factors
