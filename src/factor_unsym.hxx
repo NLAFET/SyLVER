@@ -35,20 +35,66 @@ namespace spldlt {
          
          factor_block_lu_pp_task(dblk, &node.perm[k*blksz]);
 
+         // Apply permutation
          for (int j = 0; j < k; ++j) {
             BlockUnsym<T>& rblk = node.get_block_unsym(k, j);
             // Apply row permutation on left-diagonal blocks 
             apply_rperm_block_task(&node.perm[k*blksz], rblk, workspaces);
          }
 
+         // Apply permutation and compute U factors
          for (int j = k+1; j < nc; ++j) {
 
             BlockUnsym<T>& ublk = node.get_block_unsym(k, j);
 
-            applyL_block_task(&node.perm[k*blksz], )
+            applyL_block_task(&node.perm[k*blksz], dblk, ublk, workspaces);
+         }
+
+         // Compute L factors
+         for (int i =  k+1; i < nr; ++i) {
+
+            BlockUnsym<T>& lblk = node.get_block_unsym(i, k);
+            
+            applyU_block_task(dblk, lblk);            
+         }
+
+         int en = (n-1)/blksz; // Last block-row/column in factors
+            
+         // Udpdate trailing submatrix
+         for (int j = k+1; j < nc; ++j) {
+
+            BlockUnsym<T>& ublk = node.get_block_unsym(k, j);
+
+            for (int i =  k+1; i < nr; ++i) {
+               // Loop if we are in the cb
+               if ((i > en) && (j > en)) continue;
+
+               BlockUnsym<T>& lblk = node.get_block_unsym(i, k);
+               BlockUnsym<T>& blk = node.get_block_unsym(i, j);
+               
+               update_block_lu_task(lblk, ublk, blk);
+            }
+         }
+
+         // Update contribution block
+         int rsa = n/blksz; // Last block-row/column in factors
+         
+         for (int j = rsa; j < nc; ++j) {
+
+            BlockUnsym<T>& ublk = node.get_block_unsym(k, j);
+
+            for (int i =  rsa; i < nr; ++i) {
+
+               BlockUnsym<T>& lblk = node.get_block_unsym(i, k);
+               Tile<T, PoolAlloc>& cblk = node.get_contrib_block(i, j);
+                  
+               update_cb_block_lu_task(lblk, ublk, cblk);
+               
+            }
          }
       }
 
+      // Note: we do not check for stability       
       node.nelim = n; // We eliminated all fully-summed rows/columns
       node.ndelay_out = 0; // No delays
 
