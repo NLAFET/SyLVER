@@ -13,22 +13,47 @@ namespace spldlt {
    class BlockUnsym {
    public:
       BlockUnsym()
-         : m(0), n(0), a(nullptr), lda(0), b(nullptr), ldb(0), mb_(0), nb_(0)
+         : m(0), n(0), a(nullptr), lda(0), b(nullptr), ldb(0), mb_(0), nb_(0),
+           lrperm_(nullptr)
       {}
 
       BlockUnsym(int i, int j, int m, int n, T* a, int lda)
-         : i(i), j(j), m(m), n(n), a(a), lda(lda), mb_(0), nb_(0)
+         : i(i), j(j), m(m), n(n), a(a), lda(lda), mb_(0), nb_(0),
+           lrperm_(nullptr)
       {}
 
       BlockUnsym(int i, int j, int m, int n, T* a, int lda, int mb, int nb,
                  T* b, int ldb)
          : i(i), j(j), m(m), n(n), a(a), lda(lda), mb_(mb), nb_(nb), b(b),
-           ldb(ldb)
+           ldb(ldb), lrperm_(nullptr)
       {
          assert(mb_ <= m);
          assert(nb_ < n);
       }
 
+      ~BlockUnsym() {
+         release_lrperm();
+      }
+      
+      void alloc_lrperm() {
+         // TODO use PoolAlloc
+         if (!lrperm_ && (m > 0))
+            lrperm_ = new int[m];
+      }
+
+      void release_lrperm() {
+         if(lrperm_)
+            delete[] lrperm_;
+      }
+
+      /// @brief Get number of fully-summed rows and columns in a
+      /// block lying on the digonal
+      inline int get_nfs() {
+         if (i != j) return -1;
+         return get_na();
+      }
+      
+      inline int *get_lrperm() { return lrperm_; }
       inline int get_mb() { return mb_;}
       inline int get_nb() { return nb_;}
 
@@ -56,6 +81,7 @@ namespace spldlt {
    private:
       int mb_;
       int nb_;
+      int *lrperm_; // Local row permutation
       
       // case 1) Block is in a single memory location (lcol or ucol)
       // e.g.
@@ -65,7 +91,6 @@ namespace spldlt {
       // |   a   | 
       // |       |
       // +-------+
-      //
 
       // case 2) Block split between 2 memory locations(lcol and ucol)
       // e.g.
@@ -75,15 +100,19 @@ namespace spldlt {
       // | a | b | 
       // |   |   |
       // +---+---+
-      //
+
       // or
-      // 
+
       // +---+---+  ---   ---
       // |   | b |   | mb  |
       // | a +---+  ---    | m
       // |   |             | 
       // +---+            ---
-      
+      //
+      // |---|---|
+      //   na  nb
+      // |-------|
+      //     n
    };
    
 } // namespaces spldlt

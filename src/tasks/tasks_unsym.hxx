@@ -13,17 +13,35 @@ namespace spldlt {
    /// pivoting
    template <typename T>
    void factor_block_lu_pp_task(BlockUnsym<T>& dblk, int *perm) {
+
+      dblk.alloc_lrperm();
+      int *lrperm = dblk.get_lrperm(); // Local row permutation
+      // Number of fully-summed rows/columns in dblk
+      int nfs = dblk.get_nfs();
       
+      // Note: lrperm is 0-indexed in factor_block_lu_pp 
       factor_block_lu_pp(
-            dblk.m, dblk.n, perm, dblk.a, dblk.lda, dblk.b, dblk.ldb);
+            dblk.m, nfs, lrperm, dblk.a, dblk.lda, dblk.b, dblk.ldb);
+
+      // Update perm using local permutation lrperm
+      int *temp = new int[nfs];
+      for (int i = 0; i < nfs; ++i)
+         temp[i] = perm[lrperm[i]];
+      for (int i = 0; i < nfs; ++i)
+         perm[i] = temp[i]; 
+
+      delete[] temp;
    }
 
    /// @brief Apply row permutation perm on block rblk
    template <typename T>
    void apply_rperm_block_task(
-         int *perm, BlockUnsym<T>& rblk,
+         BlockUnsym<T>& dblk, BlockUnsym<T>& rblk,
          std::vector<spral::ssids::cpu::Workspace>& workspaces) {
 
+      // Get local row permutation from dblk
+      int *lrperm = dblk.get_lrperm();
+      
       // Block dimensions
       int m = rblk.m;
       int n = rblk.n;
@@ -31,16 +49,19 @@ namespace spldlt {
       spral::ssids::cpu::Workspace& workspace = workspaces[0]; 
       int ldw = spral::ssids::cpu::align_lda<T>(m);
       T* work = workspace.get_ptr<T>(ldw*n);
-      apply_rperm_block(m, n, perm, rblk.a, rblk.lda, work, ldw);
+      apply_rperm_block(m, n, lrperm, rblk.a, rblk.lda, work, ldw);
    }
 
    /// @brief Compute U factor in lblk resulting from the
    /// factorization of block dblk
    template <typename T>
    void applyL_block_task(
-         int *perm, BlockUnsym<T>& dblk, BlockUnsym<T>& ublk,
+         BlockUnsym<T>& dblk, BlockUnsym<T>& ublk,
          std::vector<spral::ssids::cpu::Workspace>& workspaces) {
 
+      // Get local row permutation from dblk
+      int *lrperm = dblk.get_lrperm();
+      
       // ublk block might be split between lcol and ucol
       
       // Block dimensions
@@ -53,12 +74,12 @@ namespace spldlt {
       int nb = ublk.get_nb();
 
       applyL_block(
-         m, na, dblk.a, dblk.lda, perm, ublk.a, ublk.lda, work, ldw);
+         m, na, dblk.a, dblk.lda, lrperm, ublk.a, ublk.lda, work, ldw);
 
       if (nb > 0) {
          // Apply L in parts stored un ucol
          applyL_block(
-               m, nb, dblk.a, dblk.lda, perm, ublk.b, ublk.ldb, work, ldw);
+               m, nb, dblk.a, dblk.lda, lrperm, ublk.b, ublk.ldb, work, ldw);
       }
 
    }
