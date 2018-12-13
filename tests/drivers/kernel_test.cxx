@@ -89,8 +89,9 @@ int main(int argc, char** argv) {
 
    ////////////////////////////////////////////////////////////
    // Unsym front (restricted pivoting)
-
    struct spral::ssids::cpu::cpu_factor_options options;
+   options.pivot_method = PivotMethod::app_aggressive;
+
    options.cpu_block_size = 4;
    // factor_node_unsym_test<double, spral::test::AlignedAllocator<double>>(options, 4, 4, 1, 0, true, true); // Diagonally dominant
    // factor_node_unsym_test<double, spral::test::AlignedAllocator<double>>(options, 4, 4, 1, 0, false, true); // Diagonally dominant

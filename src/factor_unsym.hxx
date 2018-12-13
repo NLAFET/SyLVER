@@ -10,6 +10,14 @@
 
 namespace spldlt {
 
+   template <typename T, typename PoolAlloc>
+   void factor_front_unsym_app(
+         NumericFront<T, PoolAlloc> &node) {
+
+      
+      
+   }
+   
    /// @brief Task-based front factorization routine using Restricted
    /// Pivoting (RP)
    /// @Note No delays, potentially unstable
@@ -30,7 +38,6 @@ namespace spldlt {
       printf("[factor_front_unsym_rp] n = %d\n", n);
       
       for(int k = 0; k < nc; ++k) {
-
          BlockUnsym<T>& dblk = node.get_block_unsym(k, k);
          int *perm = &node.perm[k*blksz];
          
@@ -45,7 +52,6 @@ namespace spldlt {
 
          // Apply permutation and compute U factors
          for (int j = k+1; j < nc; ++j) {
-
             BlockUnsym<T>& ublk = node.get_block_unsym(k, j);
 
             applyL_block_task(dblk, ublk, workspaces);
@@ -53,7 +59,6 @@ namespace spldlt {
 
          // Compute L factors
          for (int i =  k+1; i < nr; ++i) {
-
             BlockUnsym<T>& lblk = node.get_block_unsym(i, k);
             
             applyU_block_task(dblk, lblk);            

@@ -153,8 +153,17 @@ namespace spldlt {
          printf("[factor_node_unsym_test] Factor..\n");
          auto start = std::chrono::high_resolution_clock::now();         
 
-         // Front factorization using restricted pivoting
-         factor_front_unsym_rp(front, workspaces);
+         switch (options.pivot_method) {
+         case PivotMethod::app_aggressive:
+            // Front factorization using restricted pivoting
+            factor_front_unsym_rp(front, workspaces);
+            break;
+         case PivotMethod::app_block:
+            factor_front_unsym_app(front);
+            break;
+         default:
+            printf("[factor_node_unsym_test] Pivot method not implemented\n");
+         }
          
          // Wait for completion
 #if defined(SPLDLT_USE_STARPU)

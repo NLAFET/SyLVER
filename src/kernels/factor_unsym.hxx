@@ -4,6 +4,8 @@
 #include "kernels/wrappers.hxx"
 
 namespace spldlt {
+   
+   ////////////////////////////////////////////////////////////
 
    /// @brief Perform LU factorization of a block using partial pivoting
    /// @param m Block height/width
