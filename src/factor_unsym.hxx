@@ -23,7 +23,7 @@ namespace spldlt {
       int n = node.get_ncol(); // Number of fully-summed rows/columns 
       int nr = node.get_nr(); // number of block rows
       int nc = node.get_nc(); // number of block columns
-
+      size_t contrib_dimn = m-n;
       int blksz = node.blksz;
       
       printf("[factor_front_unsym_rp] m = %d\n", m);
@@ -76,21 +76,23 @@ namespace spldlt {
                update_block_lu_task(lblk, ublk, blk);
             }
          }
-
-         // Update contribution block
-         int rsa = n/blksz; // Last block-row/column in factors
          
-         for (int j = rsa; j < nc; ++j) {
+         if (contrib_dimn>0) {
+            // Update contribution block
+            int rsa = n/blksz; // Last block-row/column in factors
+         
+            for (int j = rsa; j < nc; ++j) {
 
-            BlockUnsym<T>& ublk = node.get_block_unsym(k, j);
+               BlockUnsym<T>& ublk = node.get_block_unsym(k, j);
 
-            for (int i =  rsa; i < nr; ++i) {
+               for (int i = rsa; i < nr; ++i) {
 
-               BlockUnsym<T>& lblk = node.get_block_unsym(i, k);
-               Tile<T, PoolAlloc>& cblk = node.get_contrib_block(i, j);
+                  BlockUnsym<T>& lblk = node.get_block_unsym(i, k);
+                  Tile<T, PoolAlloc>& cblk = node.get_contrib_block(i, j);
                   
-               update_cb_block_lu_task(lblk, ublk, cblk);
+                  update_cb_block_lu_task(lblk, ublk, cblk);
                
+               }
             }
          }
       }

@@ -24,10 +24,10 @@ namespace spldlt {
       factor_block_lu_pp(
             dblk.m, nfs, lrperm, dblk.a, dblk.lda, dblk.b, dblk.ldb);
 
-      printf("nfs = %d\n", nfs);
-      printf("lrperm\n");          
-      for (int i=0; i < nfs; ++i) printf(" %d ", lrperm[i]);
-      printf("\n");            
+      // printf("nfs = %d\n", nfs);
+      // printf("lrperm\n");          
+      // for (int i=0; i < nfs; ++i) printf(" %d ", lrperm[i]);
+      // printf("\n");            
 
       // Update perm using local permutation lrperm
       int *temp = new int[nfs];
