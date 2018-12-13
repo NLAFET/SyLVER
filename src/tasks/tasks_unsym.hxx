@@ -14,7 +14,8 @@ namespace spldlt {
    template <typename T>
    void factor_block_lu_pp_task(BlockUnsym<T>& dblk, int *perm) {
 
-      dblk.alloc_lrperm();
+      // dblk.alloc_lrperm();
+      dblk.alloc_init_lrperm();
       int *lrperm = dblk.get_lrperm(); // Local row permutation
       // Number of fully-summed rows/columns in dblk
       int nfs = dblk.get_nfs();
@@ -22,6 +23,11 @@ namespace spldlt {
       // Note: lrperm is 0-indexed in factor_block_lu_pp 
       factor_block_lu_pp(
             dblk.m, nfs, lrperm, dblk.a, dblk.lda, dblk.b, dblk.ldb);
+
+      printf("nfs = %d\n", nfs);
+      printf("lrperm\n");          
+      for (int i=0; i < nfs; ++i) printf(" %d ", lrperm[i]);
+      printf("\n");            
 
       // Update perm using local permutation lrperm
       int *temp = new int[nfs];

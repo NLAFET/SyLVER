@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <iomanip>
 #include <iostream>
+#include <vector>
 
 // SSIDS
 #include "ssids/cpu/kernels/wrappers.hxx"
@@ -538,15 +539,15 @@ namespace spldlt {
                a[j*lda+i] = 1.0 - (2.0*rand()) / RAND_MAX ;
       }
 
-      // Generates a random dense positive definte matrix. Off
-      // diagonal entries are Unif[-1,1]. Each diagonal entry a_ii =
-      // Unif[0.1,1.1] + sum_{i!=j} |a_ij|.
+      // Generates a random general matrix. Off diagonal entries are
+      // Unif[-1,1]. Each diagonal entry a_ii = Unif[0.1,1.1] +
+      // sum_{i!=j} |a_ij|.
       /// @param m matrix order
       template<typename T>
       void gen_unsym_diagdom(int m, T* a, int lda) {
          // Generate general unsym matrix
          gen_mat(m, m, a, lda);
-         // Make it diagonally dominant*
+         // Make it diagonally dominant
          for(int i=0; i<m; ++i) a[i*lda+i] = fabs(a[i*lda+i]) + 0.1;
          for(int j=0; j<m; ++j) {
             for(int i=0; i<m; ++i) {
@@ -556,6 +557,27 @@ namespace spldlt {
          }
       }
 
+      template<typename T>
+      void gen_unsym_diagdomblock(int m, T* a, int lda, int blksz) {
+
+         // Generate general unsym matrix
+         gen_mat(m, m, a, lda);
+
+         // Make it diagonally dominant by block
+         std::vector<int> perm;
+         for (int i=0; i<blksz; ++i) perm.push_back(i);
+         for (int j=0; j<m; j+=blksz) {
+            random_shuffle(perm.begin(), perm.end());
+            // for (int i=0; i<blksz; ++i)
+            for (int k=0; k<blksz && j+k<m; ++k) {
+               T s = 0.0;
+               for (int i=0; i<m; ++i) s += fabs(a[j*lda+i]);
+               a[(j+k)*lda+j+perm[k]] = s + 0.1;
+            }
+         }
+
+      }
+      
       // Generate a single rhs corresponding to solution x = 1.0
       /// @param m matrix order
       template<typename T>

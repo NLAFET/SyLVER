@@ -41,6 +41,11 @@ namespace spldlt {
             lrperm_ = new int[m];
       }
 
+      void alloc_init_lrperm() {
+         alloc_lrperm();
+         for (int i=0; i<m; ++i) lrperm_[i] = i;
+      }
+      
       void release_lrperm() {
          if(lrperm_)
             delete[] lrperm_;

@@ -91,10 +91,13 @@ int main(int argc, char** argv) {
    // Unsym front (restricted pivoting)
 
    struct spral::ssids::cpu::cpu_factor_options options;
-   options.cpu_block_size = 8;
-   // factor_node_unsym_test<double, spral::test::AlignedAllocator<double>>(options, 8, 8, 1, 0, true, true); // Diagonally dominant
    options.cpu_block_size = 4;
-   factor_node_unsym_test<double, spral::test::AlignedAllocator<double>>(options, 8, 8, 1, 0, true, true); // Diagonally dominant
+   // factor_node_unsym_test<double, spral::test::AlignedAllocator<double>>(options, 4, 4, 1, 0, true, true); // Diagonally dominant
+   factor_node_unsym_test<double, spral::test::AlignedAllocator<double>>(options, 4, 4, 1, 0, false, true); // Diagonally dominant
+   // options.cpu_block_size = 8;
+   // factor_node_unsym_test<double, spral::test::AlignedAllocator<double>>(options, 8, 8, 1, 0, true, true); // Diagonally dominant
+   // options.cpu_block_size = 4;
+   // factor_node_unsym_test<double, spral::test::AlignedAllocator<double>>(options, 8, 8, 1, 0, true, true); // Diagonally dominant
 
    // nerr += run_factor_node_indef_tests();
    // nerr += run_form_contrib_tests();
