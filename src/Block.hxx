@@ -1,5 +1,6 @@
 #pragma once
 
+#include "kernels/ldlt_app.hxx"
 #include "kernels/factor_unsym.hxx"
 
 // STD
@@ -115,7 +116,9 @@ namespace spldlt {
          }
       }
 
+      /// @brief Return the block row index
       inline int get_row() { return i; }
+      /// @brief Return the block column index
       inline int get_col() { return j; }
 
       ////////////////////////////////////////
@@ -162,6 +165,33 @@ namespace spldlt {
          return nelim;
       }
       
+      /// @brief Apply U factor to this block and check for failed
+      /// entries i.e. entries such that |l_pq| > u^{-1}. 
+      ///
+      /// @param u threshold parameter.
+      /// @returns Number of columns successfully eliminated columns
+      /// with respect to threshold u.
+      template <typename IntAlloc>      
+      int applyU_app(
+            BlockUnsym<T> const& dblk, T u, 
+            spldlt::ldlt_app_internal::ColumnData<T, IntAlloc>& cdata) {
+         
+         if (get_row() == dblk.get_row())
+            throw std::runtime_error("atempt to apply factor on diagonal block!");
+         
+         if (get_row() < dblk.get_row()) {
+            // Super-diagonal block
+            applyU_block(
+                  dblk.m-cdata[i].nelim , cdata[j].nelim, 
+                  dblk.a, dblk.lda, &a[cdata[i].nelim], lda);
+         }
+         else {
+            // Sub-diagonal block
+            applyU_block(
+                  m, cdata[j].nelim, dblk.a, dblk.lda, a, lda);            
+         }
+      }
+
       ////////////////////////////////////////
       
       
