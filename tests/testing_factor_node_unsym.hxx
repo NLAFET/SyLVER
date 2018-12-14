@@ -103,6 +103,14 @@ namespace spldlt {
          // Allocate contribution blocks
          front.alloc_contrib_blocks_unsym();
 
+         if (options.pivot_method == PivotMethod::app_block) {
+            // Allocate backups of blocks
+            front.alloc_backup_blocks_unsym();
+            // Setup colulm data
+            front.alloc_cdata(); // TODO only if piv strategy is APTP
+         }
+      
+
          // Setup permutation vector
          // Row permutation
          front.perm = new int[m];
@@ -159,7 +167,7 @@ namespace spldlt {
             factor_front_unsym_rp(front, workspaces);
             break;
          case PivotMethod::app_block:
-            factor_front_unsym_app(front, pool_alloc);
+            factor_front_unsym_app(front);
             break;
          default:
             printf("[factor_node_unsym_test] Pivot method not implemented\n");
@@ -251,6 +259,13 @@ namespace spldlt {
 
          ////////////////////////////////////////
          // Cleanup memory
+
+         if (options.pivot_method == PivotMethod::app_block) {
+            // Allocate backups of blocks
+            front.release_backup_blocks_unsym();
+            // Free column data
+            front.free_cdata();
+         }
 
          // Cleanup data structures
          front.free_contrib_blocks_unsym();

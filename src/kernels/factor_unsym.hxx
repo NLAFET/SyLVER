@@ -2,6 +2,7 @@
 
 // SyLVER
 #include "kernels/wrappers.hxx"
+#include "kernels/lu_pp.hxx"
 
 namespace spldlt {
    

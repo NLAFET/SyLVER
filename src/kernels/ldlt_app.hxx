@@ -1214,7 +1214,7 @@ public:
          int ldld = align_lda<T>(block_size_);
          T* ld = work.get_ptr<T>(block_size_*ldld);
          // NB: we use ld[rfrom] below so alignment matches that of aval[rfrom]
-         calcLD<OP_N>(
+         calcLD<spral::ssids::cpu::OP_N>(
                nrow()-rfrom, cdata_[elim_col].nelim, &isrc.aval_[rfrom],
                lda_, cdata_[elim_col].d, &ld[rfrom], ldld
                );
@@ -1258,13 +1258,13 @@ public:
          T* ld = work.get_ptr<T>(block_size_*ldld);
          // NB: we use ld[rfrom] below so alignment matches that of aval[rfrom]
          if(isrc.j_==elim_col) {
-            calcLD<OP_N>(
+            calcLD<spral::ssids::cpu::OP_N>(
                   nrow()-rfrom, cdata_[elim_col].nelim,
                   &isrc.aval_[rfrom], lda_,
                   cdata_[elim_col].d, &ld[rfrom], ldld
                   );
          } else {
-            calcLD<OP_T>(
+            calcLD<spral::ssids::cpu::OP_T>(
                   nrow()-rfrom, cdata_[elim_col].nelim, &
                   isrc.aval_[rfrom*lda_], lda_,
                   cdata_[elim_col].d, &ld[rfrom], ldld
@@ -1297,7 +1297,7 @@ public:
       int elim_col = isrc.j_;
       int ldld = align_lda<T>(block_size_);
       T* ld = work.get_ptr<T>(block_size_*ldld);
-      calcLD<OP_N>(
+      calcLD<spral::ssids::cpu::OP_N>(
             nrow(), cdata_[elim_col].nelim, isrc.aval_, lda_,
             cdata_[elim_col].d, ld, ldld
             );

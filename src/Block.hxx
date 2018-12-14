@@ -1,5 +1,7 @@
 #pragma once
 
+#include "kernels/factor_unsym.hxx"
+
 // STD
 #include <cassert>
 
@@ -112,6 +114,56 @@ namespace spldlt {
             }
          }
       }
+
+      inline int get_row() { return i; }
+      inline int get_col() { return j; }
+
+      ////////////////////////////////////////
+      // Factorization operations
+
+      /// @brief Factorize block and update both row rperm and column
+      /// permutation cperm
+      int factor(int *rperm, int *cperm) {
+         return factor_lu_pp(rperm);
+      }
+
+      /// @brief Factorize block using LU with partial pivoting and
+      /// update global permutation perm
+      ///
+      /// @param perm Global permutation matrix
+      int factor_lu_pp(int *perm) {
+
+         int nelim = 0;
+         // dblk.alloc_lrperm();
+         alloc_init_lrperm();
+         // Number of fully-summed rows/columns in dblk
+         int nfs = get_nfs();
+      
+         // Note: lrperm is 0-indexed in factor_block_lu_pp 
+         factor_block_lu_pp(
+               m, nfs, lrperm_, a, lda, b, ldb);
+         // TODO block might be arbitrarly close to singularity so
+         // nelim might be lower that nsf
+         nelim = nfs;
+
+         // printf("nfs = %d\n", nfs);
+         // printf("lrperm\n");          
+         // for (int i=0; i < nfs; ++i) printf(" %d ", lrperm[i]);
+         // printf("\n");            
+
+         // Update perm using local permutation lrperm
+         int *temp = new int[nfs];
+         for (int i = 0; i < nfs; ++i)
+            temp[i] = perm[lrperm_[i]];
+         for (int i = 0; i < nfs; ++i)
+            perm[i] = temp[i]; 
+         delete[] temp;
+
+         return nelim;
+      }
+      
+      ////////////////////////////////////////
+      
       
       int i; // block row index
       int j; // block column index

@@ -119,9 +119,11 @@ namespace spldlt {
 
    template <typename T, typename PoolAllocator>
    class NumericFront {
-      typedef std::allocator_traits<PoolAllocator> PATraits;
+   public:
       typedef typename std::allocator_traits<PoolAllocator>::template rebind_alloc<int> IntAlloc;
+   private:
       typedef spldlt::ldlt_app_internal::Block<T, INNER_BLOCK_SIZE, IntAlloc> BlockSpec;
+      typedef std::allocator_traits<PoolAllocator> PATraits;
    public:
       /**
        * \brief Constructor
@@ -145,6 +147,7 @@ namespace spldlt {
          free_backup();
          free_cdata();
          free_blocks_unsym();
+         // TODO Free backups in blocks if necessary
       }
 
       /// \brief Allocate block structures and memory space for
@@ -533,6 +536,45 @@ namespace spldlt {
          int const num_blocks = mblk*mblk;
          BlkAllocTraits::deallocate(blkAlloc, blocks_unsym_, num_blocks);
          blocks_unsym_ = nullptr;
+         
+      }
+
+      /// @brief Allocate backups in all blocks for the unsymmetric
+      /// case
+      void alloc_backup_blocks_unsym() {
+
+         int const n = get_ncol();
+         int const nr = get_nr(); 
+         int const nc = get_nc();
+
+         int en = (n-1)/blksz; // Last block-row/column in factors
+
+         for (int j = 0; j < nc; ++j) {
+            for (int i =  0; i < nr; ++i) {
+               // Loop if we are in the cb
+               if ((i > en) && (j > en)) continue;
+               BlockUnsym<T>& blk = get_block_unsym(i, j);
+               blk.alloc_backup(pool_alloc_);
+            }
+         }
+      }
+
+      void release_backup_blocks_unsym() {
+
+         int const n = get_ncol();
+         int const nr = get_nr(); 
+         int const nc = get_nc();
+
+         int en = (n-1)/blksz; // Last block-row/column in factors
+
+         for (int j = 0; j < nc; ++j) {
+            for (int i =  0; i < nr; ++i) {
+               // Loop if we are in the cb
+               if ((i > en) && (j > en)) continue;
+               BlockUnsym<T>& blk = get_block_unsym(i, j);
+               blk.release_backup(pool_alloc_);
+            }
+         }
          
       }
       

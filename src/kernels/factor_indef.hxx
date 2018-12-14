@@ -73,7 +73,7 @@ namespace spldlt {
             next_elim, perm, d, options, work, alloc);
             
       // Init threshold check (non locking => task dependencies)
-      cdata[blk].init_passed(nelim);      
+      cdata[blk].init_passed(nelim);
    }
 
    /// @brief Applies pivots on sub-diagonal block in the LDLT

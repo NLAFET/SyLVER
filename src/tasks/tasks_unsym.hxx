@@ -12,11 +12,22 @@ namespace spldlt {
    ////////////////////////////////////////////////////////////
    // APTP factorization tasks
 
-   template <typename T>
-   void factor_block_unsym_app_task(BlockUnsym<T>& dblk, int *perm) {
+   /// @param dblk Block to be factorized
+   /// @param rperm Global row permutation
+   /// @param cperm Global columns permutation
+   /// @param cdata Column data
+   template <typename T, typename IntAlloc>
+   void factor_block_unsym_app_task(
+         BlockUnsym<T>& dblk, int *rperm, int *cperm, 
+         ColumnData<T, IntAlloc>& cdata) {
 
+      int blk = dblk.get_row(); // Block row index
       dblk.backup(); // Backup dblk
       
+      int nelim = dblk.factor(rperm, cperm);
+      
+      // Init threshold check (non locking => task dependencies)
+      cdata[blk].init_passed(nelim);
    }
 
    ////////////////////////////////////////////////////////////

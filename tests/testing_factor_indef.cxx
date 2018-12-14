@@ -8,6 +8,7 @@
 #include <vector>
 
 // SSIDS
+#include "ssids/cpu/kernels/common.hxx"
 #include "ssids/cpu/BuddyAllocator.hxx"
 // #include "ssids/cpu/kernels/ldlt_app.hxx"
 #include "ssids/cpu/kernels/wrappers.hxx"

@@ -12,8 +12,12 @@ namespace spldlt {
 
    template <typename T, typename PoolAlloc>
    void factor_front_unsym_app(
-         NumericFront<T, PoolAlloc> &node,
-         PoolAlloc& pool_alloc) {
+         NumericFront<T, PoolAlloc> &node) {
+
+      // printf("[factor_front_unsym_app]\n");
+
+      // typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
+      typedef typename NumericFront<T, PoolAlloc>::IntAlloc IntAlloc;
 
       int m = node.get_nrow(); // Frontal matrix order
       int n = node.get_ncol(); // Number of fully-summed rows/columns 
@@ -21,24 +25,18 @@ namespace spldlt {
       int nc = node.get_nc(); // number of block columns
       size_t contrib_dimn = m-n;
       int blksz = node.blksz;
-
-      int en = (n-1)/blksz; // Last block-row/column in factors
-
-      for (int j = 0; j < nc; ++j) {
-         for (int i =  0; i < nr; ++i) {
-            // Loop if we are in the cb
-            if ((i > en) && (j > en)) continue;
-            BlockUnsym<T>& blk = node.get_block_unsym(i, j);
-            blk.alloc_backup(pool_alloc);
-         }
-      }
+      ColumnData<T, IntAlloc>& cdata = *node.cdata;
 
       for(int k = 0; k < nc; ++k) {
+         
          BlockUnsym<T>& dblk = node.get_block_unsym(k, k);
-         int *perm = &node.perm[k*blksz];
-         factor_block_unsym_app_task(dblk, perm);
+         int *rperm = &node.perm [k*blksz];
+         int *cperm = &node.cperm[k*blksz];
+         factor_block_unsym_app_task(dblk, rperm, cperm, cdata);
+         
+         
       }
-      
+
    }
    
    /// @brief Task-based front factorization routine using Restricted
