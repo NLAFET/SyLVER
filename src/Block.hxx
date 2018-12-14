@@ -3,6 +3,9 @@
 // STD
 #include <cassert>
 
+// SSIDS
+#include "ssids/cpu/cpu_iface.hxx"
+
 namespace spldlt {
 
    // Block structure for unsymmetric matrices
@@ -14,18 +17,18 @@ namespace spldlt {
    public:
       BlockUnsym()
          : m(0), n(0), a(nullptr), lda(0), b(nullptr), ldb(0), mb_(0), nb_(0),
-           lrperm_(nullptr)
+           lrperm_(nullptr), cpy_(nullptr), ldcpy_(0)
       {}
 
       BlockUnsym(int i, int j, int m, int n, T* a, int lda)
          : i(i), j(j), m(m), n(n), a(a), lda(lda), mb_(0), nb_(0),
-           lrperm_(nullptr)
+           lrperm_(nullptr), cpy_(nullptr), ldcpy_(0)
       {}
 
       BlockUnsym(int i, int j, int m, int n, T* a, int lda, int mb, int nb,
                  T* b, int ldb)
          : i(i), j(j), m(m), n(n), a(a), lda(lda), mb_(mb), nb_(nb), b(b),
-           ldb(ldb), lrperm_(nullptr)
+           ldb(ldb), lrperm_(nullptr), cpy_(nullptr), ldcpy_(0)
       {
          assert(mb_ <= m);
          assert(nb_ < n);
@@ -72,6 +75,44 @@ namespace spldlt {
          return n-get_nb();
       }
 
+      /// @ Allocate copy of block
+      template <typename Allocator>
+      void alloc_backup(Allocator& alloc) {
+         if (!cpy_) {
+            ldcpy_ = spral::ssids::cpu::align_lda<T>(m);
+            cpy_ = alloc.allocate(ldcpy_*n);
+         }
+      }
+
+      /// @brief Release copy of block
+      template <typename Allocator>
+      void release_backup(Allocator& alloc) {
+         if (!cpy_) return;
+         alloc.deallocate(cpy_, ldcpy_*n);
+         cpy_ = nullptr;
+      }
+      
+      /// @brief Create a backup of this block
+      void backup() {
+
+         // Copy part from b
+         int na = get_na();         
+         for (int j = 0; j < na; ++j) {
+            for (int i = 0; i < m; ++i) {
+               cpy_[j*ldcpy_+i] = a[j*lda+i];
+            }
+         }
+
+         // Copy part from b
+         if (n > na) {
+            for (int j = 0; j < nb_; ++j) {
+               for (int i = 0; i < mb_; ++i) {
+                  cpy_[j*ldcpy_+i] = b[j*lda+i];
+               }
+            }
+         }
+      }
+      
       int i; // block row index
       int j; // block column index
       int m; // Number of rows in block
@@ -87,6 +128,8 @@ namespace spldlt {
       int mb_;
       int nb_;
       int *lrperm_; // Local row permutation
+      T *cpy_; // Copy of block 
+      int ldcpy_;
       
       // case 1) Block is in a single memory location (lcol or ucol)
       // e.g.

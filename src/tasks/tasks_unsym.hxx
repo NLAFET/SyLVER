@@ -9,6 +9,18 @@
 
 namespace spldlt {
 
+   ////////////////////////////////////////////////////////////
+   // APTP factorization tasks
+
+   template <typename T>
+   void factor_block_unsym_app_task(BlockUnsym<T>& dblk, int *perm) {
+
+      dblk.backup(); // Backup dblk
+      
+   }
+
+   ////////////////////////////////////////////////////////////
+
    /// @brief Perfom LU factorization on block dblk using partial
    /// pivoting
    template <typename T>

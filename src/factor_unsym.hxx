@@ -12,9 +12,32 @@ namespace spldlt {
 
    template <typename T, typename PoolAlloc>
    void factor_front_unsym_app(
-         NumericFront<T, PoolAlloc> &node) {
+         NumericFront<T, PoolAlloc> &node,
+         PoolAlloc& pool_alloc) {
 
-      
+      int m = node.get_nrow(); // Frontal matrix order
+      int n = node.get_ncol(); // Number of fully-summed rows/columns 
+      int nr = node.get_nr(); // number of block rows
+      int nc = node.get_nc(); // number of block columns
+      size_t contrib_dimn = m-n;
+      int blksz = node.blksz;
+
+      int en = (n-1)/blksz; // Last block-row/column in factors
+
+      for (int j = 0; j < nc; ++j) {
+         for (int i =  0; i < nr; ++i) {
+            // Loop if we are in the cb
+            if ((i > en) && (j > en)) continue;
+            BlockUnsym<T>& blk = node.get_block_unsym(i, j);
+            blk.alloc_backup(pool_alloc);
+         }
+      }
+
+      for(int k = 0; k < nc; ++k) {
+         BlockUnsym<T>& dblk = node.get_block_unsym(k, k);
+         int *perm = &node.perm[k*blksz];
+         factor_block_unsym_app_task(dblk, perm);
+      }
       
    }
    
