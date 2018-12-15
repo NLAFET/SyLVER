@@ -145,7 +145,7 @@ namespace spldlt {
          // Note: lrperm is 0-indexed in factor_block_lu_pp 
          factor_block_lu_pp(
                m, nfs, lrperm_, a, lda, b, ldb);
-         // TODO block might be arbitrarly close to singularity so
+         // TODO block might be arbitrarily close to singularity so
          // nelim might be lower that nsf
          nelim = nfs;
 
@@ -171,27 +171,84 @@ namespace spldlt {
       /// @param u threshold parameter.
       /// @returns Number of columns successfully eliminated columns
       /// with respect to threshold u.
-      template <typename IntAlloc>      
+      template <typename IntAlloc>
       int applyU_app(
             BlockUnsym<T> const& dblk, T u, 
             spldlt::ldlt_app_internal::ColumnData<T, IntAlloc>& cdata) {
          
-         if (get_row() == dblk.get_row())
-            throw std::runtime_error("atempt to apply factor on diagonal block!");
+         assert(get_row() != dblk.get_row());
          
          if (get_row() < dblk.get_row()) {
             // Super-diagonal block
             applyU_block(
                   dblk.m-cdata[i].nelim , cdata[j].nelim, 
                   dblk.a, dblk.lda, &a[cdata[i].nelim], lda);
+            return spldlt::ldlt_app_internal::check_threshold<OP_N>(
+                  cdata[i].nelim, m, 0, cdata[j].nelim, u, a, lda);
          }
          else {
             // Sub-diagonal block
             applyU_block(
                   m, cdata[j].nelim, dblk.a, dblk.lda, a, lda);            
+            return spldlt::ldlt_app_internal::check_threshold<OP_N>(
+                  0, m, 0, cdata[j].nelim, u, a, lda);
          }
       }
 
+      /// @brief Apply L factor to this block
+      /// @Note This routine assume that permutation has already been
+      /// applied
+      template <typename IntAlloc>
+      void applyL(BlockUnsym<T> const& dblk) {
+
+         int na = get_na();
+         
+         applyL_block(
+               m, na, dblk.a, dblk.lda, a, lda);
+         
+         if (nb_ > 0) {
+            
+            assert(b != nullptr);            
+            // Apply L in parts stored un ucol
+            applyL_block(
+                  mb_, nb_, dblk.a, dblk.lda, b, ldb);
+         }         
+      }
+
+      /// @brief Apply L factor to this block when using APTP
+      /// strategy.
+      template <typename IntAlloc>
+      void applyL_app(
+            BlockUnsym<T> const& dblk,
+            spldlt::ldlt_app_internal::ColumnData<T, IntAlloc>& cdata) {
+
+         assert(get_col() != dblk.get_col());
+
+         if (get_col() < dblk.get_col()) {
+            // Left-digonal block
+            applyL_block(
+                  cdata[i].nelim, n-cdata[j].nelim, dblk.a, dblk.lda,
+                  &a[lda*(n-cdata[j].nelim)], lda);
+         }
+         else {
+            
+            // Right-digonal block
+            int na = get_na();
+            applyL_block(
+               cdata[i].nelim, na, dblk.a, dblk.lda, a, lda);
+
+            if (nb_ > 0) {
+            
+               assert(b != nullptr);            
+               assert(cdata[i].nelim <= mb_);
+               
+               // Apply L in parts stored un ucol
+               applyL_block(
+                     cdata[i].nelim, nb_, dblk.a, dblk.lda, b, ldb);
+            }
+         }
+      }
+      
       ////////////////////////////////////////
       
       

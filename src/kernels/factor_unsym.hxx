@@ -91,7 +91,8 @@ namespace spldlt {
 
    }
 
-   /// @brief Apply row permutation perm and apply L factor
+     
+   /// @brief Apply row permutation perm and apply L factor 
    template<typename T>
    void applyL_block(
          int m, int n, T *l_kk, int ld_l_kk, int *perm, T *a_kj, int ld_a_kj,
