@@ -95,10 +95,10 @@ namespace spldlt {
          cpy_ = nullptr;
       }
       
-      /// @brief Create a backup of this block
+      /// @brief Create a backup for this block
       void backup() {
 
-         // Copy part from b
+         // Copy part from a
          int na = get_na();         
          for (int j = 0; j < na; ++j) {
             for (int i = 0; i < m; ++i) {
@@ -114,6 +114,127 @@ namespace spldlt {
                }
             }
          }
+      }
+
+      /// @brief Create a backup for this block and permute entries
+      /// using the row permutation rperm
+      void backup_perm(int const* rperm) {
+
+         // Copy part from a
+         int na = get_na();         
+         for (int j = 0; j < na; ++j) {
+            for (int i = 0; i < m; ++i) {
+               cpy_[j*ldcpy_+rperm[i]] = a[j*lda+i];
+            }
+         }
+         // Copy part from b
+         if (n > na) {
+            for (int j = 0; j < nb_; ++j) {
+               for (int i = 0; i < mb_; ++i) {
+                  cpy_[j*ldcpy_+rperm[i]] = b[j*lda+i];
+               }
+            }
+         }
+         
+      }
+
+      /// @brief Restore data from row rfrom and column cfrom
+      void restore(int rfrom, int cfrom) {
+
+         assert(cpy_ != nullptr);
+
+         // Copy part from a
+         int na = get_na();         
+         for (int j = cfrom; j < na; ++j) {
+            for (int i = rfrom; i < m; ++i) {
+               a[j*lda+i] = cpy_[j*ldcpy_+i];
+            }
+         }                  
+
+         // Copy part from b
+         if ((n > na) && (rfrom < nb_)) {
+            for (int j = (cfrom-na); j < nb_; ++j) {
+               for (int i = rfrom; i < m; ++i) {
+                  b[j*lda+i] = cpy_[j*ldcpy_+i];
+               }
+            }
+         }         
+      }
+
+      void restore_perm(
+            int rfrom, int cfrom, int const* rperm) {
+
+         assert(cpy_ != nullptr);
+         
+         // Copy part from a
+         int na = get_na();         
+         for (int j = cfrom; j < na; ++j) {
+            for (int i = rfrom; i < m; ++i) {
+               a[j*lda+i] = cpy_[j*ldcpy_+rperm[i]];
+            }
+         }
+
+         // Copy part from b
+         if ((n > na) && (rfrom < nb_)) {
+            for (int j = (cfrom-na); j < nb_; ++j) {
+               for (int i = rfrom; i < m; ++i) {
+                  b[j*lda+i] = cpy_[j*ldcpy_+rperm[i]];
+               }
+            }
+         }
+      }
+
+      /// @ brief Restore failed entries in block
+      template <typename IntAlloc>
+      void restore_failed(
+            int elim_col,
+            spldlt::ldlt_app_internal::ColumnData<T, IntAlloc> const& cdata) {
+         
+         assert(cpy_ != nullptr);
+         if (!cpy_) return;
+         
+         int nelim = cdata[elim_col].nelim;
+
+         if ((get_col() == elim_col) && (get_row() == elim_col)) {
+            // Diagonal block
+            restore_perm(nelim, nelim, lrperm_);
+         } 
+         else if (get_col() == elim_col) {
+            if (get_row() > elim_col) {
+               // Sub-diagonal block
+               restore(0, nelim);
+            }
+            else {
+               // Super-diagonal block
+               int nelim_row = cdata[get_row()].nelim;
+               restore(nelim_row, nelim);
+            }
+         }
+         else if (get_row() == elim_col) {
+            int nelim_row = nelim;
+            if (get_col() > elim_col) {
+               // Right-diagonal block
+               restore(nelim_row, 0);
+            }
+            else {
+               // Left-diagonal block
+               int nelim_col = cdata[get_col()].nelim;
+               restore(nelim, nelim_col);
+               
+            }
+         }
+
+      }
+
+      template <typename IntAlloc, typename Allocator>
+      void restore_failed_release_backup(
+            int elim_col,
+            spldlt::ldlt_app_internal::ColumnData<T, IntAlloc> const& cdata,
+            Allocator const& alloc) {
+
+         restore_failed(elim_col, cdata);
+         // Release backup
+         release_backup(alloc);
       }
 
       /// @brief Return the block row index
@@ -220,7 +341,7 @@ namespace spldlt {
       template <typename IntAlloc>
       void applyL_app(
             BlockUnsym<T> const& dblk,
-            spldlt::ldlt_app_internal::ColumnData<T, IntAlloc>& cdata) {
+            spldlt::ldlt_app_internal::ColumnData<T, IntAlloc> const& cdata) {
 
          assert(get_col() != dblk.get_col());
 
@@ -248,9 +369,79 @@ namespace spldlt {
             }
          }
       }
-      
+
+      template <typename IntAlloc>
+      void update_app(
+            BlockUnsym<T> const& lblk, BlockUnsym<T> const& ublk,
+            spldlt::ldlt_app_internal::ColumnData<T, IntAlloc> const& cdata) {
+         
+         int elim_col = ublk.get_row();
+         int nelim = cdata[elim_col].nelim; // Number of eliminated columns
+
+         if (i > ublk.get_row()) {
+            // Sub-diagonal block
+            if (j > lblk.get_col()) {
+               // Block is in the trailing submatrix
+
+               update_block_lu(
+                     m, n, a, lda, 
+                     nelim, 
+                     lblk.a, lblk.lda,
+                     ublk.a, ublk.lda);
+            }
+            else {
+               // Update uneliminated entries in the left-digaonal
+               // block
+
+               // Number of eliminated column in current block column
+               int nelim_col = cdata[get_col()].nelim;
+               int nu = m-nelim_col;
+               
+               update_block_lu(
+                     m, nu, &a[nelim_col*lda], lda, 
+                     nelim,
+                     lblk.a, lblk.lda,
+                     &ublk.a[nelim_col*ublk.lda], ublk.lda);
+
+            }
+         }
+         else{
+            
+            // Number of eliminated entries in the current row
+            int nelim_row = cdata[get_row()].nelim;
+            // Number of eliminated entries in the current col
+            int nelim_col = cdata[get_col()].nelim;
+            
+            // Super-diagonal block
+            if (j > lblk.get_col()) {
+               // Update uneliminated entries in the right-digaonal
+               // block            
+               
+               int mu = m-nelim_col; // Width of updated sub-block
+
+               update_block_lu(
+                     mu, n, &a[nelim_row], lda, 
+                     nelim,
+                     lblk.a, lblk.lda,
+                     &ublk.a[nelim_row], ublk.lda);
+               
+            }
+            else {
+               // Update failed entries
+               
+               update_block_lu(
+                     nelim_row, nelim_col, 
+                     &a[nelim_row+nelim_col*lda], lda,
+                     nelim,
+                     lblk.a, lblk.lda,
+                     &ublk.a[nelim_col*ublk.lda], ublk.lda);
+
+            }
+
+         }
+      }
+
       ////////////////////////////////////////
-      
       
       int i; // block row index
       int j; // block column index
