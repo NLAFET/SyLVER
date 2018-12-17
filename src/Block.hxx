@@ -200,6 +200,7 @@ namespace spldlt {
          if (!cpy_) return;
          
          int nelim = cdata[elim_col].nelim;
+         printf("BlockUnsym::restore_failed, elim_col = %d,  nelim = %d\n", elim_col, nelim);
 
          if ((get_col() == elim_col) && (get_row() == elim_col)) {
             // Diagonal block
@@ -233,7 +234,7 @@ namespace spldlt {
       }
 
       template <typename IntAlloc, typename Allocator>
-      void restore_failed_release_backup(
+      void restore_failed_and_release_backup(
             int elim_col,
             spldlt::ldlt_app_internal::ColumnData<T, IntAlloc> const& cdata,
             Allocator const& alloc) {
@@ -254,6 +255,7 @@ namespace spldlt {
       /// @brief Factorize block and update both row rperm and column
       /// permutation cperm
       int factor(int *rperm, int *cperm) {
+         printf("BlockUnsym::factor, elim_col = %d\n", j);
          return factor_lu_pp(rperm);
       }
 
@@ -344,6 +346,18 @@ namespace spldlt {
             applyL_block(
                   mb_, nb_, dblk.a, dblk.lda, b, ldb);
          }         
+      }
+
+      void apply_rperm(
+            BlockUnsym<T>& dblk, 
+            spral::ssids::cpu::Workspace& workspace) {
+         
+         // Get local row permutation from dblk
+         int *lrperm = dblk.get_lrperm();
+         int ldw = spral::ssids::cpu::align_lda<T>(m);
+         T* work = workspace.get_ptr<T>(ldw*n);
+
+         apply_rperm_block(m, n, lrperm, a, lda, work, ldw);
       }
 
       /// @brief Apply L factor to this block when using APTP

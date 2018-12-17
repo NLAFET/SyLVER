@@ -109,8 +109,8 @@ int main(int argc, char** argv) {
    // Threshold partial pivoting
    options.pivot_method = PivotMethod::app_block;
    options.cpu_block_size = 4;
-   // factor_node_unsym_test<double, spral::test::AlignedAllocator<double>>(options, 4, 4, 1, 0, true, true); // Diagonally dominant
-   factor_node_unsym_test<double, spral::test::AlignedAllocator<double>>(options, 8, 8, 1, 0, true, true); // Diagonally dominant
+   factor_node_unsym_test<double, spral::test::AlignedAllocator<double>>(options, 4, 4, 1, 0, true, true); // Diagonally dominant
+   // factor_node_unsym_test<double, spral::test::AlignedAllocator<double>>(options, 8, 8, 1, 0, true, true); // Diagonally dominant
 
    // nerr += run_factor_node_indef_tests();
    // nerr += run_form_contrib_tests();

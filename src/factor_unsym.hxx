@@ -13,10 +13,10 @@ namespace spldlt {
    template <typename T, typename PoolAlloc>
    void factor_front_unsym_app(
          struct cpu_factor_options& options,
-         NumericFront<T, PoolAlloc> &node
-         ) {
+         NumericFront<T, PoolAlloc> &node,
+         std::vector<spral::ssids::cpu::Workspace>& workspaces) {
 
-      // printf("[factor_front_unsym_app]\n");
+      printf("[factor_front_unsym_app]\n");
 
       // typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
       typedef typename NumericFront<T, PoolAlloc>::IntAlloc IntAlloc;
@@ -60,12 +60,12 @@ namespace spldlt {
          for (int j = 0; j < k; ++j) {
             // Left-diagonal block
             BlockUnsym<T>& ublk = node.get_block_unsym(k, j);
-            appyL_block_app_task(dblk, ublk, cdata);
+            appyL_block_app_task(dblk, ublk, cdata, workspaces);
          }
          for (int j = k+1; j < nr; ++j) {
             // Right-diagonal block
             BlockUnsym<T>& ublk = node.get_block_unsym(k, j);
-            appyL_block_app_task(dblk, ublk, cdata);
+            appyL_block_app_task(dblk, ublk, cdata, workspaces);
          }
          
          // Update previously failed entries

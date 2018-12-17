@@ -74,8 +74,8 @@ namespace spldlt {
             
             a = new T[lda*m];
 
-            // if (diagdom) gen_unsym_diagdom(m, a, lda);
-            if (diagdom) gen_unsym_diagdomblock(m, a, lda, blksz);
+            if (diagdom) gen_unsym_diagdom(m, a, lda);
+            // if (diagdom) gen_unsym_diagdomblock(m, a, lda, blksz);
             else         gen_mat(m, m, a, lda);
 
             b = new T[m];
@@ -167,7 +167,7 @@ namespace spldlt {
             factor_front_unsym_rp(front, workspaces);
             break;
          case PivotMethod::app_block:
-            factor_front_unsym_app(options, front);
+            factor_front_unsym_app(options, front, workspaces);
             break;
          default:
             printf("[factor_node_unsym_test] Pivot method not implemented\n");
@@ -221,7 +221,6 @@ namespace spldlt {
             int nrhs = 1;
             int ldsoln = m;
             T *soln = new T[nrhs*ldsoln];
-
             
             // Setup permuted rhs 
             T *pb = new T[m];

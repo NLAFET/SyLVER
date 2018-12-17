@@ -26,7 +26,8 @@ namespace spldlt {
       dblk.backup(); // Backup dblk
       
       int nelim = dblk.factor(rperm, cperm);
-      
+      // int nelim = dblk.factor_lu_pp(rperm);
+      // printf("[factor_block_unsym_app_task] blk = %d, nelim = %d\n", blk, nelim);
       // Init threshold check (non locking => task dependencies)
       cdata[blk].init_passed(nelim);
    }
@@ -49,7 +50,12 @@ namespace spldlt {
    template <typename T, typename IntAlloc>
    void appyL_block_app_task(
          BlockUnsym<T>& dblk, BlockUnsym<T>& ublk,
-         ColumnData<T, IntAlloc>& cdata) {
+         ColumnData<T, IntAlloc>& cdata, 
+         std::vector<spral::ssids::cpu::Workspace>& workspaces) {
+
+      spral::ssids::cpu::Workspace& workspace = workspaces[0]; 
+      
+      ublk.apply_rperm(dblk, workspace);
       
       ublk.applyL_app(dblk, cdata);
    }
