@@ -167,7 +167,7 @@ namespace spldlt {
             factor_front_unsym_rp(front, workspaces);
             break;
          case PivotMethod::app_block:
-            factor_front_unsym_app(front);
+            factor_front_unsym_app(options, front);
             break;
          default:
             printf("[factor_node_unsym_test] Pivot method not implemented\n");

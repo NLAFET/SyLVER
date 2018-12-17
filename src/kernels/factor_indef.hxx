@@ -92,11 +92,11 @@ namespace spldlt {
       // the process, store a (permuted) copy for recovery in case of
       // a failed column
       rblk.apply_cperm_and_backup(backup);
-      // Perform elimination and determine number of rows in block
+      // Perform elimination and determine number of columns in block
       // passing a posteori threshold pivot test
       int blkpass = rblk.apply_pivot_app(dblk, options.u, options.small);
       // Update column's passed pivot count
-      cdata[blk].update_passed(blkpass);      
+      cdata[blk].update_passed(blkpass);
    }
 
    

@@ -90,6 +90,9 @@ namespace spldlt {
       /// @brief Release copy of block
       template <typename Allocator>
       void release_backup(Allocator& alloc) {
+
+         assert(cpy_ != nullptr);
+
          if (!cpy_) return;
          alloc.deallocate(cpy_, ldcpy_*n);
          cpy_ = nullptr;
@@ -97,6 +100,8 @@ namespace spldlt {
       
       /// @brief Create a backup for this block
       void backup() {
+
+         assert(cpy_ != nullptr);
 
          // Copy part from a
          int na = get_na();         
@@ -120,6 +125,8 @@ namespace spldlt {
       /// using the row permutation rperm
       void backup_perm(int const* rperm) {
 
+         assert(cpy_ != nullptr);
+
          // Copy part from a
          int na = get_na();         
          for (int j = 0; j < na; ++j) {
@@ -134,8 +141,7 @@ namespace spldlt {
                   cpy_[j*ldcpy_+rperm[i]] = b[j*lda+i];
                }
             }
-         }
-         
+         }         
       }
 
       /// @brief Restore data from row rfrom and column cfrom
@@ -188,7 +194,7 @@ namespace spldlt {
       template <typename IntAlloc>
       void restore_failed(
             int elim_col,
-            spldlt::ldlt_app_internal::ColumnData<T, IntAlloc> const& cdata) {
+            spldlt::ldlt_app_internal::ColumnData<T, IntAlloc>& cdata) {
          
          assert(cpy_ != nullptr);
          if (!cpy_) return;
@@ -294,25 +300,29 @@ namespace spldlt {
       /// with respect to threshold u.
       template <typename IntAlloc>
       int applyU_app(
-            BlockUnsym<T> const& dblk, T u, 
+            BlockUnsym<T>& dblk, T u, 
             spldlt::ldlt_app_internal::ColumnData<T, IntAlloc>& cdata) {
          
-         assert(get_row() != dblk.get_row());
+         assert(dblk.get_row() != i);
          
          if (get_row() < dblk.get_row()) {
             // Super-diagonal block
             applyU_block(
                   dblk.m-cdata[i].nelim , cdata[j].nelim, 
                   dblk.a, dblk.lda, &a[cdata[i].nelim], lda);
-            return spldlt::ldlt_app_internal::check_threshold<OP_N>(
-                  cdata[i].nelim, m, 0, cdata[j].nelim, u, a, lda);
+            return 
+               spldlt::ldlt_app_internal::check_threshold
+               <spral::ssids::cpu::OP_N>(
+                     cdata[i].nelim, m, 0, cdata[j].nelim, u, a, lda);
          }
          else {
             // Sub-diagonal block
             applyU_block(
                   m, cdata[j].nelim, dblk.a, dblk.lda, a, lda);            
-            return spldlt::ldlt_app_internal::check_threshold<OP_N>(
-                  0, m, 0, cdata[j].nelim, u, a, lda);
+            return 
+               spldlt::ldlt_app_internal::check_threshold
+               <spral::ssids::cpu::OP_N>(
+                     0, m, 0, cdata[j].nelim, u, a, lda);
          }
       }
 
@@ -340,8 +350,8 @@ namespace spldlt {
       /// strategy.
       template <typename IntAlloc>
       void applyL_app(
-            BlockUnsym<T> const& dblk,
-            spldlt::ldlt_app_internal::ColumnData<T, IntAlloc> const& cdata) {
+            BlockUnsym<T>& dblk,
+            spldlt::ldlt_app_internal::ColumnData<T, IntAlloc>& cdata) {
 
          assert(get_col() != dblk.get_col());
 
@@ -372,8 +382,8 @@ namespace spldlt {
 
       template <typename IntAlloc>
       void update_app(
-            BlockUnsym<T> const& lblk, BlockUnsym<T> const& ublk,
-            spldlt::ldlt_app_internal::ColumnData<T, IntAlloc> const& cdata) {
+            BlockUnsym<T>& lblk, BlockUnsym<T>& ublk,
+            spldlt::ldlt_app_internal::ColumnData<T, IntAlloc>& cdata) {
          
          int elim_col = ublk.get_row();
          int nelim = cdata[elim_col].nelim; // Number of eliminated columns

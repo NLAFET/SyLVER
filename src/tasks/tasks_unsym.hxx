@@ -12,6 +12,7 @@ namespace spldlt {
    ////////////////////////////////////////////////////////////
    // APTP factorization tasks
 
+   /// @brief Factor diagonal block dblk for APTP
    /// @param dblk Block to be factorized
    /// @param rperm Global row permutation
    /// @param cperm Global columns permutation
@@ -28,6 +29,71 @@ namespace spldlt {
       
       // Init threshold check (non locking => task dependencies)
       cdata[blk].init_passed(nelim);
+   }
+
+   /// @param u Threshold parameter
+   template <typename T, typename IntAlloc>
+   void appyU_block_app_task(
+         BlockUnsym<T>& dblk, T u, BlockUnsym<T>& lblk, 
+         ColumnData<T, IntAlloc>& cdata) {
+      
+      int elim_col = dblk.get_col();
+      int *rperm = dblk.get_lrperm();
+      lblk.backup_perm(rperm);
+      
+      int blkpass = lblk.applyU_app(dblk, u, cdata);
+      // Update column's passed pivot count
+      cdata[elim_col].update_passed(blkpass);      
+   }
+
+   template <typename T, typename IntAlloc>
+   void appyL_block_app_task(
+         BlockUnsym<T>& dblk, BlockUnsym<T>& ublk,
+         ColumnData<T, IntAlloc>& cdata) {
+      
+      ublk.applyL_app(dblk, cdata);
+   }
+   
+   template <typename T, typename IntAlloc>
+   void update_block_unsym_app_task(
+         BlockUnsym<T>& lblk, BlockUnsym<T>& ublk, BlockUnsym<T>& blk,
+         ColumnData<T, IntAlloc>& cdata) {
+
+      blk.update_app(lblk, ublk, cdata);
+   }
+
+   template <typename T, typename IntAlloc>
+   void restore_block_unsym_app_task(
+         int elim_col, BlockUnsym<T>& blk, ColumnData<T, IntAlloc>& cdata) {
+      
+      blk.restore_failed(elim_col, cdata);
+   }
+
+   template <typename T, typename PoolAlloc, typename IntAlloc>
+   void update_cb_block_unsym_app_task(
+         BlockUnsym<T>& lblk, BlockUnsym<T>& ublk, Tile<T, PoolAlloc>& blk, 
+         ColumnData<T, IntAlloc>& cdata) {
+
+      int m = blk.m;
+      int n = blk.m;
+
+      int elim_col = lblk.get_row();
+      int nelim = cdata[elim_col].nelim;
+
+      int ml = lblk.m;
+      int nl = lblk.n;
+      T *l = &lblk.a[m-ml];
+      int ldl = lblk.lda;
+      
+      int nu = ublk.n;
+      T *u = (nu==n) ? lblk.a : lblk.b;
+      int ldu = (nu==n) ? lblk.lda : lblk.ldb;
+      
+      update_block_lu(
+            m, n, blk.a, blk.lda,
+            nelim,
+            l, ldl,
+            u, ldu);      
    }
 
    ////////////////////////////////////////////////////////////

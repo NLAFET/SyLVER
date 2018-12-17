@@ -12,7 +12,9 @@ namespace spldlt {
 
    template <typename T, typename PoolAlloc>
    void factor_front_unsym_app(
-         NumericFront<T, PoolAlloc> &node) {
+         struct cpu_factor_options& options,
+         NumericFront<T, PoolAlloc> &node
+         ) {
 
       // printf("[factor_front_unsym_app]\n");
 
@@ -22,10 +24,12 @@ namespace spldlt {
       int m = node.get_nrow(); // Frontal matrix order
       int n = node.get_ncol(); // Number of fully-summed rows/columns 
       int nr = node.get_nr(); // number of block rows
-      int nc = node.get_nc(); // number of block columns
+      int nc = node.get_nc(); // number of fully-summed block columns
       size_t contrib_dimn = m-n;
       int blksz = node.blksz;
       ColumnData<T, IntAlloc>& cdata = *node.cdata;
+
+      T u = options.u; // Threshold parameter
 
       for(int k = 0; k < nc; ++k) {
          
@@ -33,8 +37,102 @@ namespace spldlt {
          int *rperm = &node.perm [k*blksz];
          int *cperm = &node.cperm[k*blksz];
          factor_block_unsym_app_task(dblk, rperm, cperm, cdata);
+
+         // Compute L factor
+         for (int i = 0; i < k; ++i) {
+            // Super-diagonal block
+            BlockUnsym<T>& lblk = node.get_block_unsym(i, k);
+            appyU_block_app_task(dblk, u, lblk, cdata);
+         }
+         for (int i = k+1; i < nr; ++i) {
+            // Sub-diagonal block
+            BlockUnsym<T>& lblk = node.get_block_unsym(i, k);
+            appyU_block_app_task(dblk, u, lblk, cdata);
+         }
+
+         // Restore failed entries
+         for (int i = 0; i < nr; ++i) {
+            BlockUnsym<T>& blk = node.get_block_unsym(i, k);
+            restore_block_unsym_app_task(k, blk, cdata);
+         }
+
+         // Compute U factor
+         for (int j = 0; j < k; ++j) {
+            // Left-diagonal block
+            BlockUnsym<T>& ublk = node.get_block_unsym(k, j);
+            appyL_block_app_task(dblk, ublk, cdata);
+         }
+         for (int j = k+1; j < nr; ++j) {
+            // Right-diagonal block
+            BlockUnsym<T>& ublk = node.get_block_unsym(k, j);
+            appyL_block_app_task(dblk, ublk, cdata);
+         }
          
+         // Update previously failed entries
+         for (int j = 0; j < k; ++j) {
+            BlockUnsym<T>& ublk = node.get_block_unsym(k, j);
+            for (int i = 0; i < k; ++i) {
+               BlockUnsym<T>& lblk = node.get_block_unsym(i, k);
+               BlockUnsym<T>& blk = node.get_block_unsym(i, j);
+               update_block_unsym_app_task(lblk, ublk, blk, cdata);
+            }
+         }
          
+         // Update uneliminated entries in L
+         for (int j = 0; j < k; ++j) {
+            BlockUnsym<T>& ublk = node.get_block_unsym(k, j);
+            for (int i = k+1; i < nr; ++i) {
+               BlockUnsym<T>& lblk = node.get_block_unsym(i, k);
+               BlockUnsym<T>& blk = node.get_block_unsym(i, j);
+               update_block_unsym_app_task(lblk, ublk, blk, cdata);
+            }
+         }
+
+         // Update uneliminated entries in U
+         for (int j = k+1; j < nr; ++j) {
+            BlockUnsym<T>& ublk = node.get_block_unsym(k, j);
+            for (int i = 0; i < k; ++i) {
+               BlockUnsym<T>& lblk = node.get_block_unsym(i, k);
+               BlockUnsym<T>& blk = node.get_block_unsym(i, j);
+               update_block_unsym_app_task(lblk, ublk, blk, cdata);
+            }       
+         }
+      
+         // Udpdate trailing submatrix
+         int en = (n-1)/blksz; // Last block-row/column in factors
+         for (int j = k+1; j < nr; ++j) {
+            
+            BlockUnsym<T>& ublk = node.get_block_unsym(k, j);
+
+            for (int i =  k+1; i < nr; ++i) {
+               // Loop if we are in the cb
+               if ((i > en) && (j > en)) continue;
+
+               BlockUnsym<T>& lblk = node.get_block_unsym(i, k);
+               BlockUnsym<T>& blk = node.get_block_unsym(i, j);
+               update_block_unsym_app_task(lblk, ublk, blk, cdata);
+            }
+         }
+
+         // Update contribution blocks
+         if (contrib_dimn>0) {
+            // Update contribution block
+            int rsa = n/blksz; // Last block-row/column in factors
+         
+            for (int j = rsa; j < nr; ++j) {
+
+               BlockUnsym<T>& ublk = node.get_block_unsym(k, j);
+
+               for (int i = rsa; i < nr; ++i) {
+
+                  BlockUnsym<T>& lblk = node.get_block_unsym(i, k);
+                  Tile<T, PoolAlloc>& cblk = node.get_contrib_block(i, j);
+                  
+                  update_cb_block_unsym_app_task(lblk, ublk, cblk, cdata);               
+               }
+            }
+         }
+
       }
 
    }
@@ -88,7 +186,7 @@ namespace spldlt {
          int en = (n-1)/blksz; // Last block-row/column in factors
             
          // Udpdate trailing submatrix
-         for (int j = k+1; j < nc; ++j) {
+         for (int j = k+1; j < nr; ++j) {
 
             BlockUnsym<T>& ublk = node.get_block_unsym(k, j);
 
@@ -107,7 +205,7 @@ namespace spldlt {
             // Update contribution block
             int rsa = n/blksz; // Last block-row/column in factors
          
-            for (int j = rsa; j < nc; ++j) {
+            for (int j = rsa; j < nr; ++j) {
 
                BlockUnsym<T>& ublk = node.get_block_unsym(k, j);
 
