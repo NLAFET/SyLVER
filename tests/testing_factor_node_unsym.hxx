@@ -170,6 +170,23 @@ namespace spldlt {
             break;
          case PivotMethod::app_block:
             factor_front_unsym_app(options, front, workspaces);
+            
+            // Print permutation matrix         
+            printf("cperm = \n");
+            for (int i=0; i<m; ++i)
+               printf(" %d ", front.cperm[i]);
+            printf("\n");
+            print_mat_unsym(" %6.2f", k, front.lcol, lda, front.perm);
+
+            permute_failed_unsym(front);
+
+            // Print permutation matrix         
+            printf("cperm = \n");
+            for (int i=0; i<m; ++i)
+               printf(" %d ", front.cperm[i]);
+            printf("\n");
+            print_mat_unsym(" %6.2f", k, front.lcol, lda, front.perm);
+
             break;
          default:
             printf("[factor_node_unsym_test] Pivot method not implemented\n");
@@ -198,17 +215,17 @@ namespace spldlt {
             int *rperm = front.perm;
             int *cperm = front.cperm;
             
-            // Print permutation matrix         
-            printf("rperm = \n");
-            for (int i=0; i<m; ++i)
-               printf(" %d ", rperm[i]);
-            printf("\n");
+            // // Print permutation matrix         
+            // printf("rperm = \n");
+            // for (int i=0; i<m; ++i)
+            //    printf(" %d ", rperm[i]);
+            // printf("\n");
 
-            // Print permutation matrix         
-            printf("cperm = \n");
-            for (int i=0; i<m; ++i)
-               printf(" %d ", cperm[i]);
-            printf("\n");
+            // // Print permutation matrix         
+            // printf("cperm = \n");
+            // for (int i=0; i<m; ++i)
+            //    printf(" %d ", cperm[i]);
+            // printf("\n");
 
             // Alloc lu array for storing factors
             T *lu = factor_alloc.allocate(lda*m);
@@ -221,7 +238,7 @@ namespace spldlt {
             // Copy only factors (colmuns 1 to k)
             memcpy(lu, front.lcol, lda*k*sizeof(T)); // Copy lcol to lu
 
-            print_mat_unsym(" %6.2f", k, lu, lda, rperm);
+            // print_mat_unsym(" %6.2f", k, lu, lda, rperm);
 
             if (m > k) {
                

@@ -138,7 +138,36 @@ namespace spldlt {
 
       printf("[factor_front_unsym_app] first pass front.nelim = %d\n", node.nelim);
       // Permute failed entries at the back of the marix
-      permute_failed_unsym(node);
+      // permute_failed_unsym(node);
+      
+   }
+
+   template <typename T>
+   void copy_failed_diag_unsym(
+         int m, int n, int rfrom, int cfrom, 
+         T const* a, int lda, T *out, int ldout) {
+
+      if(out == a) return; // don't bother moving if memory is the same
+
+      for (int j = cfrom, jout = 0; j < n; ++j, ++jout) {
+         for (int i = rfrom, iout = 0; i < n; ++i, ++iout) {
+            out[jout*ldout+iout] = a[j*lda+i];
+         }
+      } 
+
+   }
+
+   template <typename T>
+   void move_up_diag_unsym(
+         int m, int n, T const* a, int lda, T *out, int ldout) {      
+      
+      if(out == a) return; // don't bother moving if memory is the same
+   
+      for (int j = 0; j < n; ++j) {
+         for (int i = 0; i < m; ++i) {
+            out[j*ldout+i] = a[j*lda+i];
+         }
+      }
       
    }
 
@@ -154,6 +183,10 @@ namespace spldlt {
       int nblk = node.get_nc();
 
       int nfail = n-num_elim; // Number of failed columns
+
+      // Factor entries
+      T *lcol = node.lcol;
+      int ldl = node.get_ldl();
 
       // Column data
       typedef typename NumericFront<T, PoolAlloc>::IntAlloc IntAlloc;
@@ -193,6 +226,73 @@ namespace spldlt {
          rperm[num_elim+i] = failed_perm [i];
          cperm[num_elim+i] = failed_cperm[i];
       }
+
+      std::vector<T> failed_diag(nfail*nfail);
+      
+      // Extract failed entries
+
+      // Diagonal part
+      for (int jblk=0, jfail=0, jinsert=0; jblk<nblk; ++jblk) {
+
+         int blk_n = std::min(block_size, n-(jblk*block_size)); // Number of fully-summed within block
+
+         for (int iblk=0, ifail=0, iinsert=0; iblk<nblk; ++iblk) {
+
+            int blk_m = std::min(block_size, n-(iblk*block_size)); // Number of fully-summed within block
+            
+            copy_failed_diag_unsym(
+                  blk_m, blk_n, cdata[iblk].nelim, cdata[jblk].nelim, 
+                  lcol, ldl, &failed_diag[jfail*nfail+ifail], nfail);
+            
+            iinsert += cdata[iblk].nelim;
+            ifail += blk_m - cdata[iblk].nelim;
+         }
+         
+         jinsert += cdata[jblk].nelim;
+         jfail += blk_n - cdata[jblk].nelim;
+      }
+
+      // Rectangular part
+      // ...
+
+      // Move up eliminated entries
+
+      // Diagonal part
+      for (int jblk=0, jinsert=0; jblk<nblk; ++jblk) {
+
+         int blk_n = std::min(block_size, n-(jblk*block_size)); // Number of fully-summed within block
+
+         for (int iblk=0, iinsert=0; iblk<nblk; ++iblk) {
+
+            int blk_m = std::min(block_size, n-(iblk*block_size)); // Number of fully-summed within block
+            
+            move_up_diag_unsym(
+                  cdata[iblk].nelim, cdata[jblk].nelim, 
+                  &lcol[jblk*block_size*ldl+iblk*block_size], ldl, 
+                  &lcol[jinsert*ldl+iinsert], ldl);
+            
+            iinsert += cdata[iblk].nelim;
+         }
+         jinsert += cdata[jblk].nelim;
+      }
+
+      // Copy failed entries back to factor entries
+      
+      // Diagonal part
+      // move_up_diag_unsym(
+      //       nfail, nfail, 
+      //       &failed_diag[0], nfail,
+      //       &lcol[num_elim*ldl+num_elim], ldl);
+
+      // for (int j = 0; j < nfail; ++j) {
+      //    for (int i = 0; i < nfail; ++i) {
+      //       move_up_diag_unsym(
+      //             cdata[iblk].nelim, cdata[jblk].nelim, 
+      //             failed_diag, nfail,
+      //             &lcol[num_elim*ldl+num_elim], ldl);
+      //    }
+      // }
+
    }
    
    /// @brief Task-based front factorization routine using Restricted

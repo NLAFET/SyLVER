@@ -665,7 +665,7 @@ namespace spldlt {
       void print_mat_unsym(char const* format, int n, T const* a, int lda,
                      int *rperm=nullptr) {
          for(int i=0; i<n; ++i) {
-            printf("%d:", (perm) ? perm[i] : i);
+            printf("%d:", (rperm) ? rperm[i] : i);
             for(int j=0; j<n; ++j)
                printf(format, a[j*lda+i]);
             printf("\n");
