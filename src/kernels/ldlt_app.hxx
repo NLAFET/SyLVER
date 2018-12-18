@@ -396,6 +396,7 @@ int check_threshold(int rfrom, int rto, int cfrom, int cto, T u, T* aval, int ld
    for(int j=cfrom; j<cto; j++)
    for(int i=rfrom; i<rto; i++)
       if(fabs(aval[j*lda+i]) > 1.0/u) {
+         // printf("[check_threshold] failed entry = %f\n", fabs(aval[j*lda+i]));
          if(op==OP_N) {
             // must be least failed col
             return j;

@@ -39,9 +39,9 @@ namespace spldlt {
 
          // Compute L factor
          for (int i = 0; i < k; ++i) {
-            // // Super-diagonal block
-            // BlockUnsym<T>& lblk = node.get_block_unsym(i, k);
-            // appyU_block_app_task(dblk, u, lblk, cdata);
+            // Super-diagonal block
+            BlockUnsym<T>& lblk = node.get_block_unsym(i, k);
+            appyU_block_app_task(dblk, u, lblk, cdata);
          }
          for (int i = k+1; i < nr; ++i) {
             // Sub-diagonal block
@@ -49,7 +49,7 @@ namespace spldlt {
             appyU_block_app_task(dblk, u, lblk, cdata);
          }
 
-         adjust_unsym_app_task(k, cdata, node.nelim);
+         adjust_unsym_app_task(k, cdata, node.nelim); // Update nelim in node
          
          // Restore failed entries
          for (int i = 0; i < nr; ++i) {
@@ -137,7 +137,62 @@ namespace spldlt {
       }
 
       printf("[factor_front_unsym_app] first pass front.nelim = %d\n", node.nelim);
+      // Permute failed entries at the back of the marix
+      permute_failed_unsym(node);
       
+   }
+
+   template <typename T, typename PoolAlloc>
+   void permute_failed_unsym(
+         NumericFront<T, PoolAlloc> &node) {
+      
+      // Total number of eliminated rows/columns whithin node 
+      int block_size = node.blksz;
+      int num_elim = node.nelim;
+      int n = node.get_ncol(); // Number of fully-summed rows/columns
+      // Number of block rows/columns in the fully-summed
+      int nblk = node.get_nc();
+
+      int nfail = n-num_elim; // Number of failed columns
+
+      // Column data
+      typedef typename NumericFront<T, PoolAlloc>::IntAlloc IntAlloc;
+      ColumnData<T, IntAlloc>& cdata = *node.cdata; // Column data
+
+      // Permutation
+      int *rperm = node.perm;
+      int *cperm = node.cperm;
+      
+      // std::vector<int, IntAlloc> failed_perm(n-num_elim, alloc);
+      std::vector<int> failed_perm (nfail);
+      std::vector<int> failed_cperm(nfail);
+      
+      // Permute fail entries to the back of the matrix
+      for(int jblk=0, insert=0, fail_insert=0; jblk<nblk; jblk++) {
+         
+         // int blk_n = get_ncol(jblk, n, blksz)
+         int blk_n = std::min(block_size, n-(jblk*block_size)); // Number of fully-summed within block
+
+         // Move back failed rows 
+         cdata[jblk].move_back(
+               blk_n, &rperm[jblk*block_size],
+               &rperm[insert], &failed_perm[fail_insert]
+               );
+
+         // Move back failed columns 
+         cdata[jblk].move_back(
+               blk_n, &cperm[jblk*block_size],
+               &cperm[insert], &failed_cperm[fail_insert]
+               );
+
+         insert += cdata[jblk].nelim;
+         fail_insert += blk_n - cdata[jblk].nelim;
+      }
+
+      for(int i=0; i < nfail; ++i) {
+         rperm[num_elim+i] = failed_perm [i];
+         cperm[num_elim+i] = failed_cperm[i];
+      }
    }
    
    /// @brief Task-based front factorization routine using Restricted

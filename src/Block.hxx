@@ -307,25 +307,29 @@ namespace spldlt {
          
          assert(dblk.get_row() != i);
          
+         int blkpass = 0;
+
          if (get_row() < dblk.get_row()) {
             // Super-diagonal block
             applyU_block(
-                  dblk.m-cdata[i].nelim , cdata[j].nelim, 
+                  m-cdata[i].nelim, cdata[j].nelim,
                   dblk.a, dblk.lda, &a[cdata[i].nelim], lda);
-            return 
-               spldlt::ldlt_app_internal::check_threshold
+            blkpass = spldlt::ldlt_app_internal::check_threshold
                <spral::ssids::cpu::OP_N>(
                      cdata[i].nelim, m, 0, cdata[j].nelim, u, a, lda);
          }
          else {
             // Sub-diagonal block
             applyU_block(
-                  m, cdata[j].nelim, dblk.a, dblk.lda, a, lda);            
-            return 
-               spldlt::ldlt_app_internal::check_threshold
+                  m, cdata[j].nelim, dblk.a, dblk.lda, a, lda);
+            blkpass = spldlt::ldlt_app_internal::check_threshold
                <spral::ssids::cpu::OP_N>(
                      0, m, 0, cdata[j].nelim, u, a, lda);
          }
+
+         printf("[BlockUnsym::applyU_app] u = %f, cdata[j].nelim = %d, blkpass = %d\n", u, cdata[j].nelim, blkpass);
+
+         return blkpass;
       }
 
       /// @brief Apply L factor to this block

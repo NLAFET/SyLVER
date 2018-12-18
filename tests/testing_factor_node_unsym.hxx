@@ -78,6 +78,8 @@ namespace spldlt {
             if (diagdom) gen_unsym_diagdomblock(m, a, lda, blksz);
             else         gen_mat(m, m, a, lda);
 
+            print_mat_unsym(" %6.2f", m, a, lda);
+
             b = new T[m];
             gen_unsym_rhs(m, a, lda, b);
             
@@ -197,9 +199,15 @@ namespace spldlt {
             int *cperm = front.cperm;
             
             // Print permutation matrix         
-            printf("perm = \n");
+            printf("rperm = \n");
             for (int i=0; i<m; ++i)
                printf(" %d ", rperm[i]);
+            printf("\n");
+
+            // Print permutation matrix         
+            printf("cperm = \n");
+            for (int i=0; i<m; ++i)
+               printf(" %d ", cperm[i]);
             printf("\n");
 
             // Alloc lu array for storing factors
@@ -212,6 +220,8 @@ namespace spldlt {
             // Copy factors from lcol into lu array
             // Copy only factors (colmuns 1 to k)
             memcpy(lu, front.lcol, lda*k*sizeof(T)); // Copy lcol to lu
+
+            print_mat_unsym(" %6.2f", k, lu, lda, rperm);
 
             if (m > k) {
                
