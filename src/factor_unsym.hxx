@@ -16,8 +16,6 @@ namespace spldlt {
          NumericFront<T, PoolAlloc> &node,
          std::vector<spral::ssids::cpu::Workspace>& workspaces) {
 
-      printf("[factor_front_unsym_app]\n");
-
       // typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
       typedef typename NumericFront<T, PoolAlloc>::IntAlloc IntAlloc;
 
@@ -27,11 +25,12 @@ namespace spldlt {
       int nc = node.get_nc(); // number of fully-summed block columns
       size_t contrib_dimn = m-n;
       int blksz = node.blksz;
-      ColumnData<T, IntAlloc>& cdata = *node.cdata;
+      ColumnData<T, IntAlloc>& cdata = *node.cdata; // Column data
 
       T u = options.u; // Threshold parameter
-
-      for(int k = 0; k < nc; ++k) {
+      node.nelim = 0; //
+      
+      for (int k = 0; k < nc; ++k) {
          
          BlockUnsym<T>& dblk = node.get_block_unsym(k, k);
          int *rperm = &node.perm [k*blksz];
@@ -40,9 +39,9 @@ namespace spldlt {
 
          // Compute L factor
          for (int i = 0; i < k; ++i) {
-            // Super-diagonal block
-            BlockUnsym<T>& lblk = node.get_block_unsym(i, k);
-            appyU_block_app_task(dblk, u, lblk, cdata);
+            // // Super-diagonal block
+            // BlockUnsym<T>& lblk = node.get_block_unsym(i, k);
+            // appyU_block_app_task(dblk, u, lblk, cdata);
          }
          for (int i = k+1; i < nr; ++i) {
             // Sub-diagonal block
@@ -50,6 +49,8 @@ namespace spldlt {
             appyU_block_app_task(dblk, u, lblk, cdata);
          }
 
+         adjust_unsym_app_task(k, cdata, node.nelim);
+         
          // Restore failed entries
          for (int i = 0; i < nr; ++i) {
             BlockUnsym<T>& blk = node.get_block_unsym(i, k);
@@ -135,6 +136,8 @@ namespace spldlt {
 
       }
 
+      printf("[factor_front_unsym_app] first pass front.nelim = %d\n", node.nelim);
+      
    }
    
    /// @brief Task-based front factorization routine using Restricted

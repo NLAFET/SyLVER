@@ -74,8 +74,8 @@ namespace spldlt {
             
             a = new T[lda*m];
 
-            if (diagdom) gen_unsym_diagdom(m, a, lda);
-            // if (diagdom) gen_unsym_diagdomblock(m, a, lda, blksz);
+            // if (diagdom) gen_unsym_diagdom(m, a, lda);
+            if (diagdom) gen_unsym_diagdomblock(m, a, lda, blksz);
             else         gen_mat(m, m, a, lda);
 
             b = new T[m];

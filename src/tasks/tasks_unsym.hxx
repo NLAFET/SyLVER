@@ -25,11 +25,15 @@ namespace spldlt {
       int blk = dblk.get_row(); // Block row index
       dblk.backup(); // Backup dblk
       
-      int nelim = dblk.factor(rperm, cperm);
+      int nelim_block = dblk.factor(rperm, cperm);
       // int nelim = dblk.factor_lu_pp(rperm);
-      // printf("[factor_block_unsym_app_task] blk = %d, nelim = %d\n", blk, nelim);
       // Init threshold check (non locking => task dependencies)
-      cdata[blk].init_passed(nelim);
+      cdata[blk].init_passed(nelim_block); // Init npass
+      cdata[blk].nelim = nelim_block; // Init nelim
+      
+      printf("[factor_block_unsym_app_task] blk = %d, nelim_block = %d, npass = %d\n",
+             blk, nelim_block, cdata[blk].get_npass());
+
    }
 
    /// @param u Threshold parameter
@@ -41,10 +45,17 @@ namespace spldlt {
       int elim_col = dblk.get_col();
       int *rperm = dblk.get_lrperm();
       lblk.backup_perm(rperm);
-      
+
+      // printf("[appyU_block_app_task] elim_col = %d, npass = %d\n",
+      //        elim_col, cdata[elim_col].get_npass());
+
       int blkpass = lblk.applyU_app(dblk, u, cdata);
       // Update column's passed pivot count
       cdata[elim_col].update_passed(blkpass);      
+
+      printf("[appyU_block_app_task] elim_col = %d, blkpass = %d, npass = %d\n",
+             elim_col, blkpass, cdata[elim_col].get_npass());
+
    }
 
    template <typename T, typename IntAlloc>
@@ -52,6 +63,8 @@ namespace spldlt {
          BlockUnsym<T>& dblk, BlockUnsym<T>& ublk,
          ColumnData<T, IntAlloc>& cdata, 
          std::vector<spral::ssids::cpu::Workspace>& workspaces) {
+
+      printf("[appyL_block_app_task]\n");
 
       spral::ssids::cpu::Workspace& workspace = workspaces[0]; 
       
@@ -65,6 +78,8 @@ namespace spldlt {
          BlockUnsym<T>& lblk, BlockUnsym<T>& ublk, BlockUnsym<T>& blk,
          ColumnData<T, IntAlloc>& cdata) {
 
+      printf("[update_block_unsym_app_task]\n");
+      
       blk.update_app(lblk, ublk, cdata);
    }
 
@@ -99,7 +114,24 @@ namespace spldlt {
             m, n, blk.a, blk.lda,
             nelim,
             l, ldl,
-            u, ldu);      
+            u, ldu);
+   }
+
+   /// @brief Ajust the number of eliminated columns whitin
+   /// block-colum elim_col
+   /// @param nelim Golbal number of eliminated columns
+   template <typename T, typename IntAlloc>
+   void adjust_unsym_app_task(
+         int elim_col,
+         ColumnData<T, IntAlloc>& cdata,
+         int& nelim) {
+
+      printf("[adjust_unsym_app_task] elim_col = %d, nelim = %d, npass = %d\n",
+             elim_col, cdata[elim_col].nelim, cdata[elim_col].get_npass());
+      
+      cdata[elim_col].nelim = cdata[elim_col].get_npass();
+
+      nelim += cdata[elim_col].nelim;
    }
 
    ////////////////////////////////////////////////////////////

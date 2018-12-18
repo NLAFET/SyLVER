@@ -200,7 +200,7 @@ namespace spldlt {
          if (!cpy_) return;
          
          int nelim = cdata[elim_col].nelim;
-         printf("BlockUnsym::restore_failed, elim_col = %d,  nelim = %d\n", elim_col, nelim);
+         printf("[BlockUnsym::restore_failed] elim_col = %d,  nelim = %d\n", elim_col, nelim);
 
          if ((get_col() == elim_col) && (get_row() == elim_col)) {
             // Diagonal block
@@ -255,7 +255,7 @@ namespace spldlt {
       /// @brief Factorize block and update both row rperm and column
       /// permutation cperm
       int factor(int *rperm, int *cperm) {
-         printf("BlockUnsym::factor, elim_col = %d\n", j);
+         // printf("[BlockUnsym::factor] elim_col = %d\n", j);
          return factor_lu_pp(rperm);
       }
 
@@ -419,7 +419,7 @@ namespace spldlt {
 
                // Number of eliminated column in current block column
                int nelim_col = cdata[get_col()].nelim;
-               int nu = m-nelim_col;
+               int nu = n-nelim_col;
                
                update_block_lu(
                      m, nu, &a[nelim_col*lda], lda, 
@@ -441,7 +441,7 @@ namespace spldlt {
                // Update uneliminated entries in the right-digaonal
                // block            
                
-               int mu = m-nelim_col; // Width of updated sub-block
+               int mu = m-nelim_row; // Width of updated block
 
                update_block_lu(
                      mu, n, &a[nelim_row], lda, 
@@ -452,9 +452,12 @@ namespace spldlt {
             }
             else {
                // Update failed entries
+
+               int mu = m-nelim_row;
+               int nu = n-nelim_col;
                
                update_block_lu(
-                     nelim_row, nelim_col, 
+                     mu, nu, 
                      &a[nelim_row+nelim_col*lda], lda,
                      nelim,
                      lblk.a, lblk.lda,
