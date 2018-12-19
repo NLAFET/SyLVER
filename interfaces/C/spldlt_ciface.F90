@@ -164,6 +164,10 @@ contains
     call vector_norm_2(n,   b, normRHS)
     call vector_norm_2(n,   x, solNorm)
     call matrix_norm_max(n, ptr, row, val, norm_max)
+   !print *, "resNorm", normRes
+   !print *, "rhsNorm", normRHS
+   !print *, "solNorm", solNorm
+   !print *, "ANorm", norm_max
 
     cpt = 0
     do i = 1, nrhs
@@ -249,11 +253,13 @@ end subroutine spldlt_c_finalize
 
 
 
-subroutine spldlt_c_analyse(n, cptr, crow, cval, ncpu, cakeep, coptions, cinform) &
-    bind(C, name="spldlt_analyse")
+subroutine spldlt_c_analyse(n, cptr, crow, cval, ncpu, cakeep, coptions, &
+  cinform, saveMat) bind(C, name="spldlt_analyse")
   use spldlt_ciface
   use spldlt_datatypes_mod
   use spldlt_analyse_mod
+  use spral_rutherford_boeing
+  use spral_matrix_util
   implicit none
 
   integer(C_INT),   value :: n
@@ -261,6 +267,7 @@ subroutine spldlt_c_analyse(n, cptr, crow, cval, ncpu, cakeep, coptions, cinform
   type(C_PTR),      value :: crow
   type(C_PTR),      value :: cval
   integer(C_INT),   value :: ncpu
+  integer(C_INT), optional :: saveMat
   type(C_PTR),              intent(inout) :: cakeep
   type(spldlt_options_t),   intent(in)    :: coptions
   type(spral_ssids_inform), intent(out)   :: cinform
@@ -272,8 +279,18 @@ subroutine spldlt_c_analyse(n, cptr, crow, cval, ncpu, cakeep, coptions, cinform
   type(spldlt_options)              :: foptions
   type(ssids_inform)                :: finform
   integer                           :: st
-
+  character(len=1024)               :: filename
+  integer                           :: iunit
+  type(rb_write_options)            :: options
+  integer                           :: info
   logical :: cindexed
+  integer                    :: dumpMat
+
+  if ( .not. present(saveMat) ) then
+    dumpMat = -1
+  else
+    dumpMat = saveMat
+  end if
 
   ! Copy options in first to find out whether we use Fortran or C indexing
   call copy_spldlt_options_in(coptions, foptions, cindexed)
@@ -306,6 +323,12 @@ subroutine spldlt_c_analyse(n, cptr, crow, cval, ncpu, cakeep, coptions, cinform
     ! Create new pointer
     allocate(fakeep, stat=st)
     cakeep = C_LOC(fakeep)
+  end if
+
+  if (dumpMat .ge. 0) then
+    write (filename, "(A8,I2.2,A3)") "dump_analmat", dumpMat, ".rb"
+    call rb_write(filename, SPRAL_MATRIX_REAL_SYM_INDEF, n, n, &
+      fptr, frow, options, info, fval)
   end if
 
  !print *, "Call analyse"
@@ -371,7 +394,7 @@ end subroutine spldlt_c_factor
 
 
 
-subroutine spldlt_c_solve(job, nrhs, cx, ldx, cakeep, cfkeep, cinform) &
+subroutine spldlt_c_solve(job, nrhs, cx, ldx, cakeep, cfkeep, cinform, saveRhs)&
     bind(C, name="spldlt_solve")
   use spldlt_datatypes_mod
   use spldlt_analyse_mod
@@ -386,11 +409,22 @@ subroutine spldlt_c_solve(job, nrhs, cx, ldx, cakeep, cfkeep, cinform) &
   type(C_PTR),         value            :: cakeep
   type(C_PTR),         value            :: cfkeep
   type(spral_ssids_inform), intent(out) :: cinform
+  integer(C_INT), optional              :: saveRhs
 
   real(C_DOUBLE),          pointer  :: fx(:,:)
   type(spldlt_akeep_type), pointer  :: fakeep
   type(spldlt_fkeep_type), pointer  :: ffkeep
   type(ssids_inform)                :: finform
+  character(len=1024)               :: filename
+  integer                           :: st
+  integer                           :: iunit
+  integer                           :: dumpRhs
+
+  if( .not. present(saveRhs)) then
+    dumpRhs = -1
+  else
+    dumpRhs = saveRhs
+  endif
 
   ! Translate arguments
   if (C_ASSOCIATED(cx)) then
@@ -407,6 +441,24 @@ subroutine spldlt_c_solve(job, nrhs, cx, ldx, cakeep, cfkeep, cinform) &
      call C_F_POINTER(cfkeep, ffkeep)
   else
      nullify(ffkeep)
+  end if
+
+  if (dumpRhs .ge. 0) then
+    write (filename, "(A8,I2.2,A4)") "dump_rhs", dumpRhs, ".txt"
+    ! Open file
+    open(file=filename, newunit=iunit, status='replace', iostat=st)
+    if (st .eq. 0) then
+      ! Write vector size
+      write(iunit, "(I6, I6)") ldx, nrhs
+
+      ! Write vector data
+      if (associated(fx)) then
+        write(iunit, "(3e24.16)") fx(:,:)
+      end if
+
+      ! Close file
+      close(iunit)
+    end if
   end if
 
  !print *, "Call solve"
