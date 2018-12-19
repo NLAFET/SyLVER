@@ -10,7 +10,7 @@ module spldlt_ciface
 
   type, bind(C) :: spldlt_options_t
     type(spral_ssids_options) :: options
-    logical(C_BOOL)   :: prune_tree
+    logical(C_BOOL)           :: prune_tree
   end type spldlt_options_t
 
   interface check_backward_error
@@ -254,12 +254,10 @@ end subroutine spldlt_c_finalize
 
 
 subroutine spldlt_c_analyse(n, cptr, crow, cval, ncpu, cakeep, coptions, &
-  cinform, saveMat) bind(C, name="spldlt_analyse")
+    cinform) bind(C, name="spldlt_analyse")
   use spldlt_ciface
   use spldlt_datatypes_mod
   use spldlt_analyse_mod
-  use spral_rutherford_boeing
-  use spral_matrix_util
   implicit none
 
   integer(C_INT),   value :: n
@@ -267,7 +265,6 @@ subroutine spldlt_c_analyse(n, cptr, crow, cval, ncpu, cakeep, coptions, &
   type(C_PTR),      value :: crow
   type(C_PTR),      value :: cval
   integer(C_INT),   value :: ncpu
-  integer(C_INT), optional :: saveMat
   type(C_PTR),              intent(inout) :: cakeep
   type(spldlt_options_t),   intent(in)    :: coptions
   type(spral_ssids_inform), intent(out)   :: cinform
@@ -279,18 +276,7 @@ subroutine spldlt_c_analyse(n, cptr, crow, cval, ncpu, cakeep, coptions, &
   type(spldlt_options)              :: foptions
   type(ssids_inform)                :: finform
   integer                           :: st
-  character(len=1024)               :: filename
-  integer                           :: iunit
-  type(rb_write_options)            :: options
-  integer                           :: info
   logical :: cindexed
-  integer                    :: dumpMat
-
-  if ( .not. present(saveMat) ) then
-    dumpMat = -1
-  else
-    dumpMat = saveMat
-  end if
 
   ! Copy options in first to find out whether we use Fortran or C indexing
   call copy_spldlt_options_in(coptions, foptions, cindexed)
@@ -325,12 +311,6 @@ subroutine spldlt_c_analyse(n, cptr, crow, cval, ncpu, cakeep, coptions, &
     cakeep = C_LOC(fakeep)
   end if
 
-  if (dumpMat .ge. 0) then
-    write (filename, "(A8,I2.2,A3)") "dump_analmat", dumpMat, ".rb"
-    call rb_write(filename, SPRAL_MATRIX_REAL_SYM_INDEF, n, n, &
-      fptr, frow, options, info, fval)
-  end if
-
  !print *, "Call analyse"
   ! Call Fortran routine
   if (ASSOCIATED(fval)) then
@@ -342,6 +322,67 @@ subroutine spldlt_c_analyse(n, cptr, crow, cval, ncpu, cakeep, coptions, &
   ! Copy arguments out
   call copy_inform_out(finform, cinform)
 end subroutine spldlt_c_analyse
+
+
+
+!subroutine spldlt_c_analyse_debug(n, cptr, crow, cval, ncpu, cakeep, coptions, &
+!  cinform, dumpMat) bind(C, name="spldlt_analyse_d")
+!  use spldlt_ciface
+!  use spldlt_datatypes_mod
+!  use spldlt_analyse_mod
+!  use spral_rutherford_boeing
+!  use spral_matrix_util
+!  implicit none
+!
+!  integer(C_INT),   value :: n
+!  type(C_PTR),      value :: cptr
+!  type(C_PTR),      value :: crow
+!  type(C_PTR),      value :: cval
+!  integer(C_INT),   value :: ncpu
+!  integer(C_INT),   value :: dumpMat
+!  type(C_PTR),              intent(inout) :: cakeep
+!  type(spldlt_options_t),   intent(in)    :: coptions
+!  type(spral_ssids_inform), intent(out)   :: cinform
+!
+!  integer(C_LONG),          pointer :: fptr(:)
+!  integer(C_INT),           pointer :: frow(:)
+!  real(C_DOUBLE),           pointer :: fval(:)
+!  integer                           :: st
+!  character(len=1024)               :: filename
+!  integer                           :: iunit
+!  type(rb_write_options)            :: options
+!  integer                           :: info
+!
+!  if (C_ASSOCIATED(cptr)) then
+!    call C_F_POINTER(cptr, fptr, shape=(/ n+1 /))
+!  else
+!    print *, "Error, cptr is not associated"
+!    nullify(fptr)
+!  end if
+!
+!  if (C_ASSOCIATED(crow)) then
+!    call C_F_POINTER(crow, frow, shape=(/ fptr(n+1)-1 /))
+!  else
+!    print *, "Error, crow is not associated"
+!    nullify(frow)
+!  end if
+!
+!  if (C_ASSOCIATED(cval)) then
+!    call C_F_POINTER(cval, fval, shape=(/ fptr(n+1)-1 /))
+!  else
+!    print *, "Warning, cval is not associated"
+!    nullify(fval)
+!  end if
+!
+!  if (dumpMat .ge. 0) then
+!    write (filename, "(A12,I2.2,A3)") "dump_analmat", dumpMat, ".rb"
+!    call rb_write(filename, SPRAL_MATRIX_REAL_UNSYM, n, n, &
+!      fptr, frow, options, info, fval)
+!  end if
+!
+!  call spldlt_c_analyse(n, cptr, crow, cval, ncpu, cakeep, coptions, cinform)
+!
+!end subroutine spldlt_c_analyse_debug
 
 
 
@@ -394,7 +435,7 @@ end subroutine spldlt_c_factor
 
 
 
-subroutine spldlt_c_solve(job, nrhs, cx, ldx, cakeep, cfkeep, cinform, saveRhs)&
+subroutine spldlt_c_solve(job, nrhs, cx, ldx, cakeep, cfkeep, cinform)&
     bind(C, name="spldlt_solve")
   use spldlt_datatypes_mod
   use spldlt_analyse_mod
@@ -409,22 +450,11 @@ subroutine spldlt_c_solve(job, nrhs, cx, ldx, cakeep, cfkeep, cinform, saveRhs)&
   type(C_PTR),         value            :: cakeep
   type(C_PTR),         value            :: cfkeep
   type(spral_ssids_inform), intent(out) :: cinform
-  integer(C_INT), optional              :: saveRhs
 
   real(C_DOUBLE),          pointer  :: fx(:,:)
   type(spldlt_akeep_type), pointer  :: fakeep
   type(spldlt_fkeep_type), pointer  :: ffkeep
   type(ssids_inform)                :: finform
-  character(len=1024)               :: filename
-  integer                           :: st
-  integer                           :: iunit
-  integer                           :: dumpRhs
-
-  if( .not. present(saveRhs)) then
-    dumpRhs = -1
-  else
-    dumpRhs = saveRhs
-  endif
 
   ! Translate arguments
   if (C_ASSOCIATED(cx)) then
@@ -443,24 +473,6 @@ subroutine spldlt_c_solve(job, nrhs, cx, ldx, cakeep, cfkeep, cinform, saveRhs)&
      nullify(ffkeep)
   end if
 
-  if (dumpRhs .ge. 0) then
-    write (filename, "(A8,I2.2,A4)") "dump_rhs", dumpRhs, ".txt"
-    ! Open file
-    open(file=filename, newunit=iunit, status='replace', iostat=st)
-    if (st .eq. 0) then
-      ! Write vector size
-      write(iunit, "(I6, I6)") ldx, nrhs
-
-      ! Write vector data
-      if (associated(fx)) then
-        write(iunit, "(3e24.16)") fx(:,:)
-      end if
-
-      ! Close file
-      close(iunit)
-    end if
-  end if
-
  !print *, "Call solve"
   ! Call Fortran routine
   call ffkeep%solve(fakeep, nrhs, fx, ldx, finform)
@@ -468,6 +480,76 @@ subroutine spldlt_c_solve(job, nrhs, cx, ldx, cakeep, cfkeep, cinform, saveRhs)&
   ! Copy arguments out
   call copy_inform_out(finform, cinform)
 end subroutine spldlt_c_solve
+
+
+
+!subroutine spldlt_c_solve_debug(job, nrhs, cx, ldx, cakeep, cfkeep, &
+!    cinform, dumpRhs) bind(C, name="spldlt_solve_d")
+!  use spldlt_datatypes_mod
+!  use spldlt_analyse_mod
+!  use spldlt_factorize_mod
+!  use spldlt_ciface
+!  implicit none
+!
+!  integer(C_INT),      value            :: job ! unused right now
+!  integer(C_INT),      value            :: nrhs
+!  type(C_PTR),         value            :: cx
+!  integer(C_INT),      value            :: ldx
+!  type(C_PTR),         value            :: cakeep
+!  type(C_PTR),         value            :: cfkeep
+!  integer(C_INT),      value            :: dumpRhs
+!  type(spral_ssids_inform), intent(out) :: cinform
+!
+!  real(C_DOUBLE),          pointer  :: fx(:,:)
+!  character(len=1024)               :: filename
+!  integer                           :: st
+!  integer                           :: iunit
+!
+!  if (C_ASSOCIATED(cx)) then
+!     call C_F_POINTER(cx, fx, shape=(/ ldx,nrhs /))
+!  else
+!     nullify(fx)
+!  end if
+!
+!  if (dumpRhs .ge. 0) then
+!    write (filename, "(A8,I2.2,A4)") "dump_rhs", dumpRhs, ".txt"
+!    ! Open file
+!    open(file=filename, newunit=iunit, status='replace', iostat=st)
+!    if (st .eq. 0) then
+!      ! Write vector size
+!      write(iunit, "(I6, I6)") ldx, nrhs
+!
+!      ! Write vector data
+!      if (associated(fx)) then
+!        write(iunit, "(3e24.16)") fx(:,:)
+!      end if
+!
+!      ! Close file
+!      close(iunit)
+!    end if
+!  end if
+!
+!  call spldlt_c_solve(job, nrhs, cx, ldx, cakeep, cfkeep, cinform)
+!
+!  if (dumpRhs .ge. 0) then
+!    write (filename, "(A8,I2.2,A4)") "dump_sol", dumpRhs, ".txt"
+!    ! Open file
+!    open(file=filename, newunit=iunit, status='replace', iostat=st)
+!    if (st .eq. 0) then
+!      ! Write vector size
+!      write(iunit, "(I6, I6)") ldx, nrhs
+!
+!      ! Write vector data
+!      if (associated(fx)) then
+!        write(iunit, "(3e24.16)") fx(:,:)
+!      end if
+!
+!      ! Close file
+!      close(iunit)
+!    end if
+!  end if
+!
+!end subroutine spldlt_c_solve_debug
 
 
 

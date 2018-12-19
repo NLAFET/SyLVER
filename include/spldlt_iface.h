@@ -84,8 +84,17 @@ extern void spldlt_analyse( int               n,
                             int               ncpu,
                             void              **akeep,
                             spldlt_options_t  *options,
-                            spldlt_inform_t   *info); /*,
-                            int               saveMat);*/
+                            spldlt_inform_t   *info);
+
+//extern void spldlt_analyse_d( int               n,
+//                              long              *ptr,
+//                              int               *row,
+//                              double            *val, //Optional here
+//                              int               ncpu,
+//                              void              **akeep,
+//                              spldlt_options_t  *options,
+//                              spldlt_inform_t   *info,
+//                              int               dumpMat);//MPI rank, othewise -1
 
 extern void spldlt_factor(int               posdef, //Boolean 
                           double            *val,
@@ -100,8 +109,16 @@ extern void spldlt_solve( int             job,
                           int             ldx,
                           void            *akeep,
                           void            *fkeep,
-                          spldlt_inform_t *info); /*,
-                          int             saveRhs);//MPI rank, othewise -1 */
+                          spldlt_inform_t *info);
+
+//extern void spldlt_solve_d( int             job,
+//                            int             nrhs,
+//                            double          *x,
+//                            int             ldx,
+//                            void            *akeep,
+//                            void            *fkeep,
+//                            spldlt_inform_t *info,
+//                            int             dumpRhs);//MPI rank, othewise -1
 
 extern void spldlt_chkerr(int n,
                           long *ptr,
