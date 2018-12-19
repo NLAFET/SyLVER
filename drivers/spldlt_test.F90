@@ -5,6 +5,7 @@ program spldlt_test
    ! use spral_matrix_util, only : cscl_verify, SPRAL_MATRIX_REAL_SYM_INDEF
    use spldlt_analyse_mod
    use spldlt_factorize_mod
+   use spldlt_ciface
    use spldlt_mod
    implicit none
 
@@ -20,6 +21,7 @@ program spldlt_test
 
    ! Matrix description
    character(len=200) :: matfile = ''
+   character(len=200) :: rhsfile = ''
    integer :: m, n
    integer(long), dimension(:), allocatable :: ptr
    integer, dimension(:), allocatable :: row
@@ -34,6 +36,7 @@ program spldlt_test
 
    ! right-hand side and solution
    integer :: nrhs
+   integer :: ldx, iunit, st
    double precision, dimension(:,:), allocatable :: rhs, soln 
    ! double precision, dimension(:), allocatable :: scaling
    double precision, dimension(:), allocatable :: res
@@ -72,7 +75,7 @@ program spldlt_test
 
    pos_def = .false. ! Matrix assumed indef by default
    
-   call proc_args(ssids_opt, nrhs, pos_def, ncpu, ngpu, matfile)
+   call proc_args(ssids_opt, nrhs, pos_def, ncpu, ngpu, matfile, rhsfile)
 
    ! ssids_opt%print_level = 1 ! enable printing
    ssids_opt%print_level = 0 ! disable printing
@@ -96,19 +99,42 @@ program spldlt_test
    endif
    write(*, "(a)") "ok"
 
-   ! Make up a rhs associated with the solution x = 1.0
-   allocate(rhs(n, nrhs), soln(n, nrhs))
-   rhs = 0
-   do r = 1, nrhs
-      do i = 1, n
+   if (rhsfile .eq. '') then
+     ! Make up a rhs associated with the solution x = 1.0
+     allocate(rhs(n, nrhs), soln(n, nrhs))
+     rhs = 0
+     do r = 1, nrhs
+       do i = 1, n
          do j = ptr(i), ptr(i+1)-1
-            k = row(j)
-            rhs(k, r) = rhs(k, r) + val(j)
-            if(i.eq.k) cycle
-            rhs(i, r) = rhs(i, r) + val(j)
+           k = row(j)
+           rhs(k, r) = rhs(k, r) + val(j)
+           if(i.eq.k) cycle
+           rhs(i, r) = rhs(i, r) + val(j)
          end do
-      end do
-   end do
+       end do
+     end do
+   else
+     ! Open file
+     open(file=rhsfile, newunit=iunit, status="old", action="read", iostat=st)
+     if (st .eq. 0) then
+       ! Read vector size
+       read(iunit, *) ldx, nrhs
+       if (ldx .ne. n) then
+         print *, "RHS does not have the same size as the matrix"
+         stop
+       end if 
+       print *, "Will load ", nrhs, "nrhs"
+
+       allocate(rhs(ldx, nrhs), soln(n, nrhs))
+       ! Read vector data
+       read(iunit, *) rhs(:,:)
+
+       ! Close file
+       close(iunit)
+
+      !print *, "RHS = ", rhs(:,:)
+     end if
+   end if
 
    ! ! check matrix format is correct
    ! call cscl_verify(6, SPRAL_MATRIX_REAL_SYM_INDEF, n, n, &
@@ -221,6 +247,9 @@ program spldlt_test
    call internal_calc_norm(n, ptr, row, val, soln, rhs, nrhs, res)
    print *, "bwd error scaled = ", res
 
+   call check_backward_error(n, ptr, row, val, nrhs, soln, rhs) 
+
+
    ! call ssids_free(spldlt_akeep%akeep, spldlt_fkeep%fkeep, cuda_error)
    ! call ssids_free(spldlt_akeep%akeep, cuda_error)
    ! call ssids_free(spldlt_fkeep%fkeep, cuda_error)
@@ -250,7 +279,7 @@ program spldlt_test
  contains
 
    ! Get argument from command line
-   subroutine proc_args(options, nrhs, pos_def, ncpu, ngpu, matfile)
+   subroutine proc_args(options, nrhs, pos_def, ncpu, ngpu, matfile, rhsFile)
      use spral_ssids
      implicit none
 
@@ -260,6 +289,7 @@ program spldlt_test
      integer, intent(inout) :: ncpu
      integer, intent(inout) :: ngpu
      character(len=200), intent(inout) :: matfile
+     character(len=200), intent(inout) :: rhsfile
 
      integer :: argnum, narg
      character(len=200) :: argval
@@ -313,6 +343,11 @@ program spldlt_test
            argnum = argnum + 1
            read( argval, * ) matfile
            print *, 'Matrix = ', matfile
+        case("--rhs")
+           call get_command_argument(argnum, argval)
+           argnum = argnum + 1
+           read( argval, * ) rhsfile
+           print *, 'RHS = ', rhsfile
        case("--failed-pivot-method=tpp")
           options%failed_pivot_method = 1
           print *, 'Failed pivot method TPP'
