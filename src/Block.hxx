@@ -270,7 +270,7 @@ namespace spldlt {
          alloc_init_lrperm();
          // Number of fully-summed rows/columns in dblk
          int nfs = get_nfs();
-      
+         printf("[BlockUnsym::factor_lu_pp] nfs = %d\n", nfs);
          // Note: lrperm is 0-indexed in factor_block_lu_pp 
          factor_block_lu_pp(
                m, nfs, lrperm_, a, lda, b, ldb);

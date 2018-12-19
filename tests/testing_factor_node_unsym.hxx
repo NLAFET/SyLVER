@@ -179,6 +179,10 @@ namespace spldlt {
             printf("\n");
             print_mat_unsym(" %6.2f", k, front.lcol, lda, front.perm);
 
+            printf("[factor_node_unsym_test] Eliminated pivots = %d\n", front.nelim);
+
+            printf("[factor_node_unsym_test] Permute failed\n");
+
             permute_failed_unsym(front);
 
             // Print permutation matrix         
@@ -187,6 +191,7 @@ namespace spldlt {
                printf(" %d ", front.cperm[i]);
             printf("\n");
             print_mat_unsym(" %6.2f", k, front.lcol, lda, front.perm);
+
 
             break;
          default:
@@ -213,6 +218,7 @@ namespace spldlt {
 
          if (check) {
 
+            int nelim = front.nelim;
             int *rperm = front.perm;
             int *cperm = front.cperm;
             
@@ -242,8 +248,20 @@ namespace spldlt {
             // print_mat_unsym(" %6.2f", k, lu, lda, rperm);
 
             if (m > k) {
+               // TODO Copy part from ucol into lu
+               // TODO Copy cb into lu
+            }
+            
+            if (nelim < m) { 
+
+               printf("[factor_node_unsym_test] Finish off\n");
+
+               // Finish off uneliminated entries
+               lu_pp_factor(
+                     m-nelim, m-nelim, &rperm[nelim], &lu[nelim+nelim*lda], lda, 
+                     nelim, &lu[nelim], lda);
                
-               // TODO
+               print_mat_unsym(" %6.2f", m, lu, lda, rperm);
             }
 
             int nrhs = 1;

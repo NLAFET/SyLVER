@@ -63,6 +63,7 @@ namespace spldlt {
       // printf("[find_col_abs_max] from = %d, init maxval = %e\n", from, maxval);
 
       for (int idx=from; idx <= to; ++idx) {
+         printf("[find_col_abs_max] a = %.2f\n", a[idx]);
          if (fabs(a[idx]) > maxval) {
             // printf("[find_col_abs_max] fabs(a[idx]) = %e, maxval = %e\n", fabs(a[idx]), maxval);
             maxval = fabs(a[idx]);
@@ -90,6 +91,18 @@ namespace spldlt {
             // printf("[find_col_abs_max] fabs(a[idx]) = %e, maxval = %e\n", fabs(a[idx]), maxval);
             maxval = fabs(a[idx]);
             maxidx = idx;
+         }
+      }
+   }
+
+   /// @brief Copy block a into out
+   /// @param m Height of block to be copied
+   /// @param n Width of block to be copied
+   template <typename T>
+   void copy_2d(int m, int n, T const* a, int lda, T *out, int ldout) {
+      for (int j=0; j < n; ++j) {
+         for (int i=0; i < m; ++i) {
+            out[j*ldout+i] = a[j*lda+i];
          }
       }
    }
