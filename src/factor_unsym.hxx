@@ -4,6 +4,9 @@
 #include "NumericFront.hxx"
 #include "tasks/tasks_unsym.hxx"
 
+// STD
+#include <limits>
+
 // SSIDS
 #include "ssids/cpu/cpu_iface.hxx"
 #include "ssids/cpu/Workspace.hxx"
@@ -142,21 +145,37 @@ namespace spldlt {
       
    }
 
+   /// @param a_ij Pointer on block in lower triangular part 
    template <typename T>
    void copy_failed_diag_unsym(
          int m, int n, int rfrom, int cfrom, 
-         T const* a, int lda, T *out, int ldout) {
+         T const* a, int lda, T *out, int ldout,
+         T *lout, int ldlout, T *uout, int lduout) {
 
       if(out == a) return; // don't bother moving if memory is the same
 
+      // Copy failed entries
       for (int j = cfrom, jout = 0; j < n; ++j, ++jout) {
          for (int i = rfrom, iout = 0; i < n; ++i, ++iout) {
             out[jout*ldout+iout] = a[j*lda+i];
          }
-      } 
+      }
+
+      // Copy L factors
+      for (int j = 0; j < cfrom; ++j) {
+         for (int i = rfrom, iout = 0; i < m; ++i, ++iout) {               
+            lout[j*ldlout+iout] = a[j*lda+i];
+         }
+      }
+      // Copy U factor
+      for (int j = cfrom, jout = 0; j < n; ++j, ++jout) {
+         for (int i = 0; i < rfrom; ++i) {               
+            uout[jout*lduout+i] = a[j*lda+i];
+         }
+      }      
 
    }
-
+   
    template <typename T>
    void move_up_diag_unsym(
          int m, int n, T const* a, int lda, T *out, int ldout) {      
@@ -228,6 +247,8 @@ namespace spldlt {
       }
 
       std::vector<T> failed_diag(nfail*nfail);
+      std::vector<T> failed_lwr(nfail*num_elim);
+      std::vector<T> failed_upr(num_elim*nfail);
       
       // Extract failed entries
 
@@ -239,10 +260,18 @@ namespace spldlt {
          for (int iblk=0, ifail=0, iinsert=0; iblk<nblk; ++iblk) {
 
             int blk_m = std::min(block_size, n-(iblk*block_size)); // Number of fully-summed within block
+
+            // printf("[permute_failed_unsym] iblk = %d, jblk = %d, iinsert = %d, jinsert = %d\n",
+            //        iblk, jblk, iinsert, jinsert);
             
             copy_failed_diag_unsym(
-                  blk_m, blk_n, cdata[iblk].nelim, cdata[jblk].nelim, 
-                  lcol, ldl, &failed_diag[jfail*nfail+ifail], nfail);
+                  blk_m, blk_n,
+                  cdata[iblk].nelim, cdata[jblk].nelim, 
+                  &lcol[iblk*block_size+jblk*block_size*ldl],
+                  ldl,
+                  &failed_diag[jfail*nfail+ifail], nfail,
+                  &failed_lwr[ifail+jinsert*nfail], nfail,
+                  &failed_upr[iinsert+jfail*num_elim], num_elim);
             
             iinsert += cdata[iblk].nelim;
             ifail += blk_m - cdata[iblk].nelim;
@@ -277,6 +306,24 @@ namespace spldlt {
       }
 
       // Copy failed entries back to factor entries
+      // L factor
+      for (int j = 0; j < num_elim; ++j) {
+         for (int i = 0; i < nfail; ++i) {
+            lcol[num_elim+i + j*ldl] = failed_lwr[i+j*nfail];
+            // lcol[num_elim+i + j*ldl] = std::numeric_limits<double>::quiet_NaN();
+         }
+      }
+
+      for (int j = 0; j < nfail; ++j) {
+         for (int i = 0; i < num_elim; ++i) {
+            lcol[i + (j+num_elim)*ldl] = failed_upr[i+j*num_elim];
+            // lcol[i + (j+num_elim)*ldl] = std::numeric_limits<double>::quiet_NaN();
+         }
+         for (int i = 0; i < nfail; ++i) {
+            lcol[i+num_elim + (j+num_elim)*ldl] = failed_diag[i+j*nfail];
+            // lcol[i+num_elim + (j+num_elim)*ldl] = std::numeric_limits<double>::quiet_NaN();
+         }
+      }
       
       // Diagonal part
       // move_up_diag_unsym(

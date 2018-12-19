@@ -169,6 +169,7 @@ namespace spldlt {
             factor_front_unsym_rp(front, workspaces);
             break;
          case PivotMethod::app_block:
+            // Front factorization using restricted pivoting
             factor_front_unsym_app(options, front, workspaces);
             
             // Print permutation matrix         
