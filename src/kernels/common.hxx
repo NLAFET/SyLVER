@@ -63,7 +63,7 @@ namespace spldlt {
       // printf("[find_col_abs_max] from = %d, init maxval = %e\n", from, maxval);
 
       for (int idx=from; idx <= to; ++idx) {
-         printf("[find_col_abs_max] a = %.2f\n", a[idx]);
+         // printf("[find_col_abs_max] a = %.2f\n", a[idx]);
          if (fabs(a[idx]) > maxval) {
             // printf("[find_col_abs_max] fabs(a[idx]) = %e, maxval = %e\n", fabs(a[idx]), maxval);
             maxval = fabs(a[idx]);

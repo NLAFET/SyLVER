@@ -59,7 +59,7 @@ namespace spldlt {
    }
 
    template <typename T, typename IntAlloc>
-   void appyL_block_app_task(
+   void applyL_block_app_task(
          BlockUnsym<T>& dblk, BlockUnsym<T>& ublk,
          ColumnData<T, IntAlloc>& cdata, 
          std::vector<spral::ssids::cpu::Workspace>& workspaces) {

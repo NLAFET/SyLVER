@@ -64,18 +64,21 @@ namespace spldlt {
          for (int j = 0; j < k; ++j) {
             // Left-diagonal block
             BlockUnsym<T>& ublk = node.get_block_unsym(k, j);
-            appyL_block_app_task(dblk, ublk, cdata, workspaces);
+            applyL_block_app_task(dblk, ublk, cdata, workspaces);
          }
          for (int j = k+1; j < nr; ++j) {
             // Right-diagonal block
             BlockUnsym<T>& ublk = node.get_block_unsym(k, j);
-            appyL_block_app_task(dblk, ublk, cdata, workspaces);
+            applyL_block_app_task(dblk, ublk, cdata, workspaces);
          }
          
          // Update previously failed entries
-         for (int j = 0; j < k; ++j) {
+
+         // Note: we include the diagonal block which might have some
+         // failed (and restored) entries
+         for (int j = 0; j <= k; ++j) {
             BlockUnsym<T>& ublk = node.get_block_unsym(k, j);
-            for (int i = 0; i < k; ++i) {
+            for (int i = 0; i <= k; ++i) {
                BlockUnsym<T>& lblk = node.get_block_unsym(i, k);
                BlockUnsym<T>& blk = node.get_block_unsym(i, j);
                update_block_unsym_app_task(lblk, ublk, blk, cdata);
@@ -83,7 +86,7 @@ namespace spldlt {
          }
          
          // Update uneliminated entries in L
-         for (int j = 0; j < k; ++j) {
+         for (int j = 0; j <= k; ++j) {
             BlockUnsym<T>& ublk = node.get_block_unsym(k, j);
             for (int i = k+1; i < nr; ++i) {
                BlockUnsym<T>& lblk = node.get_block_unsym(i, k);
@@ -95,7 +98,7 @@ namespace spldlt {
          // Update uneliminated entries in U
          for (int j = k+1; j < nr; ++j) {
             BlockUnsym<T>& ublk = node.get_block_unsym(k, j);
-            for (int i = 0; i < k; ++i) {
+            for (int i = 0; i <= k; ++i) {
                BlockUnsym<T>& lblk = node.get_block_unsym(i, k);
                BlockUnsym<T>& blk = node.get_block_unsym(i, j);
                update_block_unsym_app_task(lblk, ublk, blk, cdata);

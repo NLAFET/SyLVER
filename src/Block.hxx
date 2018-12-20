@@ -377,7 +377,7 @@ namespace spldlt {
             // Left-digonal block
             applyL_block(
                   cdata[i].nelim, n-cdata[j].nelim, dblk.a, dblk.lda,
-                  &a[lda*(n-cdata[j].nelim)], lda);
+                  &a[lda*cdata[j].nelim], lda);
          }
          else {
             
@@ -405,7 +405,7 @@ namespace spldlt {
          
          int elim_col = ublk.get_row();
          int nelim = cdata[elim_col].nelim; // Number of eliminated columns
-
+         printf("[BlockUnsym][update_app] elim_col = %d, nelim = %d\n", elim_col, nelim);
          if (i > ublk.get_row()) {
             // Sub-diagonal block
             if (j > lblk.get_col()) {
@@ -433,7 +433,7 @@ namespace spldlt {
 
             }
          }
-         else{
+         else {
             
             // Number of eliminated entries in the current row
             int nelim_row = cdata[get_row()].nelim;
@@ -464,7 +464,7 @@ namespace spldlt {
                      mu, nu, 
                      &a[nelim_row+nelim_col*lda], lda,
                      nelim,
-                     lblk.a, lblk.lda,
+                     &lblk.a[nelim_row], lblk.lda,
                      &ublk.a[nelim_col*ublk.lda], ublk.lda);
 
             }
