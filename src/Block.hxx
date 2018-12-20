@@ -200,7 +200,7 @@ namespace spldlt {
          if (!cpy_) return;
          
          int nelim = cdata[elim_col].nelim;
-         printf("[BlockUnsym::restore_failed] elim_col = %d,  nelim = %d\n", elim_col, nelim);
+         printf("[BlockUnsym][restore_failed] elim_col = %d,  nelim = %d\n", elim_col, nelim);
 
          if ((get_col() == elim_col) && (get_row() == elim_col)) {
             // Diagonal block
