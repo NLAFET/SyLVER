@@ -43,8 +43,11 @@ namespace spldlt {
          ColumnData<T, IntAlloc>& cdata) {
       
       int elim_col = dblk.get_col();
-      int *rperm = dblk.get_lrperm();
-      lblk.backup_perm(rperm);
+
+      // int *rperm = dblk.get_lrperm();
+      // lblk.backup_perm(rperm);
+      
+      lblk.backup(); // Note: assume there is no column pivoting
 
       // printf("[appyU_block_app_task] elim_col = %d, npass = %d\n",
       //        elim_col, cdata[elim_col].get_npass());
@@ -78,7 +81,7 @@ namespace spldlt {
          BlockUnsym<T>& lblk, BlockUnsym<T>& ublk, BlockUnsym<T>& blk,
          ColumnData<T, IntAlloc>& cdata) {
 
-      printf("[update_block_unsym_app_task]\n");
+      // printf("[update_block_unsym_app_task]\n");
       
       blk.update_app(lblk, ublk, cdata);
    }

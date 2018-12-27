@@ -33,7 +33,7 @@ namespace spldlt {
       T u = options.u; // Threshold parameter
       node.nelim = 0; //
       
-      for (int k = 0; k < nc; ++k) {
+      for (int k = 0; k < 1 /* nc */; ++k) {
          
          BlockUnsym<T>& dblk = node.get_block_unsym(k, k);
          int *rperm = &node.perm [k*blksz];
@@ -57,7 +57,7 @@ namespace spldlt {
          // Restore failed entries
          for (int i = 0; i < nr; ++i) {
             BlockUnsym<T>& blk = node.get_block_unsym(i, k);
-            restore_block_unsym_app_task(k, blk, cdata);
+            // restore_block_unsym_app_task(k, blk, cdata);
          }
 
          // Compute U factor
@@ -71,7 +71,8 @@ namespace spldlt {
             BlockUnsym<T>& ublk = node.get_block_unsym(k, j);
             applyL_block_app_task(dblk, ublk, cdata, workspaces);
          }
-         
+
+         continue;
          // Update previously failed entries
 
          // Note: we include the diagonal block which might have some

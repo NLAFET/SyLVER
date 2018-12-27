@@ -148,7 +148,8 @@ namespace spldlt {
       void restore(int rfrom, int cfrom) {
 
          assert(cpy_ != nullptr);
-
+         printf("[BlockUnsym][restore] block (%d, %d), rfrom = %d, cfrom = %d\n", i, j, rfrom, cfrom);
+         
          // Copy part from a
          int na = get_na();         
          for (int j = cfrom; j < na; ++j) {
@@ -171,7 +172,9 @@ namespace spldlt {
             int rfrom, int cfrom, int const* rperm) {
 
          assert(cpy_ != nullptr);
-         
+
+         printf("[BlockUnsym][restore_perm] block (%d, %d), rfrom = %d, cfrom = %d\n", i, j, rfrom, cfrom);
+
          // Copy part from a
          int na = get_na();         
          for (int j = cfrom; j < na; ++j) {
@@ -405,7 +408,7 @@ namespace spldlt {
          
          int elim_col = ublk.get_row();
          int nelim = cdata[elim_col].nelim; // Number of eliminated columns
-         printf("[BlockUnsym][update_app] elim_col = %d, nelim = %d\n", elim_col, nelim);
+         printf("[BlockUnsym][update_app] block = (%d, %d), elim_col = %d, nelim = %d\n", i, j, elim_col, nelim);
          if (i > ublk.get_row()) {
             // Sub-diagonal block
             if (j > lblk.get_col()) {
