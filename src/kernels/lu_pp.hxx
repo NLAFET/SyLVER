@@ -52,7 +52,7 @@ namespace spldlt {
          // Permute rows (LAPACK style)
          permute_rows(k, idx, m, perm, a, lda);
 
-         printf("[lu_pp_factor] pivot = %.2f\n", a[k*lda+k]);
+         // printf("[lu_pp_factor] pivot = %.2f\n", a[k*lda+k]);
          // printf("[lu_pp_factor] k = %d, idx = %d, piv = %d\n", k, idx, perm[k]);
 
          T d = 1.0 / a[k*lda+k];

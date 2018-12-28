@@ -453,8 +453,8 @@ namespace spldlt {
                update_block_lu(
                      mu, n, &a[nelim_row], lda, 
                      nelim,
-                     lblk.a, lblk.lda,
-                     &ublk.a[nelim_row], ublk.lda);
+                     &lblk.a[nelim_row], lblk.lda,
+                     ublk.a, ublk.lda);
                
             }
             else {

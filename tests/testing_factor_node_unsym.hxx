@@ -183,7 +183,7 @@ namespace spldlt {
 
             printf("[factor_node_unsym_test] Permute failed\n");
 
-            permute_failed_unsym(front);
+            // permute_failed_unsym(front);
 
             // Print permutation matrix         
             printf("cperm = \n");

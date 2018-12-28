@@ -117,10 +117,11 @@ int main(int argc, char** argv) {
 
    options.u = 1.0; // Theshold parameter   
    options.cpu_block_size = 2;
-   factor_node_unsym_test<double, spral::test::AlignedAllocator<double>>(options, 4, 4, 1, 0, false, true); // Diagonally dominant
+   // factor_node_unsym_test<double, spral::test::AlignedAllocator<double>>(options, 4, 4, 1, 0, true, true); // Diagonally dominant
+   factor_node_unsym_test<double, spral::test::AlignedAllocator<double>>(options, 4, 4, 1, 0, false, true);
 
    // options.cpu_block_size = 4;
-   // factor_node_unsym_test<double, spral::test::AlignedAllocator<double>>(options, 8, 8, 1, 0, false, true); // Diagonally dominant
+   // factor_node_unsym_test<double, spral::test::AlignedAllocator<double>>(options, 8, 8, 1, 0, false, true);
    
    
    // nerr += run_factor_node_indef_tests();
