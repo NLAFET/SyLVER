@@ -33,7 +33,7 @@ namespace spldlt {
       T u = options.u; // Threshold parameter
       node.nelim = 0; //
       
-      for (int k = 0; k < 1 /* nc */; ++k) {
+      for (int k = 0; k < /*1*/ nc; ++k) {
          
          BlockUnsym<T>& dblk = node.get_block_unsym(k, k);
          int *rperm = &node.perm [k*blksz];

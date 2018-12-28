@@ -67,7 +67,7 @@ namespace spldlt {
          ColumnData<T, IntAlloc>& cdata, 
          std::vector<spral::ssids::cpu::Workspace>& workspaces) {
 
-      printf("[appyL_block_app_task]\n");
+      // printf("[appyL_block_app_task]\n");
 
       spral::ssids::cpu::Workspace& workspace = workspaces[0]; 
       

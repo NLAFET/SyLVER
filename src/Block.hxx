@@ -259,7 +259,10 @@ namespace spldlt {
       /// permutation cperm
       int factor(int *rperm, int *cperm) {
          // printf("[BlockUnsym::factor] elim_col = %d\n", j);
-         return factor_lu_pp(rperm);
+         printf("[BlockUnsym][factor] block (%d,%d)\n", i, j);
+         int nelim = 0;
+         nelim = factor_lu_pp(rperm);
+         return nelim;
       }
 
       /// @brief Factorize block using LU with partial pivoting and
@@ -273,7 +276,8 @@ namespace spldlt {
          alloc_init_lrperm();
          // Number of fully-summed rows/columns in dblk
          int nfs = get_nfs();
-         printf("[BlockUnsym::factor_lu_pp] nfs = %d\n", nfs);
+         // return nelim;
+         printf("[BlockUnsym][factor_lu_pp] nfs = %d\n", nfs);
          // Note: lrperm is 0-indexed in factor_block_lu_pp 
          factor_block_lu_pp(
                m, nfs, lrperm_, a, lda, b, ldb);
@@ -408,7 +412,7 @@ namespace spldlt {
          
          int elim_col = ublk.get_row();
          int nelim = cdata[elim_col].nelim; // Number of eliminated columns
-         printf("[BlockUnsym][update_app] block = (%d, %d), elim_col = %d, nelim = %d\n", i, j, elim_col, nelim);
+         printf("[BlockUnsym][update_app] block = (%d,%d), elim_col = %d, nelim = %d\n", i, j, elim_col, nelim);
          if (i > ublk.get_row()) {
             // Sub-diagonal block
             if (j > lblk.get_col()) {

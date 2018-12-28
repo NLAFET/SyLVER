@@ -108,22 +108,42 @@ int main(int argc, char** argv) {
 
    // Threshold partial pivoting
    options.pivot_method = PivotMethod::app_block;
-   options.u = 0.01; // Theshold parameter
-      
-   options.cpu_block_size = 4;
+
+   // options.u = 0.01; // Theshold parameter   
+   // options.cpu_block_size = 4;
    // factor_node_unsym_test<double, spral::test::AlignedAllocator<double>>(options, 4, 4, 1, 0, true, true); // Diagonally dominant
    // factor_node_unsym_test<double, spral::test::AlignedAllocator<double>>(options, 8, 8, 1, 0, true, true); // Diagonally dominant
    // factor_node_unsym_test<double, spral::test::AlignedAllocator<double>>(options, 16, 16, 1, 0, true, true); // Diagonally dominant
 
-   options.u = 1.0; // Theshold parameter   
-   options.cpu_block_size = 2;
-   // factor_node_unsym_test<double, spral::test::AlignedAllocator<double>>(options, 4, 4, 1, 0, true, true); // Diagonally dominant
-   factor_node_unsym_test<double, spral::test::AlignedAllocator<double>>(options, 4, 4, 1, 0, false, true);
+   // options.cpu_block_size = 2;
 
+   // options.u = 1.0; // Theshold parameter   
+   // factor_node_unsym_test<double, spral::test::AlignedAllocator<double>>(options, 4, 4, 1, 0, true, true); // Diagonally dominant
+   // factor_node_unsym_test<double, spral::test::AlignedAllocator<double>>(options, 4, 4, 1, 0, false, true);
+
+   // options.u = 0.5; // Theshold parameter   
+   // factor_node_unsym_test<double, spral::test::AlignedAllocator<double>>(options, 6, 6, 1, 0, false, true);
+   // factor_node_unsym_test<double, spral::test::AlignedAllocator<double>>(options, 5, 5, 1, 0, false, true);
+
+   // options.u = 1.0; // Theshold parameter   
    // options.cpu_block_size = 4;
    // factor_node_unsym_test<double, spral::test::AlignedAllocator<double>>(options, 8, 8, 1, 0, false, true);
-   
-   
+
+   options.u = 0.5; // Theshold parameter
+   options.cpu_block_size = 4;
+   // factor_node_unsym_test<double, spral::test::AlignedAllocator<double>>(options, 12, 12, 1, 0, false, true);
+   // factor_node_unsym_test<double, spral::test::AlignedAllocator<double>>(options, 16, 16, 1, 0, false, true);
+   // factor_node_unsym_test<double, spral::test::AlignedAllocator<double>>(options, 6, 6, 1, 0, false, true);
+   factor_node_unsym_test<double, spral::test::AlignedAllocator<double>>(options, 10, 10, 1, 0, false, true);
+
+   // options.u = 0.1; // Theshold parameter
+   // options.cpu_block_size = 4;
+   // factor_node_unsym_test<double, spral::test::AlignedAllocator<double>>(options, 12, 12, 1, 0, false, true);
+
+   // options.u = 0.5; // Theshold parameter
+   // options.cpu_block_size = 8;
+   // factor_node_unsym_test<double, spral::test::AlignedAllocator<double>>(options, 24, 24, 1, 0, false, true);
+
    // nerr += run_factor_node_indef_tests();
    // nerr += run_form_contrib_tests();
 

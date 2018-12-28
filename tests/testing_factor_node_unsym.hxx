@@ -27,6 +27,7 @@ namespace spldlt {
          printf("[factor_node_unsym_test] m = %d\n", m);
          printf("[factor_node_unsym_test] k = %d\n", k);
          printf("[factor_node_unsym_test] blksz = %d\n", blksz);
+         printf("[factor_node_unsym_test] u = %e\n", options.u);
 
          // We don't allow these cases
          ASSERT_TRUE(k > 0);
@@ -40,6 +41,7 @@ namespace spldlt {
          // Init test problem
          // Generate test matrix
          int lda = spral::ssids::cpu::align_lda<T>(m);
+         printf("[factor_node_unsym_test] lda = %d\n", lda);
          T* a = nullptr;
          T* b = nullptr;
 
@@ -183,7 +185,7 @@ namespace spldlt {
 
             printf("[factor_node_unsym_test] Permute failed\n");
 
-            // permute_failed_unsym(front);
+            permute_failed_unsym(front);
 
             // Print permutation matrix         
             printf("cperm = \n");

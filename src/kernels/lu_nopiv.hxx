@@ -10,7 +10,7 @@ namespace spldlt {
    void lu_nopiv_factor(int m, int nelim, T *a, int lda) {
 
       // Only consider case where there are more rows than columns
-      assert(m >= n);
+      assert(m >= nelim);
       
       for (int k=0; k<nelim; ++k) {
 
