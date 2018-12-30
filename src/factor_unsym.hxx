@@ -160,7 +160,7 @@ namespace spldlt {
 
       // Copy failed entries
       for (int j = cfrom, jout = 0; j < n; ++j, ++jout) {
-         for (int i = rfrom, iout = 0; i < n; ++i, ++iout) {
+         for (int i = rfrom, iout = 0; i < m; ++i, ++iout) {
             out[jout*ldout+iout] = a[j*lda+i];
          }
       }
@@ -218,11 +218,14 @@ namespace spldlt {
       // Permutation
       int *rperm = node.perm;
       int *cperm = node.cperm;
+
+      printf("[permute_failed_unsym] n = %d\n", n);
+      printf("[permute_failed_unsym] ldl = %d\n", ldl);
       
       // std::vector<int, IntAlloc> failed_perm(n-num_elim, alloc);
       std::vector<int> failed_perm (nfail);
       std::vector<int> failed_cperm(nfail);
-      
+
       // Permute fail entries to the back of the matrix
       for(int jblk=0, insert=0, fail_insert=0; jblk<nblk; jblk++) {
          
@@ -256,24 +259,36 @@ namespace spldlt {
       
       // Extract failed entries
 
-      // Diagonal part
+      // Square (diagonal) part
       for (int jblk=0, jfail=0, jinsert=0; jblk<nblk; ++jblk) {
 
          int blk_n = std::min(block_size, n-(jblk*block_size)); // Number of fully-summed within block
+         // printf("[permute_failed_unsym] jblk = %d, blk_n = %d\n", jblk, blk_n);
 
          for (int iblk=0, ifail=0, iinsert=0; iblk<nblk; ++iblk) {
 
             int blk_m = std::min(block_size, n-(iblk*block_size)); // Number of fully-summed within block
+            // printf("[permute_failed_unsym] iblk = %d, blk_m = %d\n", iblk, blk_m);
 
             // printf("[permute_failed_unsym] iblk = %d, jblk = %d, iinsert = %d, jinsert = %d\n",
             //        iblk, jblk, iinsert, jinsert);
+
+            assert(iblk*block_size < n);
+            assert(jblk*block_size < n);
+
+            // assert(jfail < nfail);
+            // assert(ifail < nfail);
+            
+            T *failed_diag_ptr = nullptr;
+            if (ifail < nfail && jfail < nfail)
+               failed_diag_ptr = &failed_diag[jfail*nfail+ifail];
             
             copy_failed_diag_unsym(
                   blk_m, blk_n,
                   cdata[iblk].nelim, cdata[jblk].nelim, 
                   &lcol[iblk*block_size+jblk*block_size*ldl],
                   ldl,
-                  &failed_diag[jfail*nfail+ifail], nfail,
+                  failed_diag_ptr, nfail,
                   &failed_lwr[ifail+jinsert*nfail], nfail,
                   &failed_upr[iinsert+jfail*num_elim], num_elim);
             
@@ -285,7 +300,7 @@ namespace spldlt {
          jfail += blk_n - cdata[jblk].nelim;
       }
 
-      // Rectangular part
+      // Rectangular (sub-diagonal) part
       // ...
 
       // Move up eliminated entries
@@ -294,10 +309,12 @@ namespace spldlt {
       for (int jblk=0, jinsert=0; jblk<nblk; ++jblk) {
 
          int blk_n = std::min(block_size, n-(jblk*block_size)); // Number of fully-summed within block
+         // printf("[permute_failed_unsym] jblk = %d, blk_n = %d\n", jblk, blk_n);
 
          for (int iblk=0, iinsert=0; iblk<nblk; ++iblk) {
 
             int blk_m = std::min(block_size, n-(iblk*block_size)); // Number of fully-summed within block
+            // printf("[permute_failed_unsym] iblk = %d, blk_m = %d\n", iblk, blk_m);
             
             move_up_diag_unsym(
                   cdata[iblk].nelim, cdata[jblk].nelim, 
@@ -309,6 +326,7 @@ namespace spldlt {
          jinsert += cdata[jblk].nelim;
       }
 
+      // printf("[permute_failed_unsym] num_elim = %d, nfail = %d\n", num_elim, nfail);
       // Copy failed entries back to factor entries
       // L factor
       for (int j = 0; j < num_elim; ++j) {
@@ -329,21 +347,6 @@ namespace spldlt {
          }
       }
       
-      // Diagonal part
-      // move_up_diag_unsym(
-      //       nfail, nfail, 
-      //       &failed_diag[0], nfail,
-      //       &lcol[num_elim*ldl+num_elim], ldl);
-
-      // for (int j = 0; j < nfail; ++j) {
-      //    for (int i = 0; i < nfail; ++i) {
-      //       move_up_diag_unsym(
-      //             cdata[iblk].nelim, cdata[jblk].nelim, 
-      //             failed_diag, nfail,
-      //             &lcol[num_elim*ldl+num_elim], ldl);
-      //    }
-      // }
-
    }
    
    /// @brief Task-based front factorization routine using Restricted

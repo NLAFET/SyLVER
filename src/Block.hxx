@@ -148,7 +148,7 @@ namespace spldlt {
       void restore(int rfrom, int cfrom) {
 
          assert(cpy_ != nullptr);
-         printf("[BlockUnsym][restore] block (%d, %d), rfrom = %d, cfrom = %d\n", i, j, rfrom, cfrom);
+         // printf("[BlockUnsym][restore] block (%d, %d), rfrom = %d, cfrom = %d\n", i, j, rfrom, cfrom);
          
          // Copy part from a
          int na = get_na();         
@@ -173,7 +173,7 @@ namespace spldlt {
 
          assert(cpy_ != nullptr);
 
-         printf("[BlockUnsym][restore_perm] block (%d, %d), rfrom = %d, cfrom = %d\n", i, j, rfrom, cfrom);
+         // printf("[BlockUnsym][restore_perm] block (%d, %d), rfrom = %d, cfrom = %d\n", i, j, rfrom, cfrom);
 
          // Copy part from a
          int na = get_na();         
@@ -259,7 +259,7 @@ namespace spldlt {
       /// permutation cperm
       int factor(int *rperm, int *cperm) {
          // printf("[BlockUnsym::factor] elim_col = %d\n", j);
-         printf("[BlockUnsym][factor] block (%d,%d)\n", i, j);
+         // printf("[BlockUnsym][factor] block (%d,%d)\n", i, j);
          int nelim = 0;
          nelim = factor_lu_pp(rperm);
          return nelim;
@@ -277,7 +277,7 @@ namespace spldlt {
          // Number of fully-summed rows/columns in dblk
          int nfs = get_nfs();
          // return nelim;
-         printf("[BlockUnsym][factor_lu_pp] nfs = %d\n", nfs);
+         // printf("[BlockUnsym][factor_lu_pp] nfs = %d\n", nfs);
          // Note: lrperm is 0-indexed in factor_block_lu_pp 
          factor_block_lu_pp(
                m, nfs, lrperm_, a, lda, b, ldb);
@@ -334,7 +334,7 @@ namespace spldlt {
                      0, m, 0, cdata[j].nelim, u, a, lda);
          }
 
-         printf("[BlockUnsym::applyU_app] u = %f, cdata[j].nelim = %d, blkpass = %d\n", u, cdata[j].nelim, blkpass);
+         // printf("[BlockUnsym][applyU_app] u = %f, cdata[j].nelim = %d, blkpass = %d\n", u, cdata[j].nelim, blkpass);
 
          return blkpass;
       }
@@ -412,7 +412,7 @@ namespace spldlt {
          
          int elim_col = ublk.get_row();
          int nelim = cdata[elim_col].nelim; // Number of eliminated columns
-         printf("[BlockUnsym][update_app] block = (%d,%d), elim_col = %d, nelim = %d\n", i, j, elim_col, nelim);
+         // printf("[BlockUnsym][update_app] block = (%d,%d), elim_col = %d, nelim = %d\n", i, j, elim_col, nelim);
          if (i > ublk.get_row()) {
             // Sub-diagonal block
             if (j > lblk.get_col()) {

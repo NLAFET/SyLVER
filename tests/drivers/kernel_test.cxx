@@ -129,12 +129,13 @@ int main(int argc, char** argv) {
    // options.cpu_block_size = 4;
    // factor_node_unsym_test<double, spral::test::AlignedAllocator<double>>(options, 8, 8, 1, 0, false, true);
 
-   options.u = 0.5; // Theshold parameter
-   options.cpu_block_size = 4;
+   // options.u = 0.5; // Theshold parameter
+   // options.cpu_block_size = 4;
+   // factor_node_unsym_test<double, spral::test::AlignedAllocator<double>>(options, 6, 6, 1, 0, false, true);
+   // factor_node_unsym_test<double, spral::test::AlignedAllocator<double>>(options, 10, 10, 1, 0, true, true);
+   // factor_node_unsym_test<double, spral::test::AlignedAllocator<double>>(options, 10, 10, 1, 0, false, true);
    // factor_node_unsym_test<double, spral::test::AlignedAllocator<double>>(options, 12, 12, 1, 0, false, true);
    // factor_node_unsym_test<double, spral::test::AlignedAllocator<double>>(options, 16, 16, 1, 0, false, true);
-   // factor_node_unsym_test<double, spral::test::AlignedAllocator<double>>(options, 6, 6, 1, 0, false, true);
-   factor_node_unsym_test<double, spral::test::AlignedAllocator<double>>(options, 10, 10, 1, 0, false, true);
 
    // options.u = 0.1; // Theshold parameter
    // options.cpu_block_size = 4;

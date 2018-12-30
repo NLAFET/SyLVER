@@ -56,8 +56,8 @@ namespace spldlt {
       // Update column's passed pivot count
       cdata[elim_col].update_passed(blkpass);      
 
-      printf("[appyU_block_app_task] elim_col = %d, blkpass = %d, npass = %d\n",
-             elim_col, blkpass, cdata[elim_col].get_npass());
+      // printf("[appyU_block_app_task] elim_col = %d, blkpass = %d, npass = %d\n",
+      //        elim_col, blkpass, cdata[elim_col].get_npass());
 
    }
 
