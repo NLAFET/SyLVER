@@ -4,6 +4,8 @@ program splu_test
   use spldlt_datatypes_mod, only: spldlt_options
   use spral_rutherford_boeing
   use spral_matrix_util
+  use spral_ssids_inform, only : ssids_inform
+  use spldlt_analyse_mod
   implicit none
 
   ! indexes
@@ -33,8 +35,14 @@ program splu_test
   integer, dimension(:), allocatable :: row
   real(wp), dimension(:), allocatable :: val
 
-  type(spldlt_options), target :: options ! SyLVER options
+  ! SSIDS structures
+  type(ssids_inform) :: inform ! stats
   type(ssids_options), pointer :: ssids_opt ! SSIDS options
+
+  ! SyLVER structures
+  type(spldlt_options), target :: options ! SyLVER options
+
+  type(spldlt_akeep_type) :: sylver_akeep
 
   call proc_args(options, nrhs, ncpu, ngpu, matfile)
 
@@ -82,7 +90,6 @@ program splu_test
      do i = 1, n
         do j = ptr(i), ptr(i+1)-1
            k = row(j)
-           ! print *, 'r = ', k, ', c = ', i, ', val = ', val(j)
            rhs(k, r) = rhs(k, r) + val(j)
         end do
      end do
@@ -91,7 +98,8 @@ program splu_test
   ssids_opt%ordering = 1 ! use Metis ordering
   ssids_opt%scaling = 0 ! no scaling
 
-  soln = 1.0
+  ! Perform spldlt analysis
+  call spldlt_analyse(sylver_akeep, n, ptr, row, options, inform, ncpu, val=val)
 
   print *, "number bad cmp = ", count(abs(soln(1:n,1)-1.0).ge.1e-6)
   print *, "fwd error || ||_inf = ", maxval(abs(soln(1:n,1)-1.0))

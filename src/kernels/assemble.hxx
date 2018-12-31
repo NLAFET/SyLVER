@@ -466,10 +466,9 @@ namespace spldlt {
             assert(c < node.get_ncol());
             assert(r < node.get_nrow());
             long k = c*ldl + r;
-            // printf("[init_a_block] k = %d, src = %d\n", k, src);
+
             if(r >= snode.ncol) k += node.ndelay_in;
-            // if(node.ndelay_in>0) printf("[init_a_block] ndelay_in = %d\n", node.ndelay_in);
-            // printf("[init_a_block] ldl = %d\n", ldl);
+
             node.lcol[k] = aval[src];
          }
       }
