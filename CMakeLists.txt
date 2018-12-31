@@ -349,10 +349,14 @@ add_subdirectory(src)
 
 add_executable(spldlt_test drivers/spldlt_test.F90)
 # add_executable(spldlt_test_debug drivers/spldlt_test_debug.F90)
+add_executable(splu_test drivers/splu_test.F90)
 
 ## spldlt_test
 target_include_directories(spldlt_test PUBLIC ${CMAKE_BINARY_DIR}/src)
 target_link_libraries(spldlt_test spldlt)
+## splu_test
+target_include_directories(splu_test PUBLIC ${CMAKE_BINARY_DIR}/src)
+target_link_libraries(splu_test spldlt)
 
 ## spldlt_test_debug
 # target_include_directories(spldlt_test_debug PUBLIC ${CMAKE_BINARY_DIR}/src)
@@ -376,12 +380,16 @@ target_link_libraries(spldlt_test spldlt)
 
 ## spral
 target_include_directories(spldlt_test PUBLIC ${SPRAL_DIR})
+target_include_directories(splu_test PUBLIC ${SPRAL_DIR})
 # target_include_directories(spldlt_test_debug PUBLIC ${SPRAL_DIR})
-find_library(SPRAL_LIBRARY spral PATHS ${SPRAL_DIR} ${SPRAL_DIR})
-target_link_libraries(spldlt_test ${SPRAL_LIBRARY})
-# target_link_libraries(spldlt_test_debug ${SPRAL_LIBRARY})
+find_library(SPRAL_LIBRARIES spral PATHS ${SPRAL_DIR} ${SPRAL_DIR})
+# set(LIBS ${LIBS} ${SPRAL_LIBRARIES})
 
-set_property(TARGET spldlt_test PROPERTY LINKER_LANGUAGE Fortran)
+target_link_libraries(spldlt_test ${SPRAL_LIBRARIES})
+# target_link_libraries(spldlt_test_debug ${SPRAL_LIBRARIES})
+target_link_libraries(splu_test ${SPRAL_LIBRARIES})
+
+# set_property(TARGET spldlt_test PROPERTY LINKER_LANGUAGE Fortran)
 
 ################################################################################
 # Test drivers
@@ -439,10 +447,13 @@ MESSAGE( STATUS "Libs: " ${LIBS} )
 set(test_drivers)
 
 list(APPEND test_drivers "drivers/spldlt_test.F90")
+list(APPEND test_drivers "drivers/splu_test.F90")
 
 foreach(test_driver ${test_drivers})
-  
+    
   get_filename_component(test_driver_name ${test_driver} NAME_WE)
+
+  set_property(TARGET ${test_driver_name} PROPERTY LINKER_LANGUAGE Fortran)
 
   ########################################
   # Link test drivers with external libraries

@@ -12,8 +12,8 @@ program spldlt_test
    ! FIXME use the one defined in ssids for now
    ! integer, parameter :: wp = kind(0d0)
 
-   type(spldlt_options) :: options
-   type(ssids_options) :: ssids_opt
+   type(spldlt_options), target :: options
+   type(ssids_options), pointer :: ssids_opt
    logical :: pos_def ! if true, assume matrix is posdef
 
    ! matrix reader options
@@ -75,8 +75,9 @@ program spldlt_test
    pos_def = .false. ! Matrix assumed indef by default
    
    call proc_args(options, nrhs, pos_def, ncpu, ngpu, matfile)
-   ! options%super = ssids_opt
 
+   ssids_opt => options%super ! Point to SSIDS options
+   
    ! ssids_opt%print_level = 1 ! enable printing
    ssids_opt%print_level = 0 ! disable printing
    ssids_opt%use_gpu = .false. ! disable GPU
