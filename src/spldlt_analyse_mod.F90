@@ -391,10 +391,10 @@ contains
   end subroutine analyse_core
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  !> @brief Analyse phase.
+
+  !> @brief Analyse phase for symmetric matrix.
   !>
   ! TODO 32-bits wrapper
-
   subroutine spldlt_analyse(spldlt_akeep, n, ptr, row, options, inform, ncpu, val)
     use spral_ssids, only: ssids_free
     use spral_metis_wrapper, only : metis_order
@@ -517,91 +517,6 @@ contains
          options, inform)
     ! end if
 
-    ! ! Destroy partitions given by SSIDS
-    ! if (allocated(akeep%part)) deallocate(akeep%part, stat=st)
-    ! if (allocated(akeep%contrib_ptr)) deallocate(akeep%contrib_ptr, stat=st)
-    ! if (allocated(akeep%contrib_idx)) deallocate(akeep%contrib_idx, stat=st)
-
-    ! ! Destroy subtrees given by SSIDS 
-    ! if (allocated(akeep%subtree)) deallocate(akeep%subtree, stat=st)
-    ! if (st .ne. 0) go to 100
-
-    ! Find subtree partition
-    ! call find_subtree_partition(akeep%nnodes, akeep%sptr, akeep%sparent,           &
-    !      akeep%rptr, options, akeep%topology, akeep%nparts, akeep%part,            &
-    !      exec_loc, akeep%contrib_ptr, akeep%contrib_idx, contrib_dest, inform, st)
-    ! if (st .ne. 0) go to 100
-
-    ! print *, " nparts = ", akeep%nparts
-    ! print *, " part = ", akeep%part
-    ! print *, " exec_loc = ", exec_loc
-    ! print *, " contrib_idx = ", akeep%contrib_idx
-    ! print *, " contrib_ptr = ", akeep%contrib_ptr
-    ! print *, " contrib_dest = ", contrib_dest
-
-    ! akeep%nparts = 10
-    ! allocate(akeep%part(akeep%nnodes+1), exec_loc(akeep%nnodes))
-    ! akeep%part = (/1,  2,  7,  8,  9, 12, 13, 18, 19, 20, 25, 12, 13, 14, &
-    !      15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25/)
-    ! allocate(akeep%contrib_ptr(akeep%nparts+3), akeep%contrib_idx(akeep%nparts), &  
-    !      contrib_dest(akeep%nparts))
-    ! exec_loc = (/2, -1,  1,  2, -1,  1, -1,  2,  1, -1, -1,  1, -1, -1, & 
-    !      -1, -1, -1,  2,  1, -1, -1, -1, -1, -1 /)
-    ! akeep%contrib_idx = (/1,  5,  2,  3,  6,  4,  7,  8,  9, 11/)
-    ! akeep%contrib_ptr = (/1,  1,  2,  2,  2,  4,  4, 5, 5, 5, 10, 10, 0/)
-    ! contrib_dest = (/2,  9,  9, 13, 24, 24, 23, 20, 20,  0/)
-
-    ! do i = 1, akeep%nparts
-    !    ! print *, "part ", i, ", sa = ", akeep%part(i), ", en = ", akeep%part(i+1)-1, &
-    !    !      ", contrib_idx = ", akeep%contrib_idx(akeep%contrib_ptr(i):akeep%contrib_ptr(i+1)-1)
-    !    ! print *, "part ", i, "exec_loc = ", exec_loc(i), ", sa = ", akeep%part(i), ", en = ", akeep%part(i+1)-1, &
-    !    !      ", contrib_idx = ", akeep%contrib_idx(akeep%contrib_ptr(i):akeep%contrib_ptr(i+1)-1), &
-    !    !      ", contrib_dest = ", contrib_dest(akeep%contrib_ptr(i):akeep%contrib_ptr(i+1)-1)
-
-    !    print *, "part ", i, ", sa = ", akeep%part(i), ", en = ", akeep%part(i+1)-1, &
-    !         ", contrib_idx = ", akeep%contrib_idx(i), &
-    !         ", exec_loc = ", exec_loc(i)
-    !         ! ", contrib_ptr(i) = ", akeep%contrib_ptr(i), ", contrib_ptr(i+1)-1 = ", akeep%contrib_ptr(i+1)-1 
-    !         ! ", contrib_dest = ", contrib_dest(akeep%contrib_ptr(i):akeep%contrib_ptr(i+1)-1)
-
-    ! end do
-    
-    ! ! Setup subtrees
-    ! allocate(akeep%subtree(akeep%nparts), stat=st)
-    ! if (st .ne. 0) go to 100
-
-    ! do i = 1, akeep%nparts
-    !    ! Set execution location for i-th subtree
-    !    akeep%subtree(i)%exec_loc = exec_loc(i)
-    !    ! CPU
-    !    !print *, numa_region, "init cpu subtree ", i, akeep%part(i), &
-    !    !   akeep%part(i+1)-1
-    !    ! allocate(akeep%subtree(i)%ptr)
-
-    !    ! akeep%subtree(i)%ptr => construct_cpu_symbolic_subtree(akeep%n,   &
-    !    !      akeep%part(i), akeep%part(i+1), akeep%sptr, akeep%sparent,   &
-    !    !      akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist,            &
-    !    !      contrib_dest(akeep%contrib_ptr(i):akeep%contrib_ptr(i+1)-1), &
-    !    !      options)
-
-    !    ! debug
-    !    allocate(subtree_ptr)
-    !    akeep%subtree(i)%ptr => subtree_ptr
-    !    nullify(subtree_ptr) 
-
-    ! end do
-    ! print *, "[spldlt_analyse] nnodes: ", nnodes
-    ! print *, "sptr: ", akeep%sptr(1:nnodes+1)
-
-    ! call C++ analyse routine
-    ! call cpu_copy_options_in(options, coptions)
-    ! debug
-    ! spldlt_akeep%symbolic_tree_c = &
-    !      spldlt_create_symbolic_tree_c(c_loc(akeep), akeep%n, nnodes, akeep%sptr, &
-    !      akeep%sparent, akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist, &
-    !      akeep%nparts, akeep%part, akeep%contrib_idx, exec_loc, contrib_dest, & 
-    !      coptions)
-
     return
 100 continue
         
@@ -611,6 +526,134 @@ contains
   end subroutine spldlt_analyse
   
   !****************************************************************************
+
+  !> @brief Analyse phase for symmetrically-structured, non symmetric matrix.
+  !>
+  ! TODO 32-bits wrapper
+  subroutine splu_analyse(spldlt_akeep, n, ptr, row, options, inform, ncpu, val)
+    use spral_ssids, only: ssids_free
+    use spral_metis_wrapper, only : metis_order
+    use spral_ssids_akeep, only: ssids_akeep
+    use spldlt_datatypes_mod, only: spldlt_options
+    implicit none
+
+    type(spldlt_akeep_type), target, intent(inout) :: spldlt_akeep ! spldlt akeep structure 
+    integer, intent(in) :: n
+    integer(long), intent(in) :: ptr(:)
+    integer, intent(in) :: row(:)
+    type(spldlt_options), target, intent(in) :: options
+    type(ssids_inform), intent(inout) :: inform
+    integer, intent(inout) :: ncpu ! number of CPU workers
+    real(wp), optional, intent(in) :: val(:) ! Used when computing the scaling 
+
+    character(50)  :: context      ! Procedure name (used when printing).
+    logical :: check = .false. ! TODO input parameter
+    type(ssids_akeep), pointer :: akeep ! SSIDS akeep structure
+    type(ssids_options), pointer :: ssids_opts ! SSIDS options 
+    integer(long) :: nz     ! entries in expanded matrix
+
+    ! Error flags
+    integer :: st
+    integer :: free_flag
+    integer :: flag         ! error flag for metis
+
+    integer, dimension(:), allocatable :: order2 ! Computed order
+    integer(long), dimension(:), allocatable :: ptr2 ! col ptrs for lower triangular matrix
+    integer, dimension(:), allocatable :: row2 ! row indices for lower triangular matrix
+
+    context = 'splu_analyse'
+
+    ! Prepare analysis phase
+    akeep => spldlt_akeep%akeep
+    ssids_opts => options%super
+
+    ! Initialize
+    call ssids_free(akeep, free_flag)
+    ! TODO Check error flags for ssids_free
+    ! if (free_flag .ne. 0) then
+    !    return
+    ! end if
+
+    akeep%check = check
+    akeep%n = n
+
+    ! TODO As in SSIDS analyse_double routine
+    ! Checking of matrix data
+    ! Check options%ordering has a valid value
+    ! check val present when expected
+    
+    st = 0
+    ! if (check) then
+    ! TODO
+    ! else
+    nz = ptr(n+1)-1
+    ! end if
+
+    ! FIXME row2 does not need to be that large
+    allocate(akeep%invp(n),order2(n),ptr2(n+1),row2(nz),stat=st)
+
+    ! Extract lower triangular part of matrix
+    ! ...
+    
+    select case(ssids_opts%ordering)
+    case(0)
+       print *, "Not implemented"
+       ! TODO
+    case(1)
+       ! METIS ordering
+       call metis_order(n, ptr2, row2, order2, akeep%invp, &
+            flag, inform%stat)
+       ! call expand_pattern(n, nz, ptr, row, ptr2, row2)
+    case(2)
+       ! matching-based ordering required
+       ! Expand the matrix as more efficient to do it and then
+       ! call match_order_metis() with full matrix supplied
+       print *, "Not implemented"
+       ! TODO
+    end select
+
+  end subroutine splu_analyse
+
+  !> @brief Extract lower triangular part of an imput matrix stored in
+  !> a CSC (Compressed Sparse Column) format.
+  !>
+  subroutine getl_pattern(n, nz, ptr, row, aptr, arow)
+    implicit none
+
+    integer, intent(in) :: n ! order of system
+    integer(long), intent(in) :: nz
+    integer(long), intent(in) :: ptr(n+1)
+    integer, intent(in) :: row(nz)
+    integer(long), intent(out) :: aptr(n+1)
+    integer, intent(out) :: arow(nz)
+
+    integer :: i,j
+    integer(long) :: kk
+    integer(long) :: anz
+    
+    anz = 0
+    aptr = 0
+    ! Set aptr(j) to hold no. nonzeros in column j
+    do j = 1, n
+       do kk = ptr(j), ptr(j+1) - 1
+          i = row(kk)
+          if (i .ge. j) then
+             anz = anz + 1
+             aptr(j) = aptr(j)+1
+             arow(anz) = i
+          end if
+       end do
+       
+    end do
+
+    ! Set aptr(j) to point to where row indices will end in arow
+    do j = 2, n
+       aptr(j) = aptr(j-1) + aptr(j)
+    end do
+    aptr(n+1) = aptr(n) + 1
+
+    
+  end subroutine getl_pattern
   
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !> @brief Partition an elimination tree for execution on different NUMA regions
