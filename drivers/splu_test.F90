@@ -1,11 +1,12 @@
 program splu_test
   use, intrinsic :: iso_c_binding
   use spral_ssids_datatypes
-  use spldlt_datatypes_mod, only: spldlt_options
+  use spldlt_datatypes_mod, only: spldlt_options, splu_options 
   use spral_rutherford_boeing
   use spral_matrix_util
   use spral_ssids_inform, only : ssids_inform
   use spldlt_analyse_mod
+  use splu_factorize_mod
   implicit none
 
   ! indexes
@@ -41,8 +42,10 @@ program splu_test
 
   ! SyLVER structures
   type(spldlt_options), target :: options ! SyLVER options
+  type(splu_options) :: splu_opt ! SpLU options
 
-  type(spldlt_akeep_type) :: sylver_akeep
+  type(spldlt_akeep_type) :: sylver_akeep ! Analyse phase data
+  type(splu_fkeep_type) :: splu_fkeep
 
   call proc_args(options, nrhs, ncpu, ngpu, matfile)
 
@@ -99,7 +102,25 @@ program splu_test
   ssids_opt%scaling = 0 ! no scaling
 
   ! Perform spldlt analysis
-  call spldlt_analyse(sylver_akeep, n, ptr, row, options, inform, ncpu, val=val)
+  options%prune_tree = .false. ! Deactivate tree pruning
+  call splu_analyse(sylver_akeep, n, ptr, row, options, inform, ncpu, val=val)
+  print *, "Used order ", ssids_opt%ordering
+  if (inform%flag .lt. 0) then
+     print *, "oops on analyse ", inform%flag
+     stop
+  end if
+  write (*, "(a)") "ok"
+
+  ! Factorize with SpLU
+  
+  splu_opt%nb = ssids_opt%cpu_block_size
+
+  call system_clock(start_t, rate_t)
+  call splu_factor(sylver_akeep, splu_fkeep, ptr, row, val, splu_opt, inform)
+  call system_clock(stop_t)
+   
+  
+  soln = 0.0
 
   print *, "number bad cmp = ", count(abs(soln(1:n,1)-1.0).ge.1e-6)
   print *, "fwd error || ||_inf = ", maxval(abs(soln(1:n,1)-1.0))

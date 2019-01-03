@@ -1,3 +1,6 @@
+!> \file
+!> \copyright 2016- The Science and Technology Facilities Council (STFC)
+!> \author    Florent Lopez
 module spldlt_factorize_mod
   use, intrinsic :: iso_c_binding
   ! use spral_ssids_datatypes
@@ -14,10 +17,11 @@ module spldlt_factorize_mod
      procedure :: solve_diag_bwd
      procedure :: solve_diag
   end type numeric_tree_type
-  
+
+  ! Data generated during factorization phase 
   type spldlt_fkeep_type
      type(ssids_fkeep) :: fkeep
-     ! Facored elimination tree
+     ! Assemb;y tree
      type(numeric_tree_type) :: numeric_tree ! structure representing the numeric tree
    contains
      procedure :: solve

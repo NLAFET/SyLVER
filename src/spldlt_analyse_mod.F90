@@ -327,9 +327,11 @@ contains
     spldlt_akeep%subtree_en = 0
 
     ! Find out sequential subtrees
-    call prune_tree(akeep%nnodes, akeep%sptr, akeep%sparent, akeep%rptr, nth, &
-         spldlt_akeep%nsubtrees, small, contrib_dest, subtree_sa, &
-         spldlt_akeep%subtree_en, exec_loc)
+    if (options%prune_tree) then
+       call prune_tree(akeep%nnodes, akeep%sptr, akeep%sparent, akeep%rptr, nth, &
+            spldlt_akeep%nsubtrees, small, contrib_dest, subtree_sa, &
+            spldlt_akeep%subtree_en, exec_loc)
+    end if
 
     print *, "[analyse_core] nsubtrees = ", spldlt_akeep%nsubtrees
     ! print *, "[analyse_core] contrib_dest = ", contrib_dest(1:spldlt_akeep%nsubtrees)
@@ -418,8 +420,6 @@ contains
     character(50)  :: context      ! Procedure name (used when printing).
     logical :: check = .false. ! TODO input parameter
     type(ssids_akeep), pointer :: akeep ! SSIDS akeep structure
-    integer nnodes
-    type(cpu_factor_options) :: coptions
     integer :: i
     ! integer, dimension(:), allocatable :: contrib_dest, exec_loc
     integer :: st ! Error management
@@ -488,8 +488,6 @@ contains
        ! TODO
     end select
 
-
-    nnodes = akeep%nnodes
     ncpu_topo = ncpu
     ! ncpu = 2
     ! ncpu_topo = 2*ncpu
@@ -538,10 +536,10 @@ contains
     implicit none
 
     type(spldlt_akeep_type), target, intent(inout) :: spldlt_akeep ! spldlt akeep structure 
-    integer, intent(in) :: n
-    integer(long), intent(in) :: ptr(:)
-    integer, intent(in) :: row(:)
-    type(spldlt_options), target, intent(in) :: options
+    integer, intent(in) :: n ! Matrix order
+    integer(long), intent(in) :: ptr(:) ! col pointers (whole triangle)
+    integer, intent(in) :: row(:) ! row indices (whole triangle)
+    type(spldlt_options), target, intent(in) :: options ! SyLVER options
     type(ssids_inform), intent(inout) :: inform
     integer, intent(inout) :: ncpu ! number of CPU workers
     real(wp), optional, intent(in) :: val(:) ! Used when computing the scaling 
@@ -558,8 +556,11 @@ contains
     integer :: flag         ! error flag for metis
 
     integer, dimension(:), allocatable :: order2 ! Computed order
-    integer(long), dimension(:), allocatable :: ptr2 ! col ptrs for lower triangular matrix
-    integer, dimension(:), allocatable :: row2 ! row indices for lower triangular matrix
+    integer(long), dimension(:), allocatable :: lwr_ptr ! col ptrs for lower triangular matrix
+    integer, dimension(:), allocatable :: lwr_row ! row indices for lower triangular matrix
+
+    integer :: i
+    integer ncpu_topo
 
     context = 'splu_analyse'
 
@@ -590,10 +591,10 @@ contains
     ! end if
 
     ! FIXME row2 does not need to be that large
-    allocate(akeep%invp(n),order2(n),ptr2(n+1),row2(nz),stat=st)
+    allocate(akeep%invp(n),order2(n),lwr_ptr(n+1),lwr_row(nz),stat=st)
 
     ! Extract lower triangular part of matrix
-    ! ...
+    call getl_pattern(n, nz, ptr, row, lwr_ptr, lwr_row)
     
     select case(ssids_opts%ordering)
     case(0)
@@ -601,7 +602,7 @@ contains
        ! TODO
     case(1)
        ! METIS ordering
-       call metis_order(n, ptr2, row2, order2, akeep%invp, &
+       call metis_order(n, lwr_ptr, lwr_row, order2, akeep%invp, &
             flag, inform%stat)
        ! call expand_pattern(n, nz, ptr, row, ptr2, row2)
     case(2)
@@ -611,6 +612,40 @@ contains
        print *, "Not implemented"
        ! TODO
     end select
+
+    ncpu_topo = ncpu
+    ! ncpu = 2
+    ! ncpu_topo = 2*ncpu
+
+    ! Figure out topology
+    ! Create simple topology with ncpu regions, one for each CPU
+    ! worker
+    if (allocated(akeep%topology)) deallocate(akeep%topology, stat=st)
+    allocate(akeep%topology(ncpu_topo), stat=st)
+    do i = 1, ncpu_topo
+       akeep%topology(i)%nproc = 1
+       allocate(akeep%topology(i)%gpus(0), stat=st)
+    end do
+    ! print *, "Input topology"
+    ! do i = 1, size(akeep%topology)
+    !    print *, "Region ", i, " with ", akeep%topology(i)%nproc, " cores"
+    !    if(size(akeep%topology(i)%gpus).gt.0) &
+    !         print *, "---> gpus ", akeep%topology(i)%gpus
+    ! end do
+
+    ! perform rest of analyse
+    ! if (check) then
+    ! else
+    call analyse_core(spldlt_akeep, n, lwr_ptr, lwr_row, ptr, row, order2, akeep%invp, &
+         options, inform)
+    ! end if
+
+    return
+100 continue
+
+    print *, "[Error][splu_analyse] st: ", st
+
+    return
 
   end subroutine splu_analyse
 
@@ -629,30 +664,30 @@ contains
 
     integer :: i,j
     integer(long) :: kk
-    integer(long) :: anz
+    integer(long) :: cnz ! Number of nnz in current column
+    integer(long) :: sa ! Start index
     
-    anz = 0
+    sa = 1
     aptr = 0
     ! Set aptr(j) to hold no. nonzeros in column j
     do j = 1, n
+       aptr(j) = sa
+       cnz = 0
        do kk = ptr(j), ptr(j+1) - 1
           i = row(kk)
           if (i .ge. j) then
-             anz = anz + 1
-             aptr(j) = aptr(j)+1
-             arow(anz) = i
+             arow(sa+cnz) = i
+             cnz = cnz + 1
           end if
        end do
-       
+       sa = sa + cnz
     end do
+    aptr(n+1) = sa
 
-    ! Set aptr(j) to point to where row indices will end in arow
-    do j = 2, n
-       aptr(j) = aptr(j-1) + aptr(j)
-    end do
-    aptr(n+1) = aptr(n) + 1
+    ! print *, "nnz = ", aptr(n+1)-1
+    ! print *, "aptr = ", aptr
+    ! print *, "arow = ", arow(1:aptr(n+1)-1)
 
-    
   end subroutine getl_pattern
   
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
