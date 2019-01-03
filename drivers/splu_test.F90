@@ -118,8 +118,7 @@ program splu_test
   call system_clock(start_t, rate_t)
   call splu_factor(sylver_akeep, splu_fkeep, ptr, row, val, splu_opt, inform)
   call system_clock(stop_t)
-   
-  
+     
   soln = 0.0
 
   print *, "number bad cmp = ", count(abs(soln(1:n,1)-1.0).ge.1e-6)
