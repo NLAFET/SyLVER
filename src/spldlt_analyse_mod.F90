@@ -594,7 +594,7 @@ contains
     allocate(akeep%invp(n),order2(n),lwr_ptr(n+1),lwr_row(nz),stat=st)
 
     ! Extract lower triangular part of matrix
-    call getl_pattern(n, nz, ptr, row, lwr_ptr, lwr_row)
+    call get_l_pattern(n, nz, ptr, row, lwr_ptr, lwr_row)
     
     select case(ssids_opts%ordering)
     case(0)
@@ -652,14 +652,14 @@ contains
   !> @brief Extract lower triangular part of an imput matrix stored in
   !> a CSC (Compressed Sparse Column) format.
   !>
-  subroutine getl_pattern(n, nz, ptr, row, aptr, arow)
+  subroutine get_l_pattern(n, nz, ptr, row, aptr, arow)
     implicit none
 
     integer, intent(in) :: n ! order of system
-    integer(long), intent(in) :: nz
+    integer(long), intent(in) :: nz ! Number of non zero entries
     integer(long), intent(in) :: ptr(n+1)
     integer, intent(in) :: row(nz)
-    integer(long), intent(out) :: aptr(n+1)
+    integer(long), intent(out) :: aptr(n+1) ! Row indices (whole matrix)
     integer, intent(out) :: arow(nz)
 
     integer :: i,j
@@ -688,7 +688,7 @@ contains
     ! print *, "aptr = ", aptr
     ! print *, "arow = ", arow(1:aptr(n+1)-1)
 
-  end subroutine getl_pattern
+  end subroutine get_l_pattern
   
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !> @brief Partition an elimination tree for execution on different NUMA regions
