@@ -35,62 +35,62 @@ module splu_factorize_mod
 
 contains
 
-  subroutine factor_core(spldlt_akeep, splu_fkeep, lval)
+  subroutine factor_core(splu_akeep, splu_fkeep, lval)
     use spral_ssids_datatypes
-    use spldlt_analyse_mod, only: spldlt_akeep_type
+    use splu_analyse_mod, only: splu_akeep_type
     implicit none
 
-    type(spldlt_akeep_type), target, intent(in) :: spldlt_akeep ! Analysis data
+    type(splu_akeep_type), target, intent(in) :: splu_akeep ! Analysis data
     type(splu_fkeep_type), intent(inout) :: splu_fkeep ! Factorization data
     real(wp), dimension(*), intent(in) :: lval ! A values (whole matrix)
 
     ! Instanciate numeric tree using C interface
     splu_fkeep%c_numeric_tree = splu_create_numeric_tree_c( &
-         spldlt_akeep%symbolic_tree_c, lval)
+         splu_akeep%symbolic_tree_c, lval)
 
   end subroutine factor_core
 
   !> @brief Perfom sparse LU factorization of given matrix held in a
   !> CSC format.
-  subroutine splu_factor(spldlt_akeep, splu_fkeep, ptr, row, val, options, inform)
+  subroutine splu_factor(splu_akeep, splu_fkeep, ptr, row, val, options, inform)
     use spral_ssids_datatypes
     use spldlt_datatypes_mod
-    use spldlt_analyse_mod, only: spldlt_akeep_type
+    use splu_analyse_mod, only: splu_akeep_type
     use spral_ssids_inform, only : ssids_inform
     implicit none
     
-    type(spldlt_akeep_type), intent(in) :: spldlt_akeep
+    type(splu_akeep_type), intent(in) :: splu_akeep
     type(splu_fkeep_type), intent(inout) :: splu_fkeep
     integer(long), intent(in) :: ptr(:) ! Col pointers (whole triangle)
     integer, intent(in) :: row(:) ! Row indices (whole triangle)
     real(wp), dimension(*), intent(in) :: val ! A values (whole matrix)
-    type(splu_options), intent(in) :: options
+    type(sylver_options), intent(in) :: options
     type(ssids_inform), intent(inout) :: inform
 
-    integer :: n
-    integer(long) :: nz ! ptr(n+1)-1
-    real(wp), allocatable :: lval(:) ! A value in lower triagle using CSC format (includes diag) 
-    real(wp), allocatable :: uval(:) ! A value in upper triagle using CSR format (includes diag)
+    ! integer :: n
+    ! integer(long) :: nz ! ptr(n+1)-1
+    ! real(wp), allocatable :: lval(:) ! A value in lower triagle using CSC format (includes diag) 
+    ! real(wp), allocatable :: uval(:) ! A value in upper triagle using CSR format (includes diag)
 
     ! Error management
     character(50)  :: context      ! Procedure name (used when printing).
 
     context = 'splu_factor'
 
-    n = spldlt_akeep%akeep%n
-    nz = ptr(n+1)-1
+    ! n = splu_akeep%akeep%n
+    ! nz = ptr(n+1)-1
     
     ! FIXME size (nz/2 + n) would probably be enough for lval
-    allocate(lval(nz), uval(nz))
+    ! allocate(lval(nz), uval(nz))
 
-    ! Fill lval array
-    call get_l_val(n, nz, ptr, row, val, lval)
+    ! ! Fill lval array
+    ! call get_l_val(n, nz, ptr, row, val, lval)
 
-    ! Fill uval array
-    call get_u_val(n, nz, ptr, row, val, uval)
+    ! ! Fill uval array
+    ! call get_u_val(n, nz, ptr, row, val, uval)
 
     ! Compute factors
-    call factor_core(spldlt_akeep, splu_fkeep, val)
+    call factor_core(splu_akeep, splu_fkeep, val)
     
   end subroutine splu_factor
 

@@ -1,11 +1,11 @@
 program splu_test
   use, intrinsic :: iso_c_binding
   use spral_ssids_datatypes
-  use spldlt_datatypes_mod, only: spldlt_options, splu_options 
+  use spldlt_datatypes_mod, only: sylver_options 
   use spral_rutherford_boeing
   use spral_matrix_util
-  use spral_ssids_inform, only : ssids_inform
-  use spldlt_analyse_mod
+  use sylver_inform_mod
+  use splu_analyse_mod
   use splu_factorize_mod
   implicit none
 
@@ -36,30 +36,24 @@ program splu_test
   integer, dimension(:), allocatable :: row
   real(wp), dimension(:), allocatable :: val
 
-  ! SSIDS structures
-  type(ssids_inform) :: inform ! stats
-  type(ssids_options), pointer :: ssids_opt ! SSIDS options
-
   ! SyLVER structures
-  type(spldlt_options), target :: options ! SyLVER options
-  type(splu_options) :: splu_opt ! SpLU options
+  type(sylver_inform) :: inform ! SyLVER stats
+  type(sylver_options), target :: options ! SyLVER options
 
-  type(spldlt_akeep_type) :: sylver_akeep ! Analyse phase data
+  type(splu_akeep_type) :: splu_akeep ! Analyse phase data
   type(splu_fkeep_type) :: splu_fkeep
 
   call proc_args(options, nrhs, ncpu, ngpu, matfile)
 
-  ssids_opt => options%super ! Point to SSIDS options
-
-  ! Set SSIDS options
-  ! ssids_opt%print_level = 1 ! enable printing
-  ssids_opt%print_level = 0 ! disable printing
-  ssids_opt%use_gpu = .false. ! disable GPU
+  ! Set options
+  ! options%print_level = 1 ! Enable printing
+  options%print_level = 0 ! Disable printing
+  options%use_gpu = .false. ! Disable GPU
 
   if (matfile.eq.'') matfile = "matrix.rb" 
 
   print *, "[SpLU Test] ncpu = ", ncpu
-  print *, "[SpLU Test] nb = ", ssids_opt%cpu_block_size
+  print *, "[SpLU Test] nb = ", options%nb
   print *, "[SpLU Test] nrhs = ", nrhs
 
   ! Read in a matrix
@@ -98,26 +92,24 @@ program splu_test
      end do
   end do
 
-  ssids_opt%ordering = 1 ! use Metis ordering
-  ssids_opt%scaling = 0 ! no scaling
+  options%ordering = 1 ! use Metis ordering
+  options%scaling = 0 ! no scaling
 
   ! Perform spldlt analysis
   options%prune_tree = .false. ! Deactivate tree pruning
-  call splu_analyse(sylver_akeep, n, ptr, row, options, inform, ncpu, val=val)
-  print *, "Used order ", ssids_opt%ordering
+  call splu_analyse(splu_akeep, n, ptr, row, options, inform, ncpu, val=val)
+  print *, "Used order ", options%ordering
   if (inform%flag .lt. 0) then
      print *, "oops on analyse ", inform%flag
      stop
   end if
   write (*, "(a)") "ok"
 
-  ! Factorize with SpLU
+  ! Perform LU factorization
   
-  splu_opt%nb = ssids_opt%cpu_block_size
-
-  call system_clock(start_t, rate_t)
-  call splu_factor(sylver_akeep, splu_fkeep, ptr, row, val, splu_opt, inform)
-  call system_clock(stop_t)
+  ! call system_clock(start_t, rate_t)
+  ! call splu_factor(sylver_akeep, splu_fkeep, ptr, row, val, splu_opt, inform)
+  ! call system_clock(stop_t)
      
   soln = 0.0
 
@@ -132,10 +124,10 @@ contains
   ! Get argument from command line
   subroutine proc_args(options, nrhs, ncpu, ngpu, matfile)
     use spral_ssids
-    use spldlt_datatypes_mod, only: spldlt_options
+    use spldlt_datatypes_mod, only: sylver_options
     implicit none
 
-    type(spldlt_options), target, intent(inout) :: options
+    type(sylver_options), target, intent(inout) :: options
     integer, intent(inout) :: nrhs
     integer, intent(inout) :: ncpu
     integer, intent(inout) :: ngpu
@@ -143,9 +135,6 @@ contains
 
     integer :: argnum, narg
     character(len=200) :: argval
-    type(ssids_options), pointer :: ssids_opts
-
-    ssids_opts => options%super
 
     ! default values
     nrhs = 1
@@ -164,14 +153,14 @@ contains
        case("--nemin")
           call get_command_argument(argnum, argval)
           argnum = argnum + 1
-          read( argval, * ) ssids_opts%nemin
-          print *, 'Supernode amalgamation nemin = ', ssids_opts%nemin
+          read( argval, * ) options%nemin
+          print *, 'Supernode amalgamation nemin = ', options%nemin
 
        case("--nb")
           call get_command_argument(argnum, argval)
           argnum = argnum + 1
-          read( argval, * ) ssids_opts%cpu_block_size
-          print *, 'CPU block size = ', ssids_opts%cpu_block_size
+          read( argval, * ) options%nb
+          print *, 'CPU block size = ', options%nb
 
        case("--ncpu")
           call get_command_argument(argnum, argval)
