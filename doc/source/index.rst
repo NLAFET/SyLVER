@@ -6,10 +6,13 @@
 SyLVER: Symmetrically-structured Sparse Direct Solver
 =====================================================
 
+SyLVER
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
+   purpose
    types
 
 Indices and tables
