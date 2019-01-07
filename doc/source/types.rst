@@ -11,7 +11,7 @@ Derived types
 
    :f integer print_level [default=0]: the level of printing. The different 
       levels are:
-      
+
       +----------+-------------------------------------------------+
       | < 0      | No printing.                                    |
       +----------+-------------------------------------------------+
@@ -21,7 +21,6 @@ Derived types
       +----------+-------------------------------------------------+
       | > 1      | As 1, plus some additional diagnostic printing. |
       +----------+-------------------------------------------------+
-      
 
    :f integer unit_diagnostics [default=6]: Fortran unit number for 
       diagnostics printing. Printing is suppressed if <0.
@@ -30,13 +29,12 @@ Derived types
       error messages. Printing is suppressed if <0.
    :f integer unit_warning [default=6]: Fortran unit number for printing of
       warning messages. Printing is suppressed if <0.
-
    :f integer ordering [default=1]: Ordering method to use in analyse phase:
 
       +-------------+---------------------------------------------------------+
       | 0           | User-supplied ordering is used (`order` argument to     |
-      |             | :f:subr:`ssids_analyse()` or                            |
-      |             | :f:subr:`ssids_analyse_coord()`).                       |
+      |             | :f:subr:`spldlt_analyse()` or                           |
+      |             | :f:subr:`splu_analyse()`).                              |
       +-------------+---------------------------------------------------------+
       | 1 (default) | METIS ordering with default settings.                   |
       +-------------+---------------------------------------------------------+
@@ -47,9 +45,62 @@ Derived types
       |             |                                                         |
       |             | **Note:** This option should only be chosen for         |
       |             | indefinite systems. A scaling is also computed that may |
-      |             | be used in :f:subr:`ssids_factor()` (see %scaling       |
-      |             | below).                                                 |
+      |             | be used in :f:subr:`spldlt_factor()` or                 |
+      |             | :f:subr:`splu_factor()` (see %scaling below).           |
       +-------------+---------------------------------------------------------+
+
+   :f integer nemin [default=32]: supernode amalgamation threshold. Two
+      neighbours in the elimination tree are merged if they both involve fewer
+      than nemin eliminations. The default is used if nemin<1.
+   :f logical use_gpu [default=true]: Use an NVIDIA GPU if present.
+   :f integer scaling [default=0]: scaling algorithm to use:
+
+      +---------------+-------------------------------------------------------+
+      | <=0 (default) | No scaling (if ``scale(:)`` is not present on call to |
+      |               | :f:subr:`spldlt_factor()` or :f:subr:`splu_factor()`, |
+      |               | or user-supplied scaling (if ``scale(:)`` is present).|
+      +---------------+-------------------------------------------------------+
+      | =1            | Compute using weighted bipartite matching via the     |
+      |               | Hungarian Algorithm (``MC64`` algorithm).             |
+      +---------------+-------------------------------------------------------+
+      | =2            | Compute using a weighted bipartite matching via the   |
+      |               | Auction Algorithm (may be lower quality than that     |
+      |               | computed using the Hungarian Algorithm, but can be    |
+      |               | considerably faster).                                 |
+      +---------------+-------------------------------------------------------+
+      | =3            | Use matching-based ordering generated during the      |
+      |               | analyse phase using options%ordering=2. The scaling   |
+      |               | will be the same as that generated with               |
+      |               | options%scaling= 1 if the matrix values have not      |
+      |               | changed. This option will generate an error if a      |
+      |               | matching-based ordering was not used during analysis. |
+      +---------------+-------------------------------------------------------+
+      | >=4           | Compute using the norm-equilibration algorithm of     |
+      |               | Ruiz.                                                 |
+      +---------------+-------------------------------------------------------+
+
+   :f integer nb [default=256]: Block size to use for
+      parallelization of large nodes on CPU resources.
+
+   :f integer pivot_method [default=1]: Pivot method to be used on CPU, one of:
+
+      +-------------+----------------------------------------------------------+
+      | 0           | Aggressive a posteori pivoting. Cholesky-like            |
+      |             | communication pattern is used, but a single failed pivot |
+      |             | requires restart of node factorization and potential     |
+      |             | recalculation of all uneliminated entries.               |
+      +-------------+----------------------------------------------------------+
+      | 1 (default) | Block a posteori pivoting. A failed pivot only requires  |
+      |             | recalculation of entries within its own block column.    |
+      +-------------+----------------------------------------------------------+
+      | 2           | Threshold partial pivoting. Not parallel.                |
+      +-------------+----------------------------------------------------------+
+
+   :f real small [default=1d-20]: threshold below which an entry is treated as
+      equivalent to `0.0`.
+   :f real u [default=0.01]: relative pivot threshold used in symmetric
+      indefinite case. Values outside of the range :math:`[0,0.5]` are treated
+      as the closest value in that range.
 
 .. f:type:: sylver_inform
 
@@ -168,102 +219,3 @@ Derived types
    |             | (consider setting options%scaling=3).                       |
    +-------------+-------------------------------------------------------------+
 
-.. f:type:: sylver_options
-
-   The derived data type sylver\_options is used to specify the
-   options used within ``SyLVER``. The components, that are
-   automatically given default values in the definition of the type,
-   are:
-
-   :f integer print_level [default=0]: the level of printing. The different 
-      levels are:
-
-      +----------+-------------------------------------------------+
-      | < 0      | No printing.                                    |
-      +----------+-------------------------------------------------+
-      | = 0      | Error and warning messages only.                |
-      +----------+-------------------------------------------------+
-      | = 1      | As 0, plus basic diagnostic printing.           |
-      +----------+-------------------------------------------------+
-      | > 1      | As 1, plus some additional diagnostic printing. |
-      +----------+-------------------------------------------------+
-
-   :f integer unit_diagnostics [default=6]: Fortran unit number for 
-      diagnostics printing. Printing is suppressed if <0.
-
-   :f integer unit_error [default=6]: Fortran unit number for printing of
-      error messages. Printing is suppressed if <0.
-   :f integer unit_warning [default=6]: Fortran unit number for printing of
-      warning messages. Printing is suppressed if <0.
-   :f integer ordering [default=1]: Ordering method to use in analyse phase:
-
-      +-------------+---------------------------------------------------------+
-      | 0           | User-supplied ordering is used (`order` argument to     |
-      |             | :f:subr:`spldlt_analyse()` or                           |
-      |             | :f:subr:`splu_analyse()`).                              |
-      +-------------+---------------------------------------------------------+
-      | 1 (default) | METIS ordering with default settings.                   |
-      +-------------+---------------------------------------------------------+
-      | 2           | Matching-based elimination ordering is computed (the    |
-      |             | Hungarian algorithm is used to identify large           |
-      |             | off-diagonal entries. A restricted METIS ordering is    |
-      |             | then used that forces these on to the subdiagonal).     |
-      |             |                                                         |
-      |             | **Note:** This option should only be chosen for         |
-      |             | indefinite systems. A scaling is also computed that may |
-      |             | be used in :f:subr:`spldlt_factor()` or                 |
-      |             | :f:subr:`splu_factor()` (see %scaling below).           |
-      +-------------+---------------------------------------------------------+
-
-   :f integer nemin [default=32]: supernode amalgamation threshold. Two
-      neighbours in the elimination tree are merged if they both involve fewer
-      than nemin eliminations. The default is used if nemin<1.
-   :f logical use_gpu [default=true]: Use an NVIDIA GPU if present.
-   :f integer scaling [default=0]: scaling algorithm to use:
-
-      +---------------+-------------------------------------------------------+
-      | <=0 (default) | No scaling (if ``scale(:)`` is not present on call to |
-      |               | :f:subr:`spldlt_factor()` or :f:subr:`splu_factor()`, |
-      |               | or user-supplied scaling (if ``scale(:)`` is present).|
-      +---------------+-------------------------------------------------------+
-      | =1            | Compute using weighted bipartite matching via the     |
-      |               | Hungarian Algorithm (``MC64`` algorithm).             |
-      +---------------+-------------------------------------------------------+
-      | =2            | Compute using a weighted bipartite matching via the   |
-      |               | Auction Algorithm (may be lower quality than that     |
-      |               | computed using the Hungarian Algorithm, but can be    |
-      |               | considerably faster).                                 |
-      +---------------+-------------------------------------------------------+
-      | =3            | Use matching-based ordering generated during the      |
-      |               | analyse phase using options%ordering=2. The scaling   |
-      |               | will be the same as that generated with               |
-      |               | options%scaling= 1 if the matrix values have not      |
-      |               | changed. This option will generate an error if a      |
-      |               | matching-based ordering was not used during analysis. |
-      +---------------+-------------------------------------------------------+
-      | >=4           | Compute using the norm-equilibration algorithm of     |
-      |               | Ruiz.                                                 |
-      +---------------+-------------------------------------------------------+
-
-   :f integer nb [default=256]: Block size to use for
-      parallelization of large nodes on CPU resources.
-
-   :f integer pivot_method [default=1]: Pivot method to be used on CPU, one of:
-
-      +-------------+----------------------------------------------------------+
-      | 0           | Aggressive a posteori pivoting. Cholesky-like            |
-      |             | communication pattern is used, but a single failed pivot |
-      |             | requires restart of node factorization and potential     |
-      |             | recalculation of all uneliminated entries.               |
-      +-------------+----------------------------------------------------------+
-      | 1 (default) | Block a posteori pivoting. A failed pivot only requires  |
-      |             | recalculation of entries within its own block column.    |
-      +-------------+----------------------------------------------------------+
-      | 2           | Threshold partial pivoting. Not parallel.                |
-      +-------------+----------------------------------------------------------+
-
-   :f real small [default=1d-20]: threshold below which an entry is treated as
-      equivalent to `0.0`.
-   :f real u [default=0.01]: relative pivot threshold used in symmetric
-      indefinite case. Values outside of the range :math:`[0,0.5]` are treated
-      as the closest value in that range.
