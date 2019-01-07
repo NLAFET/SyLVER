@@ -397,7 +397,7 @@ contains
   !> @brief Analyse phase for symmetric matrix.
   !>
   ! TODO 32-bits wrapper
-  subroutine spldlt_analyse(spldlt_akeep, n, ptr, row, options, inform, ncpu, val)
+  subroutine spldlt_analyse(spldlt_akeep, n, ptr, row, options, inform, ncpu, order, val)
     use spral_ssids, only: ssids_free
     use spral_metis_wrapper, only : metis_order
     use spral_ssids_akeep, only: ssids_akeep
@@ -415,6 +415,7 @@ contains
     type(spldlt_options), target, intent(in) :: options
     type(ssids_inform), intent(inout) :: inform
     integer, intent(inout) :: ncpu ! number of CPU workers
+    integer, dimension(:), allocatable, optional, intent(in) :: order
     real(wp), optional, intent(in) :: val(:)
 
     character(50)  :: context      ! Procedure name (used when printing).

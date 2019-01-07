@@ -13,6 +13,8 @@ SyLVER
    :caption: Contents:
 
    purpose
+   usage
+   subroutines
    types
 
 Indices and tables
