@@ -37,6 +37,12 @@ SpLDLT
       <http://www.numerical.rl.ac.uk/spral/doc/latest/Fortran/csc_format.html>`_). Only
       used if a matching-based ordering is requested.
 
+
+.. f:subroutine::  spldlt_factor(akeep,fkeep,posdef,val,options,inform[,scale,ptr,row])
+
+   
+
+
 ====
 SpLU
 ====

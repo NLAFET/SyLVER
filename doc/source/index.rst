@@ -12,8 +12,7 @@ SyLVER
    :maxdepth: 2
    :caption: Contents:
 
-   purpose
-   usage
+   introduction
    subroutines
    types
 

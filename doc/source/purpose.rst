@@ -58,3 +58,4 @@ triangular.
 
 The code optionally supports hybrid computation using one or more
 NVIDIA GPUs.
+
