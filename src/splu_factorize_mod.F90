@@ -174,7 +174,7 @@ contains
        end do
     end do
 
-    print *, 'uval = ', uval(1:sa-1)
+    ! print *, 'uval = ', uval(1:sa-1)
 
   end subroutine get_u_val
   

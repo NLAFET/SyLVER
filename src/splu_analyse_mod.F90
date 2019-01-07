@@ -18,10 +18,91 @@ module splu_analyse_mod
 
 contains
 
-  subroutine analyse_core(splu_akeep, n, ptr, row, order, invp, options)
+  !****************************************************************************
+  !
+  ! Build a map from A to nodes
+  ! lcol( nlist(2,i) ) = val( nlist(1,i) )
+  ! ucol( nlist(2,i) ) = val( nlist(1,i) )
+  ! nptr defines start of each node in nlist
+  
+  subroutine build_map(n, ptr, row, perm, invp, nnodes, sptr, rptr, rlist, &
+       nptr, nlist, st)
+    implicit none
+    
+    ! Matrix A
+    integer, intent(in) :: n
+    integer(long), dimension(n+1), intent(in) :: ptr ! Column pointer (whole matrix)
+    integer, dimension(ptr(n+1)-1), intent(in) :: row ! Row indices (whole matrix)
+    ! Permutation and its inverse (some entries of perm may be negative to
+    ! act as flags for 2x2 pivots, so need to use abs(perm))
+    integer, dimension(n), intent(in) :: perm
+    integer, dimension(n), intent(in) :: invp
+    ! Supernode partition of L
+    integer, intent(in) :: nnodes
+    integer, dimension(nnodes+1), intent(in) :: sptr
+    ! Row indices of L
+    integer(long), dimension(nnodes+1), intent(in) :: rptr
+    integer, dimension(rptr(nnodes+1)-1), intent(in) :: rlist
+    ! Output mapping
+    integer(long), dimension(nnodes+1), intent(out) :: nptr
+    integer(long), dimension(2, ptr(n+1)-1), intent(out) :: nlist
+    ! Error check paramter
+    integer, intent(out) :: st
+
+    integer, dimension(:), allocatable :: map
+    integer :: blkm ! Number of rows in the supernode 
+    integer :: blkn ! Number of columns in the fully-summed 
+    integer :: i, j, k
+    integer(long) :: ii, jj, pp
+    integer :: col
+    integer :: node
+    
+    allocate(map(n), stat=st)
+    if (st .ne. 0) return
+
+    !
+    ! Build nptr, nlist map
+    !
+    pp = 1
+    do node = 1, nnodes
+       blkm = int(rptr(node+1) - rptr(node))
+       nptr(node) = pp
+       blkn = int(sptr(node+1) - sptr(node))
+       
+       ! Build map for node indices
+       do jj = rptr(node), rptr(node+1)-1
+          map(rlist(jj)) = int(jj-rptr(node)+1)
+       end do
+
+       ! Build nlist from A
+
+       ! lcol
+       do j = sptr(node), sptr(node+1)-1
+          col = invp(j)
+          do ii = ptr(col), ptr(col+1)-1
+             k = abs(perm(row(ii))) ! row of L
+             ! if (k .lt. j) cycle
+             nlist(2,pp) = (j-sptr(node))*blkm + map(k)
+             nlist(1,pp) = ii
+             pp = pp + 1
+          end do
+       end do
+
+       ! ucol
+       
+       
+    end do
+    nptr(nnodes+1) = pp
+
+    
+  end subroutine build_map
+  
+  subroutine analyse_core(splu_akeep, n, ptr, row, order, invp, options, inform)
     use spral_ssids_akeep, only: ssids_akeep
     use spral_core_analyse, only : basic_analyse
     use spldlt_datatypes_mod
+    use sylver_inform_mod
+    use spldlt_analyse_mod, only: spldlt_create_symbolic_tree_c, prune_tree, spldlt_print_atree
     implicit none
 
     type(splu_akeep_type), target, intent(inout) :: splu_akeep ! spldlt akeep structure 
@@ -34,15 +115,136 @@ contains
       ! Work array. Used to hold inverse of order but
       ! is NOT set to inverse for the final order that is returned.
     type(sylver_options), target, intent(in) :: options ! SyLVER options
+    type(sylver_inform), intent(inout) :: inform
 
     type(ssids_akeep), pointer :: akeep ! SSIDS akeep structure
+    type(c_ptr) :: cakeep
     integer :: nemin ! Amalgamation parameter
+    integer :: flag
+    integer :: i, j ! Indexes
+    integer(long) :: nz ! ptr(n+1)-1
+    integer :: st ! Stat
+
+    ! Tree prunnig
+    integer, dimension(:), allocatable :: small
+    integer, dimension(:), allocatable :: subtree_sa 
+    integer :: nth ! Number of regions on CPU
+    integer, dimension(:), allocatable :: contrib_dest, exec_loc
     
     akeep => splu_akeep%akeep ! Point to SSIDS analyse data
 
     ! Check nemin and set to default if out of range.
     nemin = options%nemin
     if (nemin .lt. 1) nemin = sylver_nemin_default
+
+    ! Perform basic analysis so we can figure out subtrees we want to construct
+    call basic_analyse(n, ptr, row, order, akeep%nnodes, akeep%sptr, &
+         akeep%sparent, akeep%rptr, akeep%rlist,                     &
+         nemin, flag, inform%stat, inform%num_factor, inform%num_flops)
+    select case(flag)
+    case(0)
+       ! Do nothing
+    case(-1)
+       ! Allocation error
+       inform%flag = SYLVER_ERROR_ALLOCATION
+       return
+    case(1)
+       ! Zero row/column.
+       inform%flag = SYLVER_WARNING_ANAL_SINGULAR
+    case default
+       ! Should never reach here
+       inform%flag = SYLVER_ERROR_UNKNOWN
+    end select
+
+    ! set invp to hold inverse of order
+    do i = 1,n
+       invp(order(i)) = i
+    end do
+    ! any unused variables are at the end and so can set order for them
+    do j = akeep%sptr(akeep%nnodes+1), n
+       i = invp(j)
+       order(i) = 0
+    end do
+
+    ! Build map from A to L in nptr, nlist
+    nz = ptr(n+1) - 1
+    allocate(akeep%nptr(n+1), akeep%nlist(2,nz), stat=st)
+    if (st .ne. 0) go to 100
+    ! call build_map(n, ptr, row, order, invp, akeep%nnodes, akeep%sptr, &
+    !      akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist, st)
+    if (st .ne. 0) go to 100
+
+    nth = size(akeep%topology) ! FIXME Use (total) number of procs?
+
+    ! Allocate structures and init for tree prunning
+    allocate(small(akeep%nnodes+1), contrib_dest(akeep%nnodes+1), &
+         subtree_sa(akeep%nnodes+1), stat=st)
+    if (st .ne. 0) go to 100
+    ! TODO Use temp array and copy result into subtree_en to save
+    ! memory
+    allocate(splu_akeep%subtree_en(akeep%nnodes+1))
+    allocate(exec_loc(akeep%nnodes+1))
+    
+    splu_akeep%nsubtrees = 0
+    small = 0
+    contrib_dest = 0
+    subtree_sa = 0
+    splu_akeep%subtree_en = 0
+
+    ! Find out sequential subtrees
+    if (options%prune_tree) then
+       call prune_tree(akeep%nnodes, akeep%sptr, akeep%sparent, akeep%rptr, nth, &
+            splu_akeep%nsubtrees, small, contrib_dest, subtree_sa, &
+            splu_akeep%subtree_en, exec_loc)
+    end if
+
+    print *, "[analyse_core] nsubtrees = ", splu_akeep%nsubtrees
+    ! print *, "[analyse_core] contrib_dest = ", contrib_dest(1:splu_akeep%nsubtrees)
+    ! print *, "[analyse_core] subtrees = ", splu_akeep%subtree_en(1:splu_akeep%nsubtrees)
+#if defined(SYLVER_USE_STARPU) && defined(SYLVER_USE_OMP)
+    print *, "[analyse_core] exec_loc = ", exec_loc(1:splu_akeep%nsubtrees)
+#endif    
+    ! dump atree in a dot file
+    call spldlt_print_atree(akeep%nnodes, akeep%sptr, akeep%sparent, akeep%rptr, small)
+
+    ! Construct symbolic subtrees
+    ! allocate(akeep%subtree(akeep%nparts))
+    allocate(akeep%subtree(splu_akeep%nsubtrees))
+
+    ! do i = 1, splu_akeep%nsubtrees
+
+    !    ! akeep%subtree(i)%exec_loc = exec_loc(i)
+    !    akeep%subtree(i)%exec_loc = 1
+    !    ! if (akeep%subtree(i)%exec_loc .eq. -1) cycle
+    !    ! CPU
+    !    akeep%subtree(i)%ptr => construct_cpu_symbolic_subtree(akeep%n,   &
+    !         subtree_sa(i), splu_akeep%subtree_en(i)+1,                              &
+    !                             !akeep%part(i), akeep%part(i+1),                              &
+    !         akeep%sptr, akeep%sparent,                                   &
+    !         akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist,            &
+    !                             ! contrib_dest(akeep%contrib_ptr(i):akeep%contrib_ptr(i+1)-1), &
+    !         contrib_dest(1:0), &
+    !         ssids_opts)
+    ! end do
+
+    
+    ! call C++ analyse routine
+    ! cakeep = c_loc(akeep)
+    cakeep = c_null_ptr
+
+    splu_akeep%symbolic_tree_c = &
+         spldlt_create_symbolic_tree_c(cakeep, akeep%n, akeep%nnodes, & 
+         akeep%sptr, akeep%sparent, akeep%rptr, akeep%rlist, akeep%nptr, &
+         akeep%nlist, splu_akeep%nsubtrees, splu_akeep%subtree_en, small, &
+         contrib_dest, exec_loc)
+
+    ! Clean memory
+    deallocate(small)
+    deallocate(contrib_dest)
+    deallocate(subtree_sa)
+    deallocate(exec_loc)
+
+100 continue
 
     
   end subroutine analyse_core
@@ -159,17 +361,18 @@ contains
     ! perform rest of analyse
     ! if (check) then
     ! else
-    call analyse_core(splu_akeep, n, ptr, row, order2, akeep%invp, options)
+    call analyse_core(splu_akeep, n, ptr, row, order2, akeep%invp, options, inform)
     ! call analyse_core(spldlt_akeep, n, lwr_ptr, lwr_row, ptr, row, order2, akeep%invp, &
     !      options, inform)
     ! end if
 
-    return
 100 continue
 
-    print *, "[Error][splu_analyse] st: ", st
-
-    return
+    inform%stat = st
+    if (inform%stat .ne. 0) then
+       inform%flag = SSIDS_ERROR_ALLOCATION
+    end if
+    call inform%print_flag(options, context)
 
   end subroutine splu_analyse
 

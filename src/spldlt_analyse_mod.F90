@@ -235,7 +235,6 @@ contains
     integer :: nemin, flag
     integer :: i, j
     integer(long) :: nz ! ptr(n+1)-1
-    integer, dimension(:), allocatable :: contrib_dest, exec_loc
     integer :: st
 
     type(c_ptr) :: cakeep
@@ -243,6 +242,7 @@ contains
     integer, dimension(:), allocatable :: small
     integer :: nth
     integer, dimension(:), allocatable :: subtree_sa 
+    integer, dimension(:), allocatable :: contrib_dest, exec_loc
     
     context = 'ssids_analyse'
     akeep => spldlt_akeep%akeep

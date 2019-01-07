@@ -40,6 +40,7 @@ module sylver_inform_mod
      integer(long) :: gpu_flops = 0
    contains
      procedure :: flag_to_character
+     procedure :: print_flag
   end type sylver_inform
 
 contains
