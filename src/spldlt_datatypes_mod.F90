@@ -119,6 +119,12 @@ module spldlt_datatypes_mod
      ! GPU-specific
      !     
      logical :: use_gpu = .true. ! Whether GPU should be used
+
+     !
+     ! Undocumented
+     !
+     real(wp) :: multiplier = 1.1 ! size to multiply expected memory size by
+       ! when doing initial memory allocation to allow for delays.
      
   end type sylver_options
 

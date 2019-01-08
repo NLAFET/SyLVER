@@ -93,13 +93,13 @@ contains
     if (st .ne. 0) return
     
     !
-    ! Build nptr, nlist map
+    ! Build nptr and nlist
     !
     pp = 1
     do node = 1, nnodes
-       blkm = int(rptr(node+1) - rptr(node))
+       blkm = int(rptr(node+1) - rptr(node)) ! Front dimensions
        nptr(node) = pp
-       blkn = int(sptr(node+1) - sptr(node))
+       blkn = int(sptr(node+1) - sptr(node)) ! Number of fully-summed rows/columns
        
        ! Build map for node indices
        do jj = rptr(node), rptr(node+1)-1
@@ -110,7 +110,7 @@ contains
 
        ! lcol
        do j = sptr(node), sptr(node+1)-1
-          col = invp(j)
+          col = invp(j) ! Col of L
           do ii = ptr(col), ptr(col+1)-1
              k = abs(perm(row(ii))) ! row of L
              nlist(2,pp) = (j-sptr(node))*blkm + map(k)
@@ -125,10 +125,10 @@ contains
        
        ! ucol
        do i = sptr(node), sptr(node+1)-1
-          k = abs(perm(i)) ! row of L
+          k = abs(perm(i)) ! row of U
           do j = ptr2(k), ptr2(k+1)-1
-             col = invp(row2(j))
-             nlist(2,pp) = blkm*blkn + map(k)*blkn + i
+             col = invp(row2(j)) ! Col of U
+             nlist(2,pp) = blkm*blkn + map(col)*blkn + i
              nlist(1,pp) = origin(j)
              pp = pp + 1
           end do
@@ -320,12 +320,12 @@ contains
     integer, intent(inout) :: ncpu ! number of CPU workers
     real(wp), optional, intent(in) :: val(:) ! Used when computing the scaling 
 
-    character(50)  :: context      ! Procedure name (used when printing).
     logical :: check = .false. ! TODO input parameter
     type(ssids_akeep), pointer :: akeep ! SSIDS akeep structure
     integer(long) :: nz     ! entries in expanded matrix
 
     ! Error flags
+    character(50)  :: context      ! Procedure name (used when printing).
     integer :: st
     integer :: free_flag
     integer :: flag         ! error flag for metis
@@ -419,7 +419,7 @@ contains
 
     inform%stat = st
     if (inform%stat .ne. 0) then
-       inform%flag = SSIDS_ERROR_ALLOCATION
+       inform%flag = SYLVER_ERROR_ALLOCATION
     end if
     call inform%print_flag(options, context)
 

@@ -35,18 +35,21 @@ module splu_factorize_mod
 
 contains
 
-  subroutine factor_core(splu_akeep, splu_fkeep, lval)
-    use spral_ssids_datatypes
+  subroutine factor_core(splu_akeep, splu_fkeep, val, options, inform)
+    use spldlt_datatypes_mod
     use splu_analyse_mod, only: splu_akeep_type
+    use sylver_inform_mod, only: sylver_inform
     implicit none
 
     type(splu_akeep_type), target, intent(in) :: splu_akeep ! Analysis data
     type(splu_fkeep_type), intent(inout) :: splu_fkeep ! Factorization data
-    real(wp), dimension(*), intent(in) :: lval ! A values (whole matrix)
+    real(wp), dimension(*), intent(in) :: val ! A values (whole matrix)
+    type(sylver_options), intent(in) :: options
+    type(sylver_inform), intent(inout) :: inform
 
     ! Instanciate numeric tree using C interface
     splu_fkeep%c_numeric_tree = splu_create_numeric_tree_c( &
-         splu_akeep%symbolic_tree_c, lval)
+         splu_akeep%symbolic_tree_c, val)
 
   end subroutine factor_core
 
@@ -56,7 +59,7 @@ contains
     use spral_ssids_datatypes
     use spldlt_datatypes_mod
     use splu_analyse_mod, only: splu_akeep_type
-    use spral_ssids_inform, only : ssids_inform
+    use sylver_inform_mod, only: sylver_inform
     implicit none
     
     type(splu_akeep_type), intent(in) :: splu_akeep
@@ -65,7 +68,7 @@ contains
     integer, intent(in) :: row(:) ! Row indices (whole triangle)
     real(wp), dimension(*), intent(in) :: val ! A values (whole matrix)
     type(sylver_options), intent(in) :: options
-    type(ssids_inform), intent(inout) :: inform
+    type(sylver_inform), intent(inout) :: inform
 
     ! integer :: n
     ! integer(long) :: nz ! ptr(n+1)-1
@@ -74,6 +77,7 @@ contains
 
     ! Error management
     character(50)  :: context      ! Procedure name (used when printing).
+    integer :: st
 
     context = 'splu_factor'
 
@@ -90,7 +94,37 @@ contains
     ! call get_u_val(n, nz, ptr, row, val, uval)
 
     ! Compute factors
-    call factor_core(splu_akeep, splu_fkeep, val)
+    call factor_core(splu_akeep, splu_fkeep, val, options, inform)
+
+    if ((options%print_level .ge. 1) .and. (options%unit_diagnostics .ge. 0)) then
+       write (options%unit_diagnostics,'(/a)') &
+            ' Completed factorisation with:'
+       write (options%unit_diagnostics, &
+            '(a,2(/a,i12),2(/a,es12.4),5(/a,i12))') &
+            ' information parameters (inform%) :', &
+            ' flag                   Error flag                               = ',&
+            inform%flag, &
+            ' maxfront               Maximum frontsize                        = ',&
+            inform%maxfront, &
+            ' num_factor             Number of entries in L                   = ',&
+            real(inform%num_factor), &
+            ' num_flops              Number of flops performed                = ',&
+            real(inform%num_flops), &
+            ' num_delay              Number of delayed eliminations           = ',&
+            inform%num_delay, &
+            ' rank                   Computed rank                            = ',&
+            inform%matrix_rank, &
+            ' num_neg                Computed number of negative eigenvalues  = ',&
+            inform%num_neg
+    end if
+
+100 continue
+
+    inform%stat = st
+    if (inform%stat .ne. 0) then
+       inform%flag = SYLVER_ERROR_ALLOCATION
+    end if
+    call inform%print_flag(options, context)
     
   end subroutine splu_factor
 

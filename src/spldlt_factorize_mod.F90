@@ -649,6 +649,30 @@ contains
     ! Call main factorization routine
     call factor_core(spldlt_akeep, spldlt_fkeep, val, ssids_opts, inform)
 
+    ! if ((options%print_level .ge. 1) .and. (options%unit_diagnostics .ge. 0)) then
+    !    write (options%unit_diagnostics,'(/a)') &
+    !         ' Completed factorisation with:'
+    !    write (options%unit_diagnostics, &
+    !         '(a,2(/a,i12),2(/a,es12.4),5(/a,i12))') &
+    !         ' information parameters (inform%) :', &
+    !         ' flag                   Error flag                               = ',&
+    !         inform%flag, &
+    !         ' maxfront               Maximum frontsize                        = ',&
+    !         inform%maxfront, &
+    !         ' num_factor             Number of entries in L                   = ',&
+    !         real(inform%num_factor), &
+    !         ' num_flops              Number of flops performed                = ',&
+    !         real(inform%num_flops), &
+    !         ' num_two                Number of 2x2 pivots used                = ',&
+    !         inform%num_two, &
+    !         ' num_delay              Number of delayed eliminations           = ',&
+    !         inform%num_delay, &
+    !         ' rank                   Computed rank                            = ',&
+    !         inform%matrix_rank, &
+    !         ' num_neg                Computed number of negative eigenvalues  = ',&
+    !         inform%num_neg
+    ! end if
+
     return
 100 continue
     

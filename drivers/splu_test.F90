@@ -105,11 +105,16 @@ program splu_test
   end if
   write (*, "(a)") "ok"
 
-  ! Perform LU factorization
-  
-  ! call system_clock(start_t, rate_t)
-  ! call splu_factor(sylver_akeep, splu_fkeep, ptr, row, val, splu_opt, inform)
-  ! call system_clock(stop_t)
+  ! Perform LU factorization  
+  call system_clock(start_t, rate_t)
+  call splu_factor(splu_akeep, splu_fkeep, ptr, row, val, options, inform)
+  if (inform%flag .lt. 0) then
+     print *, "oops on factorize ", inform%flag
+     stop
+  end if
+  call system_clock(stop_t)
+  write(*, "(a)") "ok"
+  print *, "Factor took ", (stop_t - start_t)/real(rate_t)
      
   soln = 0.0
 
