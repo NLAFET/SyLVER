@@ -19,7 +19,7 @@ SpLDLT
    :p spldlt_akeep akeep [out]: returns symbolic factorization, to be
       passed unchanged to subsequent routines.
    :p integer n [in]: number of columns in :math:`A`.
-   :p integer(long) ptr(n+1) [in]: column pointers for :math:`A` (see
+   :p long ptr(n+1) [in]: column pointers for :math:`A` (see
       `CSC format
       <http://www.numerical.rl.ac.uk/spral/doc/latest/Fortran/csc_format.html>`_).
    :p integer row(ptr(n+1)-1) [in]: row indices for :math:`A` (see
@@ -47,6 +47,7 @@ SpLDLT
 SpLU
 ====
 
+
 .. f:subroutine:: splu_analyse(akeep,n,ptr,row,options,inform, ncpu[,order,val])
 
    Perform the analyse (symbolic) phase of the factorization for a
@@ -58,8 +59,7 @@ SpLU
    :p splu_akeep akeep [out]: returns symbolic factorization, to be
       passed unchanged to subsequent routines.
    :p integer n [in]: number of columns in :math:`A`.
-   :p integer(long) ptr(n+1) [in]: column pointers for :math:`A` (see
-      `CSC format
+   :p long ptr(n+1) [in]: column pointers for :math:`A` (see `CSC format
       <http://www.numerical.rl.ac.uk/spral/doc/latest/Fortran/csc_format.html>`_).
    :p integer row(ptr(n+1)-1) [in]: row indices for :math:`A` (see
       `CSC format

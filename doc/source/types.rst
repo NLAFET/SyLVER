@@ -130,18 +130,21 @@ Derived types
       number of fully-summed variables that were passed to the father node
       because of stability considerations. If a variable is passed further
       up the tree, it will be counted again.
-   :f integer(long) num_factor: number of entries in :math:`L` (without pivoting
-      after analyse phase, with pivoting after factorize phase).
-   :f integer(long) num_flops: number of floating-point operations for Cholesky
-      factorization (indefinte needs slightly more). Without pivoting after
-      analyse phase, with pivoting after factorize phase.
-   :f integer num_neg: number of negative eigenvalues of the matrix :math:`D`
-      after factorize phase.
+   :f long num_factor: number of entries in :math:`L`
+      (without pivoting after analyse phase, with pivoting after
+      factorize phase).
+   :f long num_flops: number of
+      floating-point operations for Cholesky factorization (indefinte
+      needs slightly more). Without pivoting after analyse phase, with
+      pivoting after factorize phase.
+   :f integer num_neg: number of negative eigenvalues of the matrix
+      :math:`D` after factorize phase.
    :f integer num_sup: number of supernodes in assembly tree.
    :f integer num_two: number of :math:`2 \times 2` pivots used by the
-      factorization (i.e. in the matrix :math:`D`).
-   :f integer stat: Fortran allocation status parameter in event of allocation
-      error (0 otherwise).
+      factorization (i.e. in the matrix :math:`D` in the indefinite
+                       case).
+   :f integer stat: Fortran allocation status parameter in event of
+      allocation error (0 otherwise).
 
    +-------------+-------------------------------------------------------------+
    | inform%flag | Return status                                               |
