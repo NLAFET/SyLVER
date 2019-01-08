@@ -46,7 +46,8 @@ contains
     integer, dimension(rptr(nnodes+1)-1), intent(in) :: rlist
     ! Output mapping
     integer(long), dimension(nnodes+1), intent(out) :: nptr
-    integer(long), dimension(2, ptr(n+1)-1), intent(out) :: nlist
+    ! integer(long), dimension(2, ptr(n+1)-1), intent(out) :: nlist
+    integer(long), dimension(2, 2*(ptr(n+1)-1)), intent(out) :: nlist
     ! Error check paramter
     integer, intent(out) :: st
 
@@ -90,7 +91,7 @@ contains
     
     allocate(map(n), stat=st)
     if (st .ne. 0) return
-
+    
     !
     ! Build nptr, nlist map
     !
@@ -118,6 +119,10 @@ contains
           end do
        end do
 
+       ! print *, 'lcol = ', nlist(2,nptr(node):pp-1) / blkm 
+       ! print *, 'val = ', nlist(2,nptr(node):pp-1) 
+       ! ii = pp
+       
        ! ucol
        do i = sptr(node), sptr(node+1)-1
           k = abs(perm(i)) ! row of L
@@ -128,10 +133,11 @@ contains
              pp = pp + 1
           end do
        end do
+
+       ! print *, 'ucol = ', nlist(2,ii:pp-1)
        
     end do
     nptr(nnodes+1) = pp
-
     
   end subroutine build_map
   
@@ -206,10 +212,11 @@ contains
 
     ! Build map from A to L in nptr, nlist
     nz = ptr(n+1) - 1
-    allocate(akeep%nptr(n+1), akeep%nlist(2,nz), stat=st)
+    ! allocate(akeep%nptr(n+1), akeep%nlist(2,nz), stat=st)
+    allocate(akeep%nptr(n+1), akeep%nlist(2,2*nz), stat=st) ! FIXME nlist does not need to be 2*nz large
     if (st .ne. 0) go to 100
-    ! call build_map(n, ptr, row, order, invp, akeep%nnodes, akeep%sptr, &
-    !      akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist, st)
+    call build_map(n, ptr, row, order, invp, akeep%nnodes, akeep%sptr, &
+         akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist, st)
     if (st .ne. 0) go to 100
 
     nth = size(akeep%topology) ! FIXME Use (total) number of procs?
@@ -284,6 +291,10 @@ contains
 
 100 continue
 
+    inform%stat = st
+    if (inform%stat .ne. 0) then
+       inform%flag = SSIDS_ERROR_ALLOCATION
+    end if
     
   end subroutine analyse_core
   
