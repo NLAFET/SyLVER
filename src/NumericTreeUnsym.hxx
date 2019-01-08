@@ -2,6 +2,7 @@
  *  \copyright 2016- The Science and Technology Facilities Council (STFC)
  *  \author    Florent Lopez
  */
+
 // SyLVER
 #include "SymbolicTree.hxx"
 #include "sylver_ciface.hxx"
@@ -23,11 +24,19 @@ namespace sylver {
                struct sylver_options_c &options)
             : symb_(symbolic_tree)
          {
-         
-            printf("[NumericTreeUnsym] u = %e, small = %e\n", options.u, options.small);
-            
-            
 
+            printf("[NumericTreeUnsym] u = %e, small = %e\n", options.u, options.small);
+         
+            bool diagdom = true;
+            
+            if (diagdom) factor_mf_diagdom(val, options);
+
+         }
+
+         void factor_mf_diagdom(
+               T *val, struct sylver_options_c &options) {
+            
+            
          }
 
       private:

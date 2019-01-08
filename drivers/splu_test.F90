@@ -105,7 +105,7 @@ program splu_test
   end if
   write (*, "(a)") "ok"
 
-  ! Perform LU factorization  
+  ! Perform LU factorization
   call system_clock(start_t, rate_t)
   call splu_factor(splu_akeep, splu_fkeep, ptr, row, val, options, inform)
   if (inform%flag .lt. 0) then

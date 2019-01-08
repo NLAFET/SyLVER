@@ -1,13 +1,27 @@
+/** \file
+ *  \copyright 2016- The Science and Technology Facilities Council (STFC)
+ *  \author    Florent Lopez
+ */
+
 #pragma once
 
 // SyVLER
 #include "Block.hxx"
 #include "kernels/factor_unsym.hxx"
+#include "kernels/assemble_unsym.hxx"
 
 // SSIDS
 #include "ssids/cpu/Workspace.hxx"
 
 namespace spldlt {
+
+   ////////////////////////////////////////////////////////////
+   // Sparse LU factorization tasks
+   template <typename T, typename PoolAlloc>
+   void activate_init_unsym_task(NumericFront<T, PoolAlloc> &front) {
+      
+      
+   }
 
    ////////////////////////////////////////////////////////////
    // APTP factorization tasks
@@ -138,6 +152,7 @@ namespace spldlt {
    }
 
    ////////////////////////////////////////////////////////////
+   // LU factorization tasks
 
    /// @brief Perfom LU factorization on block dblk using partial
    /// pivoting
