@@ -106,28 +106,26 @@ Derived types
 
    Used to return information about the progress and needs of the algorithm.
 
-   :f integer cpu_flops: number of flops performed on CPU
+   :f integer flag: exit status of the algorithm (see table below).
    :f integer cublas_error: CUBLAS error code in the event of a CUBLAS error
       (0 otherwise).
    :f integer cuda_error: CUDA error code in the event of a CUDA error
       (0 otherwise). Note that due to asynchronous execution, CUDA errors may 
       not be reported by the call that caused them.
-   :f integer flag: exit status of the algorithm (see table below).
-   :f integer(long) gpu_flops: number of flops performed on GPU
    :f integer matrix_dup: number of duplicate entries encountered (if
-      :f:subr:`ssids_analyse()` called with check=true, or any call to
-      :f:subr:`ssids_analyse_coord()`).
-   :f integer matrix_missing_diag: number of diagonal entries without an
-      explicit value (if :f:subr:`ssids_analyse()` called with check=true, or
-      any call to :f:subr:`ssids_analyse_coord()`).
-   :f integer matrix_outrange: number of out-of-range entries encountered (if
-      :f:subr:`ssids_analyse()` called with check=true, or any call to
-      :f:subr:`ssids_analyse_coord()`).
-   :f integer matrix_rank: (estimated) rank (structural after analyse phase,
-      numerical after factorize phase).
+      :f:subr:`spldlt_analyse()` or :f:subr:`splu_analyse()` called with
+      check=true).
+   :f integer matrix_missing_diag: number of diagonal entries without
+      an explicit value (if :f:subr:`spldlt_analyse()` or
+      :f:subr:`splu_analyse()` called with check=true).
+   :f integer matrix_outrange: number of out-of-range entries
+      encountered (if :f:subr:`spldlt_analyse()` or
+      :f:subr:`splu_analyse()` called with check=true).
+   :f integer matrix_rank: (estimated) rank (structural after analyse
+      phase, numerical after factorize phase).
    :f integer maxdepth: maximum depth of the assembly tree.
-   :f integer maxfront: maximum front size (without pivoting after analyse
-      phase, with pivoting after factorize phase).
+   :f integer maxfront: maximum front size (without pivoting after
+      analyse phase, with pivoting after factorize phase).
    :f integer num_delay: number of delayed pivots. That is, the total
       number of fully-summed variables that were passed to the father node
       because of stability considerations. If a variable is passed further
