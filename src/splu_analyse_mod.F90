@@ -22,6 +22,7 @@ contains
   !
   ! Build a map from A to nodes
   ! lcol( nlist(2,i) ) = val( nlist(1,i) )
+  ! followed by
   ! ucol( nlist(2,i) ) = val( nlist(1,i) )
   ! nptr defines start of each node in nlist
   
@@ -49,6 +50,8 @@ contains
     ! Error check paramter
     integer, intent(out) :: st
 
+    integer, dimension(:), allocatable :: ptr2, row2 ! Hold the transpose of A
+    integer(long), dimension(:), allocatable :: origin
     integer, dimension(:), allocatable :: map
     integer :: blkm ! Number of rows in the supernode 
     integer :: blkn ! Number of columns in the fully-summed 
@@ -56,6 +59,34 @@ contains
     integer(long) :: ii, jj, pp
     integer :: col
     integer :: node
+
+    ! Build A transpose in ptr2, row2 and store original position for
+    ! matrix entries.
+    allocate(ptr2(n+3), row2(ptr(n+1)-1), origin(ptr(n+1)-1), stat=st)
+    if (st .ne. 0) return
+
+    ! Count number of entries in row i in ptr2(i+2).
+    ptr2(:) = 0
+    do i = 1, n
+       do jj = ptr(i), ptr(i+1)-1
+          k = row(jj)
+          ptr2(k+2) = ptr2(k+2) + 1
+       end do
+    end do
+    ! Work out row starts such that row i starts in posn ptr2(i+1)
+    ptr2(1:2) = 1
+    do i = 1, n
+       ptr2(i+2) = ptr2(i+2) + ptr2(i+1)
+    end do
+    ! Drop entries into place
+    do i = 1, n
+       do jj = ptr(i), ptr(i+1)-1
+          k = row(jj)
+          row2(ptr2(k+1)) = i
+          origin(ptr2(k+1)) = jj
+          ptr2(k+1) = ptr2(k+1) + 1
+       end do
+    end do    
     
     allocate(map(n), stat=st)
     if (st .ne. 0) return
@@ -81,7 +112,6 @@ contains
           col = invp(j)
           do ii = ptr(col), ptr(col+1)-1
              k = abs(perm(row(ii))) ! row of L
-             ! if (k .lt. j) cycle
              nlist(2,pp) = (j-sptr(node))*blkm + map(k)
              nlist(1,pp) = ii
              pp = pp + 1
@@ -89,7 +119,15 @@ contains
        end do
 
        ! ucol
-       
+       do i = sptr(node), sptr(node+1)-1
+          k = abs(perm(i)) ! row of L
+          do j = ptr2(k), ptr2(k+1)-1
+             col = invp(row2(j))
+             nlist(2,pp) = blkm*blkn + map(k)*blkn + i
+             nlist(1,pp) = origin(j)
+             pp = pp + 1
+          end do
+       end do
        
     end do
     nptr(nnodes+1) = pp
