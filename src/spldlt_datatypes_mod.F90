@@ -111,6 +111,19 @@ module spldlt_datatypes_mod
        !  >=4: Norm equilibriation algorithm (MC77-like)
 
      !
+     ! Options used by splu_factor() for controlling pivoting
+     !
+     integer :: pivot_method = SYLVER_PIVOT_METHOD_APP_BLOCK
+       ! Type of pivoting to use on CPU side:
+       ! 0 - A posteori pivoting, roll back entire front on pivot failure
+       ! 1 - A posteori pivoting, roll back on block column level for failure
+       ! 2 - Traditional threshold partial pivoting (serial, inefficient!)
+     real(wp) :: small = 1e-20_wp ! Minimum pivot size (absolute value of a
+       ! pivot must be of size at least small to be accepted).
+     real(wp) :: u = 0.01 ! Threshold used to decide whether a pivot
+       ! is accepted or not.
+
+     !
      ! CPU-specific
      !     
      integer :: nb ! Block size 
@@ -125,6 +138,10 @@ module spldlt_datatypes_mod
      !
      real(wp) :: multiplier = 1.1 ! size to multiply expected memory size by
        ! when doing initial memory allocation to allow for delays.
+     integer :: failed_pivot_method = SYLVER_FAILED_PIVOT_METHOD_TPP
+       ! What to do with failed pivots:
+       !     <= 1  Attempt to eliminate with TPP pass
+       !     >= 2  Pass straight to parent
      
   end type sylver_options
 

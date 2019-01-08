@@ -8,7 +8,7 @@
 
 #include <memory>
 
-using namespace spldlt;
+using namespace spldlt; // TODO change to sylver::spldlt namespace
 
 namespace {
    typedef double T;

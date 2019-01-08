@@ -23,13 +23,14 @@ module splu_factorize_mod
   ! return a C ptr on the tree structure
   interface splu_create_numeric_tree_c
      type(c_ptr) function splu_create_numeric_tree_dlb( &
-          symbolic_tree, lval) &
+          symbolic_tree, val, options) &
           bind(C, name="splu_create_numeric_tree_dbl")
        use, intrinsic :: iso_c_binding
-       ! use spral_ssids_cpu_iface, only : cpu_factor_options, cpu_factor_stats
+       use sylver_ciface_mod, only:sylver_options_c
        implicit none
        type(c_ptr), value :: symbolic_tree
-       real(c_double), dimension(*), intent(in) :: lval
+       real(c_double), dimension(*), intent(in) :: val
+       type(sylver_options_c), intent(in) :: options
      end function splu_create_numeric_tree_dlb
   end interface splu_create_numeric_tree_c
 
@@ -39,6 +40,7 @@ contains
     use spldlt_datatypes_mod
     use splu_analyse_mod, only: splu_akeep_type
     use sylver_inform_mod, only: sylver_inform
+    use sylver_ciface_mod, only:sylver_options_c, copy_options_f2c
     implicit none
 
     type(splu_akeep_type), target, intent(in) :: splu_akeep ! Analysis data
@@ -47,9 +49,12 @@ contains
     type(sylver_options), intent(in) :: options
     type(sylver_inform), intent(inout) :: inform
 
+    type(sylver_options_c) :: coptions ! C interoperable options 
+
     ! Instanciate numeric tree using C interface
+    call copy_options_f2c(options, coptions) ! Create C interoperable option structure
     splu_fkeep%c_numeric_tree = splu_create_numeric_tree_c( &
-         splu_akeep%symbolic_tree_c, val)
+         splu_akeep%symbolic_tree_c, val, coptions)
 
   end subroutine factor_core
 
@@ -70,28 +75,11 @@ contains
     type(sylver_options), intent(in) :: options
     type(sylver_inform), intent(inout) :: inform
 
-    ! integer :: n
-    ! integer(long) :: nz ! ptr(n+1)-1
-    ! real(wp), allocatable :: lval(:) ! A value in lower triagle using CSC format (includes diag) 
-    ! real(wp), allocatable :: uval(:) ! A value in upper triagle using CSR format (includes diag)
-
     ! Error management
     character(50)  :: context      ! Procedure name (used when printing).
     integer :: st
 
     context = 'splu_factor'
-
-    ! n = splu_akeep%akeep%n
-    ! nz = ptr(n+1)-1
-    
-    ! FIXME size (nz/2 + n) would probably be enough for lval
-    ! allocate(lval(nz), uval(nz))
-
-    ! ! Fill lval array
-    ! call get_l_val(n, nz, ptr, row, val, lval)
-
-    ! ! Fill uval array
-    ! call get_u_val(n, nz, ptr, row, val, uval)
 
     ! Compute factors
     call factor_core(splu_akeep, splu_fkeep, val, options, inform)
