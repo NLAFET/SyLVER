@@ -60,7 +60,8 @@ contains
 
   !> @brief Perfom sparse LU factorization of given matrix held in a
   !> CSC format.
-  subroutine splu_factor(splu_akeep, splu_fkeep, ptr, row, val, options, inform)
+  subroutine splu_factorize(splu_akeep, splu_fkeep, ptr, row, val, options, &
+       inform)
     use spral_ssids_datatypes
     use spldlt_datatypes_mod
     use splu_analyse_mod, only: splu_akeep_type
@@ -114,7 +115,7 @@ contains
     end if
     call inform%print_flag(options, context)
     
-  end subroutine splu_factor
+  end subroutine splu_factorize
 
   !> @brief Extract values in the lower triangle of input matrix and
   !> put them in lval using a CSC format.

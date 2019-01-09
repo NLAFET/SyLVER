@@ -107,7 +107,7 @@ program splu_test
 
   ! Perform LU factorization
   call system_clock(start_t, rate_t)
-  call splu_factor(splu_akeep, splu_fkeep, ptr, row, val, options, inform)
+  call splu_factorize(splu_akeep, splu_fkeep, ptr, row, val, options, inform)
   if (inform%flag .lt. 0) then
      print *, "oops on factorize ", inform%flag
      stop

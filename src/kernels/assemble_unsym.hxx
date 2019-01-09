@@ -32,8 +32,9 @@ namespace sylver {
          size_t const ldu = get_ldu(); // U factor
          
          size_t lenl = ldl*ncol;
-         size_t lenl = ldu*(nrow-numfs);
-            
+         size_t lenu = ldu*(nrow-numfs);
+         
+         
       }
 
    }

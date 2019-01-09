@@ -581,7 +581,8 @@ contains
     return
   end subroutine factor_core
 
-  subroutine spldlt_factor(spldlt_akeep, spldlt_fkeep, posdef, val, options, inform)
+  subroutine spldlt_factorize(spldlt_akeep, spldlt_fkeep, posdef, val, &
+       options, inform)
     use spral_ssids_datatypes
     use spral_ssids_inform, only : ssids_inform
     use spral_ssids_akeep, only : ssids_akeep
@@ -679,7 +680,7 @@ contains
     print *, "[Error][spldlt_factorize] st: ", st
 
     return
-  end subroutine spldlt_factor
+  end subroutine spldlt_factorize
 
   ! Solve phase
   subroutine solve(spldlt_fkeep, spldlt_akeep, nrhs, x, ldx, inform)

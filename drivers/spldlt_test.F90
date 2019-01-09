@@ -52,8 +52,6 @@ program spldlt_test
    
    ! ssids structures
    type(ssids_inform) :: inform ! stats
-   ! type(ssids_akeep) :: akeep   ! analysis data
-   ! type(ssids_fkeep) :: fkeep   ! factorization data
    ! spldlt strucutres
    type(spldlt_akeep_type) :: spldlt_akeep
    type(spldlt_fkeep_type) :: spldlt_fkeep
@@ -61,14 +59,6 @@ program spldlt_test
    ! stats
    real :: smfact
    ! real :: smanal, smaflop, smafact
-
-   !integer, parameter :: nfact = 1
-   !integer, parameter :: nfact = 50
-   !integer, parameter :: nfact = 100
-
-   !integer, parameter :: nslv = 1
-   !integer, parameter :: nslv = 10
-   !integer, parameter :: nslv = 100
 
    ! integer :: cuda_error ! DEBUG not useful for now 
 
@@ -125,29 +115,6 @@ program spldlt_test
    ssids_opt%ordering = 1 ! use Metis ordering
    ssids_opt%scaling = 0 ! no scaling
 
-   ! Analyse
-   ! write(*, "(a)") "[SpLDLT Test] Analyse..."
-   ! call system_clock(start_t, rate_t)
-   ! call ssids_analyse(.false., n, ptr, row, akeep, &
-   !      ssids_opt, inform, val=val)
-   ! call system_clock(stop_t)
-   ! print *, "Used order ", ssids_opt%ordering
-   ! if (inform%flag < 0) then
-   !    print *, "oops on analyse ", inform%flag
-   !    stop
-   ! endif
-   ! write(*, "(a)") "ok"
-   ! print *, "Analyse took ", (stop_t - start_t)/real(rate_t)
-   ! !print *, "Used maximum memory of ", inform%maxmem
-   ! smanal = (stop_t - start_t)/real(rate_t)
-   ! print "(a,es10.2)", "Predict nfact = ", real(inform%num_factor)
-   ! print "(a,es10.2)", "Predict nflop = ", real(inform%num_flops)
-   ! print "(a6, i10)", "nparts", inform%nparts
-   ! print "(a6, es10.2)", "cpu_flops", real(inform%cpu_flops)
-   ! ! print "(a6, es10.2)", "gpu_flops", real(inform%gpu_flops)
-   ! smaflop = real(inform%num_flops)
-   ! smafact = real(inform%num_factor)
-
    ! Perform spldlt analysis
    call spldlt_analyse(spldlt_akeep, n, ptr, row, options, inform, ncpu, val=val)
    ! print atree
@@ -158,32 +125,9 @@ program spldlt_test
    ! Initialize SpLDLT
    call spldlt_init(ncpu, ngpu)
 
-   ! print *, "TETETET"
-   ! stop
-   ! Factorize
-   ! write(*, "(a)") "[SpLDLT Test] Factorize..."
-   ! call system_clock(start_t, rate_t)
-   ! do i = 1, nfact
-   !    if(allocated(scaling)) then
-   !       call ssids_factor(pos_def, val, akeep, fkeep, &
-   !            ssids_opt, inform, ptr=ptr, row=row, scale=scaling)
-   !    else
-   !       call ssids_factor(pos_def, val, akeep, fkeep, &
-   !            ssids_opt, inform, ptr=ptr, row=row)
-   !    endif
-   ! end do
-   ! call system_clock(stop_t)
-   ! if (inform%flag < 0) then
-   !    print *, "oops on factorize ", inform%flag
-   !    stop
-   ! endif
-   ! write(*, "(a)") "ok"
-   ! print *, "Factor took ", (stop_t - start_t)/real(rate_t)
-   ! smfact = (stop_t - start_t)/real(rate_t)
-
    ! Factorize (SpLDLT)
    call system_clock(start_t, rate_t)
-   call spldlt_factor(spldlt_akeep, spldlt_fkeep, pos_def, val, options, inform)
+   call spldlt_factorize(spldlt_akeep, spldlt_fkeep, pos_def, val, options, inform)
    call system_clock(stop_t)
    write(*, "(a)") "ok"
    print *, "Factor took ", (stop_t - start_t)/real(rate_t)
@@ -195,18 +139,6 @@ program spldlt_test
 
    ! Solve
    write(*, "(a)") "[SpLDLT Test] Solve..."
-   ! call system_clock(start_t, rate_t)
-   ! do i = 1, nslv
-   !    soln = rhs
-   !    call ssids_solve(nrhs, soln, n, akeep, fkeep, ssids_opt, inform)
-   ! end do
-   ! call system_clock(stop_t)
-   ! if (inform%flag < 0) then
-   !    print *, "oops on solve ", inform%flag
-   !    stop
-   ! endif
-   ! write(*, "(a)") "ok"
-   ! print *, "Solve took ", (stop_t - start_t)/real(rate_t)
 
    ! Solve SpLDLT
    call system_clock(start_t, rate_t)
@@ -224,22 +156,6 @@ program spldlt_test
    allocate(res(nrhs))
    call internal_calc_norm(n, ptr, row, val, soln, rhs, nrhs, res)
    print *, "bwd error scaled = ", res
-
-   ! call ssids_free(spldlt_akeep%akeep, spldlt_fkeep%fkeep, cuda_error)
-   ! call ssids_free(spldlt_akeep%akeep, cuda_error)
-   ! call ssids_free(spldlt_fkeep%fkeep, cuda_error)
-   ! if (allocated(spldlt_fkeep%fkeep%scaling)) deallocate(spldlt_fkeep%fkeep%scaling)
-   ! if (allocated(spldlt_fkeep%fkeep%subtree)) then
-   !    do i = 1, size(spldlt_fkeep%fkeep%subtree)
-   !       if (spldlt_akeep%akeep%subtree(i)%exec_loc .eq. -1) cycle
-   !       if (associated(spldlt_fkeep%fkeep%subtree(i)%ptr)) then
-   !          ! call spldlt_fkeep%fkeep%subtree(i)%ptr%cleanup()
-   !          deallocate(spldlt_fkeep%fkeep%subtree(i)%ptr)
-   !          nullify(spldlt_fkeep%fkeep%subtree(i)%ptr)
-   !       end if
-   !    end do
-   !    deallocate(spldlt_fkeep%fkeep%subtree)
-   ! end if
 
    print "(a6, es10.2)", "nfact:", real(inform%num_factor)
    print "(a6, es10.2)", "nflop:", real(inform%num_flops)
