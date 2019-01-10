@@ -2,8 +2,8 @@ module spldlt_mod
 
 contains
 
-  ! Initialize SpLDLT solver, initialize runtime system.
-  ! TODO: Use topology structure to represent the machine 
+  !> @brief Initialize SpLDLT solver, initialize runtime system.
+  ! TODO: Use topology structure to represent the machine
   subroutine spldlt_init(ncpu, ngpu)
 #if defined(SPLDLT_USE_STARPU)
     use iso_c_binding
@@ -24,7 +24,7 @@ contains
 
   end subroutine spldlt_init
 
-  ! Shutdown SpLDLT solver, shutdown runtime system.
+  !> @brief Shutdown SpLDLT solver, shutdown runtime system.
   subroutine spldlt_finalize()
 #if defined(SPLDLT_USE_STARPU)
     use iso_c_binding
@@ -38,5 +38,18 @@ contains
 #endif
 
   end subroutine spldlt_finalize
+
+  !> @brief Release memory and cleanup data structure
+  subroutine spldlt_free(akeep, fkeep)
+    use spldlt_analyse_mod
+    use spldlt_factorize_mod
+    implicit none
+    
+    type(spldlt_akeep), intent(inout) :: akeep
+    type(spldlt_fkeep), intent(inout) :: fkeep
+
+    ! TODO
+    
+  end subroutine spldlt_free
 
 end module spldlt_mod
