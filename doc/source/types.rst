@@ -1,10 +1,14 @@
-*************
-Derived types
-*************
+**********
+Data types
+**********
+
+=======
+Options
+=======
 
 .. f:type:: sylver_options
 
-   The derived data type sylver\_options is used to specify the
+   The derived data type :f:type:`sylver_options` is used to specify the
    options used within ``SyLVER``. The components, that are
    automatically given default values in the definition of the type,
    are:
@@ -102,9 +106,15 @@ Derived types
       indefinite case. Values outside of the range :math:`[0,0.5]` are treated
       as the closest value in that range.
 
+===========
+Information
+===========
+
 .. f:type:: sylver_inform
 
-   Used to return information about the progress and needs of the algorithm.
+   The derived data type :f:type:`sylver_inform` is used to return
+   information about the progress and needs of the algorithm that
+   might be of interest for the user.
 
    :f integer flag: exit status of the algorithm (see table below).
    :f integer cublas_error: CUBLAS error code in the event of a CUBLAS error

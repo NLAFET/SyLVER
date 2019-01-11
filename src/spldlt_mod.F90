@@ -45,8 +45,8 @@ contains
     use spldlt_factorize_mod
     implicit none
     
-    type(spldlt_akeep), intent(inout) :: akeep
-    type(spldlt_fkeep), intent(inout) :: fkeep
+    type(spldlt_akeep_type), intent(inout) :: akeep
+    type(spldlt_fkeep_type), intent(inout) :: fkeep
 
     ! TODO
     
