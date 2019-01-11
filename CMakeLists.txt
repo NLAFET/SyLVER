@@ -118,7 +118,7 @@ set(SPRAL_SRC_DIR $ENV{SPRALSRCDIR} CACHE PATH "Location of Spral sources")
 include_directories(${SPRAL_SRC_DIR})
 include_directories(${SPRAL_SRC_DIR}/src)
 
-MESSAGE(STATUS "spral source dir: " ${SPRAL_SRC_DIR})
+# MESSAGE(STATUS "spral source dir: " ${SPRAL_SRC_DIR})
 
 # Get object files 
 file(

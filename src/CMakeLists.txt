@@ -40,7 +40,7 @@ if(${RUNTIME} MATCHES "StarPU")
     StarPU/*.cxx
     StarPU/*.hxx)
 
-  message(STATUS "StarPU sources: ${starpu_sources}")
+  # message(STATUS "StarPU sources: ${starpu_sources}")
 
   set(sources ${sources} ${starpu_sources})
 
@@ -65,13 +65,13 @@ if(${USE_GPU} MATCHES ON)
   # set(sources ${sources} ${cuda_sources})
   # set(sources ${cuda_sources})
   
-  MESSAGE( STATUS "CUDA source files: " ${cuda_sources} )
+  # MESSAGE( STATUS "CUDA source files: " ${cuda_sources} )
 endif()
 
 if(${USE_GPU} MATCHES ON)
   cuda_add_library(spldlt_cuda ${cuda_sources})
 endif()
 
-message(STATUS "Sources: ${sources}")
+# message(STATUS "Sources: ${sources}")
 
 add_library(spldlt ${sources})
