@@ -869,4 +869,77 @@ contains
 
   end subroutine solve_diag
 
+  !> @Brief Solve phase
+  !>
+  !> @param x On entry, x must be set so that if i has been used to
+  !> index a variable, x(i,j) is the corresponding component of the
+  !> right-hand side for the jth system (j = 1,2,..., nrhs).  On exit,
+  !> if i has been used to index a variable, x(i,j) holds solution for
+  !> variable i to system j.
+  !> @param ldx Leading dimension for x.
+  subroutine spldlt_solve(spldlt_akeep, spldlt_fkeep, nrhs, x, ldx, options, &
+       inform, job)
+    use spral_ssids_datatypes
+    use spral_ssids_inform, only : ssids_inform
+    use spldlt_datatypes_mod, only: sylver_options
+    use spldlt_analyse_mod, only: spldlt_akeep_type
+    use sylver_inform_mod, only: sylver_inform
+    implicit none
+
+    type(spldlt_akeep_type), intent(in) :: spldlt_akeep ! Analyse data
+    ! structures
+    type(spldlt_fkeep_type), intent(inout) :: spldlt_fkeep ! Data
+    ! structure holding factors and other factorization related
+    ! information
+    integer, intent(in) :: nrhs ! Number of rhs 
+    integer, intent(in) :: ldx ! Leading dimension for x
+    real(wp), dimension(ldx,nrhs), intent(inout), target :: x ! On
+      ! entry, x must be set so that if i has been used to index a
+      ! variable, x(i,j) is the corresponding component of the
+      ! right-hand side for the jth system (j = 1,2,..., nrhs).  On
+      ! exit, if i has been used to index a variable, x(i,j) holds
+      ! solution for variable i to system j
+    type(sylver_options), intent(in) :: options ! User options 
+    type(sylver_inform), intent(out) :: inform
+    integer, optional, intent(in) :: job ! used to indicate whether
+      ! partial solution required
+      ! job = 1 : forward eliminations only (PLX = B)
+      ! job = 2 : diagonal solve (DX = B) (indefinite case only)
+      ! job = 3 : backsubs only ((PL)^TX = B)
+      ! job = 4 : diag and backsubs (D(PL)^TX = B) (indefinite case only)
+      ! job absent: complete solve performed
+
+    type(ssids_inform) :: ssids_info
+    character(50) :: context  ! Procedure name (used when printing).
+
+    context = 'spldlt_solve'
+
+    ! ! Perform appropriate printing
+    ! if ((options%print_level .ge. 1) .and. (options%unit_diagnostics .ge. 0)) then
+    !    write (options%unit_diagnostics,'(//a)') &
+    !         ' Entering ssids_solve with:'
+    !    write (options%unit_diagnostics,'(a,4(/a,i12),(/a,i12))') &
+    !         ' options parameters (options%) :', &
+    !         ' print_level         Level of diagnostic printing        = ', &
+    !         options%print_level, &
+    !         ' unit_diagnostics    Unit for diagnostics                = ', &
+    !         options%unit_diagnostics, &
+    !         ' unit_error          Unit for errors                     = ', &
+    !         options%unit_error, &
+    !         ' unit_warning        Unit for warnings                   = ', &
+    !         options%unit_warning, &
+    !         ' nrhs                                                    = ', &
+    !         nrhs
+    !    if (nrhs .gt. 1) write (options%unit_diagnostics,'(/a,i12)') &
+    !         ' ldx                                                     = ', &
+    !         ldx
+    ! end if
+
+   call spldlt_fkeep%solve(spldlt_akeep, nrhs, x, ldx, ssids_info)
+
+   ! Print useful info if requested
+   call inform%print_flag(options, context)
+
+  end subroutine spldlt_solve
+
 end module spldlt_factorize_mod

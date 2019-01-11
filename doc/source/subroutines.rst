@@ -56,6 +56,43 @@ SpLDLT
       ``options%scaling=0`` (user-supplied scaling). On exit, return scaling
       used.
 
+.. f:subroutine:: spldlt_solve(akeep,fkeep,nrhs,x,ldx,options,inform[,job])
+
+   Solve (for multiple right-hand sides) one of the following equations:
+
+   +---------------+--------------------------+
+   | `job`         | Equation solved          |
+   +===============+==========================+
+   | 0 (or absent) | :math:`AX=B`             |
+   +---------------+--------------------------+
+   | 1             | :math:`PLX=SB`           |
+   +---------------+--------------------------+
+   | 2             | :math:`DX=B`             |
+   +---------------+--------------------------+
+   | 3             | :math:`(PL)^TS^{-1}X=B`  |
+   +---------------+--------------------------+
+   | 4             | :math:`D(PL)^TS^{-1}X=B` |
+   +---------------+--------------------------+
+
+   Recall :math:`A` has been factorized as either:
+   
+   * :math:`SAS = (PL)(PL)^T~` (positive-definite case); or
+   * :math:`SAS = (PL)D(PL)^T` (indefinite case).
+
+   :p spldlt_akeep akeep [in]: symbolic factorization returned by preceding
+      call to :f:subr:`spldlt_analyse()`
+   :p spldlt_fkeep fkeep [in]: numeric factorization returned by preceding
+      call to :f:subr:`spldlt_factor()`.
+   :p integer nrhs [in]: number of right-hand sides.
+   :p real x(ldx,nrhs) [inout]: right-hand sides :math:`B` on entry,
+      solutions :math:`X` on exit.
+   :p integer ldx [in]: leading dimension of :f:type:`x`.
+   :p sylver_options options [in]: specifies algorithm options to be used
+      (see :f:type:`sylver_options`).
+   :p sylver_inform inform [out]: returns information about the
+      execution of the routine (see :f:type:`sylver_inform`).                                    
+   :o integer job [in]: specifies equation to solve, as per above table.
+
 ====
 SpLU
 ====
@@ -106,3 +143,41 @@ SpLU
       :math:`S_{ii}` of :math:`S`. Must be supplied by user if
       ``options%scaling=0`` (user-supplied scaling). On exit, return scaling
       used.
+
+.. f:subroutine:: splu_solve(akeep,fkeep,nrhs,x,ldx,options,inform[,job])
+
+   Solve (for multiple right-hand sides) one of the following equations:
+
+   +---------------+--------------------------+
+   | `job`         | Equation solved          |
+   +===============+==========================+
+   | 0 (or absent) | :math:`AX=B`             |
+   +---------------+--------------------------+
+   | 1             | :math:`PLX=SB`           |
+   +---------------+--------------------------+
+   | 2             | :math:`DX=B`             |
+   +---------------+--------------------------+
+   | 3             | :math:`(PL)^TS^{-1}X=B`  |
+   +---------------+--------------------------+
+   | 4             | :math:`D(PL)^TS^{-1}X=B` |
+   +---------------+--------------------------+
+
+   Recall :math:`A` has been factorized as:
+   
+   * :math:`SAS = PLUQ`
+     
+   Where :math:`P` and :math:`Q` are permutation matices.
+
+   :p spldlt_akeep akeep [in]: symbolic factorization returned by preceding
+      call to :f:subr:`spldlt_analyse()`
+   :p spldlt_fkeep fkeep [in]: numeric factorization returned by preceding
+      call to :f:subr:`spldlt_factor()`.
+   :p integer nrhs [in]: number of right-hand sides.
+   :p real x(ldx,nrhs) [inout]: right-hand sides :math:`B` on entry,
+      solutions :math:`X` on exit.
+   :p integer ldx [in]: leading dimension of :f:type:`x`.
+   :p sylver_options options [in]: specifies algorithm options to be used
+      (see :f:type:`sylver_options`).
+   :p sylver_inform inform [out]: returns information about the
+      execution of the routine (see :f:type:`sylver_inform`).                                    
+   :o integer job [in]: specifies equation to solve, as per above table.
