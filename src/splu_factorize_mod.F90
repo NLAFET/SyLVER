@@ -23,14 +23,15 @@ module splu_factorize_mod
   ! return a C ptr on the tree structure
   interface splu_create_numeric_tree_c
      type(c_ptr) function splu_create_numeric_tree_dlb( &
-          symbolic_tree, val, options) &
+          symbolic_tree, val, scaling, options) &
           bind(C, name="splu_create_numeric_tree_dbl")
        use, intrinsic :: iso_c_binding
-       use sylver_ciface_mod, only:sylver_options_c
+       use sylver_ciface_mod, only:options_c
        implicit none
        type(c_ptr), value :: symbolic_tree
        real(c_double), dimension(*), intent(in) :: val
-       type(sylver_options_c), intent(in) :: options
+       type(c_ptr), value :: scaling
+       type(options_c), intent(in) :: options
      end function splu_create_numeric_tree_dlb
   end interface splu_create_numeric_tree_c
 
@@ -40,7 +41,7 @@ contains
     use spldlt_datatypes_mod
     use splu_analyse_mod, only: splu_akeep_type
     use sylver_inform_mod, only: sylver_inform
-    use sylver_ciface_mod, only:sylver_options_c, copy_options_f2c
+    use sylver_ciface_mod, only:options_c, copy_options_f2c
     implicit none
 
     type(splu_akeep_type), target, intent(in) :: splu_akeep ! Analysis data
@@ -49,12 +50,15 @@ contains
     type(sylver_options), intent(in) :: options
     type(sylver_inform), intent(inout) :: inform
 
-    type(sylver_options_c) :: coptions ! C interoperable options 
+    type(options_c) :: coptions ! C interoperable options 
+    type(c_ptr) :: scaling_c
+
+    scaling_c = c_null_ptr! TODO Add scaling
 
     ! Instanciate numeric tree using C interface
     call copy_options_f2c(options, coptions) ! Create C interoperable option structure
     splu_fkeep%c_numeric_tree = splu_create_numeric_tree_c( &
-         splu_akeep%symbolic_tree_c, val, coptions)
+         splu_akeep%symbolic_tree_c, val, scaling_c, coptions)
 
   end subroutine factor_core
 

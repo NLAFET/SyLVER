@@ -19,12 +19,12 @@ namespace sylver {
    };
 
    /// @brief Interoperable subset of sylver_options
-   struct sylver_options_c {
+   struct options_c {
       int print_level;
       double small;
       double u;
       double multiplier;
-      int nb;
+      int nb; // Block size
       sylver::PivotMethod pivot_method;
       sylver::FailedPivotMethod failed_pivot_method;
    };

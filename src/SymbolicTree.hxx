@@ -125,7 +125,12 @@ namespace spldlt {
 
       template <typename T>
       size_t get_pool_size() const {
-         return maxfront_*spral::ssids::cpu::align_lda<double>(maxfront_);
+         return maxfront_*spral::ssids::cpu::align_lda<T>(maxfront_);
+      }
+      
+      /// @brief Return the number of nodes in the assembly tree
+      inline int get_nnodes() const {
+         return nnodes_;
       }
 
    public:

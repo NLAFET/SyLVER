@@ -1,12 +1,12 @@
-!> \file
-!> \copyright 2016- The Science and Technology Facilities Council (STFC)
-!> \author    Florent Lopez
+!> @file
+!> @copyright 2016- The Science and Technology Facilities Council (STFC)
+!> @author    Florent Lopez
 module sylver_ciface_mod
   use, intrinsic :: iso_c_binding
   implicit none
  
   !> @brief Interoperable subset of sylver_options
-  type , bind(C) :: sylver_options_c
+  type , bind(C) :: options_c
      integer(C_INT) :: print_level
      real(C_DOUBLE) :: small
      real(C_DOUBLE) :: u
@@ -14,7 +14,7 @@ module sylver_ciface_mod
      integer(C_INT) :: nb
      integer(C_INT) :: pivot_method
      integer(C_INT) :: failed_pivot_method
-  end type sylver_options_c
+  end type options_c
 
 contains
 
@@ -24,7 +24,7 @@ contains
     implicit none
 
     type(sylver_options), intent(in) :: foptions
-    type(sylver_options_c), intent(inout) :: coptions
+    type(options_c), intent(inout) :: coptions
 
     coptions%print_level    = foptions%print_level
     coptions%small          = foptions%small

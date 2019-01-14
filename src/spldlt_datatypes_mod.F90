@@ -7,6 +7,8 @@ module spldlt_datatypes_mod
 
   integer, parameter, public :: sylver_nemin_default = 32 ! Node amalgamation
 
+  integer, parameter, public :: sylver_nb_default = 256 ! Block size
+
   ! Success flag
   integer, parameter, public :: SYLVER_SUCCESS                 = 0
 
@@ -126,7 +128,7 @@ module spldlt_datatypes_mod
      !
      ! CPU-specific
      !     
-     integer :: nb ! Block size 
+     integer :: nb = sylver_nb_default! Block size 
 
      !
      ! GPU-specific

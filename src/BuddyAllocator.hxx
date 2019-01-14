@@ -1,8 +1,7 @@
-/** \file
- *  \copyright 2016 The Science and Technology Facilities Council (STFC)
- *  \licence   BSD licence, see LICENCE file for details
- *  \author    Jonathan Hogg
- */
+/// @file
+/// @copyright 2016- The Science and Technology Facilities Council (STFC)
+/// @author Jonathan Hogg
+/// @author Florent Lopez
 #pragma once
 
 //#define MEM_STATS
@@ -16,6 +15,7 @@
 #if defined(SPLDLT_USE_STARPU)
 #include <mutex>
 #endif
+#include <vector>
 
 namespace spldlt {
 
