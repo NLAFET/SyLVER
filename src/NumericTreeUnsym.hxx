@@ -169,7 +169,7 @@ namespace sylver {
                stats += tstats;
             if(stats.flag < 0) return;
             
-            for(int ni=0; ni<symb_.nnodes_; ni++) {
+            for(int ni=0; ni<symb_.get_nnodes(); ni++) {
                int m = symb_[ni].nrow + fronts_[ni].ndelay_in;
                stats.maxfront = std::max(stats.maxfront, m);
                // int n = symb_[ni].ncol + fronts_[ni].ndelay_in;
