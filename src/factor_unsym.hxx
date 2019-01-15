@@ -11,16 +11,17 @@
 #include "ssids/cpu/cpu_iface.hxx"
 #include "ssids/cpu/Workspace.hxx"
 
-namespace spldlt {
+namespace sylver {
+namespace splu {
 
    template <typename T, typename PoolAlloc>
    void factor_front_unsym_app(
          struct cpu_factor_options& options,
-         NumericFront<T, PoolAlloc> &node,
+         spldlt::NumericFront<T, PoolAlloc> &node,
          std::vector<spral::ssids::cpu::Workspace>& workspaces) {
 
       // typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
-      typedef typename NumericFront<T, PoolAlloc>::IntAlloc IntAlloc;
+      typedef typename spldlt::NumericFront<T, PoolAlloc>::IntAlloc IntAlloc;
 
       int m = node.get_nrow(); // Frontal matrix order
       int n = node.get_ncol(); // Number of fully-summed rows/columns 
@@ -134,7 +135,7 @@ namespace spldlt {
                for (int i = rsa; i < nr; ++i) {
 
                   BlockUnsym<T>& lblk = node.get_block_unsym(i, k);
-                  Tile<T, PoolAlloc>& cblk = node.get_contrib_block(i, j);
+                  spldlt::Tile<T, PoolAlloc>& cblk = node.get_contrib_block(i, j);
                   
                   update_cb_block_unsym_app_task(lblk, ublk, cblk, cdata);               
                }
@@ -196,7 +197,7 @@ namespace spldlt {
 
    template <typename T, typename PoolAlloc>
    void permute_failed_unsym(
-         NumericFront<T, PoolAlloc> &node) {
+         spldlt::NumericFront<T, PoolAlloc> &node) {
       
       // Total number of eliminated rows/columns whithin node 
       int block_size = node.blksz;
@@ -212,7 +213,7 @@ namespace spldlt {
       int ldl = node.get_ldl();
 
       // Column data
-      typedef typename NumericFront<T, PoolAlloc>::IntAlloc IntAlloc;
+      typedef typename spldlt::NumericFront<T, PoolAlloc>::IntAlloc IntAlloc;
       ColumnData<T, IntAlloc>& cdata = *node.cdata; // Column data
 
       // Permutation
@@ -354,7 +355,7 @@ namespace spldlt {
    /// @Note No delays, potentially unstable
    template <typename T, typename PoolAlloc>
    void factor_front_unsym_rp(
-         NumericFront<T, PoolAlloc> &node,
+         spldlt::NumericFront<T, PoolAlloc> &node,
          std::vector<spral::ssids::cpu::Workspace>& workspaces) {
 
       // Extract front info
@@ -424,7 +425,7 @@ namespace spldlt {
                for (int i = rsa; i < nr; ++i) {
 
                   BlockUnsym<T>& lblk = node.get_block_unsym(i, k);
-                  Tile<T, PoolAlloc>& cblk = node.get_contrib_block(i, j);
+                  spldlt::Tile<T, PoolAlloc>& cblk = node.get_contrib_block(i, j);
                   
                   update_cb_block_lu_task(lblk, ublk, cblk);
                
@@ -439,4 +440,4 @@ namespace spldlt {
 
    }
 
-}
+}} // End of namespace sylver::splu 

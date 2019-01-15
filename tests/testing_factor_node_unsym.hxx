@@ -9,8 +9,9 @@
 // SSIDS
 #include "ssids/cpu/cpu_iface.hxx"
 
-namespace spldlt { 
-   namespace tests {
+namespace sylver { 
+namespace splu { 
+namespace tests {
 
       /// @param T working precision
       /// @param FactorAllocator memory allocator for factors
@@ -54,10 +55,10 @@ namespace spldlt {
          PoolAllocator pool_alloc(m*m);
 
          // Setup symbolic front
-         SymbolicFront sfront;
+         spldlt::SymbolicFront sfront;
          sfront.nrow = m;
          sfront.ncol = k;
-         NumericFront<T, PoolAllocator> front(sfront, pool_alloc, blksz);
+         spldlt::NumericFront<T, PoolAllocator> front(sfront, pool_alloc, blksz);
          front.ndelay_in = 0; // No incoming delayed columns      
          front.ndelay_out = 0;
 
@@ -331,5 +332,4 @@ namespace spldlt {
          return failed ? -1 : 0;
       }
 
-   } // namespace tests
-} // namespace spldlt
+}}} // End of namespace spylver::splu::tests
