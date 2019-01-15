@@ -18,8 +18,8 @@ int main(int argc, char** argv) {
    opts.parse_opts(argc, argv);
 
    int m = 4;
-   chol_test<double>(m);
-   // chol_test<float>(m);
+   // chol_test<double>(m);
+   chol_test<float>(m);
    
    return ret;
 }

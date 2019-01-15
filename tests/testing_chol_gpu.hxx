@@ -59,7 +59,7 @@ namespace tests {
       // Copy a into l
       l = new T[m*lda];
       memcpy(l, a, lda*m*sizeof(T));
-      spldlt::tests::print_mat("%10.2e", m, l, lda);
+      // spldlt::tests::print_mat("%10.2e", m, l, lda);
 
       cudaError_t cuerr;
       cublasStatus_t custat;
@@ -72,8 +72,8 @@ namespace tests {
          return -1;
       }
       // Send matrix to device
-      // custat = cublasSetMatrix(m, m, sizeof(T), l, lda, d_l, lda);
-      cudaMemcpy(d_l, l, lda*m*sizeof(T), cudaMemcpyHostToDevice);
+      custat = cublasSetMatrix(m, m, sizeof(T), l, lda, d_l, lda);
+      // cudaMemcpy(d_l, l, lda*m*sizeof(T), cudaMemcpyHostToDevice);
    
       cusolverStatus_t cusolstat;
       cusolverDnHandle_t cusolhandle;
@@ -85,10 +85,12 @@ namespace tests {
       T *d_work = nullptr;
       int worksz; // Workspace size
       cusolstat = dev_potrf_buffersize(cusolhandle, CUBLAS_FILL_MODE_LOWER, m, d_l, lda, &worksz);
-      std::cout << "[chol_test] work size = " << worksz << std::endl;
+      // std::cout << "[chol_test] work size = " << worksz << std::endl;
       cuerr = cudaMalloc((void**)&d_work, worksz*sizeof(T)); 
       int *d_info = nullptr;
       cudaMalloc ((void**)&d_info, sizeof(int));
+
+      auto start = std::chrono::high_resolution_clock::now();
 
       cusolstat = dev_potrf(
             cusolhandle, CUBLAS_FILL_MODE_LOWER, 
@@ -97,6 +99,12 @@ namespace tests {
             d_work, worksz,
             d_info);
       cudaDeviceSynchronize();
+
+      auto end = std::chrono::high_resolution_clock::now();
+      long ttotal = 
+         std::chrono::duration_cast<std::chrono::nanoseconds>
+         (end-start).count();
+
       std::cout << "[chol_test] cusolstat = " << cusolstat << std::endl;
 
       // cudaStreamSynchronize(stream);
@@ -106,10 +114,10 @@ namespace tests {
       std::cout << "[chol_test] info = " << info << std::endl;
 
       // Get matrix into host memory      
-      // custat = cublasGetMatrix(m, m, sizeof(T), d_l, lda, l, lda);
-      cudaMemcpy(l, d_l, lda*m*sizeof(T), cudaMemcpyDeviceToHost);
+      custat = cublasGetMatrix(m, m, sizeof(T), d_l, lda, l, lda);
+      // cudaMemcpy(l, d_l, lda*m*sizeof(T), cudaMemcpyDeviceToHost);
 
-      spldlt::tests::print_mat("%10.2e", m, l, lda);
+      // spldlt::tests::print_mat("%10.2e", m, l, lda);
       
       // Check results
 
@@ -144,7 +152,11 @@ namespace tests {
 
       T bwderr = sylver::tests::backward_error(m, a, lda, b, 1, soln, m);
       printf("bwderr = %le\n", bwderr);
-      
+ 
+      double flops = ((double)m*m*m)/3.0;
+      printf("factor time (s) = %e\n", 1e-9*ttotal);
+      printf("GFlop/s = %.3f\n", flops/(double)ttotal);
+
       // Cleanup memory
 
       // cudaStreamDestroy(stream);
