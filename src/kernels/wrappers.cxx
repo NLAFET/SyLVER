@@ -6,6 +6,7 @@ extern "C" {
    double dlange_(char *norm, int *m, int *n, const double *a, int *lda);
    void dpotrf_(char *uplo, int *n, double *a, int *lda, int *info);
    void dtrsm_(char *side, char *uplo, char *transa, char *diag, int *m, int *n, const double *alpha, const double *a, int *lda, double *b, int *ldb);
+   void strsm_(char *side, char *uplo, char *transa, char *diag, int *m, int *n, const float *alpha, const float *a, int *lda, float *b, int *ldb);
    void dgemm_(char* transa, char* transb, int* m, int* n, int* k, double* alpha, const double* a, int* lda, const double* b, int* ldb, double *beta, double* c, int* ldc);
    void dsyrk_(char *uplo, char *trans, int *n, int *k, double *alpha, const double *a, int *lda, double *beta, double *c, int *ldc);
    void dgetrf_(int *m, int *n, double* a, int *lda, int *ipiv, int *info);
@@ -76,6 +77,20 @@ namespace spldlt {
       dtrsm_(&fside, &fuplo, &ftransa, &fdiag, &m, &n, &alpha, a, &lda, b, &ldb);
    }
 
+   template <>
+   void host_trsm<float>(
+         enum spldlt::side side, enum spldlt::fillmode uplo,
+         enum spldlt::operation transa, enum spldlt::diagonal diag,
+         int m, int n,
+         float alpha, const float* a, int lda,
+         float* b, int ldb) {
+      char fside = (side==spldlt::SIDE_LEFT) ? 'L' : 'R';
+      char fuplo = (uplo==spldlt::FILL_MODE_LWR) ? 'L' : 'U';
+      char ftransa = (transa==spldlt::OP_N) ? 'N' : 'T';
+      char fdiag = (diag==spldlt::DIAG_UNIT) ? 'U' : 'N';
+      strsm_(&fside, &fuplo, &ftransa, &fdiag, &m, &n, &alpha, a, &lda, b, &ldb);
+   }
+
    /* _GEMM */
    template <>
    void host_gemm<double>(
@@ -86,7 +101,7 @@ namespace spldlt {
       char ftransb = (transb==spldlt::OP_N) ? 'N' : 'T';
       dgemm_(&ftransa, &ftransb, &m, &n, &k, &alpha, a, &lda, b, &ldb, &beta, c, &ldc);
    }
-
+   
    /* _SYRK */
    template <>
    void host_syrk<double>(

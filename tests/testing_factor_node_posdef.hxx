@@ -1,3 +1,6 @@
+/// @file
+/// @copyright 2016- The Science and Technology Facilities Council (STFC)
+/// @author Florent Lopez
 #pragma once
 
 // SpLDLT
@@ -40,7 +43,7 @@ namespace spldlt { namespace tests {
          T* a = nullptr;
          T* b = nullptr;
          if (check) {
-            a = new double[m*lda];
+            a = new T[m*lda];
             gen_posdef(m, a, lda);
 
             // Generate a RHS based on x=1, b=Ax

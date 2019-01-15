@@ -1,3 +1,7 @@
+/// @file
+/// @copyright 2016- The Science and Technology Facilities Council (STFC)
+/// @author Florent Lopez
+
 // SpLDLT
 #include "testing.hxx"
 #include "testing_update_block_gpu.hxx"
