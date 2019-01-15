@@ -6,6 +6,10 @@
 // SyLVER tests
 #include "common.hxx"
 #include "kernels/wrappers.hxx"
+#include "kernels/gpu/wrappers.hxx"
+
+// STD
+#include <iostream>
 
 // SSIDS
 #include "ssids/cpu/cpu_iface.hxx"
@@ -67,13 +71,26 @@ namespace tests {
       cusolverStatus_t cusolstat;
       cusolverDnHandle_t cusolhandle;
       cusolstat = cusolverDnCreate(&cusolhandle);
-      
+      T *d_work;
+      int worksz; // Workspace size
+      cusolstat = dev_potrf_buffersize(cusolhandle, CUBLAS_FILL_MODE_LOWER, m, d_l, lda, &worksz);
+      std::cout << "[chol_test] work size = " << worksz << std::endl;
+      cuerr = cudaMalloc((void**)&d_work, worksz*sizeof(T));
+ 
       // Send matrix to device
       custat = cublasSetMatrix(m, m, sizeof(T), l, lda, d_l, lda);
+
+      int info;
+      cusolstat = dev_potrf(
+            cusolhandle, CUBLAS_FILL_MODE_LOWER, 
+            m, 
+            d_l, lda, 
+            d_work, worksz,
+            &info);
       
       custat = cublasGetMatrix(m, m, sizeof(T), d_l, lda, l, lda);
 
-      cusolstat =  cusolverDnDestroy(cusolhandle);
+      cusolstat = cusolverDnDestroy(cusolhandle);
       
       // Check results
 
@@ -111,6 +128,7 @@ namespace tests {
       
       // Cleanup memory
 
+      cudaFree(d_work);
       cudaFree(d_l);
       
       delete[] a;
