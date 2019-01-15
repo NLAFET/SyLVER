@@ -17,8 +17,9 @@ int main(int argc, char** argv) {
    spldlt::SpldltOpts opts;
    opts.parse_opts(argc, argv);
 
-   int m = 10;
-   chol_test<float>(m);
+   int m = 4;
+   chol_test<double>(m);
+   // chol_test<float>(m);
    
    return ret;
 }

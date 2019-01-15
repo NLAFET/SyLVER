@@ -18,8 +18,8 @@
 #include "tests/ssids/kernels/framework.hxx"
 // CUDA, CuBLAS and CuSOLVER
 #include <cuda_runtime.h>
-#include "cublas_v2.h"
 #include <cusolverDn.h>
+#include "cublas_v2.h"
 
 namespace sylver {
 namespace tests {
@@ -45,6 +45,8 @@ namespace tests {
       T* b = nullptr;
       T* l = nullptr;
 
+      std::cout << "[chol_test] m = " << m << std::endl;
+
       // Generate test matrix
       int lda = spral::ssids::cpu::align_lda<T>(m);
       a = new T[m*lda];
@@ -57,40 +59,57 @@ namespace tests {
       // Copy a into l
       l = new T[m*lda];
       memcpy(l, a, lda*m*sizeof(T));
+      spldlt::tests::print_mat("%10.2e", m, l, lda);
 
       cudaError_t cuerr;
       cublasStatus_t custat;
 
+      // Allocate memory on the device
       T *d_l = nullptr;
       cuerr = cudaMalloc((void**)&d_l, m*lda*sizeof(T));
       if (cuerr != cudaSuccess) {
          printf("[chol_test] CUDA memory allocation error\n");
          return -1;
       }
-
+      // Send matrix to device
+      // custat = cublasSetMatrix(m, m, sizeof(T), l, lda, d_l, lda);
+      cudaMemcpy(d_l, l, lda*m*sizeof(T), cudaMemcpyHostToDevice);
+   
       cusolverStatus_t cusolstat;
       cusolverDnHandle_t cusolhandle;
       cusolstat = cusolverDnCreate(&cusolhandle);
-      T *d_work;
+      // cudaStream_t stream;
+      // cudaStreamCreate(&stream);
+      // cusolverDnSetStream(cusolhandle, stream);
+
+      T *d_work = nullptr;
       int worksz; // Workspace size
       cusolstat = dev_potrf_buffersize(cusolhandle, CUBLAS_FILL_MODE_LOWER, m, d_l, lda, &worksz);
       std::cout << "[chol_test] work size = " << worksz << std::endl;
-      cuerr = cudaMalloc((void**)&d_work, worksz*sizeof(T));
- 
-      // Send matrix to device
-      custat = cublasSetMatrix(m, m, sizeof(T), l, lda, d_l, lda);
+      cuerr = cudaMalloc((void**)&d_work, worksz*sizeof(T)); 
+      int *d_info = nullptr;
+      cudaMalloc ((void**)&d_info, sizeof(int));
 
-      int info;
       cusolstat = dev_potrf(
             cusolhandle, CUBLAS_FILL_MODE_LOWER, 
             m, 
             d_l, lda, 
             d_work, worksz,
-            &info);
-      
-      custat = cublasGetMatrix(m, m, sizeof(T), d_l, lda, l, lda);
+            d_info);
+      cudaDeviceSynchronize();
+      std::cout << "[chol_test] cusolstat = " << cusolstat << std::endl;
 
-      cusolstat = cusolverDnDestroy(cusolhandle);
+      // cudaStreamSynchronize(stream);
+
+      int info;
+      cudaMemcpy(&info, d_info, sizeof(int), cudaMemcpyDeviceToHost);
+      std::cout << "[chol_test] info = " << info << std::endl;
+
+      // Get matrix into host memory      
+      // custat = cublasGetMatrix(m, m, sizeof(T), d_l, lda, l, lda);
+      cudaMemcpy(l, d_l, lda*m*sizeof(T), cudaMemcpyDeviceToHost);
+
+      spldlt::tests::print_mat("%10.2e", m, l, lda);
       
       // Check results
 
@@ -127,6 +146,9 @@ namespace tests {
       printf("bwderr = %le\n", bwderr);
       
       // Cleanup memory
+
+      // cudaStreamDestroy(stream);
+      cusolstat = cusolverDnDestroy(cusolhandle);
 
       cudaFree(d_work);
       cudaFree(d_l);
