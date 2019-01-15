@@ -320,7 +320,7 @@ public:
       // Try allocating in existing pages
 #if defined(SPLDLT_USE_STARPU)
       std::lock_guard<std::mutex> lock(mtx);
-#else
+#elif defined(_OPENMP)
       spral::omp::AcquiredLock scopeLock(lock_);
 #endif
       void* ptr;
@@ -361,7 +361,7 @@ public:
       // Find page ptr belongs to and call it's deallocate function
 #if defined(SPLDLT_USE_STARPU)
       std::lock_guard<std::mutex> lock(mtx);
-#else
+#elif defined(_OPENMP)
       spral::omp::AcquiredLock scopeLock(lock_);
 #endif
       for(auto& page: pages_) {
@@ -378,7 +378,7 @@ private:
    std::vector<PageSpec, PageAlloc> pages_; ///< Individual buddy allocators
 #if defined(SPLDLT_USE_STARPU)
    std::mutex mtx;
-#else
+#elif defined(_OPENMP)
    spral::omp::Lock lock_; ///< Underlying OpenMP lock
 #endif
 };
