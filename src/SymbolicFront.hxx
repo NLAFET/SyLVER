@@ -23,5 +23,8 @@ namespace spldlt {
       int part; // Partition info
       int exec_loc; // Execution location info
       int contrib_idx; // Index of contribution
+      bool is_in_subtree() {
+         return (exec_loc != -1);
+      }
    };
 }

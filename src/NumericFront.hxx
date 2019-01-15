@@ -461,7 +461,7 @@ namespace spldlt {
 
       void alloc_blocks_unsym() {
          
-         typedef typename std::allocator_traits<PoolAllocator>::template rebind_traits<BlockUnsym<T>> BlkAllocTraits;
+         typedef typename std::allocator_traits<PoolAllocator>::template rebind_traits<sylver::splu::BlockUnsym<T>> BlkAllocTraits;
          typename BlkAllocTraits::allocator_type blkAlloc(pool_alloc_);
          
          int const m = get_nrow(); // Number of fully summed rows and columns
@@ -529,7 +529,7 @@ namespace spldlt {
 
          if (!blocks_unsym_) return;
          
-         typedef typename std::allocator_traits<PoolAllocator>::template rebind_traits<BlockUnsym<T>> BlkAllocTraits;
+         typedef typename std::allocator_traits<PoolAllocator>::template rebind_traits<sylver::splu::BlockUnsym<T>> BlkAllocTraits;
          typename BlkAllocTraits::allocator_type blkAlloc(pool_alloc_);
 
          int const mblk = get_nr();
@@ -553,7 +553,7 @@ namespace spldlt {
             for (int i =  0; i < nr; ++i) {
                // Loop if we are in the cb
                if ((i > en) && (j > en)) continue;
-               BlockUnsym<T>& blk = get_block_unsym(i, j);
+               sylver::splu::BlockUnsym<T>& blk = get_block_unsym(i, j);
                blk.alloc_backup(pool_alloc_);
             }
          }
@@ -571,7 +571,7 @@ namespace spldlt {
             for (int i =  0; i < nr; ++i) {
                // Loop if we are in the cb
                if ((i > en) && (j > en)) continue;
-               BlockUnsym<T>& blk = get_block_unsym(i, j);
+               sylver::splu::BlockUnsym<T>& blk = get_block_unsym(i, j);
                blk.release_backup(pool_alloc_);
             }
          }
@@ -635,7 +635,7 @@ namespace spldlt {
       //    return blocks[i+j*nr];
       // }
 
-      inline BlockUnsym<T>& get_block_unsym(int i, int j) {
+      inline sylver::splu::BlockUnsym<T>& get_block_unsym(int i, int j) {
 
          int nr = get_nr();
          
@@ -689,7 +689,7 @@ namespace spldlt {
       starpu_data_handle_t contrib_hdl; // Symbolic handle for contribution blocks
 #endif
    private:
-      BlockUnsym<T> *blocks_unsym_; // Block array (unsym case) 
+      sylver::splu::BlockUnsym<T> *blocks_unsym_; // Block array (unsym case) 
       PoolAllocator pool_alloc_; // Our own version of pool allocator for freeing
       // contrib
    };

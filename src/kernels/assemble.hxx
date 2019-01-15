@@ -341,7 +341,7 @@ namespace spldlt {
       size_t len = ldl    * ncol;  // posdef
       front.lcol = FADoubleTraits::allocate(factor_alloc_double, len);
 
-      // /* Get space for contribution block + (explicitly do not zero it!) */
+      // Get space for contribution block + (explicitly do not zero it!)
       // node.alloc_contrib();
       front.alloc_contrib_blocks();
 

@@ -9,7 +9,8 @@
 // SSIDS
 #include "ssids/cpu/cpu_iface.hxx"
 
-namespace spldlt {
+namespace sylver {
+namespace splu {      
 
    // Block structure for unsymmetric matrices
    //
@@ -78,7 +79,10 @@ namespace spldlt {
          return n-get_nb();
       }
 
-      /// @ Allocate copy of block
+      /// @brief Allocate copy of block
+      /// 
+      /// @param alloc Memory allocator to be used for allocating
+      /// backup
       template <typename Allocator>
       void alloc_backup(Allocator& alloc) {
          if (!cpy_) {
@@ -479,6 +483,27 @@ namespace spldlt {
          }
       }
 
+#if defined(SPLDLT_USE_STARPU)
+      void register_handle() {
+         
+         assert(a != nullptr); // Trying to register a nullptr
+         
+         if (!a) return;
+         
+         // Register block in StarPU
+         starpu_matrix_data_register(
+               &hdl_, STARPU_MAIN_RAM, reinterpret_cast<uintptr_t>(a),
+               lda, get_ma(), get_na(), sizeof(T));
+
+         if (get_nb() > 0) {
+            // Register b block in StarPU
+            starpu_matrix_data_register(
+                  &b_hdl_, STARPU_MAIN_RAM, reinterpret_cast<uintptr_t>(b),
+                  lda, get_mb(), get_nb(), sizeof(T));
+         }
+      }
+#endif      
+
       ////////////////////////////////////////
       
       int i; // block row index
@@ -498,7 +523,11 @@ namespace spldlt {
       int *lrperm_; // Local row permutation
       T *cpy_; // Copy of block 
       int ldcpy_;
-      
+#if defined(SPLDLT_USE_STARPU)
+      // StarPU handles
+      starpu_data_handle_t hdl_;
+      starpu_data_handle_t b_hdl_;
+#endif      
       // case 1) Block is in a single memory location (lcol or ucol)
       // e.g.
      
@@ -527,8 +556,9 @@ namespace spldlt {
       //
       // |---|---|
       //   na  nb
+      //
       // |-------|
       //     n
    };
    
-} // namespaces spldlt
+}} // End of namespaces sylver::splu

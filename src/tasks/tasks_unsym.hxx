@@ -9,17 +9,23 @@
 #include "Block.hxx"
 #include "kernels/factor_unsym.hxx"
 #include "kernels/assemble_unsym.hxx"
+#include "kernels/ldlt_app.hxx"
 
 // SSIDS
 #include "ssids/cpu/Workspace.hxx"
 
-namespace spldlt {
+namespace sylver {
+namespace splu {
 
    ////////////////////////////////////////////////////////////
    // Sparse LU factorization tasks
-   template <typename T, typename PoolAlloc>
-   void activate_init_unsym_task(NumericFront<T, PoolAlloc> &front) {
+   template <typename T, typename PoolAlloc, typename FactorAlloc>
+   void activate_init_front_unsym_task(
+         spldlt::NumericFront<T, PoolAlloc> &front, 
+         FactorAlloc& factor_alloc, 
+         bool diagdom) {
       
+      activate_front_unsym(front, factor_alloc, diagdom);
       
    }
 
@@ -34,7 +40,7 @@ namespace spldlt {
    template <typename T, typename IntAlloc>
    void factor_block_unsym_app_task(
          BlockUnsym<T>& dblk, int *rperm, int *cperm, 
-         ColumnData<T, IntAlloc>& cdata) {
+         spldlt::ldlt_app_internal::ColumnData<T, IntAlloc>& cdata) {
 
       int blk = dblk.get_row(); // Block row index
       dblk.backup(); // Backup dblk
@@ -54,7 +60,7 @@ namespace spldlt {
    template <typename T, typename IntAlloc>
    void appyU_block_app_task(
          BlockUnsym<T>& dblk, T u, BlockUnsym<T>& lblk, 
-         ColumnData<T, IntAlloc>& cdata) {
+         spldlt::ldlt_app_internal::ColumnData<T, IntAlloc>& cdata) {
       
       int elim_col = dblk.get_col();
 
@@ -78,7 +84,7 @@ namespace spldlt {
    template <typename T, typename IntAlloc>
    void applyL_block_app_task(
          BlockUnsym<T>& dblk, BlockUnsym<T>& ublk,
-         ColumnData<T, IntAlloc>& cdata, 
+         spldlt::ldlt_app_internal::ColumnData<T, IntAlloc>& cdata, 
          std::vector<spral::ssids::cpu::Workspace>& workspaces) {
 
       // printf("[appyL_block_app_task]\n");
@@ -93,7 +99,7 @@ namespace spldlt {
    template <typename T, typename IntAlloc>
    void update_block_unsym_app_task(
          BlockUnsym<T>& lblk, BlockUnsym<T>& ublk, BlockUnsym<T>& blk,
-         ColumnData<T, IntAlloc>& cdata) {
+         spldlt::ldlt_app_internal::ColumnData<T, IntAlloc>& cdata) {
 
       // printf("[update_block_unsym_app_task]\n");
       
@@ -102,15 +108,16 @@ namespace spldlt {
 
    template <typename T, typename IntAlloc>
    void restore_block_unsym_app_task(
-         int elim_col, BlockUnsym<T>& blk, ColumnData<T, IntAlloc>& cdata) {
+         int elim_col, BlockUnsym<T>& blk, 
+         spldlt::ldlt_app_internal::ColumnData<T, IntAlloc>& cdata) {
       
       blk.restore_failed(elim_col, cdata);
    }
 
    template <typename T, typename PoolAlloc, typename IntAlloc>
    void update_cb_block_unsym_app_task(
-         BlockUnsym<T>& lblk, BlockUnsym<T>& ublk, Tile<T, PoolAlloc>& blk, 
-         ColumnData<T, IntAlloc>& cdata) {
+         BlockUnsym<T>& lblk, BlockUnsym<T>& ublk, spldlt::Tile<T, PoolAlloc>& blk, 
+         spldlt::ldlt_app_internal::ColumnData<T, IntAlloc>& cdata) {
 
       int m = blk.m;
       int n = blk.m;
@@ -140,7 +147,7 @@ namespace spldlt {
    template <typename T, typename IntAlloc>
    void adjust_unsym_app_task(
          int elim_col,
-         ColumnData<T, IntAlloc>& cdata,
+         spldlt::ldlt_app_internal::ColumnData<T, IntAlloc>& cdata,
          int& nelim) {
 
       printf("[adjust_unsym_app_task] elim_col = %d, nelim = %d, npass = %d\n",
@@ -277,7 +284,7 @@ namespace spldlt {
 
    template <typename T, typename PoolAlloc>
    void update_cb_block_lu_task(
-         BlockUnsym<T>& lblk, BlockUnsym<T>& ublk, Tile<T, PoolAlloc>& blk) {
+         BlockUnsym<T>& lblk, BlockUnsym<T>& ublk, spldlt::Tile<T, PoolAlloc>& blk) {
 
       int m = blk.m;
       int n = blk.m;
@@ -298,4 +305,5 @@ namespace spldlt {
             u, ldu);
       
    }
-}
+
+}} // End of namespace sylver::splu
