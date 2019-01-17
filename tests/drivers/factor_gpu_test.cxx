@@ -17,9 +17,11 @@ int main(int argc, char** argv) {
    spldlt::SpldltOpts opts;
    opts.parse_opts(argc, argv);
 
-   int m = 4;
+   printf("[factor_node_test] Matrix m = %d, n = %d\n", opts.m, opts.m);
+
+   // int m = 4;
    // chol_test<double>(m);
-   chol_test<float>(m);
+   chol_test<float>(opts.m);
    
    return ret;
 }
