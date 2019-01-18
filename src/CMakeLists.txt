@@ -54,13 +54,20 @@ if(${USE_GPU} MATCHES ON)
     kernels/gpu/*.cxx
     kernels/gpu/*.hxx
     )  
-
+  
   set(sources ${sources} ${gpu_sources})
 
   file(
     GLOB
     cuda_sources 
     kernels/gpu/*.cu)
+
+  if (${HAVE_CUTLASS} MATCHES "OFF")
+    file(
+      GLOB 
+      to_remove
+      kernels/gpu/chol.cu)
+  endif()
 
   # set(sources ${sources} ${cuda_sources})
   # set(sources ${cuda_sources})

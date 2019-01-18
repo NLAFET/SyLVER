@@ -155,6 +155,31 @@ if (${HAVE_LAHP} MATCHES "ON")
 endif()
 MESSAGE(STATUS "LAHP: " ${HAVE_LAHP})
 
+# Have CUTALSS library
+option(HAVE_CUTLASS "CUTLASS library available" OFF)
+if (${HAVE_CUTLASS} MATCHES "ON")
+
+  set(CUTLASS_HEADERS "" CACHE STRING "CUTLASS library")
+
+  if(CUTLASS_DIR)
+    set(CUTLASS_HEADERS ${CUTLASS_DIR})
+  elseif(DEFINED ENV{CUTLASS_DIR})
+    set(CUTLASS_HEADERS $ENV{CUTLASS_DIR})
+  elseif(DEFINED ENV{CUTLASSDIR})
+    set(CUTLASS_HEADERS $ENV{CUTLASSDIR})
+  endif()
+
+  if(EXISTS ${CUTLASS_HEADERS})
+    MESSAGE(STATUS "CUTLASS: " ${HAVE_CUTLASS})
+    MESSAGE(STATUS "CUTLASS Directory: " ${CUTLASS_HEADERS})
+  else()
+    message(FATAL_ERROR "CUTLASS NOT found")
+  endif()
+  
+  add_definitions(-DHAVE_CUTLASS)
+endif()
+
+
 ################################################################################
 # Low-level options
 
@@ -379,6 +404,7 @@ target_link_libraries(splu_test spldlt)
 
 # endif()
 
+########################################
 ## spral
 target_include_directories(spldlt_test PUBLIC ${SPRAL_DIR})
 target_include_directories(splu_test PUBLIC ${SPRAL_DIR})
@@ -392,6 +418,10 @@ target_link_libraries(spldlt_test ${SPRAL_LIBRARIES})
 target_link_libraries(splu_test ${SPRAL_LIBRARIES})
 
 # set_property(TARGET spldlt_test PROPERTY LINKER_LANGUAGE Fortran)
+
+########################################
+# CUTLASS
+
 
 ################################################################################
 # Test drivers
