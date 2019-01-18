@@ -88,12 +88,12 @@ namespace tests {
       // cusolstat = dev_potrf_buffersize(cusolhandle, CUBLAS_FILL_MODE_LOWER, m, d_l, lda, &worksz);
       // std::cout << "[chol_test] work size = " << worksz << std::endl;
       // cuerr = cudaMalloc((void**)&d_work, worksz*sizeof(T)); 
-      // int *d_info = nullptr;
-      // cudaMalloc ((void**)&d_info, sizeof(int));
+      int *d_info = nullptr;
+      cudaMalloc ((void**)&d_info, sizeof(int));
 
       auto start = std::chrono::high_resolution_clock::now();
 
-      sylver::spldlt::gpu::factor(stream, m, m, d_l, lda);
+      sylver::spldlt::gpu::factor_bcol(stream, m, m, d_l, lda, d_info);
       cudaStreamSynchronize(stream);
          
       // cusolstat = dev_potrf(
@@ -103,6 +103,7 @@ namespace tests {
       //       d_work, worksz,
       //       d_info);
       // cudaDeviceSynchronize();
+      // cudaStreamSynchronize(stream);
 
       auto end = std::chrono::high_resolution_clock::now();
       long ttotal = 
@@ -111,11 +112,9 @@ namespace tests {
 
       std::cout << "[chol_test] cusolstat = " << cusolstat << std::endl;
 
-      // cudaStreamSynchronize(stream);
-
-      // int info;
-      // cudaMemcpy(&info, d_info, sizeof(int), cudaMemcpyDeviceToHost);
-      // std::cout << "[chol_test] info = " << info << std::endl;
+      int info;
+      cudaMemcpy(&info, d_info, sizeof(int), cudaMemcpyDeviceToHost);
+      std::cout << "[chol_test] info = " << info << std::endl;
 
       // Get matrix into host memory      
       custat = cublasGetMatrix(m, m, sizeof(T), d_l, lda, l, lda);
