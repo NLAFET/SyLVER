@@ -4,8 +4,9 @@
 #include <cusolverDn.h>
 
 namespace sylver {
+namespace gpu {
 
-   // _POTRF BufferSize
+   // SPOTRF BufferSize
    template<>
    cusolverStatus_t dev_potrf_buffersize<float>(cusolverDnHandle_t handle, cublasFillMode_t uplo, int n, float *a, int lda, int *lwork) {
       return cusolverDnSpotrf_bufferSize(handle, uplo, n, a, lda, lwork);
@@ -15,7 +16,7 @@ namespace sylver {
       return cusolverDnDpotrf_bufferSize(handle, uplo, n, a, lda, lwork);
    }
 
-   // _POTRF
+   // SPOTRF
    template<>
    cusolverStatus_t dev_potrf<float>(cusolverDnHandle_t handle, cublasFillMode_t uplo, int n, float *a, int lda, float *work, int lwork, int *info) {
       return cusolverDnSpotrf(handle, uplo, n, a, lda, work, lwork, info);
@@ -25,4 +26,19 @@ namespace sylver {
       return cusolverDnDpotrf(handle, uplo, n, a, lda, work, lwork, info);
    }
    
-}
+   // SSYRK
+   template<>
+   cublasStatus_t dev_syrk<float>(
+         cublasHandle_t handle, cublasFillMode_t uplo, cublasOperation_t trans, 
+         int n, int k, const float *alpha, const float *a, int lda, const float *beta, float *c, int ldc) {
+      return cublasSsyrk(handle, uplo, trans, n, k, alpha, a, lda, beta, c, ldc);
+   }
+   // DSYRK
+   template<>
+   cublasStatus_t dev_syrk<double>(
+         cublasHandle_t handle, cublasFillMode_t uplo, cublasOperation_t trans, 
+         int n, int k, const double *alpha, const double *a, int lda, const double *beta, double *c, int ldc) {
+      return cublasDsyrk(handle, uplo, trans, n, k, alpha, a, lda, beta, c, ldc);
+   }
+
+}}

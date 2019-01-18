@@ -8,6 +8,7 @@
 #include <cusolverDn.h>
 
 namespace sylver {
+namespace gpu {
 
    // _POTRF BufferSize
    template <typename T> 
@@ -17,4 +18,9 @@ namespace sylver {
    template <typename T>
    cusolverStatus_t dev_potrf(cusolverDnHandle_t handle, cublasFillMode_t uplo, int n, T *a, int lda, T *work, int lwork, int *info);
 
-}
+   // _SYRK
+   template <typename T>
+   cublasStatus_t dev_syrk(
+         cublasHandle_t handle, cublasFillMode_t uplo, cublasOperation_t trans, 
+         int n, int k, const T *alpha, const T *a, int lda, const T *beta, T *c, int ldc);
+}}

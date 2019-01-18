@@ -89,11 +89,11 @@ namespace tests {
       // std::cout << "[chol_test] work size = " << worksz << std::endl;
       // cuerr = cudaMalloc((void**)&d_work, worksz*sizeof(T)); 
       int *d_info = nullptr;
-      cudaMalloc ((void**)&d_info, sizeof(int));
+      cudaMalloc((void**)&d_info, sizeof(int));
 
       auto start = std::chrono::high_resolution_clock::now();
 
-      sylver::spldlt::gpu::factor_bcol(stream, m, m, d_l, lda, d_info);
+      sylver::spldlt::gpu::factor(stream, m, m, d_l, lda, d_info);
       cudaStreamSynchronize(stream);
          
       // cusolstat = dev_potrf(

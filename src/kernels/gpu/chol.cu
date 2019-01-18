@@ -9,8 +9,6 @@
 #include <cuda_runtime.h>
 #include <cuda_runtime_api.h>
 
-#define BLOCK_SIZE 32  // Number of threads
-
 namespace /* anon */ {
 
    // Dynamically allocated shared memory
