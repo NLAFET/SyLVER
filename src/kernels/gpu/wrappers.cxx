@@ -41,4 +41,12 @@ namespace gpu {
       return cublasDsyrk(handle, uplo, trans, n, k, alpha, a, lda, beta, c, ldc);
    }
 
+   // SGEMM
+   template<>
+   cublasStatus_t dev_gemm<float>(
+         cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb,
+         int m, int n, int k, const float *alpha, const float *a, int lda,
+         const float *b, int ldb, const float *beta, float *c, int ldc) {
+      return cublasSgemm(handle, transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
+   }
 }}

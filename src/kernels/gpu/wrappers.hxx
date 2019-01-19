@@ -23,4 +23,12 @@ namespace gpu {
    cublasStatus_t dev_syrk(
          cublasHandle_t handle, cublasFillMode_t uplo, cublasOperation_t trans, 
          int n, int k, const T *alpha, const T *a, int lda, const T *beta, T *c, int ldc);
+
+   // _GEMM
+   template <typename T>
+   cublasStatus_t dev_gemm(
+         cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb,
+         int m, int n, int k, const T *alpha, const T *a, int lda,
+         const T *b, int ldb, const T *beta, T *c, int ldc);
+   
 }}

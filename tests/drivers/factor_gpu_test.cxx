@@ -21,6 +21,7 @@ int main(int argc, char** argv) {
 
    // int m = 4;
    // chol_test<double>(m);
+   // chol_test<double>(opts.m);
    chol_test<float>(opts.m);
    
    return ret;

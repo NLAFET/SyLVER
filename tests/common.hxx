@@ -688,9 +688,14 @@ namespace tests {
          for(int i=j; i<n; ++i)
             a[j*lda+i] = 1.0 - (2.0*rand()) / RAND_MAX ;
       /* Fill upper triangle with NaN */
+      // for(int j=0; j<n; ++j)
+      //    for(int i=0; i<j; ++i)
+      //       a[j*lda+i] = std::numeric_limits<T>::signaling_NaN();
+      /* Fill upper triangle with zeros */
       for(int j=0; j<n; ++j)
          for(int i=0; i<j; ++i)
-            a[j*lda+i] = std::numeric_limits<T>::signaling_NaN();
+            a[j*lda+i] = 0.0;
+
    }
 
    // Generates a random dense positive definte matrix. Off

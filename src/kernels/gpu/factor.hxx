@@ -11,9 +11,10 @@
 
 // CuBLAS
 #include "cublas_v2.h"
+#include <cusolverDn.h>
 
 // Thread block size
-#define BLOCK_SIZE 8
+#define BLOCK_SIZE 1
 
 namespace sylver {
 namespace spldlt {
@@ -38,34 +39,66 @@ namespace gpu {
       // Number of block columns
       int const nc = (n-1) / BLOCK_SIZE + 1; 
       
-      std::cout << "[spldlt::gpu::factor] nc = " << nc << std::endl;
-      
+      // std::cout << "[spldlt::gpu::factor] nc = " << nc << std::endl;
+
+      cudaError_t cuerr;
+
       // CuBLAS handle
       cublasHandle_t cuhandle;
       cublasCreate(&cuhandle);
       cublasSetStream(cuhandle, stream);
 
+      // CuSOLVER
+      // cusolverStatus_t cusolstat;
+      // cusolverDnHandle_t cusolhandle;
+      // cusolstat = cusolverDnCreate(&cusolhandle);
+      // cusolverDnSetStream(cusolhandle, stream);
+      // int worksz; // Workspace size
+      // sylver::gpu::dev_potrf_buffersize(cusolhandle, CUBLAS_FILL_MODE_LOWER, m, d_a, ldda, &worksz);
+      // T *d_work = nullptr;
+      // cuerr = cudaMalloc((void**)&d_work, worksz*sizeof(T)); 
+   
       for (int k = 0; k < nc; ++k) {
-
-         std::cout << "[spldlt::gpu::factor] k = " << k << std::endl;
+         
+         // std::cout << "[spldlt::gpu::factor] k = " << k << std::endl;
          // Factor kth block column
          int ofs = k*BLOCK_SIZE; // Number of eliminated columns
          int cblkm = m-ofs; // Block column height
          int cblkn = std::min(n-ofs, BLOCK_SIZE); // Block column width
          factor_bcol(stream, cblkm, cblkn, &d_a[ofs+ofs*ldda], ldda, d_info);
+         // sylver::gpu::dev_potrf(cusolhandle, CUBLAS_FILL_MODE_LOWER, cblkn, &d_a[ofs+ofs*ldda], ldda, d_work, worksz, d_info);
          // cudaStreamSynchronize(stream);
 
          // Update trailing submatrix
          int ofst = (k+1)*BLOCK_SIZE; // Offset to trailing submatrix
          int tblkn = n - ofst;
-         std::cout << "[spldlt::gpu::factor] tblkn = " << tblkn << std::endl;
-         T alpha = -1.0, beta = 1.0;
-         sylver::gpu::dev_syrk(
-               cuhandle, CUBLAS_FILL_MODE_LOWER, CUBLAS_OP_N, tblkn, BLOCK_SIZE, 
-               &alpha, &d_a[ofst+ofs*ldda], ldda, 
-               &beta, &d_a[ofst+ofst*ldda], ldda);
-         // cudaStreamSynchronize(stream);
+         if (tblkn>0) {
+            T alpha = -1.0, beta = 1.0;
+            
+            // T *d_alpha = nullptr, *d_beta = nullptr;
+            // cudaMalloc((void**)&d_beta, sizeof(T));
+            // cudaMalloc((void**)&d_alpha, sizeof(T));
+            // cudaMemcpy(d_alpha, &alpha, sizeof(T), cudaMemcpyHostToDevice);
+            // cudaMemcpy(d_beta, &beta, sizeof(T), cudaMemcpyHostToDevice);
+            // cudaDeviceSynchronize();
 
+            // cublasStatus_t cubstat;
+            // cubstat = sylver::gpu::dev_syrk(
+            //       cuhandle, CUBLAS_FILL_MODE_UPPER, CUBLAS_OP_N,
+            //       tblkn, BLOCK_SIZE, 
+            //       d_alpha, &d_a[ofst+ ofs*ldda], ldda, 
+            //       d_beta,  &d_a[ofst+ofst*ldda], ldda);
+            sylver::gpu::dev_gemm(
+                  cuhandle, CUBLAS_OP_N, CUBLAS_OP_T,
+                  tblkn, tblkn, BLOCK_SIZE, &alpha,
+                  &d_a[ofst+ofs*ldda], ldda,
+                  &d_a[ofst+ofs*ldda], ldda,
+                  &beta, &d_a[ofst+ofst*ldda], ldda);
+               
+            // cudaStreamSynchronize(stream);
+            // std::cout << "[spldlt::gpu::factor] cubstat = " << cubstat << std::endl;
+
+         }
       }
 
       cudaStreamSynchronize(stream);

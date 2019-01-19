@@ -84,6 +84,8 @@ namespace /* anon */ {
          int *const stat // Info parameter
          ) {
 
+      printf("[dev_llt_block] m = %d, n = %d, lda = %d, TILE_SIZE = %d\n", m, n, ldl, TILE_SIZE);
+      
       T *const swork = (T*) SharedMemory; // Contains 2 tile i.e. dimensions (2*TILE_SIZE,TILE_SIZE) 
       int ld_swork = 2*TILE_SIZE;
       
@@ -98,12 +100,13 @@ namespace /* anon */ {
       int tx = threadIdx.x;
       int ty = threadIdx.y;
 
-      // printf("[dev_factor_block] tx = %d, ty = %d\n", tx, ty);
+      printf("[dev_llt_block] bx = %d, tx = %d, ty = %d\n", bx, tx, ty);
 
       // Compute cholesky factor of W in shared memory  
       for (int k = 0; k < n; ++k) {
 
          T d11 = swork[k+ld_swork*k];
+
          if ( d11 <= 0.0 ) {
             // zero or negative pivot detected , stop factorization
             // and record column index
@@ -112,13 +115,16 @@ namespace /* anon */ {
             return;
          }
 
-         d11 = sqrt((T) d11); // Compute pivot
+         d11 = sqrt(d11); // Compute pivot
          __syncthreads();
          
          // Apply pivot
          int idx = tx + ty*TILE_SIZE;
          if (idx < ld_swork)
             swork[idx + k*ld_swork] /= d11; 
+         __syncthreads();
+
+         printf("[dev_factor_block] idx = %d, swork[idx] = %.3e\n", idx, swork[idx + k*ld_swork]);
          __syncthreads();
 
          // Update trailing submatrix
@@ -139,7 +145,7 @@ namespace /* anon */ {
       
       // Store W into A (A_ik)
       dev_block_store<T, TILE_SIZE>(bx, m, n, swork, l, ldl);
-      __syncthreads();
+      // __syncthreads();
 
    }
 
@@ -156,7 +162,7 @@ namespace /* anon */ {
          ) {
 
       int bx = blockIdx.x;
-
+      // printf("[dev_llt_bcol] bx = %d\n", bx);
       dev_llt_block<T, TILE_SIZE>(bx, m, n, l, ldl, stat);
    }
 
@@ -190,5 +196,29 @@ namespace gpu {
          <<<grid, threads, smsize, stream>>>
          (m, n, a, lda, stat);
    }
-   
+
+   template<>
+   void factor_bcol<double>(
+         const cudaStream_t stream,
+         int m, int n,
+         double *const a, int lda,
+         int *const stat) {
+
+      dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
+      // dim3 grid((m + threads.x - 1) / threads.x,
+      // (n + threads.y -1) / threads.y);
+      dim3 grid((m + threads.x - 1) / threads.x);
+      // std::cout << "[factor] gridDim.x = " << grid.x << ", gridDim.y = " << grid.y << std::endl; 
+
+      // Calculate the size of the shared memory workspace per thread
+      // blocks
+      size_t smsize = 2*BLOCK_SIZE*BLOCK_SIZE*sizeof(double); // 2 tiles per blocks
+      
+      dev_llt_bcol
+         <double, BLOCK_SIZE>
+         // <<<grid, threads, 0, stream>>>
+         <<<grid, threads, smsize, stream>>>
+         (m, n, a, lda, stat);
+   }
+
 }}} // End of namespace sylver::spldlt::gpu

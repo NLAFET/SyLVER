@@ -46,10 +46,9 @@ namespace tests {
       T* b = nullptr;
       T* l = nullptr;
 
-      std::cout << "[chol_test] m = " << m << std::endl;
-
       // Generate test matrix
       int lda = spral::ssids::cpu::align_lda<T>(m);
+      std::cout << "[chol_test] m = " << m << ", lda = " << lda << std::endl;
       a = new T[m*lda];
       sylver::tests::gen_posdef(m, a, lda);
 
@@ -60,7 +59,7 @@ namespace tests {
       // Copy a into l
       l = new T[m*lda];
       memcpy(l, a, lda*m*sizeof(T));
-      // spldlt::tests::print_mat("%10.2e", m, l, lda);
+      ::spldlt::tests::print_mat("%10.3e", m, l, lda);
 
       cudaError_t cuerr;
       cublasStatus_t custat;
@@ -76,9 +75,9 @@ namespace tests {
       custat = cublasSetMatrix(m, m, sizeof(T), l, lda, d_l, lda);
       // cudaMemcpy(d_l, l, lda*m*sizeof(T), cudaMemcpyHostToDevice);
    
-      cusolverStatus_t cusolstat;
-      cusolverDnHandle_t cusolhandle;
-      cusolstat = cusolverDnCreate(&cusolhandle);
+      // cusolverStatus_t cusolstat;
+      // cusolverDnHandle_t cusolhandle;
+      // cusolstat = cusolverDnCreate(&cusolhandle);
       cudaStream_t stream;
       cudaStreamCreate(&stream);
       // cusolverDnSetStream(cusolhandle, stream);
@@ -110,7 +109,7 @@ namespace tests {
          std::chrono::duration_cast<std::chrono::nanoseconds>
          (end-start).count();
 
-      std::cout << "[chol_test] cusolstat = " << cusolstat << std::endl;
+      // std::cout << "[chol_test] cusolstat = " << cusolstat << std::endl;
 
       int info;
       cudaMemcpy(&info, d_info, sizeof(int), cudaMemcpyDeviceToHost);
@@ -120,7 +119,7 @@ namespace tests {
       custat = cublasGetMatrix(m, m, sizeof(T), d_l, lda, l, lda);
       // cudaMemcpy(l, d_l, lda*m*sizeof(T), cudaMemcpyDeviceToHost);
 
-      // spldlt::tests::print_mat("%10.2e", m, l, lda);
+      ::spldlt::tests::print_mat_unsym("%10.3e", m, l, lda);
       
       // Check results
 
@@ -163,7 +162,7 @@ namespace tests {
       // Cleanup memory
 
       // cudaStreamDestroy(stream);
-      cusolstat = cusolverDnDestroy(cusolhandle);
+      // cusolstat = cusolverDnDestroy(cusolhandle);
 
       // cudaFree(d_work);
       cudaFree(d_l);
