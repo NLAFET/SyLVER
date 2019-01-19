@@ -14,7 +14,7 @@
 #include <cusolverDn.h>
 
 // Thread block size
-#define BLOCK_SIZE 1
+#define BLOCK_SIZE 2
 
 namespace sylver {
 namespace spldlt {

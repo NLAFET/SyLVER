@@ -23,20 +23,8 @@
 #include "cublas_v2.h"
 
 namespace sylver {
-namespace tests {
-
-   
-   
-   
-   // template<>
-   // cusolverStatus_t cusolverDnSpotrf_bufferSize(
-   //       cusolverDnHandle_t handle,
-   //       cublasFillMode_t uplo,
-   //       int n,
-   //       float *A,
-   //       int lda,
-   //       int *Lwork );
-   
+namespace tests {   
+      
    template<typename T>
    int chol_test(int m) {
 
@@ -59,7 +47,7 @@ namespace tests {
       // Copy a into l
       l = new T[m*lda];
       memcpy(l, a, lda*m*sizeof(T));
-      ::spldlt::tests::print_mat("%10.3e", m, l, lda);
+      ::spldlt::tests::print_mat("%12.3e", m, l, lda);
 
       cudaError_t cuerr;
       cublasStatus_t custat;
@@ -119,7 +107,7 @@ namespace tests {
       custat = cublasGetMatrix(m, m, sizeof(T), d_l, lda, l, lda);
       // cudaMemcpy(l, d_l, lda*m*sizeof(T), cudaMemcpyDeviceToHost);
 
-      ::spldlt::tests::print_mat_unsym("%10.3e", m, l, lda);
+      ::spldlt::tests::print_mat_unsym("%20.8e", m, l, lda);
       
       // Check results
 

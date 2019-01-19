@@ -84,9 +84,13 @@ namespace /* anon */ {
          int *const stat // Info parameter
          ) {
 
-      printf("[dev_llt_block] m = %d, n = %d, lda = %d, TILE_SIZE = %d\n", m, n, ldl, TILE_SIZE);
+      // printf("[dev_llt_block] m = %d, n = %d, lda = %d, TILE_SIZE = %d\n", m, n, ldl, TILE_SIZE);
       
-      T *const swork = (T*) SharedMemory; // Contains 2 tile i.e. dimensions (2*TILE_SIZE,TILE_SIZE) 
+      // Dynamically allocated shared memory
+      // T * swork = (T*) SharedMemory; // Contains 2 tile i.e. dimensions (2*TILE_SIZE,TILE_SIZE) 
+      // extern __shared__ __align__(sizeof(T)) unsigned char SharedMemory[];
+      T *swork = reinterpret_cast<T*>(SharedMemory); // Contains 2 tile i.e. dimensions (2*TILE_SIZE,TILE_SIZE)
+ 
       int ld_swork = 2*TILE_SIZE;
       
       // Load A (A_kk and A_ik) into shared memory workspace W
@@ -100,13 +104,12 @@ namespace /* anon */ {
       int tx = threadIdx.x;
       int ty = threadIdx.y;
 
-      printf("[dev_llt_block] bx = %d, tx = %d, ty = %d\n", bx, tx, ty);
+      // printf("[dev_llt_block] bx = %d, tx = %d, ty = %d\n", bx, tx, ty);
 
       // Compute cholesky factor of W in shared memory  
       for (int k = 0; k < n; ++k) {
 
          T d11 = swork[k+ld_swork*k];
-
          if ( d11 <= 0.0 ) {
             // zero or negative pivot detected , stop factorization
             // and record column index
@@ -119,18 +122,17 @@ namespace /* anon */ {
          __syncthreads();
          
          // Apply pivot
-         int idx = tx + ty*TILE_SIZE;
-         if (idx < ld_swork)
+         // int idx = tx + ty*TILE_SIZE;
+         // if (idx < ld_swork)
+         for (int idx = tx + ty*TILE_SIZE; idx < ld_swork; idx += TILE_SIZE*TILE_SIZE)
             swork[idx + k*ld_swork] /= d11; 
          __syncthreads();
 
-         printf("[dev_factor_block] idx = %d, swork[idx] = %.3e\n", idx, swork[idx + k*ld_swork]);
-         __syncthreads();
-
          // Update trailing submatrix
-         if ((tx > k) && (ty > k)) {
+         if ((ty > k)) {
             // Update A_kk
-            swork[tx + ty*ld_swork] -= swork[tx + k*ld_swork]*swork[ty + k*ld_swork];
+            if (tx > k)
+               swork[tx + ty*ld_swork] -= swork[tx + k*ld_swork]*swork[ty + k*ld_swork];
             // Update A_ik
             int sdata_x = tx + TILE_SIZE; // Row index in sdata
             swork[sdata_x + ty*ld_swork] -= swork[sdata_x + k*ld_swork]*swork[ty + k*ld_swork];
