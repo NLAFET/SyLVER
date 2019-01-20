@@ -20,16 +20,21 @@ namespace gpu {
       return cusolverDnDpotrf_bufferSize(handle, uplo, n, a, lda, lwork);
    }
 
+   ////////////////////////////////////////
+
    // SPOTRF
    template<>
    cusolverStatus_t dev_potrf<float>(cusolverDnHandle_t handle, cublasFillMode_t uplo, int n, float *a, int lda, float *work, int lwork, int *info) {
       return cusolverDnSpotrf(handle, uplo, n, a, lda, work, lwork, info);
    }
+   // DPOTRF
    template<>
    cusolverStatus_t dev_potrf<double>(cusolverDnHandle_t handle, cublasFillMode_t uplo, int n, double *a, int lda, double *work, int lwork, int *info) {
       return cusolverDnDpotrf(handle, uplo, n, a, lda, work, lwork, info);
    }
-   
+
+   ////////////////////////////////////////
+
    // SSYRK
    template<>
    cublasStatus_t dev_syrk<float>(
@@ -44,6 +49,8 @@ namespace gpu {
          int n, int k, const double *alpha, const double *a, int lda, const double *beta, double *c, int ldc) {
       return cublasDsyrk(handle, uplo, trans, n, k, alpha, a, lda, beta, c, ldc);
    }
+
+   ////////////////////////////////////////
 
    // SGEMM
    template<>
@@ -62,6 +69,8 @@ namespace gpu {
       return cublasDgemm(handle, transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
    }
 
+   ////////////////////////////////////////
+   
    // STRSM
    template<>
    cublasStatus_t dev_trsm<float>(
@@ -71,6 +80,16 @@ namespace gpu {
          const float *a, int lda,
          float *b, int ldb) {
       return cublasStrsm(handle, side, uplo, trans, diag, m, n, alpha, a, lda, b, ldb);
+   }
+   // DTRSM
+   template<>
+   cublasStatus_t dev_trsm<double>(
+         cublasHandle_t handle, cublasSideMode_t side, cublasFillMode_t uplo,
+         cublasOperation_t trans, cublasDiagType_t diag, int m, int n,
+         const double *alpha,
+         const double *a, int lda,
+         double *b, int ldb) {
+      return cublasDtrsm(handle, side, uplo, trans, diag, m, n, alpha, a, lda, b, ldb);
    }
 
 }}

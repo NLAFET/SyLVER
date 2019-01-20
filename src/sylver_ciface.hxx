@@ -39,7 +39,9 @@ namespace sylver {
       ERROR_SINGULAR          = -5,
       ERROR_NOT_POS_DEF       = -6,
       ERROR_ALLOCATION        = -50,
-
+      ERROR_CUDA_UNKNOWN      = -51,
+      ERROR_CUBLAS_UNKNOWN    = -52,
+      
       WARNING_FACT_SINGULAR   = 7
    };
 

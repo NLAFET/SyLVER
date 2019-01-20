@@ -67,26 +67,30 @@ namespace tests {
       cudaStream_t stream;
       cudaStreamCreate(&stream);
 
-      cusolverStatus_t cusolstat;
-      cusolverDnHandle_t cusolhandle;
-      cusolstat = cusolverDnCreate(&cusolhandle);
-      cusolverDnSetStream(cusolhandle, stream);
-      T *d_work = nullptr;
-      int worksz = 0; // Workspace size
-      cusolstat = sylver::gpu::dev_potrf_buffersize(
-            cusolhandle, CUBLAS_FILL_MODE_LOWER, m, d_l, lda, &worksz);
-      std::cout << "[chol_test] dev_potrf_buffersize cusolstat = " << cusolstat << std::endl;
-      std::cout << "[chol_test] work size = " << worksz << std::endl;
-      cuerr = cudaMalloc((void**)&d_work, worksz*sizeof(T)); 
-      int *d_info = nullptr;
-      cudaMalloc((void**)&d_info, sizeof(int));
+      // cusolverStatus_t cusolstat;
+      // cusolverDnHandle_t cusolhandle;
+      // cusolstat = cusolverDnCreate(&cusolhandle);
+      // cusolverDnSetStream(cusolhandle, stream);
+      // T *d_work = nullptr;
+      // int worksz = 0; // Workspace size
+      // cusolstat = sylver::gpu::dev_potrf_buffersize(
+      //       cusolhandle, CUBLAS_FILL_MODE_LOWER, m, d_l, lda, &worksz);
+      // std::cout << "[chol_test] dev_potrf_buffersize cusolstat = " << cusolstat << std::endl;
+      // std::cout << "[chol_test] work size = " << worksz << std::endl;
+      // cuerr = cudaMalloc((void**)&d_work, worksz*sizeof(T)); 
+      // int *d_info = nullptr;
+      // cudaMalloc((void**)&d_info, sizeof(int));
 
       inform_t inform;
       auto start = std::chrono::high_resolution_clock::now();
 
       sylver::spldlt::gpu::factor(stream, m, m, d_l, lda, inform);
-      cudaStreamSynchronize(stream);
-         
+      cuerr = cudaStreamSynchronize(stream);
+      if (cuerr != cudaSuccess) {
+         printf("[chol_test][error] Failed to synchronize stream\n");
+         return -1;
+      }
+      
       // cusolstat = sylver::gpu::dev_potrf(
       //       cusolhandle, CUBLAS_FILL_MODE_LOWER, 
       //       m,
@@ -110,8 +114,10 @@ namespace tests {
       custat = cublasGetMatrix(m, m, sizeof(T), d_l, lda, l, lda);
       // cudaMemcpy(l, d_l, lda*m*sizeof(T), cudaMemcpyDeviceToHost);
 
-      // ::spldlt::tests::print_mat_unsym("%20.8e", m, l, lda);
-      
+      cudaDeviceSynchronize();
+
+      // ::spldlt::tests::print_mat_unsym("%12.3e", m, l, lda);
+
       // Check results
 
       int nrhs = 1;

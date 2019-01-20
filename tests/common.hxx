@@ -687,14 +687,18 @@ namespace tests {
       for(int j=0; j<n; ++j)
          for(int i=j; i<n; ++i)
             a[j*lda+i] = 1.0 - (2.0*rand()) / RAND_MAX ;
-      /* Fill upper triangle with NaN */
+      // Fill upper triangle with NaN
       // for(int j=0; j<n; ++j)
       //    for(int i=0; i<j; ++i)
       //       a[j*lda+i] = std::numeric_limits<T>::signaling_NaN();
-      /* Fill upper triangle with zeros */
+      // Fill upper triangle with zeros
       for(int j=0; j<n; ++j)
          for(int i=0; i<j; ++i)
             a[j*lda+i] = 0.0;
+      // Symmetrize
+      // for(int j=0; j<n; ++j)
+      //    for(int i=0; i<j; ++i)
+      //       a[j*lda+i] = a[i*lda+j];
 
    }
 

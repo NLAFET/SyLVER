@@ -40,6 +40,7 @@ namespace gpu {
          const cudaStream_t stream, int m, int n, T *const d_a, int ldda, inform_t& inform) {
 
       int const ib = BLOCK_SIZE; // Inner block size
+      // int const nb = BLOCK_SIZE; // Outer block size 
       int const nb = OUTER_BLOCK_SIZE; // Outer block size 
          
       // Number of block columns
@@ -47,22 +48,25 @@ namespace gpu {
       
       // std::cout << "[spldlt::gpu::factor] nc = " << nc << std::endl;
 
+      // Cuda error
       cudaError_t cuerr;
 
+      // CuBLAS status
+      cublasStatus_t custat;
       // CuBLAS handle
       cublasHandle_t cuhandle;
       cublasCreate(&cuhandle);
       cublasSetStream(cuhandle, stream);
 
-      // CuSOLVER
-      cusolverStatus_t cusolstat;
-      cusolverDnHandle_t cusolhandle;
-      cusolstat = cusolverDnCreate(&cusolhandle);
-      cusolverDnSetStream(cusolhandle, stream);
-      int worksz; // Workspace size
-      sylver::gpu::dev_potrf_buffersize(cusolhandle, CUBLAS_FILL_MODE_LOWER, m, d_a, ldda, &worksz);
-      T *d_work = nullptr;
-      cuerr = cudaMalloc((void**)&d_work, worksz*sizeof(T)); 
+      // // CuSOLVER
+      // cusolverStatus_t cusolstat;
+      // cusolverDnHandle_t cusolhandle;
+      // cusolstat = cusolverDnCreate(&cusolhandle);
+      // cusolverDnSetStream(cusolhandle, stream);
+      // int worksz; // Workspace size
+      // sylver::gpu::dev_potrf_buffersize(cusolhandle, CUBLAS_FILL_MODE_LOWER, m, d_a, ldda, &worksz);
+      // T *d_work = nullptr;
+      // cuerr = cudaMalloc((void**)&d_work, worksz*sizeof(T)); 
 
       int *info;
       int *d_info;
@@ -83,16 +87,24 @@ namespace gpu {
 
             // std::cout << "[spldlt::gpu::factor] updm = " << updm << ", updn = " << in << ", k = " << ofs << std::endl;
 
-            sylver::gpu::dev_gemm(
+            custat = sylver::gpu::dev_gemm(
                   cuhandle, CUBLAS_OP_N, CUBLAS_OP_T,
                   updm, in, ofs, &alpha,
                   &d_a[ofs], ldda,
                   &d_a[ofs], ldda,
-                  &beta, &d_a[ofs+ofs*ldda], ldda);         
+                  &beta, &d_a[ofs+ofs*ldda], ldda);
+               // cudaStreamSynchronize(stream);
+            if (custat != CUBLAS_STATUS_SUCCESS) {    
+               printf("[sylver::spldlt::gpu::factor][error] CuBLAS gemm kernel launch\n");
+               inform.flag = ERROR_CUBLAS_UNKNOWN;
+               return;
+            }
+
             // cudaStreamSynchronize(stream);
 
          }         
 
+         // Factor outer block
          for (int k = 0; k < inc; ++k) {
          
             // std::cout << "[spldlt::gpu::factor] k = " << k << std::endl;
@@ -105,7 +117,8 @@ namespace gpu {
                   stream, cblkm, cblkn,
                   &d_a[ofs+iofs+(ofs+iofs)*ldda], ldda,
                   d_info);
-
+            // cudaStreamSynchronize(stream);
+            
             // sylver::gpu::dev_potrf(
             //       cusolhandle, CUBLAS_FILL_MODE_LOWER, cblkn, &d_a[ofs+iofs+(ofs+iofs)*ldda], ldda,
             //       d_work, worksz, d_info);
@@ -121,24 +134,23 @@ namespace gpu {
             //       cblkm-cblkn, cblkn, &alp,
             //       &d_a[ofs+iofs+(ofs+iofs)*ldda], ldda,
             //       &d_a[ofs+iofs+cblkn+(ofs+iofs)*ldda], ldda);
-
+            
             // cudaStreamSynchronize(stream);
 
             // cuerr = cudaMemcpyAsync(info, d_info, sizeof(int), cudaMemcpyDeviceToHost, stream);
             // cudaStreamSynchronize(stream);
-            // // std::cout << "[spldlt::gpu::factor] num_elim = " << info << std::endl;
             // if (*info < cblkn) { // Not positive-definite
+            //    std::cout << "[spldlt::gpu::factor][error] negative or null pivot" << info << std::endl;
             //    inform.flag = ERROR_NOT_POS_DEF;
             //    return;
             // }
          
             // Update trailing submatrix
             int iofst = (k+1)*ib; // Offset to trailing submatrix in outer block
+            int tblkm = m-ofs-iofst; // Width of trailing submatrix in outer block
             int tblkn = in-iofst; // Width of trailing submatrix in outer block
             if (tblkn>0) {
             
-               cublasStatus_t cubstat;
-
                // Update trailing submatrix (inner & outer)
                // cubstat = sylver::gpu::dev_syrk(
                //       cuhandle, CUBLAS_FILL_MODE_LOWER, CUBLAS_OP_N,
@@ -155,24 +167,48 @@ namespace gpu {
                //       &beta, &d_a[ofst+ofst*ldda], ldda);
 
                // Update trailing submatrix (inner only)
-               cubstat = sylver::gpu::dev_gemm(
+               // std::cout << "[spldlt::gpu::factor] cblkm = " << cblkm << ", tblkn = " << tblkn << ", inc = " << inc << std::endl;
+               custat = sylver::gpu::dev_gemm(
                      cuhandle, CUBLAS_OP_N, CUBLAS_OP_T,
-                     cblkm, tblkn, ib, &alpha,
+                     tblkm, tblkn, ib, &alpha,
                      &d_a[ofs+iofst+ (ofs+iofs)*ldda], ldda,
                      &d_a[ofs+iofst+ (ofs+iofs)*ldda], ldda,
                      &beta, &d_a[ofs+iofst+(ofs+iofst)*ldda], ldda);
+               // cudaStreamSynchronize(stream);
+               if (custat != CUBLAS_STATUS_SUCCESS) {    
+                  printf("[sylver::spldlt::gpu::factor][error] CuBLAS gemm kernel launch\n");
+                  inform.flag = ERROR_CUBLAS_UNKNOWN;
+                  return;
+               }
                
                // cudaStreamSynchronize(stream);
                // std::cout << "[spldlt::gpu::factor] cubstat = " << cubstat << std::endl;
             }
          }
       }
-      cudaStreamSynchronize(stream);
+
+      cuerr = cudaStreamSynchronize(stream);
+      if (cuerr != cudaSuccess) {
+         printf("[sylver::spldlt::gpu::factor][error] Failed to synchronize stream\n");
+         inform.flag = ERROR_CUDA_UNKNOWN;
+         return;
+      }
 
       // Cleanup memory
       cublasDestroy(cuhandle);
-      cudaFreeHost(info);
-      cudaFree(d_info);
+      cuerr = cudaFreeHost(info);
+      if (cuerr != cudaSuccess) {
+         printf("[sylver::spldlt::gpu::factor][error] Host memory free failed\n");
+         inform.flag = ERROR_CUDA_UNKNOWN;
+         return;
+      }
+      cuerr = cudaFree(d_info);
+      if (cuerr != cudaSuccess) {
+         printf("[sylver::spldlt::gpu::factor][error] Device Memory free failed\n");
+         inform.flag = ERROR_CUDA_UNKNOWN;
+         return;
+      }
+
    }
    
 }}} // End of sylver::spldlt::gpu
