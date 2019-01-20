@@ -28,5 +28,24 @@ namespace sylver {
       sylver::PivotMethod pivot_method;
       sylver::FailedPivotMethod failed_pivot_method;
    };
+   using options_t = struct options_c;
+   
+   // @brief SyLVER error/warning flags.
+   //
+   // Must match Fortran definitions in src/sylver_datatypes_mod.F90
+   enum Flag : int {
+      SUCCESS                 = 0,
+
+      ERROR_SINGULAR          = -5,
+      ERROR_NOT_POS_DEF       = -6,
+      ERROR_ALLOCATION        = -50,
+
+      WARNING_FACT_SINGULAR   = 7
+   };
+
+   struct inform_c {
+      Flag flag = Flag::SUCCESS; ///< Error flag for thread
+   };
+   using inform_t = struct inform_c;
 
 }

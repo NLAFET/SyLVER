@@ -5,6 +5,7 @@
 
 // SyLVER tests
 #include "common.hxx"
+#include "sylver_ciface.hxx"
 #include "kernels/wrappers.hxx"
 #include "kernels/gpu/wrappers.hxx"
 #include "kernels/gpu/factor.hxx"
@@ -47,7 +48,7 @@ namespace tests {
       // Copy a into l
       l = new T[m*lda];
       memcpy(l, a, lda*m*sizeof(T));
-      ::spldlt::tests::print_mat("%12.3e", m, l, lda);
+      // ::spldlt::tests::print_mat("%12.3e", m, l, lda);
 
       cudaError_t cuerr;
       cublasStatus_t custat;
@@ -63,33 +64,35 @@ namespace tests {
       custat = cublasSetMatrix(m, m, sizeof(T), l, lda, d_l, lda);
       // cudaMemcpy(d_l, l, lda*m*sizeof(T), cudaMemcpyHostToDevice);
    
-      // cusolverStatus_t cusolstat;
-      // cusolverDnHandle_t cusolhandle;
-      // cusolstat = cusolverDnCreate(&cusolhandle);
       cudaStream_t stream;
       cudaStreamCreate(&stream);
-      // cusolverDnSetStream(cusolhandle, stream);
 
-      // T *d_work = nullptr;
-      // int worksz; // Workspace size
-      // cusolstat = dev_potrf_buffersize(cusolhandle, CUBLAS_FILL_MODE_LOWER, m, d_l, lda, &worksz);
-      // std::cout << "[chol_test] work size = " << worksz << std::endl;
-      // cuerr = cudaMalloc((void**)&d_work, worksz*sizeof(T)); 
+      cusolverStatus_t cusolstat;
+      cusolverDnHandle_t cusolhandle;
+      cusolstat = cusolverDnCreate(&cusolhandle);
+      cusolverDnSetStream(cusolhandle, stream);
+      T *d_work = nullptr;
+      int worksz = 0; // Workspace size
+      cusolstat = sylver::gpu::dev_potrf_buffersize(
+            cusolhandle, CUBLAS_FILL_MODE_LOWER, m, d_l, lda, &worksz);
+      std::cout << "[chol_test] dev_potrf_buffersize cusolstat = " << cusolstat << std::endl;
+      std::cout << "[chol_test] work size = " << worksz << std::endl;
+      cuerr = cudaMalloc((void**)&d_work, worksz*sizeof(T)); 
       int *d_info = nullptr;
       cudaMalloc((void**)&d_info, sizeof(int));
 
+      inform_t inform;
       auto start = std::chrono::high_resolution_clock::now();
 
-      sylver::spldlt::gpu::factor(stream, m, m, d_l, lda, d_info);
+      sylver::spldlt::gpu::factor(stream, m, m, d_l, lda, inform);
       cudaStreamSynchronize(stream);
          
-      // cusolstat = dev_potrf(
+      // cusolstat = sylver::gpu::dev_potrf(
       //       cusolhandle, CUBLAS_FILL_MODE_LOWER, 
-      //       m, 
+      //       m,
       //       d_l, lda, 
       //       d_work, worksz,
       //       d_info);
-      // cudaDeviceSynchronize();
       // cudaStreamSynchronize(stream);
 
       auto end = std::chrono::high_resolution_clock::now();
@@ -99,15 +102,15 @@ namespace tests {
 
       // std::cout << "[chol_test] cusolstat = " << cusolstat << std::endl;
 
-      int info;
-      cudaMemcpy(&info, d_info, sizeof(int), cudaMemcpyDeviceToHost);
-      std::cout << "[chol_test] info = " << info << std::endl;
+      // int info;
+      // cudaMemcpy(&info, d_info, sizeof(int), cudaMemcpyDeviceToHost);
+      std::cout << "[chol_test] flag = " << inform.flag << std::endl;
 
       // Get matrix into host memory      
       custat = cublasGetMatrix(m, m, sizeof(T), d_l, lda, l, lda);
       // cudaMemcpy(l, d_l, lda*m*sizeof(T), cudaMemcpyDeviceToHost);
 
-      ::spldlt::tests::print_mat_unsym("%20.8e", m, l, lda);
+      // ::spldlt::tests::print_mat_unsym("%20.8e", m, l, lda);
       
       // Check results
 

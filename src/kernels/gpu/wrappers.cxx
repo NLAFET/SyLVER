@@ -1,3 +1,7 @@
+/// @file
+/// @copyright 2016- The Science and Technology Facilities Council (STFC)
+/// @author Florent Lopez
+
 #include "kernels/gpu/wrappers.hxx"
 
 // CuSOLVER
@@ -49,4 +53,24 @@ namespace gpu {
          const float *b, int ldb, const float *beta, float *c, int ldc) {
       return cublasSgemm(handle, transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
    }
+   // DGEMM
+   template<>
+   cublasStatus_t dev_gemm<double>(
+         cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb,
+         int m, int n, int k, const double *alpha, const double *a, int lda,
+         const double *b, int ldb, const double *beta, double *c, int ldc) {
+      return cublasDgemm(handle, transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
+   }
+
+   // STRSM
+   template<>
+   cublasStatus_t dev_trsm<float>(
+         cublasHandle_t handle, cublasSideMode_t side, cublasFillMode_t uplo,
+         cublasOperation_t trans, cublasDiagType_t diag, int m, int n,
+         const float *alpha,
+         const float *a, int lda,
+         float *b, int ldb) {
+      return cublasStrsm(handle, side, uplo, trans, diag, m, n, alpha, a, lda, b, ldb);
+   }
+
 }}

@@ -30,5 +30,15 @@ namespace gpu {
          cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb,
          int m, int n, int k, const T *alpha, const T *a, int lda,
          const T *b, int ldb, const T *beta, T *c, int ldc);
+
+   // _TRSM
+   template <typename T>
+   cublasStatus_t dev_trsm(
+         cublasHandle_t handle, cublasSideMode_t side, cublasFillMode_t uplo,
+         cublasOperation_t trans, cublasDiagType_t diag,
+         int m, int n,
+         const T *alpha,
+         const T *a, int lda,
+         T *b, int ldb);
    
 }}

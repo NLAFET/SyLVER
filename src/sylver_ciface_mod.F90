@@ -5,8 +5,8 @@ module sylver_ciface_mod
   use, intrinsic :: iso_c_binding
   implicit none
  
-  !> @brief Interoperable subset of sylver_options
-  type , bind(C) :: options_c
+  !> @brief Interoperable subset of sylver_options structure
+  type , bind(c) :: options_c
      integer(C_INT) :: print_level
      real(C_DOUBLE) :: small
      real(C_DOUBLE) :: u
@@ -16,6 +16,11 @@ module sylver_ciface_mod
      integer(C_INT) :: failed_pivot_method
   end type options_c
 
+  !> @brief Interoperable subset of sylver_inform structure
+  type, bind(c) :: inform_c
+     integer(C_INT) :: print_level
+  end type inform_c
+     
 contains
 
   !> @brief Copy Fortran options structure into interoperable one

@@ -71,6 +71,7 @@ namespace /* anon */ {
       int sdata_x = tx + TILE_SIZE; // Row index in sdata
       if (tx < m && ty < n)
          a[a_x + ty*lda] = sdata[sdata_x + ty*ld_sdata];
+
    }
   
    // Note: assume that m > n and n <= TILE_SIZE 
@@ -147,7 +148,7 @@ namespace /* anon */ {
       
       // Store W into A (A_ik)
       dev_block_store<T, TILE_SIZE>(bx, m, n, swork, l, ldl);
-      // __syncthreads();
+      __syncthreads();
 
    }
 
@@ -163,11 +164,10 @@ namespace /* anon */ {
          int *const stat // Info parameter
          ) {
 
-      int bx = blockIdx.x;
+      unsigned int bx = blockIdx.x;
       // printf("[dev_llt_bcol] bx = %d\n", bx);
       dev_llt_block<T, TILE_SIZE>(bx, m, n, l, ldl, stat);
    }
-
    
 }
 
@@ -194,7 +194,6 @@ namespace gpu {
       
       dev_llt_bcol
          <float, BLOCK_SIZE>
-         // <<<grid, threads, 0, stream>>>
          <<<grid, threads, smsize, stream>>>
          (m, n, a, lda, stat);
    }
@@ -218,7 +217,6 @@ namespace gpu {
       
       dev_llt_bcol
          <double, BLOCK_SIZE>
-         // <<<grid, threads, 0, stream>>>
          <<<grid, threads, smsize, stream>>>
          (m, n, a, lda, stat);
    }
