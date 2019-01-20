@@ -15,144 +15,6 @@ namespace /* anon */ {
    extern __shared__ char SharedMemory[];
 
    ////////////////////////////////////////
-
-   template
-   < 
-      typename ELEMENT_TYPE, 
-      unsigned int TILE_SIZE, 
-      unsigned int TILES 
-      >
-   __device__ void
-   dev_init_chol_fact(
-         unsigned int block,
-         int nrows, // number of rows of the factorized matrix
-         int ncols, // number of columns thereof
-         ELEMENT_TYPE* a, // array of elements of A
-         int lda, // leading dimension of a
-         ELEMENT_TYPE* fs // initial L factor (shared mem)
-         )
-   {
-      const int SIZE_X = TILES*TILE_SIZE;
-
-      int x; // row index
-
-      for ( int tile = 0; tile < TILES; tile++ ) {
-         if ( tile ) { // load A's offdiagonal tiles into shared memory
-            x = ncols + threadIdx.x + (tile - 1)*TILE_SIZE +
-               (TILES - 1)*TILE_SIZE*block; // offdiagonal row index in A
-            fs[threadIdx.x + tile*TILE_SIZE + SIZE_X*threadIdx.y] =
-               ( x < nrows && threadIdx.y < ncols ) ? 
-                     a[x + lda*threadIdx.y] : 0.0;
-         }
-         else { // load the diagonal (pivot) tile
-            fs[threadIdx.x + SIZE_X*threadIdx.y] =
-               ( threadIdx.x < ncols && threadIdx.y < ncols ) ?
-                               a[threadIdx.x + lda*threadIdx.y] : 0.0;
-         }
-      }
-
-   }
-
-   template
-   < 
-      typename ELEMENT_TYPE, 
-      unsigned int TILE_SIZE, 
-      unsigned int TILES 
-      >
-   __device__ void
-   dev_save_chol_fact(
-         unsigned int block,
-         int nrows, // number of rows of the factorized matrix
-         int ncols, // number of columns thereof
-         ELEMENT_TYPE* fs, // initial L factor (shared mem)
-         ELEMENT_TYPE* f, // array of elements of L
-         int ldf // leading dimension of f
-         )
-   {
-      const int SIZE_X = TILES*TILE_SIZE;
-
-      int x; // row index
-
-      for ( int tile = 0; tile < TILES; tile++ ) {
-         if ( tile ) { // upload the relevant elements of fs to f
-            x = ncols + threadIdx.x + (tile - 1)*TILE_SIZE +
-               (TILES - 1)*TILE_SIZE*block;
-            if ( x < nrows && threadIdx.y < ncols )
-               f[x + ldf*threadIdx.y] =
-                     fs[threadIdx.x + tile*TILE_SIZE + SIZE_X*threadIdx.y];
-         }
-         else if ( block == 0 ) { 
-            // upload to f and fd
-            if ( threadIdx.x < ncols && threadIdx.y < ncols )
-               f[threadIdx.x + ldf*threadIdx.y] =
-                               fs[threadIdx.x + SIZE_X*threadIdx.y];
-         }
-      } // loop through tiles ends here
-   }
-
-   template
-   < 
-      typename ELEMENT_TYPE, 
-      unsigned int TILE_SIZE,
-      unsigned int TILES 
-      >
-   __device__ void
-   dev_block_chol(
-         int block,
-         int nrows, int ncols,
-         ELEMENT_TYPE* a, int lda, 
-         ELEMENT_TYPE* f, int ldf, 
-         int* stat
-         )
-   {
-      const int SIZE_X = TILES*TILE_SIZE;
-
-      int ip;
-      ELEMENT_TYPE v;
-
-      ELEMENT_TYPE *work = (ELEMENT_TYPE*)SharedMemory;
-
-      // load A into shared memory
-      dev_init_chol_fact< ELEMENT_TYPE, TILE_SIZE, TILES >
-         ( block, nrows, ncols, a, lda, work );
-      __syncthreads();
-
-      for ( ip = 0; ip < ncols; ip++ ) {
-
-         v = work[ip + SIZE_X*ip];
-         if ( v <= 0.0 ) {
-            if ( block == 0 && threadIdx.x == 0 && threadIdx.y == 0 )
-               stat[0] = ip;
-            return;
-         }
-         v = sqrt(v);
-         __syncthreads();
-
-         if ( threadIdx.y < TILES )
-            work[threadIdx.x + TILE_SIZE*threadIdx.y + SIZE_X*ip] /= v;
-         __syncthreads();
-    
-         if ( threadIdx.y > ip && threadIdx.y < ncols ) {
-            for ( int x = threadIdx.x + TILE_SIZE; x < SIZE_X; x += TILE_SIZE )
-               work[x + SIZE_X*threadIdx.y] -= 
-                  work[threadIdx.y + SIZE_X*ip]*work[x + SIZE_X*ip];
-            if ( threadIdx.x > ip )
-               work[threadIdx.x + SIZE_X*threadIdx.y]
-                  -= work[threadIdx.y + SIZE_X*ip]
-                  *work[threadIdx.x + SIZE_X*ip];
-         }
-         __syncthreads();
-
-      }
-      if ( block == 0 && threadIdx.x == 0 && threadIdx.y == 0 )
-         stat[0] = ncols;
-
-      // save the L factor
-      dev_save_chol_fact< ELEMENT_TYPE, TILE_SIZE, TILES >
-         ( block, nrows, ncols, work, f, ldf );
-   }
-
-   ////////////////////////////////////////
    
    // Load diagonal block as well as block bx into shared memory
    // workspace
@@ -164,8 +26,10 @@ namespace /* anon */ {
          unsigned int bx, // Block row index
          int m, // Number of rows in matrix
          int n, // Number of columns in matrix
-         T *const a, // Data pointer
-         int lda, // Input matrix leading dimensions
+         T const *const d, // Workspace with copy of the digonal tile
+         int ldd, // Workspace leading dimension
+         T *const a, // Matrix block column pointer
+         int lda, // Matrix leading dimensions
          T *const sdata // Shared memory data dimn (2*TILE_SIZE,TILE_SIZE)
          ) {
 
@@ -177,7 +41,8 @@ namespace /* anon */ {
       // Load diagonal block A_kk
       sdata[tx + ty*ld_sdata] =
          ( (tx < n) && (ty < n)) ? // Note that m > n
-         a[tx + ty*lda] : (T) 0.0;
+         d[tx + ty*ldd] : (T) 0.0;
+         // a[tx + ty*lda] : (T) 0.0;
 
       // Load off-diag block A_ik
       int a_x = tx + TILE_SIZE*bx; // Row index in a
@@ -221,6 +86,7 @@ namespace /* anon */ {
    dev_llt_block(
          unsigned int bx,
          int m, int n,
+         T const *const d, int ldd,
          T *const l, int ldl,
          int *const stat // Info parameter
          ) {
@@ -235,7 +101,7 @@ namespace /* anon */ {
       int ld_swork = 2*TILE_SIZE;
       
       // Load A (A_kk and A_ik) into shared memory workspace W
-      dev_block_load<T, TILE_SIZE>(bx, m, n, l, ldl, swork);
+      dev_block_load<T, TILE_SIZE>(bx, m, n, d, ldd, l, ldl, swork);
       // dev_init_chol_fact<T, TILE_SIZE, 2>(bx, m, n, l, ldl, swork);
       __syncthreads();
    
@@ -296,31 +162,6 @@ namespace /* anon */ {
       __syncthreads();
 
    }
-
-   // Naive implementation not using shared memory buffer
-   // template<typename T,
-   //          int TILE_SIZE>
-   // __device__ void
-   // dev_llt_block_inplace(
-   //       unsigned int bx,
-   //       int m, int n,
-   //       T *const l, int ldl,
-   //       int *const stat // Info parameter
-   //       ) {
-
-   //    int tx = threadIdx.x;
-   //    int ty = threadIdx.y;
-
-   //    for (int k = 0; k < n; ++k) {
-
-   //       T d11 = l[k+ldl*k];
-
-   //       d11 = sqrt(d11); // Compute pivot
-   //       __syncthreads();
-
-   //    }
-      
-   // }
    
    // Perform the Cholesky factorization of a block-column matrix size
    // m x n with m >= n and n <= TILE_SIZE
@@ -330,13 +171,14 @@ namespace /* anon */ {
    __global__ void
    dev_llt_bcol(
          int m, int n,
+         T const *const d, int ldd,
          T *const l, int ldl,
          int *const stat // Info parameter
          ) {
 
       unsigned int bx = blockIdx.x;
       // printf("[dev_llt_bcol] bx = %d\n", bx);
-      dev_llt_block<T, TILE_SIZE>(bx, m, n, l, ldl, stat);
+      dev_llt_block<T, TILE_SIZE>(bx, m, n, d, ldd, l, ldl, stat);
       // dev_block_chol<T, TILE_SIZE, 2>(bx, m, n, l, ldl, l, ldl, stat);
    }
    
@@ -350,6 +192,7 @@ namespace gpu {
    void factor_bcol<float>(
          const cudaStream_t stream,
          int m, int n,
+         float const *const d, int ldd,
          float *const a, int lda,
          int *const stat) {
 
@@ -367,13 +210,14 @@ namespace gpu {
       dev_llt_bcol
          <float, BLOCK_SIZE>
          <<<grid, threads, smsize, stream>>>
-         (m, n, a, lda, stat);
+         (m, n, d, ldd, a, lda, stat);
    }
 
    template<>
    void factor_bcol<double>(
          const cudaStream_t stream,
          int m, int n,
+         double const *const d, int ldd,
          double *const a, int lda,
          int *const stat) {
 
@@ -390,7 +234,7 @@ namespace gpu {
       dev_llt_bcol
          <double, BLOCK_SIZE>
          <<<grid, threads, smsize, stream>>>
-         (m, n, a, lda, stat);
+         (m, n, d, ldd, a, lda, stat);
    }
 
 }}} // End of namespace sylver::spldlt::gpu

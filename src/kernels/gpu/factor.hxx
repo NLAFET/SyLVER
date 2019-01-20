@@ -27,7 +27,10 @@ namespace gpu {
    // m x n with m >= n and n <= TILE_SIZE
    template<typename T>
    void factor_bcol(
-         const cudaStream_t stream, int m, int n, T *const a, int lda, int *const stat);
+         const cudaStream_t stream, int m, int n,
+         T const *const d, int ldd,
+         T *const a, int lda,
+         int *const stat);
 
 
    // @brief Perform the Cholesky factorization on the GPU for a
@@ -72,7 +75,10 @@ namespace gpu {
       int *d_info;
       cudaMallocHost((void**)&info, sizeof(int)); // Page-locked memory on host side
       cudaMalloc((void**)&d_info, sizeof(int));
-
+      T *d_d = nullptr;
+      int lddd = ib;
+      cudaMalloc((void**)&d_d, lddd*ib*sizeof(T));
+      
       T alpha = -1.0, beta = 1.0;
 
       for (int kk = 0; kk < nc; ++kk) {
@@ -113,8 +119,16 @@ namespace gpu {
             int cblkm = m-ofs-iofs; // Block column height
             int cblkn = std::min(in-iofs, ib); // Block column width
 
+            // Copy diagonal tile into workspace d_d
+            cudaMemcpy2DAsync(
+                  d_d, lddd*sizeof(T),
+                  &d_a[ofs+iofs+(ofs+iofs)*ldda], ldda*sizeof(T),
+                  cblkn*sizeof(T), cblkn,
+                  cudaMemcpyDeviceToDevice, stream);
+            
             factor_bcol(
                   stream, cblkm, cblkn,
+                  d_d, lddd,
                   &d_a[ofs+iofs+(ofs+iofs)*ldda], ldda,
                   d_info);
             // cudaStreamSynchronize(stream);
@@ -196,6 +210,14 @@ namespace gpu {
 
       // Cleanup memory
       cublasDestroy(cuhandle);
+
+      cuerr = cudaFree(d_d);
+      if (cuerr != cudaSuccess) {
+         printf("[sylver::spldlt::gpu::factor][error] Device memory free failed\n");
+         inform.flag = ERROR_CUDA_UNKNOWN;
+         return;
+      }
+
       cuerr = cudaFreeHost(info);
       if (cuerr != cudaSuccess) {
          printf("[sylver::spldlt::gpu::factor][error] Host memory free failed\n");
