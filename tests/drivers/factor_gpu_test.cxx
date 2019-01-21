@@ -6,6 +6,9 @@
 #include "testing.hxx"
 #include "testing_chol_gpu.hxx"
 
+// STD
+#include <iostream>
+
 using namespace sylver::tests;
 
 int main(int argc, char** argv) {
@@ -17,12 +20,11 @@ int main(int argc, char** argv) {
    spldlt::SpldltOpts opts;
    opts.parse_opts(argc, argv);
 
-   printf("[factor_node_test] Matrix m = %d, n = %d\n", opts.m, opts.m);
-
-   // int m = 4;
-   // chol_test<double>(m);
-   chol_test<double>(opts.m, opts.algo);
-   // chol_test<float>(opts.m);
+   std::cout << "[factor_node_test] Matrix m = " << opts.m << ", n = " << opts.m
+             << std::endl;
+   
+   // ret = chol_test<double>(opts.m, opts.algo);
+   ret = chol_test<float>(opts.m, opts.algo);
    
    return ret;
 }

@@ -1,3 +1,6 @@
+/// @file
+/// @copyright 2016- The Science and Technology Facilities Council (STFC)
+/// @author Florent Lopez
 #pragma once
 
 #include <algorithm>
@@ -107,4 +110,4 @@ namespace spldlt {
       }
    }
 
-}
+} // End of namespace splldlt

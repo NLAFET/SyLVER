@@ -4,6 +4,7 @@
 
 // Sylver
 #include "sylver_ciface.hxx"
+#include "kernels/gpu/common.hxx"
 #include "kernels/gpu/wrappers.hxx"
  
 // STD
@@ -40,7 +41,7 @@ namespace gpu {
    // @param d_a Data pointer on the device
    // @param d_info Info value for factorization on the device 
    template<typename T>
-   void factor(
+   void factor_ll(
          const cublasHandle_t cuhandle, 
          int m, // Number of rows 
          int n, // Number of columns
@@ -236,7 +237,7 @@ namespace gpu {
    }
 
    template<typename T>
-   void factor_hp(
+   void factor_rl(
          const cublasHandle_t cuhandle, // cuBLAS handle 
          int m, // Number of rows 
          int n, // Number of columns
@@ -271,7 +272,58 @@ namespace gpu {
       cudaMalloc((void**)&d_d, lddd*ib*sizeof(T));
       
       T alpha = -1.0, beta = 1.0;
-      
+
+      // We use a 2 level blocking for maximizing the performance of
+      // the GEMM operaion on the GPU
+      for (int kk = 0; kk < nc; ++kk) {
+
+         int ofs = kk*nb;
+         int in = std::min(n-ofs, nb);
+         int inc = (in-1) / ib + 1; 
+
+         // Factor outer block
+         for (int k = 0; k < inc; ++k) {
+
+            // Factor kth block column
+            int iofs = k*ib; // Number of eliminated columns
+            int cblkm = m-ofs-iofs; // Block column height
+            int cblkn = std::min(in-iofs, ib); // Block column width
+
+            // Copy diagonal tile into workspace d_d
+            cudaMemcpy2DAsync(
+                  d_d, lddd*sizeof(T),
+                  &d_a[ofs+iofs+(ofs+iofs)*ldda], ldda*sizeof(T),
+                  cblkn*sizeof(T), cblkn,
+                  cudaMemcpyDeviceToDevice,
+                  stream);
+            
+            factor_bcol(
+                  stream, cblkm, cblkn,
+                  d_d, lddd,
+                  &d_a[ofs+iofs+(ofs+iofs)*ldda], ldda,
+                  d_inform);
+
+            // Update trailing submatrix
+            int iofst = (k+1)*ib; // Offset to trailing submatrix in outer block
+            int tblkm = m-ofs-iofst; // Width of trailing submatrix in outer block
+            int tblkn = in-iofst; // Width of trailing submatrix in outer block
+            if (tblkn>0) {
+               custat = sylver::gpu::dev_gemm(
+                     cuhandle, CUBLAS_OP_N, CUBLAS_OP_T,
+                     tblkm, tblkn, ib, &alpha,
+                     &d_a[ofs+iofst+ (ofs+iofs)*ldda], ldda,
+                     &d_a[ofs+iofst+ (ofs+iofs)*ldda], ldda,
+                     &beta, &d_a[ofs+iofst+(ofs+iofst)*ldda], ldda);
+               // cudaStreamSynchronize(stream);
+               if (custat != CUBLAS_STATUS_SUCCESS) {    
+                  printf("[sylver::spldlt::gpu::factor][error] CuBLAS gemm kernel launch\n");
+                  inform.flag = ERROR_CUBLAS_UNKNOWN;
+                  return;
+               }
+
+            }
+         }
+      }
    }
    
 }}} // End of sylver::spldlt::gpu

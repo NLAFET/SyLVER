@@ -7,6 +7,7 @@
 #include "common.hxx"
 #include "sylver_ciface.hxx"
 #include "kernels/wrappers.hxx"
+#include "kernels/gpu/common.hxx"
 #include "kernels/gpu/wrappers.hxx"
 #include "kernels/gpu/factor.hxx"
 
@@ -56,11 +57,13 @@ namespace tests {
       // Allocate memory on the device
       T *d_l = nullptr;
       cuerr = cudaMalloc((void**)&d_l, m*lda*sizeof(T));
-      if (cuerr != cudaSuccess) {
-            std::cout << "[chol_test][error] Failed allocate memory on device "
-                      << "(" << cudaGetErrorString(cuerr) << ")" << std::endl;
-            std::exit(1);
-      }
+      sylver::gpu::cuda_check_error(cuerr, "chol_test");
+      // if (cuerr != cudaSuccess) {
+      //    std::cout << "[chol_test][error] Failed allocate memory on device "
+      //              << "(" << cudaGetErrorString(cuerr) << ")" << std::endl;
+      //    std::exit(1);
+      // }
+      
       // Send matrix to device
       auto transfer_sa = std::chrono::high_resolution_clock::now();
       custat = cublasSetMatrix(m, m, sizeof(T), l, lda, d_l, lda);
@@ -157,7 +160,7 @@ namespace tests {
          start = std::chrono::high_resolution_clock::now();
 
          // Launch factorization on device
-         sylver::spldlt::gpu::factor(cuhandle, m, m, d_l, lda, inform, d_inform);
+         sylver::spldlt::gpu::factor_ll(cuhandle, m, m, d_l, lda, inform, d_inform);
          if (inform.flag != SUCCESS) {
             std::cout << "[chol_test][error] Failed to launch factorization "
                       << "(" << inform.flag << ")" << std::endl;

@@ -188,37 +188,37 @@ namespace sylver {
 namespace spldlt {
 namespace gpu {
 
-   template<>
-   void factor_bcol<float>(
-         const cudaStream_t stream,
-         int m, int n,
-         float const *const d, int ldd,
-         float *const a, int lda,
-         int *const stat) {
+   // template<>
+   // void factor_bcol<float>(
+   //       const cudaStream_t stream,
+   //       int m, int n,
+   //       float const *const d, int ldd,
+   //       float *const a, int lda,
+   //       int *const stat) {
 
-      dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
-      // std::cout << "[factor] blockDim.x = " << threads.x << ", blockDim.y = " << threads.y << std::endl; 
-      // dim3 grid((m + threads.x - 1) / threads.x,
-                // (n + threads.y -1) / threads.y);
-      dim3 grid((m + threads.x - 1) / threads.x);
-      // std::cout << "[factor] gridDim.x = " << grid.x << std::endl; 
+   //    dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
+   //    // std::cout << "[factor] blockDim.x = " << threads.x << ", blockDim.y = " << threads.y << std::endl; 
+   //    // dim3 grid((m + threads.x - 1) / threads.x,
+   //              // (n + threads.y -1) / threads.y);
+   //    dim3 grid((m + threads.x - 1) / threads.x);
+   //    // std::cout << "[factor] gridDim.x = " << grid.x << std::endl; 
 
-      // Calculate the size of the shared memory workspace per thread
-      // blocks
-      size_t smsize = 2*BLOCK_SIZE*BLOCK_SIZE*sizeof(float); // 2 tiles per blocks
+   //    // Calculate the size of the shared memory workspace per thread
+   //    // blocks
+   //    size_t smsize = 2*BLOCK_SIZE*BLOCK_SIZE*sizeof(float); // 2 tiles per blocks
       
-      dev_llt_bcol
-         <float, BLOCK_SIZE>
-         <<<grid, threads, smsize, stream>>>
-         (m, n, d, ldd, a, lda, stat);
-   }
+   //    dev_llt_bcol
+   //       <float, BLOCK_SIZE>
+   //       <<<grid, threads, smsize, stream>>>
+   //       (m, n, d, ldd, a, lda, stat);
+   // }
 
-   template<>
-   void factor_bcol<double>(
+   template<typename T>
+   void factor_bcol(
          const cudaStream_t stream,
          int m, int n,
-         double const *const d, int ldd,
-         double *const a, int lda,
+         T const *const d, int ldd,
+         T *const a, int lda,
          int *const stat) {
 
       dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
@@ -229,12 +229,22 @@ namespace gpu {
 
       // Calculate the size of the shared memory workspace per thread
       // blocks
-      size_t smsize = 2*BLOCK_SIZE*BLOCK_SIZE*sizeof(double); // 2 tiles per blocks
+      size_t smsize = 2*BLOCK_SIZE*BLOCK_SIZE*sizeof(T); // 2 tiles per blocks
       
       dev_llt_bcol
-         <double, BLOCK_SIZE>
+         <T, BLOCK_SIZE>
          <<<grid, threads, smsize, stream>>>
          (m, n, d, ldd, a, lda, stat);
    }
 
+   // Single precision
+   template void factor_bcol<float>(
+         const cudaStream_t stream, int m, int n, float const *const d, int ldd,
+         float *const a, int lda, int *const stat);
+   // Double precision
+   template void factor_bcol<double>(
+         const cudaStream_t stream, int m, int n, double const *const d, int ldd,
+         double *const a, int lda, int *const stat);
+
+   
 }}} // End of namespace sylver::spldlt::gpu
