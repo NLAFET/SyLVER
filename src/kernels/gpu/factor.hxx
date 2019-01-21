@@ -124,7 +124,8 @@ namespace gpu {
                   d_d, lddd*sizeof(T),
                   &d_a[ofs+iofs+(ofs+iofs)*ldda], ldda*sizeof(T),
                   cblkn*sizeof(T), cblkn,
-                  cudaMemcpyDeviceToDevice, stream);
+                  cudaMemcpyDeviceToDevice,
+                  stream);
             
             factor_bcol(
                   stream, cblkm, cblkn,
