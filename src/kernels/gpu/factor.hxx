@@ -46,7 +46,13 @@ namespace gpu {
          int n, // Number of columns
          T *const d_a, // Matrix pointer on device 
          int ldda, // Matrix leadind dim on device
-         inform_t& inform) {
+         inform_t& inform, // Info host
+         int *d_info // Info device
+         ) {
+
+      // Error handling
+      cudaError_t cuerr; // CUDA error
+      cublasStatus_t custat; // CuBLAS status
 
       int const ib = BLOCK_SIZE; // Inner block size
       // int const nb = BLOCK_SIZE; // Outer block size 
@@ -55,9 +61,6 @@ namespace gpu {
       int const nc = (n-1) / nb +1;
       
       // std::cout << "[spldlt::gpu::factor] nc = " << nc << std::endl;
-
-      cudaError_t cuerr; // CUDA error
-      cublasStatus_t custat; // CuBLAS status
 
       cudaStream_t stream; // CUDA Stream
       // Retreive CUDA stream from cuBLAS handle
@@ -69,7 +72,7 @@ namespace gpu {
          return;
       }
       
-      // // CuSOLVER
+      // CuSOLVER
       // cusolverStatus_t cusolstat;
       // cusolverDnHandle_t cusolhandle;
       // cusolstat = cusolverDnCreate(&cusolhandle);
@@ -79,15 +82,15 @@ namespace gpu {
       // T *d_work = nullptr;
       // cuerr = cudaMalloc((void**)&d_work, worksz*sizeof(T)); 
 
-      int *info;
-      int *d_info;
-      cudaMallocHost((void**)&info, sizeof(int)); // Page-locked memory on host side
-      cudaMalloc((void**)&d_info, sizeof(int));
+      // Workspace
       T *d_d = nullptr;
       int lddd = ib;
       cudaMalloc((void**)&d_d, lddd*ib*sizeof(T));
       
       T alpha = -1.0, beta = 1.0;
+
+      // We use a 2 level blocking for maximizing the performance of
+      // the GEMM operaion on the GPU
 
       for (int kk = 0; kk < nc; ++kk) {
 
@@ -136,7 +139,7 @@ namespace gpu {
                   cudaMemcpyDeviceToDevice,
                   stream);
             
-            factor_bcol(
+             factor_bcol(
                   stream, cblkm, cblkn,
                   d_d, lddd,
                   &d_a[ofs+iofs+(ofs+iofs)*ldda], ldda,
@@ -230,19 +233,6 @@ namespace gpu {
          return;
       }
 
-      cuerr = cudaFreeHost(info);
-      if (cuerr != cudaSuccess) {
-         printf("[sylver::spldlt::gpu::factor][error] Host memory free failed\n");
-         inform.flag = ERROR_CUDA_UNKNOWN;
-         return;
-      }
-      cuerr = cudaFree(d_info);
-      if (cuerr != cudaSuccess) {
-         printf("[sylver::spldlt::gpu::factor][error] Device Memory free failed\n");
-         inform.flag = ERROR_CUDA_UNKNOWN;
-         return;
-      }
-
    }
 
    template<typename T>
@@ -252,7 +242,12 @@ namespace gpu {
          int n, // Number of columns
          T *const d_a, 
          int ldda, 
-         inform_t& inform) {
+         inform_t& inform,
+         int* d_inform) {
+
+      // Error handling
+      cudaError_t cuerr; // CUDA error
+      cublasStatus_t custat; // CuBLAS status
 
       int const ib = BLOCK_SIZE; // Inner block size
       // int const nb = BLOCK_SIZE; // Outer block size 
@@ -260,6 +255,23 @@ namespace gpu {
       // Number of block columns
       int const nc = (n-1) / nb +1;
 
+      cudaStream_t stream; // CUDA Stream
+      // Retreive CUDA stream from cuBLAS handle
+      custat = cublasGetStream(cuhandle, &stream);
+      if (custat != CUBLAS_STATUS_SUCCESS) {
+         std::cout << "[sylver::spldlt::gpu::factor][error] Failed to retrieve stream from cuBLAS handle "
+                   << "(" << custat << ")" << std::endl;
+         inform.flag = ERROR_CUBLAS_UNKNOWN;
+         return;
+      }
+
+      // Workspace
+      T *d_d = nullptr;
+      int lddd = ib;
+      cudaMalloc((void**)&d_d, lddd*ib*sizeof(T));
+      
+      T alpha = -1.0, beta = 1.0;
+      
    }
    
 }}} // End of sylver::spldlt::gpu

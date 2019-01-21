@@ -139,8 +139,11 @@ namespace tests {
 
          cublasStatus_t custat; // CuBLAS status
          cublasHandle_t cuhandle;
-         inform_t inform;
+         inform_t inform; // Host side status
 
+         int *d_inform; // Device side status
+         cuerr = cudaMalloc((void**)&d_inform, sizeof(int));
+         
          // Initialize factrization
          custat = cublasCreate(&cuhandle);
          if (custat != CUBLAS_STATUS_SUCCESS) {    
@@ -153,19 +156,28 @@ namespace tests {
       
          start = std::chrono::high_resolution_clock::now();
 
-         sylver::spldlt::gpu::factor(cuhandle, m, m, d_l, lda, inform);
+         // Launch factorization on device
+         sylver::spldlt::gpu::factor(cuhandle, m, m, d_l, lda, inform, d_inform);
+         if (inform.flag != SUCCESS) {
+            std::cout << "[chol_test][error] Failed to launch factorization "
+                      << "(" << inform.flag << ")" << std::endl;
+            std::exit(1);         
+         }
+         // Wait for completion
          cuerr = cudaStreamSynchronize(stream);
          if (cuerr != cudaSuccess) {
-            std::cout << "[chol_test][error] Failed to synchronize stream"
+            std::cout << "[chol_test][error] Failed to synchronize stream "
                       << "(" << cudaGetErrorString(cuerr) << ")" << std::endl;
             std::exit(1);
          }
       
          end = std::chrono::high_resolution_clock::now();
 
-         std::cout << "[chol_test] flag = " << inform.flag << std::endl;
-
+         std::cout << "[chol_test] Inform flag = " << inform.flag << std::endl;
+         
+         // Cleanup
          cublasDestroy(cuhandle);
+         cuerr = cudaFree(d_inform);
 
       }
       else {
