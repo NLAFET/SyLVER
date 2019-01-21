@@ -27,7 +27,8 @@ namespace gpu {
    // m x n with m >= n and n <= TILE_SIZE
    template<typename T>
    void factor_bcol(
-         const cudaStream_t stream, int m, int n,
+         const cudaStream_t stream, 
+         int m, int n,
          T const *const d, int ldd,
          T *const a, int lda,
          int *const stat);
@@ -40,27 +41,34 @@ namespace gpu {
    // @param d_info Info value for factorization on the device 
    template<typename T>
    void factor(
-         const cudaStream_t stream, int m, int n, T *const d_a, int ldda, inform_t& inform) {
+         const cublasHandle_t cuhandle, 
+         int m, // Number of rows 
+         int n, // Number of columns
+         T *const d_a, // Matrix pointer on device 
+         int ldda, // Matrix leadind dim on device
+         inform_t& inform) {
 
       int const ib = BLOCK_SIZE; // Inner block size
       // int const nb = BLOCK_SIZE; // Outer block size 
-      int const nb = OUTER_BLOCK_SIZE; // Outer block size 
-         
+      int const nb = OUTER_BLOCK_SIZE; // Outer block size         
       // Number of block columns
       int const nc = (n-1) / nb +1;
       
       // std::cout << "[spldlt::gpu::factor] nc = " << nc << std::endl;
 
-      // Cuda error
-      cudaError_t cuerr;
+      cudaError_t cuerr; // CUDA error
+      cublasStatus_t custat; // CuBLAS status
 
-      // CuBLAS status
-      cublasStatus_t custat;
-      // CuBLAS handle
-      cublasHandle_t cuhandle;
-      cublasCreate(&cuhandle);
-      cublasSetStream(cuhandle, stream);
-
+      cudaStream_t stream; // CUDA Stream
+      // Retreive CUDA stream from cuBLAS handle
+      custat = cublasGetStream(cuhandle, &stream);
+      if (custat != CUBLAS_STATUS_SUCCESS) {
+         std::cout << "[sylver::spldlt::gpu::factor][error] Failed to retrieve stream from cuBLAS handle "
+                   << "(" << custat << ")" << std::endl;
+         inform.flag = ERROR_CUBLAS_UNKNOWN;
+         return;
+      }
+      
       // // CuSOLVER
       // cusolverStatus_t cusolstat;
       // cusolverDnHandle_t cusolhandle;
@@ -100,8 +108,9 @@ namespace gpu {
                   &d_a[ofs], ldda,
                   &beta, &d_a[ofs+ofs*ldda], ldda);
                // cudaStreamSynchronize(stream);
-            if (custat != CUBLAS_STATUS_SUCCESS) {    
-               printf("[sylver::spldlt::gpu::factor][error] CuBLAS gemm kernel launch\n");
+            if (custat != CUBLAS_STATUS_SUCCESS) {
+               std::cout << "[sylver::spldlt::gpu::factor][error] cuBLAS gemm kernel launch "
+                         << "(" << custat << ")" << std::endl;
                inform.flag = ERROR_CUBLAS_UNKNOWN;
                return;
             }
@@ -204,17 +213,19 @@ namespace gpu {
 
       cuerr = cudaStreamSynchronize(stream);
       if (cuerr != cudaSuccess) {
-         printf("[sylver::spldlt::gpu::factor][error] Failed to synchronize stream\n");
+         std::cout << "[sylver::spldlt::gpu::factor][error] Failed to synchronize stream "
+                   << "(" << cudaGetErrorString(cuerr) << ")" << std::endl;
          inform.flag = ERROR_CUDA_UNKNOWN;
          return;
       }
 
-      // Cleanup memory
-      cublasDestroy(cuhandle);
+      // // Cleanup memory
+      // cublasDestroy(cuhandle);
 
       cuerr = cudaFree(d_d);
       if (cuerr != cudaSuccess) {
-         printf("[sylver::spldlt::gpu::factor][error] Device memory free failed\n");
+         std::cout << "[sylver::spldlt::gpu::factor][error] Device memory free failed "
+                   << "(" << cudaGetErrorString(cuerr) << ")" << std::endl;
          inform.flag = ERROR_CUDA_UNKNOWN;
          return;
       }
@@ -231,6 +242,23 @@ namespace gpu {
          inform.flag = ERROR_CUDA_UNKNOWN;
          return;
       }
+
+   }
+
+   template<typename T>
+   void factor_hp(
+         const cublasHandle_t cuhandle, // cuBLAS handle 
+         int m, // Number of rows 
+         int n, // Number of columns
+         T *const d_a, 
+         int ldda, 
+         inform_t& inform) {
+
+      int const ib = BLOCK_SIZE; // Inner block size
+      // int const nb = BLOCK_SIZE; // Outer block size 
+      int const nb = OUTER_BLOCK_SIZE; // Outer block size         
+      // Number of block columns
+      int const nc = (n-1) / nb +1;
 
    }
    

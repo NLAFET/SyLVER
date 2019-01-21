@@ -678,6 +678,14 @@ namespace spldlt {
 namespace sylver {
 namespace tests {
 
+   // Algorithm to be tested
+   enum algo {
+      /// SyLVER routine
+      SyLVER,
+      /// Use routine from cuSOLVER 
+      cuSOLVER
+   };
+
    // Generates a random dense positive definte matrix. Entries are
    // Unif[-1,1]. Only lower triangle is used, rest is filled with
    // NaNs.

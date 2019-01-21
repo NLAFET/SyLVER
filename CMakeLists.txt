@@ -307,8 +307,8 @@ if (${USE_GPU} MATCHES ON)
   # set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS};-g;-arch=compute_20,code=compute_20,sm_20,sm_35")
   # set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS};-g;-arch=compute_20;-code=compute_20,sm_20,sm_35" CACHE STRING "NVCC flags")
 
-  # set(CUDA_NVCC_FLAGS "TET" CACHE STRING "NVCC flags")
-  list(APPEND CUDA_NVCC_FLAGS "-g")
+  # list(APPEND CUDA_NVCC_FLAGS "-g")
+  list(APPEND CUDA_NVCC_FLAGS "-g -O2")
   
   MESSAGE( STATUS "CUDA found:         " ${CUDA_FOUND} )
   MESSAGE( STATUS "CUDA host compiler: " ${CUDA_HOST_COMPILER} )

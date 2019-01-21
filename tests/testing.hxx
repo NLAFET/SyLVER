@@ -1,5 +1,9 @@
 #pragma once
 
+// SyLVER
+#include "common.hxx"
+
+// STD
 #include <cstring>
 #include <cstdlib>
 
@@ -10,7 +14,8 @@ namespace spldlt {
    public:
       SpldltOpts():
          ncpu(1), ngpu(0), m(256), n(256), k(256), nb(256), ib(256), posdef(false), 
-         check(true), chol(false), diagdom(false) {}
+         check(true), chol(false), diagdom(false), algo(sylver::tests::algo::SyLVER) 
+      {}
 
       void parse_opts(int argc, char** argv) {
          
@@ -72,6 +77,14 @@ namespace spldlt {
             else if ( !strcmp("--diagdom", argv[i]) ) {
                diagdom = true;
             }
+
+            // Select algorithm
+            else if ( !strcmp("--algo=sylver", argv[i]) ) {
+               algo = sylver::tests::algo::SyLVER;
+            }
+            else if ( !strcmp("--algo=cusolver", argv[i]) ) {
+               algo = sylver::tests::algo::cuSOLVER;
+            }
             
          }
          
@@ -88,5 +101,6 @@ namespace spldlt {
       bool check;
       bool chol; // Use Cholesky factorization
       bool diagdom; // Diagonally dominant matrix (unsymmetric case)
+      enum sylver::tests::algo algo; // Algorithm to use
    };
 }
