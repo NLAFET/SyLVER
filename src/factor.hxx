@@ -1,5 +1,9 @@
+/// @file
+/// @copyright 2016- The Science and Technology Facilities Council (STFC)
+/// @author Florent Lopez
 #pragma once
 
+// SyLVER
 #include "tasks.hxx"
 
 namespace spldlt {
@@ -7,7 +11,7 @@ namespace spldlt {
    ////////////////////////////////////////////////////////////
    // factor_front_posdef
    //
-   // Factorize a supernode using a multifrontal mode
+   /// @brief Factorize a supernode using a multifrontal mode
    template <typename T, typename PoolAlloc>
    void factor_front_posdef(
          NumericFront<T, PoolAlloc> &node,

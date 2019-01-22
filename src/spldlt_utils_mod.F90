@@ -1,3 +1,7 @@
+!> @file
+!> @copyright 2016- The Science and Technology Facilities Council (STFC)
+!> @author    Jonathan Hogg
+!> @author    Florent Lopez
 module spldlt_utils_mod
   use spral_ssids_datatypes
   implicit none

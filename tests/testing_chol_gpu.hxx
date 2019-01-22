@@ -13,6 +13,7 @@
 
 // STD
 #include <iostream>
+#include <string>
 
 // SSIDS
 #include "ssids/cpu/cpu_iface.hxx"
@@ -30,6 +31,7 @@ namespace tests {
    template<typename T>
    int chol_test(int m, enum algo algo) {
 
+      std::string context = "chol_test";
       bool failed = false;
 
       T* a = nullptr;
@@ -57,21 +59,14 @@ namespace tests {
       // Allocate memory on the device
       T *d_l = nullptr;
       cuerr = cudaMalloc((void**)&d_l, m*lda*sizeof(T));
-      sylver::gpu::cuda_check_error(cuerr, "chol_test");
-      // if (cuerr != cudaSuccess) {
-      //    std::cout << "[chol_test][error] Failed allocate memory on device "
-      //              << "(" << cudaGetErrorString(cuerr) << ")" << std::endl;
-      //    std::exit(1);
-      // }
+      sylver::gpu::cuda_check_error(cuerr, context);
       
       // Send matrix to device
       auto transfer_sa = std::chrono::high_resolution_clock::now();
       custat = cublasSetMatrix(m, m, sizeof(T), l, lda, d_l, lda);
       // cudaMemcpy(d_l, l, lda*m*sizeof(T), cudaMemcpyHostToDevice);
-      if (custat != CUBLAS_STATUS_SUCCESS) {    
-         printf("[chol_test][error] CuBLAS SetMatrix failed\n");
-         return 1;
-      }   
+      sylver::gpu::cublas_check_error(custat, context);
+
       auto transfer_en = std::chrono::high_resolution_clock::now();
       long t_transfer = 
          std::chrono::duration_cast<std::chrono::nanoseconds>
@@ -146,6 +141,7 @@ namespace tests {
 
          int *d_inform; // Device side status
          cuerr = cudaMalloc((void**)&d_inform, sizeof(int));
+         sylver::gpu::cuda_check_error(cuerr, context);
          
          // Initialize factrization
          custat = cublasCreate(&cuhandle);
@@ -155,12 +151,13 @@ namespace tests {
             std::exit(1);
          }
 
-         cublasSetStream(cuhandle, stream);
+         custat = cublasSetStream(cuhandle, stream);
       
          start = std::chrono::high_resolution_clock::now();
 
          // Launch factorization on device
-         sylver::spldlt::gpu::factor_ll(cuhandle, m, m, d_l, lda, inform, d_inform);
+         // sylver::spldlt::gpu::factor_ll(cuhandle, m, m, d_l, lda, inform, d_inform);
+         sylver::spldlt::gpu::factor_rl(cuhandle, m, m, d_l, lda, inform, d_inform);
          if (inform.flag != SUCCESS) {
             std::cout << "[chol_test][error] Failed to launch factorization "
                       << "(" << inform.flag << ")" << std::endl;
@@ -168,11 +165,7 @@ namespace tests {
          }
          // Wait for completion
          cuerr = cudaStreamSynchronize(stream);
-         if (cuerr != cudaSuccess) {
-            std::cout << "[chol_test][error] Failed to synchronize stream "
-                      << "(" << cudaGetErrorString(cuerr) << ")" << std::endl;
-            std::exit(1);
-         }
+         sylver::gpu::cuda_check_error(cuerr, context);
       
          end = std::chrono::high_resolution_clock::now();
 
@@ -181,6 +174,7 @@ namespace tests {
          // Cleanup
          cublasDestroy(cuhandle);
          cuerr = cudaFree(d_inform);
+         sylver::gpu::cuda_check_error(cuerr, context);
 
       }
       else {

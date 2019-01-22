@@ -24,7 +24,7 @@ namespace gpu {
          std::cout << "[" << fname << "][CUDA error] "
                    << "(" << cudaGetErrorString(cuerr) << ")" << std::endl;
          inform.flag = ERROR_CUDA_UNKNOWN;
-         exit(1);
+         std::exit(1);
       }
    }
 
@@ -33,16 +33,26 @@ namespace gpu {
       if (cuerr != cudaSuccess) {
          std::cout << "[" << fname << "][CUDA error] "
                    << "(" << cudaGetErrorString(cuerr) << ")" << std::endl;
-         exit(1);
+         std::exit(1);
       }
    }
 
-   // @brief Check CUDA error and exit if error is detected
-   inline void cublas_check_error(cublasStatus_t custat, std::string fname) {
-         if (custat != CUBLAS_STATUS_SUCCESS) {    
-            std::cout << "[" << fname << "][cuBLAS error] "
+   // @brief Check cuBLAS error and exit if error is detected
+   inline void cublas_check_error(cublasStatus_t custat, std::string fname, inform_t& inform) {
+      if (custat != CUBLAS_STATUS_SUCCESS) {    
+         std::cout << "[" << fname << "][cuBLAS error] "
                    << "(" << custat << ")" << std::endl;
-         exit(1);
+         inform.flag = ERROR_CUBLAS_UNKNOWN;
+         std::exit(1);
+      }
+   }
+
+   // @brief Check cuBLAS error and exit if error is detected
+   inline void cublas_check_error(cublasStatus_t custat, std::string fname) {
+      if (custat != CUBLAS_STATUS_SUCCESS) {    
+         std::cout << "[" << fname << "][cuBLAS error] "
+                   << "(" << custat << ")" << std::endl;
+         std::exit(1);
       }
    }
 

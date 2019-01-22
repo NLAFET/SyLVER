@@ -1,6 +1,7 @@
 /// @file
 /// @copyright 2016- The Science and Technology Facilities Council (STFC)
 /// @author    Florent Lopez
+#pragma once
 
 // Sylver
 #include "sylver_ciface.hxx"
@@ -10,6 +11,7 @@
 // STD
 #include <iostream>
 #include <algorithm>
+#include <string>
 
 // CuBLAS
 #include "cublas_v2.h"
@@ -17,8 +19,10 @@
 
 #define BLOCK_SIZE 8 // Thread block size
 // #define BLOCK_SIZE 16 // Thread block size
-// #define OUTER_BLOCK_SIZE 256
 #define OUTER_BLOCK_SIZE 128
+// #define OUTER_BLOCK_SIZE 256
+// #define OUTER_BLOCK_SIZE 512
+// #define OUTER_BLOCK_SIZE 768
 
 namespace sylver {
 namespace spldlt {
@@ -66,6 +70,8 @@ namespace gpu {
       cudaStream_t stream; // CUDA Stream
       // Retreive CUDA stream from cuBLAS handle
       custat = cublasGetStream(cuhandle, &stream);
+      sylver::gpu::cublas_check_error(custat, "sylver::spldlt::gpu::factor", inform);
+      
       if (custat != CUBLAS_STATUS_SUCCESS) {
          std::cout << "[sylver::spldlt::gpu::factor][error] Failed to retrieve stream from cuBLAS handle "
                    << "(" << custat << ")" << std::endl;
@@ -247,6 +253,7 @@ namespace gpu {
          int* d_inform) {
 
       // Error handling
+      std::string context = "spldlt::gpu::factor_rl";
       cudaError_t cuerr; // CUDA error
       cublasStatus_t custat; // CuBLAS status
 
@@ -259,18 +266,14 @@ namespace gpu {
       cudaStream_t stream; // CUDA Stream
       // Retreive CUDA stream from cuBLAS handle
       custat = cublasGetStream(cuhandle, &stream);
-      if (custat != CUBLAS_STATUS_SUCCESS) {
-         std::cout << "[sylver::spldlt::gpu::factor][error] Failed to retrieve stream from cuBLAS handle "
-                   << "(" << custat << ")" << std::endl;
-         inform.flag = ERROR_CUBLAS_UNKNOWN;
-         return;
-      }
-
+      sylver::gpu::cublas_check_error(custat, context, inform);
+      
       // Workspace
       T *d_d = nullptr;
       int lddd = ib;
-      cudaMalloc((void**)&d_d, lddd*ib*sizeof(T));
-      
+      cuerr = cudaMalloc((void**)&d_d, lddd*ib*sizeof(T));
+      sylver::gpu::cuda_check_error(cuerr, context, inform);
+
       T alpha = -1.0, beta = 1.0;
 
       // We use a 2 level blocking for maximizing the performance of
@@ -290,12 +293,13 @@ namespace gpu {
             int cblkn = std::min(in-iofs, ib); // Block column width
 
             // Copy diagonal tile into workspace d_d
-            cudaMemcpy2DAsync(
+            cuerr = cudaMemcpy2DAsync(
                   d_d, lddd*sizeof(T),
                   &d_a[ofs+iofs+(ofs+iofs)*ldda], ldda*sizeof(T),
                   cblkn*sizeof(T), cblkn,
                   cudaMemcpyDeviceToDevice,
                   stream);
+            sylver::gpu::cuda_check_error(cuerr, context, inform);
             
             factor_bcol(
                   stream, cblkm, cblkn,
@@ -305,22 +309,41 @@ namespace gpu {
 
             // Update trailing submatrix
             int iofst = (k+1)*ib; // Offset to trailing submatrix in outer block
-            int tblkm = m-ofs-iofst; // Width of trailing submatrix in outer block
-            int tblkn = in-iofst; // Width of trailing submatrix in outer block
-            if (tblkn>0) {
+            int itblkm = m-ofs-iofst; // Width of trailing submatrix in outer block
+            int itblkn = in-iofst; // Width of trailing submatrix in outer block
+            if (itblkn>0) {
                custat = sylver::gpu::dev_gemm(
                      cuhandle, CUBLAS_OP_N, CUBLAS_OP_T,
-                     tblkm, tblkn, ib, &alpha,
+                     itblkm, itblkn, ib, &alpha,
                      &d_a[ofs+iofst+ (ofs+iofs)*ldda], ldda,
                      &d_a[ofs+iofst+ (ofs+iofs)*ldda], ldda,
                      &beta, &d_a[ofs+iofst+(ofs+iofst)*ldda], ldda);
                // cudaStreamSynchronize(stream);
-               if (custat != CUBLAS_STATUS_SUCCESS) {    
-                  printf("[sylver::spldlt::gpu::factor][error] CuBLAS gemm kernel launch\n");
-                  inform.flag = ERROR_CUBLAS_UNKNOWN;
-                  return;
-               }
+               sylver::gpu::cublas_check_error(custat, context, inform);
+               
+            }
+         }
 
+         int ofst = (kk+1)*nb;
+         int tm = m-ofst; // Width of trailing submatrix
+         int tn = n-ofst; // Width of trailing submatrix
+         if (tn>0) {
+            int tnc = (tn-1) / nb +1; // Number of blocks in the trailing submatrix 
+            for (int jj = 0; jj < tnc; ++jj) {
+               int tblko = jj*nb; 
+               int tblkm = tm - tblko;
+               int tblkn = std::min(tn, nb);
+               // std::cout << "tblko = " << tblko << ", tblkm = " << tblkm << ", tblkn = " << tblkn << std::endl;
+               custat = sylver::gpu::dev_gemm(
+                     cuhandle, CUBLAS_OP_N, CUBLAS_OP_T,
+                     tblkm, tblkn, nb, &alpha,
+                     &d_a[ofst+tblko+ ofs*ldda], ldda,
+                     &d_a[ofst+tblko+ ofs*ldda], ldda,
+                     &beta,
+                     &d_a[ofst+tblko+(ofst+tblko)*ldda], ldda);
+               // cudaStreamSynchronize(stream);
+               sylver::gpu::cublas_check_error(custat, context, inform);
+               
             }
          }
       }

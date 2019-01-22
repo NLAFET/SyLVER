@@ -1,6 +1,6 @@
-!> \file
-!> \copyright 2016- The Science and Technology Facilities Council (STFC)
-!> \author    Florent Lopez
+!> @file
+!> @copyright 2016- The Science and Technology Facilities Council (STFC)
+!> @author    Florent Lopez
 module spldlt_factorize_mod
   use, intrinsic :: iso_c_binding
   ! use spral_ssids_datatypes

@@ -2,7 +2,6 @@
 /// @copyright 2016- The Science and Technology Facilities Council (STFC)
 /// @author    Jonathan Hogg
 /// @author    Florent Lopez
-
 #pragma once
 
 // SpLDLT
@@ -10,6 +9,7 @@
 #include "SymbolicFront.hxx"
 #include "kernels/ldlt_app.hxx"
 
+// STD
 #include <cassert>
 
 // SSIDS
