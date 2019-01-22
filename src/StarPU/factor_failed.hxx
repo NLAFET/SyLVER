@@ -1,12 +1,14 @@
+/// @file
+/// @copyright 2016- The Science and Technology Facilities Council (STFC)
+/// @author Florent Lopez
 #pragma once
 
-// SpLDLT
+// SyLVER
 #include "NumericFront.hxx"
 #include "factor_failed.hxx"
 
 // StarPU
 #include <starpu.h>
-
 // SSIDS
 #include "ssids/cpu/Workspace.hxx"
 #include "ssids/cpu/ThreadStats.hxx"

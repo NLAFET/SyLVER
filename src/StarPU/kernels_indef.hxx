@@ -1,17 +1,19 @@
+/// @file
+/// @copyright 2016- The Science and Technology Facilities Council (STFC)
+/// @author Florent Lopez
 #pragma once
 
-// SpLDLT
+// SyLVER
 #if defined(SPLDLT_USE_GPU)
 #include "kernels/gpu/factor_indef.hxx"
 #endif
-
 #include "kernels/ldlt_app.hxx"
 #include "kernels/factor_indef.hxx"
 // #include "StarPU/kernels.hxx"
 #include "SymbolicFront.hxx"
 #include "NumericFront.hxx"
 
-// TODO only load in debug mode
+// STD
 #include <iostream>
 #include <iomanip>
 

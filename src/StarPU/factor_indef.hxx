@@ -1,7 +1,12 @@
+/// @file
+/// @copyright 2016- The Science and Technology Facilities Council (STFC)
+/// @author Florent Lopez
 #pragma once
 
+// SyLVER
 #include "factor_indef.hxx"
 
+// StarPU
 #include <starpu.h>
 
 namespace spldlt { namespace starpu {

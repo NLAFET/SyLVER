@@ -1,5 +1,11 @@
+/// @file
+/// @copyright 2016- The Science and Technology Facilities Council (STFC)
+/// @author Florent Lopez
+
+// SyLVER
 #include "kernels_indef.hxx"
 
+// StarPU
 #include <starpu.h>
 
 namespace spldlt { namespace starpu {

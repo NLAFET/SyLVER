@@ -1,4 +1,11 @@
+/// @file
+/// @copyright 2016- The Science and Technology Facilities Council (STFC)
+/// @author Florent Lopez
+
+// SyLVER 
 #include "wrappers.hxx"
+
+// STD
 #include <stdexcept>
 
 extern "C" {

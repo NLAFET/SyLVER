@@ -1,3 +1,8 @@
+/// @file
+/// @copyright 2016- The Science and Technology Facilities Council (STFC)
+/// @author Florent Lopez
+
+// SyLVER
 #include "kernels/ldlt_app.hxx"
 
 // namespace spral { namespace ssids { namespace cpu {

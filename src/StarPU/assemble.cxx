@@ -1,3 +1,8 @@
+/// @file
+/// @copyright 2016- The Science and Technology Facilities Council (STFC)
+/// @author Florent Lopez
+
+// StarPU
 #include <starpu.h>
 
 namespace spldlt { namespace starpu {

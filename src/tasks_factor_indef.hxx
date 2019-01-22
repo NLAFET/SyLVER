@@ -1,3 +1,6 @@
+/// @file
+/// @copyright 2016- The Science and Technology Facilities Council (STFC)
+/// @author Florent Lopez
 #pragma once
 
 #include "factor_indef.hxx"
