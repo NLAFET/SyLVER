@@ -2,12 +2,18 @@
 /// @copyright 2016- The Science and Technology Facilities Council (STFC)
 /// @author Florent Lopez
 
+// SyLVER
+#include "kernels/gpu/convert.cuh"
 #include "kernels/gpu/factor.hxx"
-
+//STD
 #include <iostream>
-
+// CUDA
 #include <cuda_runtime.h>
 #include <cuda_runtime_api.h>
+
+// #if defined (HAVE_CUTLASS)
+// #else
+// #endif
 
 namespace /* anon */ {
 
@@ -188,6 +194,8 @@ namespace sylver {
 namespace spldlt {
 namespace gpu {
 
+   ////////////////////////////////////////
+
    // template<>
    // void factor_bcol<float>(
    //       const cudaStream_t stream,
@@ -246,5 +254,87 @@ namespace gpu {
          const cudaStream_t stream, int m, int n, double const *const d, int ldd,
          double *const a, int lda, int *const stat);
 
+   ////////////////////////////////////////
    
+   template<>
+   void factor_ll_hp<float>(
+         const cublasHandle_t cuhandle, 
+         int m, // Number of rows 
+         int n, // Number of columns
+         float *const d_a, // Matrix pointer on device 
+         int ldda, // Matrix leadind dim on device
+         inform_t& inform, // Info host
+         int *d_info // Info device
+         ) {
+      
+      // Error handling
+      std::string context = "spldlt::gpu::factor_ll_hp";
+      cudaError_t cuerr; // CUDA error
+      cublasStatus_t custat; // CuBLAS status
+
+      int const ib = BLOCK_SIZE; // Inner block size
+      // int const nb = BLOCK_SIZE; // Outer block size 
+      int const nb = OUTER_BLOCK_SIZE; // Outer block size         
+      // Number of block columns
+      int const nc = (n-1) / nb +1;
+
+      // std::cout << "[" << context << "]" << std::endl;
+
+      // Retreive CUDA stream from cuBLAS handle
+      cudaStream_t stream; // CUDA Stream
+      custat = cublasGetStream(cuhandle, &stream);
+      sylver::gpu::cublas_check_error(custat, context, inform);
+      
+      // Allocate memory to accomodate half prec representation of
+      // matrix A
+      sylver::gpu::half *d_a_hp = nullptr;
+      cuerr = cudaMalloc((void**)&d_a_hp, m*ldda*sizeof(sylver::gpu::half));      
+      sylver::gpu::cuda_check_error(cuerr, context, inform);
+
+      // Copy matrix and convert to half prec  
+      sylver::gpu::convert(stream, m, n, d_a, ldda, d_a_hp, ldda);
+      
+      // Workspace
+      float *d_d = nullptr;
+      int lddd = ib;
+      cuerr = cudaMalloc((void**)&d_d, lddd*ib*sizeof(float));
+      sylver::gpu::cuda_check_error(cuerr, context, inform);
+      
+      float alpha = -1.0, beta = 1.0;
+
+      // We use a 2 level blocking for maximizing the performance of
+      // the GEMM operaion on the GPU
+
+      for (int kk = 0; kk < nc; ++kk) {
+
+         int ofs = kk*nb;
+         int in = std::min(n-ofs, nb);
+         int inc = (in-1) / ib + 1; 
+         int updm = m-ofs;
+         
+         // Update trailing outer block in a left-looking fashion
+         if (ofs > 0) {
+
+            // std::cout << "[spldlt::gpu::factor] updm = " << updm << ", updn = " << in << ", k = " << ofs << std::endl;
+            cublasGemmEx(cuhandle, CUBLAS_OP_N, CUBLAS_OP_T,
+                         updm, in, ofs, &alpha,
+                         &d_a[ofs], CUDA_R_16F, ldda,
+                         &d_a[ofs], CUDA_R_16F, ldda,
+                         &beta,
+                         &d_a[ofs+ofs*ldda], CUDA_R_16F, ldda,
+                         CUDA_R_32F, CUBLAS_GEMM_DEFAULT);                         
+            // custat = sylver::gpu::dev_gemm(
+            //       cuhandle, CUBLAS_OP_N, CUBLAS_OP_T,
+            //       updm, in, ofs, &alpha,
+            //       &d_a[ofs], ldda,
+            //       &d_a[ofs], ldda,
+            //       &beta, &d_a[ofs+ofs*ldda], ldda);
+            // cudaStreamSynchronize(stream);
+            sylver::gpu::cublas_check_error(custat, context, inform);
+            // cudaStreamSynchronize(stream);
+         }
+
+      }
+   }
+
 }}} // End of namespace sylver::spldlt::gpu

@@ -28,6 +28,17 @@ namespace sylver {
 namespace spldlt {
 namespace gpu {
 
+   template<typename T>
+   void factor_ll_hp(
+         const cublasHandle_t cuhandle, 
+         int m, // Number of rows 
+         int n, // Number of columns
+         T *const d_a, // Matrix pointer on device 
+         int ldda, // Matrix leadind dim on device
+         inform_t& inform, // Info host
+         int *d_info // Info device
+         );
+
    // Perform the Cholesky factorization of a block-column matrix size
    // m x n with m >= n and n <= TILE_SIZE
    template<typename T>
@@ -56,6 +67,7 @@ namespace gpu {
          ) {
 
       // Error handling
+      std::string context = "spldlt::gpu::factor_ll";
       cudaError_t cuerr; // CUDA error
       cublasStatus_t custat; // CuBLAS status
 
@@ -70,15 +82,8 @@ namespace gpu {
       cudaStream_t stream; // CUDA Stream
       // Retreive CUDA stream from cuBLAS handle
       custat = cublasGetStream(cuhandle, &stream);
-      sylver::gpu::cublas_check_error(custat, "sylver::spldlt::gpu::factor", inform);
-      
-      if (custat != CUBLAS_STATUS_SUCCESS) {
-         std::cout << "[sylver::spldlt::gpu::factor][error] Failed to retrieve stream from cuBLAS handle "
-                   << "(" << custat << ")" << std::endl;
-         inform.flag = ERROR_CUBLAS_UNKNOWN;
-         return;
-      }
-      
+      sylver::gpu::cublas_check_error(custat, context, inform);
+            
       // CuSOLVER
       // cusolverStatus_t cusolstat;
       // cusolverDnHandle_t cusolhandle;
@@ -118,13 +123,7 @@ namespace gpu {
                   &d_a[ofs], ldda,
                   &beta, &d_a[ofs+ofs*ldda], ldda);
                // cudaStreamSynchronize(stream);
-            if (custat != CUBLAS_STATUS_SUCCESS) {
-               std::cout << "[sylver::spldlt::gpu::factor][error] cuBLAS gemm kernel launch "
-                         << "(" << custat << ")" << std::endl;
-               inform.flag = ERROR_CUBLAS_UNKNOWN;
-               return;
-            }
-
+            sylver::gpu::cublas_check_error(custat, context, inform);
             // cudaStreamSynchronize(stream);
 
          }         
@@ -209,12 +208,8 @@ namespace gpu {
                      &d_a[ofs+iofst+ (ofs+iofs)*ldda], ldda,
                      &beta, &d_a[ofs+iofst+(ofs+iofst)*ldda], ldda);
                // cudaStreamSynchronize(stream);
-               if (custat != CUBLAS_STATUS_SUCCESS) {    
-                  printf("[sylver::spldlt::gpu::factor][error] CuBLAS gemm kernel launch\n");
-                  inform.flag = ERROR_CUBLAS_UNKNOWN;
-                  return;
-               }
-               
+               sylver::gpu::cublas_check_error(custat, context, inform);
+                              
                // cudaStreamSynchronize(stream);
                // std::cout << "[spldlt::gpu::factor] cubstat = " << cubstat << std::endl;
             }

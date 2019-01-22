@@ -682,6 +682,8 @@ namespace tests {
    enum algo {
       /// SyLVER routine
       SyLVER,
+      /// SyLVER routine using half precision
+      SyLVER_HP,
       /// Use routine from cuSOLVER 
       cuSOLVER
    };

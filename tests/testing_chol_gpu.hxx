@@ -143,7 +143,7 @@ namespace tests {
          cuerr = cudaMalloc((void**)&d_inform, sizeof(int));
          sylver::gpu::cuda_check_error(cuerr, context);
          
-         // Initialize factrization
+         // Initialize factorization
          custat = cublasCreate(&cuhandle);
          if (custat != CUBLAS_STATUS_SUCCESS) {    
             std::cout << "[chol_test][error] Failed to create cuBLAS handle "
@@ -176,6 +176,24 @@ namespace tests {
          cuerr = cudaFree(d_inform);
          sylver::gpu::cuda_check_error(cuerr, context);
 
+      }
+      else if (algo == sylver::tests::SyLVER_HP) {
+
+         cublasHandle_t cuhandle;
+         inform_t inform; // Host side status
+
+         int *d_inform; // Device side status
+         cuerr = cudaMalloc((void**)&d_inform, sizeof(int));
+         sylver::gpu::cuda_check_error(cuerr, context);
+         // Initialize factorization
+         custat = cublasCreate(&cuhandle);
+         sylver::gpu::cublas_check_error(custat, context);
+         
+         sylver::spldlt::gpu::factor_ll_hp(cuhandle, m, m, d_l, lda, inform, d_inform);
+
+         cuerr = cudaFree(d_inform);
+         sylver::gpu::cuda_check_error(cuerr, context);
+         
       }
       else {
          std::cout << "[chol_test] Algo NOT implemented " << std::endl;
