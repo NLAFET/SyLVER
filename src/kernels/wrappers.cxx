@@ -20,7 +20,7 @@ extern "C" {
    void dlaswp_(int *n, double* a, int *lda, int *k1, int *k2, int *ipiv, const int *incx);
 }
 
-namespace spldlt {
+namespace sylver {
 
    // _LASWP
    template<>
@@ -36,19 +36,19 @@ namespace spldlt {
 
    // _LANGE
    template<>
-   double host_lange<double>(spldlt::norm norm, int m, int n, const double *a, int lda){
+   double host_lange<double>(sylver::norm norm, int m, int n, const double *a, int lda){
       char fnorm;
       switch(norm) {
-      case spldlt::NORM_M:
+      case sylver::NORM_M:
          fnorm = 'M';
          break;
-      case spldlt::NORM_ONE:
+      case sylver::NORM_ONE:
          fnorm = '1';
          break;
-      case spldlt::NORM_INF:
+      case sylver::NORM_INF:
          fnorm = 'I';
          break;
-      case spldlt::NORM_FRO:
+      case sylver::NORM_FRO:
          fnorm = 'F';
          break;
       }
@@ -57,11 +57,11 @@ namespace spldlt {
 
    /* _POTRF */
    template<>
-   int host_potrf<double>(enum spldlt::fillmode uplo, int n, double* a, int lda) {
+   int host_potrf<double>(enum sylver::fillmode uplo, int n, double* a, int lda) {
       char fuplo;
       switch(uplo) {
-      case spldlt::FILL_MODE_LWR: fuplo = 'L'; break;
-      case spldlt::FILL_MODE_UPR: fuplo = 'U'; break;
+      case sylver::FILL_MODE_LWR: fuplo = 'L'; break;
+      case sylver::FILL_MODE_UPR: fuplo = 'U'; break;
       default: throw std::runtime_error("Unknown fill mode");
       }
       int info;
@@ -72,51 +72,51 @@ namespace spldlt {
    /* _TRSM */
    template <>
    void host_trsm<double>(
-         enum spldlt::side side, enum spldlt::fillmode uplo,
-         enum spldlt::operation transa, enum spldlt::diagonal diag,
+         enum sylver::side side, enum sylver::fillmode uplo,
+         enum sylver::operation transa, enum sylver::diagonal diag,
          int m, int n,
          double alpha, const double* a, int lda,
          double* b, int ldb) {
-      char fside = (side==spldlt::SIDE_LEFT) ? 'L' : 'R';
-      char fuplo = (uplo==spldlt::FILL_MODE_LWR) ? 'L' : 'U';
-      char ftransa = (transa==spldlt::OP_N) ? 'N' : 'T';
-      char fdiag = (diag==spldlt::DIAG_UNIT) ? 'U' : 'N';
+      char fside = (side==sylver::SIDE_LEFT) ? 'L' : 'R';
+      char fuplo = (uplo==sylver::FILL_MODE_LWR) ? 'L' : 'U';
+      char ftransa = (transa==sylver::OP_N) ? 'N' : 'T';
+      char fdiag = (diag==sylver::DIAG_UNIT) ? 'U' : 'N';
       dtrsm_(&fside, &fuplo, &ftransa, &fdiag, &m, &n, &alpha, a, &lda, b, &ldb);
    }
 
    template <>
    void host_trsm<float>(
-         enum spldlt::side side, enum spldlt::fillmode uplo,
-         enum spldlt::operation transa, enum spldlt::diagonal diag,
+         enum sylver::side side, enum sylver::fillmode uplo,
+         enum sylver::operation transa, enum sylver::diagonal diag,
          int m, int n,
          float alpha, const float* a, int lda,
          float* b, int ldb) {
-      char fside = (side==spldlt::SIDE_LEFT) ? 'L' : 'R';
-      char fuplo = (uplo==spldlt::FILL_MODE_LWR) ? 'L' : 'U';
-      char ftransa = (transa==spldlt::OP_N) ? 'N' : 'T';
-      char fdiag = (diag==spldlt::DIAG_UNIT) ? 'U' : 'N';
+      char fside = (side==sylver::SIDE_LEFT) ? 'L' : 'R';
+      char fuplo = (uplo==sylver::FILL_MODE_LWR) ? 'L' : 'U';
+      char ftransa = (transa==sylver::OP_N) ? 'N' : 'T';
+      char fdiag = (diag==sylver::DIAG_UNIT) ? 'U' : 'N';
       strsm_(&fside, &fuplo, &ftransa, &fdiag, &m, &n, &alpha, a, &lda, b, &ldb);
    }
 
    /* _GEMM */
    template <>
    void host_gemm<double>(
-         enum spldlt::operation transa, enum spldlt::operation transb,
+         enum sylver::operation transa, enum sylver::operation transb,
          int m, int n, int k, double alpha, const double* a, int lda,
          const double* b, int ldb, double beta, double* c, int ldc) {
-      char ftransa = (transa==spldlt::OP_N) ? 'N' : 'T';
-      char ftransb = (transb==spldlt::OP_N) ? 'N' : 'T';
+      char ftransa = (transa==sylver::OP_N) ? 'N' : 'T';
+      char ftransb = (transb==sylver::OP_N) ? 'N' : 'T';
       dgemm_(&ftransa, &ftransb, &m, &n, &k, &alpha, a, &lda, b, &ldb, &beta, c, &ldc);
    }
    
    /* _SYRK */
    template <>
    void host_syrk<double>(
-         enum spldlt::fillmode uplo, enum spldlt::operation trans,
+         enum sylver::fillmode uplo, enum sylver::operation trans,
          int n, int k, double alpha, const double* a, int lda,
          double beta, double* c, int ldc) {
-      char fuplo = (uplo==spldlt::FILL_MODE_LWR) ? 'L' : 'U';
-      char ftrans = (trans==spldlt::OP_N) ? 'N' : 'T';
+      char fuplo = (uplo==sylver::FILL_MODE_LWR) ? 'L' : 'U';
+      char ftrans = (trans==sylver::OP_N) ? 'N' : 'T';
       dsyrk_(&fuplo, &ftrans, &n, &k, &alpha, a, &lda, &beta, c, &ldc);
    }
 
@@ -128,4 +128,4 @@ namespace spldlt {
       return info;
    }
 
-} // end of namespace spldlt
+} // end of namespace sylver

@@ -7,7 +7,7 @@
 #include <cstdio>
 #include <cassert>
 
-namespace spldlt {
+namespace sylver {
 
    /// @brief spldlt::operation enumerates operations that can be applied
    /// to a matrix * argument of a BLAS call.

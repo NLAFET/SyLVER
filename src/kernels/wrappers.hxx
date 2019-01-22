@@ -5,7 +5,7 @@
 
 #include "common.hxx"
 
-namespace spldlt {
+namespace sylver {
 
    enum norm {
       // 
@@ -26,26 +26,26 @@ namespace spldlt {
    void host_axpy(int n, const T a, const T *x, const int incx, T *y, const int incy);
 
    template <typename T> 
-   double host_lange(spldlt::norm norm, const int m, const int n, const T *a, const int lda);
+   double host_lange(sylver::norm norm, const int m, const int n, const T *a, const int lda);
 
    /* _POTRF */
    template <typename T>
-   int host_potrf(enum spldlt::fillmode uplo, int n, T* a, int lda);
+   int host_potrf(enum sylver::fillmode uplo, int n, T* a, int lda);
 
    /* _TRSM */
    template <typename T>
-   void host_trsm(enum spldlt::side side,enum spldlt::fillmode uplo,
-                  enum spldlt::operation transa, enum spldlt::diagonal diag,
+   void host_trsm(enum sylver::side side,enum sylver::fillmode uplo,
+                  enum sylver::operation transa, enum sylver::diagonal diag,
                   int m, int n, T alpha, const T* a, int lda, T* b, int ldb);
 
    /* _SYRK */
    template <typename T>
-   void host_syrk(enum spldlt::fillmode uplo, enum spldlt::operation trans,
+   void host_syrk(enum sylver::fillmode uplo, enum sylver::operation trans,
                   int n, int k, T alpha, const T* a, int lda, T beta, T* c, int ldc);
 
    /* _GEMM */
    template <typename T>
-   void host_gemm(enum spldlt::operation transa, enum spldlt::operation transb,
+   void host_gemm(enum sylver::operation transa, enum sylver::operation transb,
                   int m, int n, int k, T alpha, const T* a, int lda, const T* b,
                   int ldb, T beta, T* c, int ldc);
 

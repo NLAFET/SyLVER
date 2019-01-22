@@ -74,14 +74,12 @@ namespace tests {
 
       cudaStream_t stream;
       cuerr = cudaStreamCreate(&stream);
-      if (cuerr != cudaSuccess) {
-         std::cout << "[chol_test][error] Failed to create stream "
-                   << "(" << cudaGetErrorString(cuerr) << ")" << std::endl;
-         std::exit(1);
-      }
+      sylver::gpu::cuda_check_error(cuerr, context);
 
+      // Timers
       std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
 
+      // cuSOLVER algo
       if (algo == sylver::tests::cuSOLVER) {
 
          // Initialize cuSOLVER
@@ -133,6 +131,7 @@ namespace tests {
          cusolstat = cusolverDnDestroy(cusolhandle);
 
       }
+      // SyLVER algo
       else if (algo == sylver::tests::SyLVER) { 
 
          cublasStatus_t custat; // CuBLAS status
@@ -177,6 +176,7 @@ namespace tests {
          sylver::gpu::cuda_check_error(cuerr, context);
 
       }
+      // SyLVER algo exploiting half prec
       else if (algo == sylver::tests::SyLVER_HP) {
 
          cublasHandle_t cuhandle;
@@ -197,7 +197,7 @@ namespace tests {
       }
       else {
          std::cout << "[chol_test] Algo NOT implemented " << std::endl;
-         return 1;
+         std::exit(1);
       }
 
       // Calculate walltime
@@ -226,18 +226,18 @@ namespace tests {
       // spral::ssids::cpu::cholesky_solve_bwd(m, m, l, lda, nrhs, soln, ldsoln);
 
       // Fwd substitution
-      ::spldlt::host_trsm(
-            ::spldlt::SIDE_LEFT, ::spldlt::FILL_MODE_LWR,
-            ::spldlt::OP_N, ::spldlt::DIAG_NON_UNIT,
+      sylver::host_trsm(
+            sylver::SIDE_LEFT, sylver::FILL_MODE_LWR,
+            sylver::OP_N, sylver::DIAG_NON_UNIT,
             m, nrhs,
             (T) 1.0,
             l, lda,
             soln, ldsoln);
 
       // Bwd substitution
-      ::spldlt::host_trsm(
-            ::spldlt::SIDE_LEFT, ::spldlt::FILL_MODE_LWR,
-            ::spldlt::OP_T, ::spldlt::DIAG_NON_UNIT,
+      sylver::host_trsm(
+            sylver::SIDE_LEFT, sylver::FILL_MODE_LWR,
+            sylver::OP_T, sylver::DIAG_NON_UNIT,
             m, nrhs,
             (T) 1.0,
             l, lda,

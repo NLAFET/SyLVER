@@ -1,6 +1,6 @@
 #pragma once
 
-// SpLDLT
+// SyLVER
 #include "common.hxx"
 #include "kernels/wrappers.hxx"
 #include "kernels/gpu/factor_indef.hxx"
@@ -230,10 +230,10 @@ namespace spldlt { namespace tests {
          ////////////////////////////////////////
          // Check results
 
-         T lij_norm = host_lange(spldlt::NORM_FRO, m, n, l_ij, ld_lij);
-         host_axpy(ld_lij*n, -1.0, upd, 1.0, l_ij, 1.0);
+         T lij_norm = sylver::host_lange(sylver::NORM_FRO, m, n, l_ij, ld_lij);
+         sylver::host_axpy(ld_lij*n, -1.0, upd, 1.0, l_ij, 1.0);
          // host_axpy(ld_lij*n, -1.0, l_ij, 1.0, l_ij, 1.0);
-         T err_norm = host_lange(spldlt::NORM_FRO, m, n, l_ij, ld_lij);
+         T err_norm = sylver::host_lange(sylver::NORM_FRO, m, n, l_ij, ld_lij);
 
          // printf("[update_block_gpu_test] lij_norm = : %e\n", lij_norm);
          // printf("[update_block_gpu_test] err_norm = : %e\n", err_norm);

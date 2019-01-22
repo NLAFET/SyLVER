@@ -19,7 +19,7 @@ namespace splu {
 
    template <typename T, typename PoolAlloc>
    void factor_front_unsym_app(
-         struct cpu_factor_options& options,
+         struct spral::ssids::cpu::cpu_factor_options& options,
          spldlt::NumericFront<T, PoolAlloc> &node,
          std::vector<spral::ssids::cpu::Workspace>& workspaces) {
 

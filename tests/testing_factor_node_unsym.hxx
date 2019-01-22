@@ -5,6 +5,7 @@
 #include "NumericFront.hxx"
 #include "factor_unsym.hxx"
 #include "kernels/lu_nopiv.hxx"
+#include "sylver_ciface.hxx"
 
 // SSIDS
 #include "ssids/cpu/cpu_iface.hxx"
@@ -108,7 +109,7 @@ namespace tests {
          // Allocate contribution blocks
          front.alloc_contrib_blocks_unsym();
 
-         if (options.pivot_method == PivotMethod::app_block) {
+         if (options.pivot_method == spral::ssids::cpu::PivotMethod::app_block) {
             // Allocate backups of blocks
             front.alloc_backup_blocks_unsym();
             // Setup colulm data
@@ -145,7 +146,7 @@ namespace tests {
          // #else
          //       nworkers = omp_get_num_threads();
 #endif
-         std::vector<ThreadStats> worker_stats(nworkers);
+         std::vector<spral::ssids::cpu::ThreadStats> worker_stats(nworkers);
          std::vector<spral::ssids::cpu::Workspace> workspaces;
          const int PAGE_SIZE = 8*1024*1024; // 8 MB
 
@@ -167,11 +168,11 @@ namespace tests {
          auto start = std::chrono::high_resolution_clock::now();         
 
          switch (options.pivot_method) {
-         case PivotMethod::app_aggressive:
+         case spral::ssids::cpu::PivotMethod::app_aggressive:
             // Front factorization using restricted pivoting
             factor_front_unsym_rp(front, workspaces);
             break;
-         case PivotMethod::app_block:
+         case spral::ssids::cpu::PivotMethod::app_block:
             // Front factorization using restricted pivoting
             factor_front_unsym_app(options, front, workspaces);
             
@@ -308,7 +309,7 @@ namespace tests {
          ////////////////////////////////////////
          // Cleanup memory
 
-         if (options.pivot_method == PivotMethod::app_block) {
+         if (options.pivot_method == spral::ssids::cpu::PivotMethod::app_block) {
             // Allocate backups of blocks
             front.release_backup_blocks_unsym();
             // Free column data

@@ -3,15 +3,15 @@
 /// @author Florent Lopez
 #pragma once
 
+// SyLVER
+#include "kernels/common.hxx"
+#include "kernels/wrappers.hxx"
+
 // SSIDS
 // #include "ssids/cpu/kernels/common.hxx"
 // #include "ssids/cpu/kernels/wrappers.hxx"
 
-// SpLDLT
-#include "kernels/common.hxx"
-#include "kernels/wrappers.hxx"
-
-using namespace spral::ssids::cpu;
+// using namespace spral::ssids::cpu;
 
 namespace spldlt {
 
@@ -23,29 +23,32 @@ namespace spldlt {
          double *aval, 
          void **child_contrib, 
          struct spral::ssids::cpu::cpu_factor_options *options,
-         ThreadStats *stats);
+         spral::ssids::cpu::ThreadStats *stats);
    
-   /*
-     m: number of row in block
-     n: number of column in block
-    */
+   
+   /// @param m Number of rows in block
+   /// @param n Number of columns in block
    template <typename T>
    void factorize_diag_block(int m, int n, T *a, int lda) {
 
-      int flag = spldlt::host_potrf(FILL_MODE_LWR, n, a, lda);
+      int flag = sylver::host_potrf(sylver::FILL_MODE_LWR, n, a, lda);
+
       if(m > n) {
          // Diagonal block factored OK, handle some rectangular part of block
-         spldlt::host_trsm(SIDE_RIGHT, FILL_MODE_LWR, OP_T, DIAG_NON_UNIT,
-                           m-n, n, 1.0, a, lda,
-                           &a[n], lda);
+         sylver::host_trsm(
+               sylver::SIDE_RIGHT, sylver::FILL_MODE_LWR,
+               sylver::OP_T, sylver::DIAG_NON_UNIT,
+               m-n, n,
+               1.0,
+               a, lda,
+               &a[n], lda);
       }
    }
 
-   /*
-     m: number of row in block
-     n: number of column in block
-     upd: contribution block
-    */
+   
+   /// @param m Number of rows in block
+   /// @param n Number of column in block
+   /// @param upd Contribution block
    template <typename T>
    void factorize_diag_block(
          int m, int n,
@@ -53,28 +56,30 @@ namespace spldlt {
          T* upd, int ldupd,
          bool zero_upd) {
 
-      int flag = spldlt::host_potrf(FILL_MODE_LWR, n, a, lda);
-      if(m > n) {
-         // Diagonal block factored OK, handle some rectangular part of block
-         spldlt::host_trsm(SIDE_RIGHT, FILL_MODE_LWR, OP_T, DIAG_NON_UNIT,
-                           m-n, n, 1.0, a, lda,
-                           &a[n], lda);
+      int flag = sylver::host_potrf(sylver::FILL_MODE_LWR, n, a, lda);
+
+      if(m>n) {
+         // Diagonal block factored OK, handle some rectangular part
+         // of block
+         sylver::host_trsm(
+               sylver::SIDE_RIGHT, sylver::FILL_MODE_LWR,
+               sylver::OP_T, sylver::DIAG_NON_UNIT,
+               m-n, n,
+               1.0,
+               a, lda,
+               &a[n], lda);
          
          if(upd) {
             
             double rbeta = zero_upd ? 0.0 : 1.0;
             
-            // printf("[factorize_diag_block]\n");
-            // printf("[factorize_diag_block] blkm: %d, blkn: %d\n", m, n);
-            // printf("[factorize_diag_block] updm: %d, k: %d\n", m-n, n);
-            // printf("[factorize_diag_block] upd: %p\n", upd);
-
-            spldlt::host_syrk(FILL_MODE_LWR, OP_N, 
-                              m-n, n, 
-                              -1.0,
-                              &a[n], lda, 
-                              rbeta, 
-                              upd, ldupd);
+            sylver::host_syrk(
+                  sylver::FILL_MODE_LWR, sylver::OP_N, 
+                  m-n, n, 
+                  -1.0,
+                  &a[n], lda, 
+                  rbeta, 
+                  upd, ldupd);
          }
 
       }
@@ -89,16 +94,17 @@ namespace spldlt {
                     T *a_kk, int ld_a_kk, 
                     T *a_ik, int ld_a_ik) {
 
-      spldlt::host_trsm(SIDE_RIGHT, FILL_MODE_LWR, OP_T, DIAG_NON_UNIT,
-                        m, n, 1.0, a_kk, ld_a_kk, a_ik, ld_a_ik);
+      sylver::host_trsm(
+            sylver::SIDE_RIGHT, sylver::FILL_MODE_LWR,
+            sylver::OP_T, sylver::DIAG_NON_UNIT,
+            m, n, 1.0, a_kk, ld_a_kk, a_ik, ld_a_ik);
 
    }
 
-   /*
-     m: number of row in sub diag block
-     n: number of column in sub diag block
-     upd: contribution block
-    */
+   
+   /// @param m Number of rows in sub diag block
+   /// @param n Number of columns in sub diag block
+   /// @param upd Contribution block
    template <typename T>
    void solve_block(
          int m, int n, 
@@ -109,51 +115,59 @@ namespace spldlt {
          int blksz
          ) {
 
-      spldlt::host_trsm(SIDE_RIGHT, FILL_MODE_LWR, OP_T, DIAG_NON_UNIT,
-                        m, n, 1.0, a_kk, ld_a_kk, a_ik, ld_a_ik);
+      sylver::host_trsm(
+            sylver::SIDE_RIGHT, sylver::FILL_MODE_LWR,
+            sylver::OP_T, sylver::DIAG_NON_UNIT,
+            m, n, 1.0, a_kk, ld_a_kk, a_ik, ld_a_ik);
 
       if (n<blksz && upd) {
 
          double rbeta = zero_upd ? 0.0 : 1.0;
-         
-         // printf("[solve_block]\n");
-         // printf("[solve_block] blkm: %d\n", m);
-         // printf("[solve_block] updn: %d\n", blksz-n);
 
-         spldlt::host_gemm(OP_N, OP_T,
-                           m, blksz-n, n,
-                           -1.0,
-                           a_ik, ld_a_ik,
-                           &a_kk[n], ld_a_kk,
-                           rbeta,
-                           upd, ldupd);
+         sylver::host_gemm(
+               sylver::OP_N, sylver::OP_T,
+               m, blksz-n, n,
+               -1.0,
+               a_ik, ld_a_ik,
+               &a_kk[n], ld_a_kk,
+               rbeta,
+               upd, ldupd);
       }
    }
 
-   /*
-     A_ij <- A_ij - Aik A_jk^T
-     m: number of row in A_ij block
-     n: number of column in A_ij block
-     k: number of column in A_ik and A_jk blocks
-    */
+   
+   /// @brief Perform the update of block Aij i.e.
+   ///
+   ///   Aij = Aij - Aik * Ajk^T
+   ///
+   /// @param m Number of rows in A_ij block
+   /// @param n: Number of columns in A_ij block
+   /// @param k: Number of columns in A_ik and A_jk blocks
    template <typename T>
    void update_block(int m, int n, T *a_ij, int ld_a_ij,
                      int k,
                      T *a_ik, int ld_a_ik, 
                      T *a_kj, int ld_a_kj) {
       
-      spldlt::host_gemm(OP_N, OP_T, m, n, k, -1.0, a_ik, ld_a_ik,
-                        a_kj, ld_a_kj, 1.0, a_ij, ld_a_ij);
+      sylver::host_gemm(
+            sylver::OP_N, sylver::OP_T,
+            m, n, k,
+            -1.0,
+            a_ik, ld_a_ik,
+            a_kj, ld_a_kj,
+            1.0,
+            a_ij, ld_a_ij);
 
    }
 
-   /*
-     A_ij <- A_ij - Lik L_jk^T
-     m: number of row in A_ij block
-     n: number of column in A_ij block
-     k: number of column in A_ik and A_jk blocks
-     upd: contribution block
-    */
+   /// @brief Perform the update of block Aij i.e.
+   ///
+   ///   Aij = Aij - Aik * Ajk^T
+   ///   
+   /// @param m Number of rows in Aij block
+   /// @param n Number of columns in Aij block
+   /// @param k Number of columns in Aik and Ajk blocks
+   /// @param upd Contribution block
    template <typename T>
    void update_block(
          int m, int n, T *a_ij, int ld_a_ij,
@@ -166,38 +180,35 @@ namespace spldlt {
          int blksz
          ) {
 
-      spldlt::host_gemm(OP_N, OP_T, m, n, k, -1.0, a_ik, ld_a_ik,
-                        a_kj, ld_a_kj, 1.0, a_ij, ld_a_ij);
+      sylver::host_gemm(
+            sylver::OP_N, sylver::OP_T,
+            m, n, k, -1.0, a_ik, ld_a_ik,
+            a_kj, ld_a_kj, 1.0, a_ij, ld_a_ij);
       
       if(n<blksz && upd) {
 
-         // printf("[update_block] lda: %d\n", ld_a_ij);
-         // printf("[update_block] blkm: %d, blkn: %d\n", m, n);
-         // printf("[update_block] updm: %d, updn: %d, k: %d\n", updm, updn, k);
-         // printf("[update_block] upd: %p, ldupd: %d\n", upd, ldupd);
-         // printf("[update_block] blkn: %d, blksz: %d\n", n, blksz);
-
          double rbeta = zero_upd ? 0.0 : 1.0;
 
-         spldlt::host_gemm(OP_N, OP_T,
-                           updm, updn, k, 
-                           -1.0,
-                           &a_ik[m-updm], ld_a_ik, 
-                           &a_kj[n], ld_a_kj, 
-                           rbeta,
-                           upd, ldupd);
+         sylver::host_gemm(
+               sylver::OP_N, sylver::OP_T,
+               updm, updn, k, 
+               -1.0,
+               &a_ik[m-updm], ld_a_ik, 
+               &a_kj[n], ld_a_kj, 
+               rbeta,
+               upd, ldupd);
 
       }
    }
 
-   /*
-     Performs update of a block in Schur complement 
-     A_ij <- A_ij - Lik A_Lk^T
-     m: number of row in A_ij block
-     n: number of column in A_ij block
-     k: number of column in A_ik and A_jk blocks
-     upd: contribution block
-    */
+   /// @brief Perform the update of block Aij i.e.
+   ///
+   ///   Aij = Aij - Aik * Ajk^T
+   ///   
+   /// @param m Number of rows in Aij block
+   /// @param n Number of columns in Aij block
+   /// @param k Number of columns in Aik and Ajk blocks
+   /// @param upd Contribution block
    template <typename T>
    void update_block(
          int m, int n, 
@@ -207,15 +218,10 @@ namespace spldlt {
          T *a_kj, int ld_a_kj,
          bool zero_upd) {
 
-      // printf("[update_block]\n");
-      // printf("[update_block] upd: %p\n", upd);
-      // printf("[update_block] blkm: %d, blkn: %d, k: %d\n", m, n, k);
-      // printf("[update_block] ldupd: %d\n", ldupd);
-
       T rbeta = zero_upd ? 0.0 : 1.0;
 
-      spldlt::host_gemm(
-            OP_N, OP_T, 
+      sylver::host_gemm(
+            sylver::OP_N, sylver::OP_T, 
             m, n, k,
             -1.0,
             a_ik, ld_a_ik,
@@ -224,10 +230,9 @@ namespace spldlt {
             upd, ldupd);
    }
 
-   /*
-     Update block lying the diagonal
-     TODO: only A_ik or A_kj needed as it is the same block
-   */
+   
+   // @brief Update block lying the diagonal
+   // TODO: only A_ik or A_kj needed as it is the same block
    template <typename T>
    void update_diag_block(
          int m, int n, T *a_ij, int ld_a_ij,
@@ -235,19 +240,28 @@ namespace spldlt {
          T *a_ik, int ld_a_ik, 
          T *a_kj, int ld_a_kj) {
       
-      spldlt::host_syrk(FILL_MODE_LWR, OP_N, n, k, -1.0, 
-                        a_ik, ld_a_ik,
-                        1.0, 
-                        a_ij, ld_a_ij);
+      sylver::host_syrk(
+            sylver::FILL_MODE_LWR, sylver::OP_N,
+            n, k, -1.0, 
+            a_ik, ld_a_ik,
+            1.0, 
+            a_ij, ld_a_ij);
 
       if (m > n) {
 
-         spldlt::host_gemm(OP_N, OP_T, m-n, n, k, -1.0,
-                           &a_ik[n], ld_a_ik,
-                           a_kj, ld_a_kj, 1.0, &a_ij[n], ld_a_ij);
+         sylver::host_gemm(
+               sylver::OP_N, sylver::OP_T,
+               m-n, n, k,
+               -1.0,
+               &a_ik[n], ld_a_ik,
+               a_kj, ld_a_kj,
+               1.0,
+               &a_ij[n], ld_a_ij);
       }      
    }
 
+   // Following kernels are specific to the supernodal method
+   
    // template <typename T>
    // void expand_buffer_block(
    //       SymbolicSNode &snode, // symbolic source node  
@@ -376,4 +390,4 @@ namespace spldlt {
    //          work, rowmap, colmap);
    // }
 
-} /* end of namespace spldlt */
+} // End of namespace spldlt
