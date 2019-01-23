@@ -105,6 +105,10 @@ namespace gpu {
 #endif
    }
 
+   template<typename TA, typename TAO> 
+   __global__
+   void convert_kernel(int m, int n, const TA  *dA, int ldda, TAO *dB, int lddb );
+
    // Template specialization
    template<>
    __global__
@@ -132,7 +136,10 @@ namespace gpu {
          TA *const a, int lda, 
          TAO *const aout, int ldaout) {
       
-      std::cout << "[convert]" << std::endl;
+      std::cout << "[convert]"
+                << " m = " << m << ", n = " << n
+                << " lda = " << lda << ", ldaout = " << ldaout
+                << std::endl;
       
       assert( BLK_X == BLK_Y );
       const int super_NB = max_blocks*BLK_X;
@@ -160,5 +167,9 @@ namespace gpu {
    template void convert<float, sylver::gpu::half>(
          cudaStream_t const stream, int m, int n, float *const a, int lda, 
          sylver::gpu::half *const aout, int ldaout);
+
+   template void convert<sylver::gpu::half, float>(
+         cudaStream_t const stream, int m, int n, sylver::gpu::half *const a, int lda, 
+         float *const aout, int ldaout);
 
 }} // End of namespace sykver::gpu

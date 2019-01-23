@@ -13,15 +13,9 @@ namespace gpu {
 
    using half = __half;
 
-   template<typename TA, typename TAO> 
-   __global__
-   void convert_kernel(int m, int n, const TA  *dA, int ldda, TAO *dB, int lddb );
-
    // @brief Convert matrix a of type TA into type TAO and put result
    // in aout
    template<typename TA, typename TAO>
    void convert(cudaStream_t const stream, int m, int n, TA *const a, int lda, TAO *const aout, int ldaout);
-
-   
 
 }} // End of namespace sykver::gpu

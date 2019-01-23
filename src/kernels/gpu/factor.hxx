@@ -97,7 +97,8 @@ namespace gpu {
       // Workspace
       T *d_d = nullptr;
       int lddd = ib;
-      cudaMalloc((void**)&d_d, lddd*ib*sizeof(T));
+      cuerr = cudaMalloc((void**)&d_d, lddd*ib*sizeof(T));
+      sylver::gpu::cuda_check_error(cuerr, context, inform);
       
       T alpha = -1.0, beta = 1.0;
 
@@ -217,23 +218,12 @@ namespace gpu {
       }
 
       cuerr = cudaStreamSynchronize(stream);
-      if (cuerr != cudaSuccess) {
-         std::cout << "[sylver::spldlt::gpu::factor][error] Failed to synchronize stream "
-                   << "(" << cudaGetErrorString(cuerr) << ")" << std::endl;
-         inform.flag = ERROR_CUDA_UNKNOWN;
-         return;
-      }
+      sylver::gpu::cuda_check_error(cuerr, context, inform);
 
       // // Cleanup memory
       // cublasDestroy(cuhandle);
-
       cuerr = cudaFree(d_d);
-      if (cuerr != cudaSuccess) {
-         std::cout << "[sylver::spldlt::gpu::factor][error] Device memory free failed "
-                   << "(" << cudaGetErrorString(cuerr) << ")" << std::endl;
-         inform.flag = ERROR_CUDA_UNKNOWN;
-         return;
-      }
+      sylver::gpu::cuda_check_error(cuerr, context, inform);
 
    }
 

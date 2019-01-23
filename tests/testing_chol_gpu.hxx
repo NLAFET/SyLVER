@@ -188,8 +188,14 @@ namespace tests {
          // Initialize factorization
          custat = cublasCreate(&cuhandle);
          sylver::gpu::cublas_check_error(custat, context);
-         
+
+         start = std::chrono::high_resolution_clock::now();
+
          sylver::spldlt::gpu::factor_ll_hp(cuhandle, m, m, d_l, lda, inform, d_inform);
+
+         end = std::chrono::high_resolution_clock::now();
+
+         std::cout << "[chol_test] Inform flag = " << inform.flag << std::endl;
 
          cuerr = cudaFree(d_inform);
          sylver::gpu::cuda_check_error(cuerr, context);
@@ -208,6 +214,7 @@ namespace tests {
       // Get matrix into host memory      
       custat = cublasGetMatrix(m, m, sizeof(T), d_l, lda, l, lda);
       // cudaMemcpy(l, d_l, lda*m*sizeof(T), cudaMemcpyDeviceToHost);
+      sylver::gpu::cublas_check_error(custat, context);
 
       cudaDeviceSynchronize();
 
