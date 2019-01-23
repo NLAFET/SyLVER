@@ -8,6 +8,7 @@
 // CUDA
 #include <cuda_runtime.h>
 #include <cuda_runtime_api.h>
+#include <cuda_fp16.h>
 
 // MAGMA see magmablas/hlaconvert.cu
 const int max_blocks = 65535;
@@ -135,12 +136,7 @@ namespace gpu {
          int m, int n,
          TA *const a, int lda, 
          TAO *const aout, int ldaout) {
-      
-      std::cout << "[convert]"
-                << " m = " << m << ", n = " << n
-                << " lda = " << lda << ", ldaout = " << ldaout
-                << std::endl;
-      
+            
       assert( BLK_X == BLK_Y );
       const int super_NB = max_blocks*BLK_X;
       dim3 super_grid(
@@ -153,10 +149,11 @@ namespace gpu {
       int mm, nn;
       for( unsigned int i=0; i < super_grid.x; ++i ) {
          mm = (i == super_grid.x-1 ? m % super_NB : super_NB);
-         grid.x = (mm + super_NB - 1) / BLK_X;
+         grid.x = (mm + BLK_X - 1) / BLK_X;
          for( unsigned int j=0; j < super_grid.y; ++j ) {  // full row
             nn = (j == super_grid.y-1 ? n % super_NB : super_NB);
-            grid.y = (nn + super_NB - 1) / BLK_Y;
+            grid.y = (nn + BLK_Y - 1) / BLK_Y;
+
             convert_kernel 
                <<< grid, threads, 0, stream >>>
                (mm, nn, &a[i*super_NB + j*super_NB*lda], lda, &aout[i*super_NB + j*super_NB*ldaout], ldaout);

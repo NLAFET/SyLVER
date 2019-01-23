@@ -330,16 +330,16 @@ namespace gpu {
          int updm = m-ofs;
 
          // Copy panel into temporary buffer
-         start = std::chrono::high_resolution_clock::now();
+         // start = std::chrono::high_resolution_clock::now();
          sylver::gpu::convert(stream, updm, in, &d_a_hp[ofs+ofs*ldda], ldda, d_a_tmp, ldda);
-         cudaStreamSynchronize(stream);
-         end = std::chrono::high_resolution_clock::now();
-         tconv =  
-         std::chrono::duration_cast<std::chrono::nanoseconds>
-            (end-start).count();
-         std::cout << "[" << context << "] "
-                   << "Time to convert hp to sp into panel (s) = " << 1e-9*tconv 
-                   << std::endl;
+         // cudaStreamSynchronize(stream);
+         // end = std::chrono::high_resolution_clock::now();
+         // tconv =  
+         // std::chrono::duration_cast<std::chrono::nanoseconds>
+            // (end-start).count();
+         // std::cout << "[" << context << "] "
+                   // << "Time to convert hp to sp into panel (s) = " << 1e-9*tconv 
+                   // << std::endl;
 
          // std::cout << "[" << context << "]" << " im =  " << updm << ", in = " << in << std::endl;
 
