@@ -685,7 +685,9 @@ namespace tests {
       /// SyLVER routine using half precision
       SyLVER_HP,
       /// Use routine from cuSOLVER 
-      cuSOLVER
+      cuSOLVER,
+      /// Use routine from cuSOLVER using half precision
+      cuSOLVER_HP,
    };
 
    // Generates a random dense positive definte matrix. Entries are

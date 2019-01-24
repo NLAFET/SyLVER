@@ -106,17 +106,10 @@ namespace tests {
                d_l, lda, 
                d_work, worksz,
                d_info);
-         if (cusolstat != CUSOLVER_STATUS_SUCCESS) {
-            printf("[chol_test][error] Failed to launch cuSOLVER potrf\n");
-            return 1;
-         }
+
          // Wait for completion
          cuerr = cudaStreamSynchronize(stream);
-         if (cuerr != cudaSuccess) {
-            std::cout << "[chol_test][error] Failed to synchronize stream "
-                      << "(" << cudaGetErrorString(cuerr) << ")" << std::endl;
-            std::exit(1);
-         }
+         sylver::gpu::cuda_check_error(cuerr, context);
 
          end = std::chrono::high_resolution_clock::now();
 
@@ -203,7 +196,7 @@ namespace tests {
       }
       else {
          std::cout << "[chol_test] Algo NOT implemented " << std::endl;
-         std::exit(1);
+         std::exit(0);
       }
 
       // Calculate walltime
@@ -262,7 +255,7 @@ namespace tests {
 
       // Cleanup memory
 
-      // cudaStreamDestroy(stream);
+      cudaStreamDestroy(stream);
 
       // cudaFree(d_work);
       cudaFree(d_l);

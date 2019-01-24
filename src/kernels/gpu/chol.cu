@@ -109,7 +109,6 @@ namespace /* anon */ {
       
       // Load A (A_kk and A_ik) into shared memory workspace W
       dev_block_load<T, TILE_SIZE>(bx, m, n, d, ldd, l, ldl, swork);
-      // dev_init_chol_fact<T, TILE_SIZE, 2>(bx, m, n, l, ldl, swork);
       __syncthreads();
    
       // Block info

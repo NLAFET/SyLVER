@@ -6,6 +6,7 @@
 // STD
 #include <cstring>
 #include <cstdlib>
+#include <iostream>
 
 namespace spldlt {
 
@@ -87,6 +88,12 @@ namespace spldlt {
             }
             else if ( !strcmp("--algo=cusolver", argv[i]) ) {
                algo = sylver::tests::algo::cuSOLVER;
+            }
+            else if ( !strcmp("--algo=cusolver-hp", argv[i]) ) {
+               algo = sylver::tests::algo::cuSOLVER_HP;
+            }
+            else {
+               std::cout << "Unrecognized command " << i << std::endl;
             }
             
          }

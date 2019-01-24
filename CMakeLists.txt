@@ -464,6 +464,17 @@ if (${KERNEL_TESTS} MATCHES "ON")
     target_link_libraries(sylver_tests_factor_gpu spldlt_tests)
     target_link_libraries(sylver_tests_factor_gpu cusolver) # CuSOLVER
 
+    add_executable(sylver_tests_gemm_gpu tests/drivers/gemm_gpu_test.cxx)
+
+    target_include_directories(sylver_tests_gemm_gpu PUBLIC ${SPRAL_DIR})
+    target_include_directories(sylver_tests_gemm_gpu PUBLIC "${SpLDLT_SOURCE_DIR}/tests")
+    target_link_libraries(sylver_tests_gemm_gpu spldlt)
+    target_link_libraries(sylver_tests_gemm_gpu ${obj})
+    target_link_libraries(sylver_tests_gemm_gpu ${SPRAL_LIBRARIES})
+    target_link_libraries(sylver_tests_gemm_gpu ${LIBS})
+    target_link_libraries(sylver_tests_gemm_gpu spldlt_tests)
+    target_link_libraries(sylver_tests_gemm_gpu cusolver) # CuSOLVER
+
   endif()
   
   target_include_directories(spldlt_tests_factor_node PUBLIC "${SpLDLT_SOURCE_DIR}/tests")
