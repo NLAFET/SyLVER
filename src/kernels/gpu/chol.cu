@@ -292,8 +292,17 @@ namespace gpu {
       // Allocate memory to accomodate half prec representation of
       // matrix A
       sylver::gpu::half *d_a_hp = nullptr;
+      start = std::chrono::high_resolution_clock::now();
       cuerr = cudaMalloc((void**)&d_a_hp, m*ldda*sizeof(sylver::gpu::half));      
       sylver::gpu::cuda_check_error(cuerr, context, inform);
+      end = std::chrono::high_resolution_clock::now();
+      long talloc =
+         std::chrono::duration_cast<std::chrono::nanoseconds>
+         (end-start).count();
+      std::cout << "[" << context << "] "
+                << "Time to allocate hp matrix (s) = " 
+                << std::scientific << 1e-9*talloc 
+                << std::endl;
 
       // Copy matrix into buffer and convert to half prec  
       start = std::chrono::high_resolution_clock::now();
@@ -354,7 +363,8 @@ namespace gpu {
                          &beta,
                          // &d_a[ofs+ofs*ldda], CUDA_R_16F, ldda,
                          d_a_tmp, CUDA_R_32F, ldda,
-                         CUDA_R_32F, CUBLAS_GEMM_DEFAULT);                         
+                         CUDA_R_32F,
+                         CUBLAS_GEMM_DEFAULT);                         
             // custat = sylver::gpu::dev_gemm(
             //       cuhandle, CUBLAS_OP_N, CUBLAS_OP_T,
             //       updm, in, ofs, &alpha,
@@ -382,7 +392,7 @@ namespace gpu {
                   cblkn*sizeof(float), cblkn,
                   cudaMemcpyDeviceToDevice,
                   stream);
-            cudaStreamSynchronize(stream);
+            // cudaStreamSynchronize(stream);
             sylver::gpu::cuda_check_error(cuerr, context, inform, "Failed to copy diag tile into buffer");
             
             factor_bcol(
@@ -408,17 +418,17 @@ namespace gpu {
             //       &d_a[ofs+iofs+(ofs+iofs)*ldda], ldda,
             //       &d_a[ofs+iofs+cblkn+(ofs+iofs)*ldda], ldda);
             
-            cudaStreamSynchronize(stream);
-            int *info;
-            cudaMallocHost(&info, sizeof(int));
-            cuerr = cudaMemcpyAsync(info, d_info, sizeof(int), cudaMemcpyDeviceToHost, stream);
-            cudaStreamSynchronize(stream);
-            if (*info < cblkn) { // Not positive-definite
-               std::cout << "[spldlt::gpu::factor][error] kk = " << kk << std::endl;
-               std::cout << "[spldlt::gpu::factor][error] negative or null pivot, info = " << *info << std::endl;
-               inform.flag = ERROR_NOT_POS_DEF;
-               exit(1);
-            }
+            // cudaStreamSynchronize(stream);
+            // int *info;
+            // cudaMallocHost(&info, sizeof(int));
+            // cuerr = cudaMemcpyAsync(info, d_info, sizeof(int), cudaMemcpyDeviceToHost, stream);
+            // cudaStreamSynchronize(stream);
+            // if (*info < cblkn) { // Not positive-definite
+            //    std::cout << "[spldlt::gpu::factor][error] kk = " << kk << std::endl;
+            //    std::cout << "[spldlt::gpu::factor][error] negative or null pivot, info = " << *info << std::endl;
+            //    inform.flag = ERROR_NOT_POS_DEF;
+            //    exit(1);
+            // }
          
             // Update trailing submatrix
             int iofst = (k+1)*ib; // Offset to trailing submatrix in outer block

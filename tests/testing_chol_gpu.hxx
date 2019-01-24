@@ -155,8 +155,8 @@ namespace tests {
          start = std::chrono::high_resolution_clock::now();
 
          // Launch factorization on device
-         // sylver::spldlt::gpu::factor_ll(cuhandle, m, m, d_l, lda, inform, d_inform);
-         sylver::spldlt::gpu::factor_rl(cuhandle, m, m, d_l, lda, inform, d_inform);
+         sylver::spldlt::gpu::factor_ll(cuhandle, m, m, d_l, lda, inform, d_inform);
+         // sylver::spldlt::gpu::factor_rl(cuhandle, m, m, d_l, lda, inform, d_inform);
          if (inform.flag != SUCCESS) {
             std::cout << "[chol_test][error] Failed to launch factorization "
                       << "(" << inform.flag << ")" << std::endl;
