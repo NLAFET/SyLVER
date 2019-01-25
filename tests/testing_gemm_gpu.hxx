@@ -17,7 +17,7 @@ namespace sylver {
 namespace tests {   
 
    template<typename T>
-   int gemm_test(int m, int n, int k, enum algo algo) {
+   int gemm_test(int m, int n, int k, enum algo algo, bool usetc = true) {
 
       std::string context = "gemm_test";
       bool failed = false;
@@ -154,8 +154,8 @@ namespace tests {
                                // d_c_hp, CUDA_R_16F, ldda,
                                // CUDA_R_16F,
                                CUDA_R_32F,
-                               // CUBLAS_GEMM_DEFAULT
-                               CUBLAS_GEMM_DEFAULT_TENSOR_OP
+                               (usetc) ? CUBLAS_GEMM_DEFAULT_TENSOR_OP : CUBLAS_GEMM_DEFAULT
+                               
                );
          sylver::gpu::cublas_check_error(custat, context);
 

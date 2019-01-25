@@ -15,7 +15,8 @@ namespace spldlt {
    public:
       SpldltOpts():
          ncpu(1), ngpu(0), m(256), n(256), k(256), nb(256), ib(256), posdef(false), 
-         check(true), chol(false), diagdom(false), algo(sylver::tests::algo::SyLVER) 
+         check(true), chol(false), diagdom(false), algo(sylver::tests::algo::SyLVER),
+         usetc(true)
       {}
 
       void parse_opts(int argc, char** argv) {
@@ -61,6 +62,10 @@ namespace spldlt {
             }
             else if ( !strcmp("-ngpu", argv[i]) && i+1 < argc ) {
                ngpu =  std::atoi( argv[++i] );
+            }
+            else if ( !strcmp("--notc", argv[i]) ) {
+               std::cout << "Tensor cores deactivated" << std::endl;
+               usetc =  false;
             }
             else if ( !strcmp("--posdef", argv[i]) ) {
                posdef = true;
@@ -115,5 +120,6 @@ namespace spldlt {
       bool chol; // Use Cholesky factorization
       bool diagdom; // Diagonally dominant matrix (unsymmetric case)
       enum sylver::tests::algo algo; // Algorithm to use
+      bool usetc; // Use tensor cores on GPU 
    };
 }

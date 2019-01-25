@@ -706,13 +706,13 @@ namespace tests {
       //    for(int i=0; i<j; ++i)
       //       a[j*lda+i] = std::numeric_limits<T>::signaling_NaN();
       // Fill upper triangle with zeros
-      for(int j=0; j<n; ++j)
-         for(int i=0; i<j; ++i)
-            a[j*lda+i] = 0.0;
-      // Symmetrize
       // for(int j=0; j<n; ++j)
       //    for(int i=0; i<j; ++i)
-      //       a[j*lda+i] = a[i*lda+j];
+      //       a[j*lda+i] = 0.0;
+      // Symmetrize
+      for(int j=0; j<n; ++j)
+         for(int i=0; i<j; ++i)
+            a[j*lda+i] = a[i*lda+j];
 
    }
 
@@ -745,6 +745,19 @@ namespace tests {
             rhs[i] += a[j*lda+i] * 1.0;
          }
       }
+   }
+
+   // Calculates forward error ||soln-x||_inf assuming x=1.0
+   template<typename T>
+   T forward_error(int n, int nrhs, T const* soln, int ldx) {
+      /* Check scaled backwards error */
+      T fwderr=0.0;
+      for(int r=0; r<nrhs; ++r)
+         for(int i=0; i<n; ++i) {
+            T diff = std::fabs(soln[r*ldx+i] - 1.0);
+            fwderr = std::max(fwderr, diff);
+         }
+      return fwderr;
    }
 
    // Calculate scaled backward error ||Ax-b|| / ( ||A|| ||x|| + ||b||

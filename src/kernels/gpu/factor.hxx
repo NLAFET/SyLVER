@@ -19,10 +19,17 @@
 
 #define BLOCK_SIZE 8 // Thread block size
 // #define BLOCK_SIZE 16 // Thread block size
+// #define OUTER_BLOCK_SIZE 16
+// #define OUTER_BLOCK_SIZE 32
+// #define OUTER_BLOCK_SIZE 64
 #define OUTER_BLOCK_SIZE 128
 // #define OUTER_BLOCK_SIZE 256
 // #define OUTER_BLOCK_SIZE 512
 // #define OUTER_BLOCK_SIZE 768
+
+// Debug values
+// #define BLOCK_SIZE 2 // Thread block size
+// #define OUTER_BLOCK_SIZE 4
 
 namespace sylver {
 namespace spldlt {
@@ -61,7 +68,6 @@ namespace gpu {
          T const *const d, int ldd,
          T *const a, int lda,
          int *const stat);
-
 
    // @brief Perform the Cholesky factorization on the GPU for a
    // matrix size m x n such that m >= n
@@ -138,8 +144,7 @@ namespace gpu {
                   &beta, &d_a[ofs+ofs*ldda], ldda);
                // cudaStreamSynchronize(stream);
             sylver::gpu::cublas_check_error(custat, context, inform);
-            // cudaStreamSynchronize(stream);
-
+            cudaStreamSynchronize(stream);
          }         
 
          // Factor outer block

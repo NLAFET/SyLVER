@@ -24,7 +24,7 @@ int main(int argc, char** argv) {
              << std::endl;
    
    // ret = gemm_test<double>(opts.m, opts.n, opts.k, opts.algo);
-   ret = gemm_test<float>(opts.m, opts.n, opts.k, opts.algo);
+   ret = gemm_test<float>(opts.m, opts.n, opts.k, opts.algo, opts.usetc);
    
    return ret;
 }

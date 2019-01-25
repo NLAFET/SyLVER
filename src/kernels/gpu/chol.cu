@@ -127,12 +127,20 @@ namespace /* anon */ {
          if ( d11 <= 0.0 ) {
             // zero or negative pivot detected , stop factorization
             // and record column index
-            if ((bx == 0) && (ty == 0) && (ty == 0)) {
+            if ((bx == 0) && (ty == 0) && (tx == 0)) {
                printf("[dev_llt_block] Zero or negative pivot detected, d11 = %.3e\n", d11);
                stat[0] = k;
             }
             return;
          }
+
+         // if (isnan(d11) || isinf(d11)) {
+         //    if ((bx == 0) && (ty == 0) && (tx == 0)) {
+         //       printf("[dev_llt_block] NaN detected\n");
+         //       printf("[dev_llt_block] m = %d, n = %d\n", m, n);
+         //    }
+         //    continue;
+         // }
 
          d11 = sqrt(d11); // Compute pivot
          __syncthreads();
@@ -142,6 +150,17 @@ namespace /* anon */ {
          if (idx < ld_swork) {
          // for (int idx = tx + ty*TILE_SIZE; idx < ld_swork; idx += TILE_SIZE*TILE_SIZE)
             swork[idx + k*ld_swork] /= d11;
+
+            // T u = 1e-5; // Threshold
+            // T aik = swork[idx + k*ld_swork];
+            // if (isnan(aik) || isinf(aik)) {
+            //    continue;
+            //    // printf("[dev_llt_block] NaN enrty detected, aik = %.3e\n", aik);
+            // }
+            // else if (fabs(aik) > (1/u)) {
+            //    printf("[dev_llt_block] large enrty detected, aik = %.3e\n", aik);
+            // }
+
          }
          __syncthreads();
          
@@ -150,6 +169,7 @@ namespace /* anon */ {
             // Update A_kk
             if (tx > k)
                swork[tx + ty*ld_swork] -= swork[tx + k*ld_swork]*swork[ty + k*ld_swork];
+            
             // Update A_ik
             int sdata_x = tx + TILE_SIZE; // Row index in sdata
             swork[sdata_x + ty*ld_swork] -= swork[sdata_x + k*ld_swork]*swork[ty + k*ld_swork];
@@ -283,10 +303,17 @@ namespace gpu {
       std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
 
       std::cout << "[" << context << "]" << std::endl;
+      // std::cout << "[" << context << "]" << " nc = " << nc << std::endl;
 
       // Retreive CUDA stream from cuBLAS handle
-      cudaStream_t stream; // CUDA Stream
+      cudaStream_t stream = NULL; // CUDA Stream
+      // custat = cublasSetStream(cuhandle, NULL);
       custat = cublasGetStream(cuhandle, &stream);
+      sylver::gpu::cublas_check_error(custat, context, inform);
+
+      // Set Math mode
+      // custat = cublasSetMathMode(cuhandle, CUBLAS_DEFAULT_MATH);
+      custat = cublasSetMathMode(cuhandle, CUBLAS_TENSOR_OP_MATH);
       sylver::gpu::cublas_check_error(custat, context, inform);
       
       // Allocate memory to accomodate half prec representation of
@@ -338,6 +365,7 @@ namespace gpu {
       // cuerr = cudaMalloc((void**)&d_work, worksz*sizeof(float)); 
 
       float alpha = -1.0, beta = 1.0;
+      sylver::gpu::half alpha_hp = -1.0, beta_hp = 1.0;
       // We use a 2 level blocking for maximizing the performance of
       // the GEMM operaion on the GPU
 
@@ -366,16 +394,33 @@ namespace gpu {
          if (ofs > 0) {
 
             // std::cout << "[spldlt::gpu::factor] updm = " << updm << ", updn = " << in << ", k = " << ofs << std::endl;
-            cublasGemmEx(cuhandle, CUBLAS_OP_N, CUBLAS_OP_T,
-                         updm, in, ofs, &alpha,
-                         &d_a_hp[ofs], CUDA_R_16F, ldda,
-                         &d_a_hp[ofs], CUDA_R_16F, ldda,
-                         &beta,
-                         // &d_a[ofs+ofs*ldda], CUDA_R_16F, ldda,
-                         d_a_tmp, CUDA_R_32F, ldda,
-                         CUDA_R_32F,
-                         // CUBLAS_GEMM_DEFAULT
-                         CUBLAS_GEMM_DEFAULT_TENSOR_OP
+
+            // custat = cublasHgemm(cuhandle, CUBLAS_OP_N, CUBLAS_OP_T,
+            //                      updm, in, ofs,
+            //                      &alpha_hp,
+            //                      &d_a_hp[ofs], ldda,
+            //                      &d_a_hp[ofs], ldda,
+            //                      &beta_hp,
+            //                      &d_a_hp[ofs+ofs*ldda], ldda);
+            
+            custat = cublasGemmEx(cuhandle, CUBLAS_OP_N, CUBLAS_OP_T,
+                                  updm, in, ofs, 
+                                  // &alpha_hp,
+                                  &alpha,
+                                  &d_a_hp[ofs], CUDA_R_16F, ldda,
+                                  &d_a_hp[ofs], CUDA_R_16F, ldda,
+                                  // &beta_hp,
+                                  &beta,
+                                  // &d_a[ofs+ofs*ldda], CUDA_R_16F, ldda,
+                                  d_a_tmp, CUDA_R_32F, ldda,
+                                  // &d_a_hp[ofs+ofs*ldda], CUDA_R_16F, ldda,
+                                  CUDA_R_32F,
+                                  // CUDA_R_16F,
+                                  // CUBLAS_GEMM_DEFAULT
+                                  // CUBLAS_GEMM_ALGO0
+                                  // CUBLAS_GEMM_ALGO1
+                                  CUBLAS_GEMM_DEFAULT_TENSOR_OP
+                                  // CUBLAS_GEMM_ALGO0_TENSOR_OP
                   );
             // custat = sylver::gpu::dev_gemm(
             //       cuhandle, CUBLAS_OP_N, CUBLAS_OP_T,
@@ -387,6 +432,8 @@ namespace gpu {
             sylver::gpu::cublas_check_error(custat, context, inform, "Failed to launch cublasGemmEx");
             // cudaStreamSynchronize(stream);
          }
+
+         // sylver::gpu::convert(stream, updm, in, &d_a_hp[ofs+ofs*ldda], ldda, d_a_tmp, ldda);
 
          // Factor outer block
          for (int k = 0; k < inc; ++k) {
@@ -549,6 +596,11 @@ namespace gpu {
       cudaStream_t stream; // CUDA Stream
       custat = cublasGetStream(cuhandle, &stream);
       sylver::gpu::cublas_check_error(custat, context, inform);
+
+      // Set Math mode
+      // custat = cublasSetMathMode(cuhandle, CUBLAS_DEFAULT_MATH);
+      custat = cublasSetMathMode(cuhandle, CUBLAS_TENSOR_OP_MATH);
+      sylver::gpu::cublas_check_error(custat, context, inform);
       
       // Allocate memory to accomodate half prec representation of
       // matrix A
@@ -619,17 +671,26 @@ namespace gpu {
          if (ofs > 0) {
 
             // std::cout << "[spldlt::gpu::factor] updm = " << updm << ", updn = " << in << ", k = " << ofs << std::endl;
-            cublasGemmEx(cuhandle, CUBLAS_OP_N, CUBLAS_OP_T,
-                         updm, in, ofs, &alpha_hp,
-                         &d_a_hp[ofs], CUDA_R_16F, ldda,
-                         &d_a_hp[ofs], CUDA_R_16F, ldda,
-                         &beta_hp,
-                         &d_a_hp[ofs+ofs*ldda], CUDA_R_16F, ldda,
-                         // d_a_tmp, CUDA_R_32F, ldda,
-                         CUDA_R_16F,
-                         // CUBLAS_GEMM_DEFAULT
-                         CUBLAS_GEMM_DEFAULT_TENSOR_OP
-                  );
+            custat = cublasHgemm(cuhandle, CUBLAS_OP_N, CUBLAS_OP_T,
+                                 updm, in, ofs,
+                                 &alpha_hp,
+                                 &d_a_hp[ofs], ldda,
+                                 &d_a_hp[ofs], ldda,
+                                 &beta_hp,
+                                 &d_a_hp[ofs+ofs*ldda], ldda);
+            
+            // cublasGemmEx(cuhandle, CUBLAS_OP_N, CUBLAS_OP_T,
+            //              updm, in, ofs, &alpha_hp,
+            //              &d_a_hp[ofs], CUDA_R_16F, ldda,
+            //              &d_a_hp[ofs], CUDA_R_16F, ldda,
+            //              &beta_hp,
+            //              &d_a_hp[ofs+ofs*ldda], CUDA_R_16F, ldda,
+            //              // d_a_tmp, CUDA_R_32F, ldda,
+            //              CUDA_R_16F,
+            //              // CUDA_R_32F,
+            //              // CUBLAS_GEMM_DEFAULT
+            //              CUBLAS_GEMM_DEFAULT_TENSOR_OP
+            //       );
             // custat = sylver::gpu::dev_gemm(
             //       cuhandle, CUBLAS_OP_N, CUBLAS_OP_T,
             //       updm, in, ofs, &alpha,
@@ -734,17 +795,26 @@ namespace gpu {
                //       &beta,
                //       &d_a_tmp[iofst + iofst * ldda], ldda);
                // cudaStreamSynchronize(stream);
-               cublasGemmEx(cuhandle, CUBLAS_OP_N, CUBLAS_OP_T,
-                            tblkm, tblkn, ib, &alpha_hp,
-                            &d_a_hp[ofs+iofst+(ofs+iofs)*ldda], CUDA_R_16F, ldda,
-                            &d_a_hp[ofs+iofst+(ofs+iofs)*ldda], CUDA_R_16F, ldda,                            
-                            &beta_hp,
-                            // &d_a[ofs+ofs*ldda], CUDA_R_16F, ldda,
-                            &d_a_hp[ofs+iofst+(ofs+iofst)*ldda], CUDA_R_16F, ldda,
-                            CUDA_R_16F,
-                            // CUBLAS_GEMM_DEFAULT
-                            CUBLAS_GEMM_DEFAULT_TENSOR_OP
-                     );
+               // custat = cublasGemmEx(cuhandle, CUBLAS_OP_N, CUBLAS_OP_T,
+               //                       tblkm, tblkn, ib, &alpha_hp,
+               //                       &d_a_hp[ofs+iofst+(ofs+iofs)*ldda], CUDA_R_16F, ldda,
+               //                       &d_a_hp[ofs+iofst+(ofs+iofs)*ldda], CUDA_R_16F, ldda,                            
+               //                       &beta_hp,
+               //                       // &d_a[ofs+ofs*ldda], CUDA_R_16F, ldda,
+               //              &d_a_hp[ofs+iofst+(ofs+iofst)*ldda], CUDA_R_16F, ldda,
+               //                       CUDA_R_16F,
+               //                       // CUBLAS_GEMM_DEFAULT
+               //                       CUBLAS_GEMM_DEFAULT_TENSOR_OP
+               //       );
+
+               custat = cublasHgemm(cuhandle, CUBLAS_OP_N, CUBLAS_OP_T,
+                           tblkm, tblkn, ib, 
+                           &alpha_hp,
+                           &d_a_hp[ofs+iofst+(ofs+iofs)*ldda], ldda,
+                           &d_a_hp[ofs+iofst+(ofs+iofs)*ldda], ldda,
+                           &beta_hp,
+                           &d_a_hp[ofs+iofst+(ofs+iofst)*ldda], ldda);            
+
                sylver::gpu::cublas_check_error(custat, context, inform, "Failed to launch inner block update");
                               
                // cudaStreamSynchronize(stream);

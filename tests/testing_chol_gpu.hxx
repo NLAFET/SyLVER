@@ -51,7 +51,8 @@ namespace tests {
       // Copy a into l
       l = new T[m*lda];
       memcpy(l, a, lda*m*sizeof(T));
-      // ::spldlt::tests::print_mat("%12.3e", m, l, lda);
+      // ::spldlt::tests::print_mat_unsym("%12.3e", m, l, lda);
+      // ::spldlt::tests::print_mat_unsym("%12.3e", m, a, lda);
 
       cudaError_t cuerr;
       cublasStatus_t custat;
@@ -172,7 +173,7 @@ namespace tests {
       // SyLVER algo exploiting half prec
       else if (algo == sylver::tests::SyLVER_HP) {
 
-         std::cout << context << " Chol half prec " << std::endl;
+         std::cout << "[" << context << "]" << " Chol half prec" << std::endl;
 
          cublasHandle_t cuhandle;
          inform_t inform; // Host side status
@@ -182,6 +183,8 @@ namespace tests {
          sylver::gpu::cuda_check_error(cuerr, context);
          // Initialize factorization
          custat = cublasCreate(&cuhandle);
+         sylver::gpu::cublas_check_error(custat, context);
+         custat = cublasSetStream(cuhandle, stream); // Set CUDA stream
          sylver::gpu::cublas_check_error(custat, context);
 
          start = std::chrono::high_resolution_clock::now();
@@ -206,6 +209,8 @@ namespace tests {
          sylver::gpu::cuda_check_error(cuerr, context);
          // Initialize factorization
          custat = cublasCreate(&cuhandle);
+         sylver::gpu::cublas_check_error(custat, context);
+         custat = cublasSetStream(cuhandle, stream); // Set CUDA stream
          sylver::gpu::cublas_check_error(custat, context);
 
          start = std::chrono::high_resolution_clock::now();
@@ -270,6 +275,8 @@ namespace tests {
       // Print useful info
       printf("Host to Device matrix transfer (s) = %e\n", 1e-9*t_transfer);
       
+      T fwderr = sylver::tests::forward_error(m, 1, soln, ldsoln);
+      // printf("fwderr = %le\n", fwderr);
       T bwderr = sylver::tests::backward_error(m, a, lda, b, 1, soln, m);
       printf("bwderr = %le\n", bwderr);
  
