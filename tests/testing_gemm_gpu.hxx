@@ -6,6 +6,7 @@
 // SyLVER
 #include "kernels/gpu/common.hxx"
 #include "kernels/gpu/wrappers.hxx"
+#include "kernels/gpu/convert.cuh"
 
 // STD
 #include <iostream>
@@ -117,15 +118,58 @@ namespace tests {
 
          std::cout << context << " cuSOLVER half prec" << std::endl;
 
-         // cublasGemmEx(cuhandle, CUBLAS_OP_N, CUBLAS_OP_T,
-         //              updm, in, ofs, &alpha,
-         //              &d_a_hp[ofs], CUDA_R_16F, ldda,
-         //              &d_a_hp[ofs], CUDA_R_16F, ldda,
-         //              &beta,
-         //              // &d_a[ofs+ofs*ldda], CUDA_R_16F, ldda,
-         //              d_a_tmp, CUDA_R_32F, ldda,
-         //              CUDA_R_32F,
-         //              CUBLAS_GEMM_DEFAULT);
+         sylver::gpu::half *d_a_hp = nullptr;
+         sylver::gpu::half *d_b_hp = nullptr;
+         sylver::gpu::half *d_c_hp = nullptr;
+
+         // Allocate memory for matrices on the device
+         cuerr = cudaMalloc((void**)&d_a_hp, ldda*k*sizeof(T));
+         sylver::gpu::cuda_check_error(cuerr, context);
+         cuerr = cudaMalloc((void**)&d_b_hp, lddb*n*sizeof(T));
+         sylver::gpu::cuda_check_error(cuerr, context);
+         cuerr = cudaMalloc((void**)&d_c_hp, ldda*n*sizeof(T));
+         sylver::gpu::cuda_check_error(cuerr, context);
+
+         sylver::gpu::convert(stream, m, k, d_a, ldda, d_a_hp, ldda);
+         sylver::gpu::convert(stream, k, n, d_b, lddb, d_b_hp, lddb);
+
+         sylver::gpu::convert(stream, m, n, d_c, ldda, d_c_hp, ldda);
+         
+         // Setup cuBLAS handle
+         cublasHandle_t cuhandle;
+         custat = cublasCreate(&cuhandle);
+         sylver::gpu::cublas_check_error(custat, context);
+         custat = cublasSetStream(cuhandle, stream);
+         sylver::gpu::cublas_check_error(custat, context);
+
+         sylver::gpu::half alpha_hp = -1.0;
+         sylver::gpu::half beta_hp = 1.0;
+         sa = std::chrono::high_resolution_clock::now();         
+         custat = cublasGemmEx(cuhandle, CUBLAS_OP_N, CUBLAS_OP_T,
+                               m, n, k, &alpha_hp,
+                               d_a_hp, CUDA_R_16F, ldda,
+                               d_b_hp, CUDA_R_16F, lddb,
+                               &beta_hp,
+                               d_c, CUDA_R_32F, ldda,
+                               // d_c_hp, CUDA_R_16F, ldda,
+                               // CUDA_R_16F,
+                               CUDA_R_32F,
+                               // CUBLAS_GEMM_DEFAULT
+                               CUBLAS_GEMM_DEFAULT_TENSOR_OP
+               );
+         sylver::gpu::cublas_check_error(custat, context);
+
+         cuerr = cudaStreamSynchronize(stream);
+         sylver::gpu::cuda_check_error(cuerr, context);
+         en = std::chrono::high_resolution_clock::now();
+
+         // Cleanup cuBLAS handle
+         custat = cublasDestroy(cuhandle);
+         sylver::gpu::cublas_check_error(custat, context);
+
+         cudaFree(d_a_hp);
+         cudaFree(d_b_hp);
+         // cudaFree(d_c_hp);
          
       }
       else {

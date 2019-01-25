@@ -172,6 +172,8 @@ namespace tests {
       // SyLVER algo exploiting half prec
       else if (algo == sylver::tests::SyLVER_HP) {
 
+         std::cout << context << " Chol half prec " << std::endl;
+
          cublasHandle_t cuhandle;
          inform_t inform; // Host side status
 
@@ -183,9 +185,7 @@ namespace tests {
          sylver::gpu::cublas_check_error(custat, context);
 
          start = std::chrono::high_resolution_clock::now();
-
          sylver::spldlt::gpu::factor_ll_hp(cuhandle, m, m, d_l, lda, inform, d_inform);
-
          end = std::chrono::high_resolution_clock::now();
 
          std::cout << "[chol_test] Inform flag = " << inform.flag << std::endl;
@@ -193,6 +193,30 @@ namespace tests {
          cuerr = cudaFree(d_inform);
          sylver::gpu::cuda_check_error(cuerr, context);
          
+      }
+      else if (algo == sylver::tests::SyLVER_HP_C16) {
+
+         std::cout << "[" << context << "]" << " Chol half prec compute type 16F" << std::endl;
+
+         cublasHandle_t cuhandle;
+         inform_t inform; // Host side status
+
+         int *d_inform; // Device side status
+         cuerr = cudaMalloc((void**)&d_inform, sizeof(int));
+         sylver::gpu::cuda_check_error(cuerr, context);
+         // Initialize factorization
+         custat = cublasCreate(&cuhandle);
+         sylver::gpu::cublas_check_error(custat, context);
+
+         start = std::chrono::high_resolution_clock::now();
+         sylver::spldlt::gpu::factor_ll_hp_c16(cuhandle, m, m, d_l, lda, inform, d_inform);
+         end = std::chrono::high_resolution_clock::now();
+
+         std::cout << "[chol_test] Inform flag = " << inform.flag << std::endl;
+
+         cuerr = cudaFree(d_inform);
+         sylver::gpu::cuda_check_error(cuerr, context);
+
       }
       else {
          std::cout << "[chol_test] Algo NOT implemented " << std::endl;

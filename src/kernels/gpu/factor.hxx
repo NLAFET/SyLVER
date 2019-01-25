@@ -28,8 +28,21 @@ namespace sylver {
 namespace spldlt {
 namespace gpu {
 
+   // Half prec with compute type 32F 
    template<typename T>
    void factor_ll_hp(
+         const cublasHandle_t cuhandle, 
+         int m, // Number of rows 
+         int n, // Number of columns
+         T *const d_a, // Matrix pointer on device 
+         int ldda, // Matrix leadind dim on device
+         inform_t& inform, // Info host
+         int *d_info // Info device
+         );
+
+   // Half prec with compute type 16F 
+   template<typename T>
+   void factor_ll_hp_c16(
          const cublasHandle_t cuhandle, 
          int m, // Number of rows 
          int n, // Number of columns
