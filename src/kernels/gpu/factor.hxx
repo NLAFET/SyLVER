@@ -96,6 +96,7 @@ namespace gpu {
       // Number of block columns
       int const nc = (n-1) / nb +1;
       
+      std::cout << "[" << context << "]" << std::endl;
       // std::cout << "[spldlt::gpu::factor] nc = " << nc << std::endl;
 
       cudaStream_t stream; // CUDA Stream
@@ -144,7 +145,7 @@ namespace gpu {
                   &beta, &d_a[ofs+ofs*ldda], ldda);
                // cudaStreamSynchronize(stream);
             sylver::gpu::cublas_check_error(custat, context, inform);
-            cudaStreamSynchronize(stream);
+            // cudaStreamSynchronize(stream);
          }         
 
          // Factor outer block

@@ -11,6 +11,7 @@
 // CUDA
 #include <cuda_runtime.h>
 #include <cuda_runtime_api.h>
+#include <cuda_fp16.h>
 
 // #if defined (HAVE_CUTLASS)
 // #else
@@ -124,7 +125,7 @@ namespace /* anon */ {
       for (int k = 0; k < n; ++k) {
 
          T d11 = swork[k+ld_swork*k];
-         if ( d11 <= 0.0 ) {
+         if ( d11 <=  0.0 ) {
             // zero or negative pivot detected , stop factorization
             // and record column index
             if ((bx == 0) && (ty == 0) && (tx == 0)) {
@@ -184,6 +185,127 @@ namespace /* anon */ {
       
       // Store W into A (A_ik)
       dev_block_store<T, TILE_SIZE>(bx, m, n, swork, l, ldl);
+      // dev_save_chol_fact<T, TILE_SIZE, 2>(bx, m, n, swork, l, ldl);
+      __syncthreads();
+
+   }
+
+   // #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+
+   // Ugly but partial function specialization does not seems to be
+   // possible. Other solution would be to specialize dev_llt_bcol()
+   // for half prec.
+   template<>
+   __device__ void
+   dev_llt_block<__half, BLOCK_SIZE>(
+         unsigned int bx,
+         int m, int n,
+         __half const *const d, int ldd,
+         __half *const l, int ldl,
+         int *const stat // Info parameter
+         ) {
+
+      // No-op
+      // printf("TETTETETETET\n");
+
+      // printf("[dev_llt_block] m = %d, n = %d, lda = %d, TILE_SIZE = %d\n", m, n, ldl, TILE_SIZE);
+      
+      // Dynamically allocated shared memory
+      // T * swork = (T*) SharedMemory; // Contains 2 tile i.e. dimensions (2*TILE_SIZE,TILE_SIZE) 
+      // extern __shared__ __align__(sizeof(T)) unsigned char SharedMemory[];
+      __half *swork = reinterpret_cast<__half*>(SharedMemory); // Contains 2 tile i.e. dimensions (2*TILE_SIZE,TILE_SIZE)
+ 
+      int ld_swork = 2*BLOCK_SIZE;
+      
+      // Load A (A_kk and A_ik) into shared memory workspace W
+      dev_block_load<__half, BLOCK_SIZE>(bx, m, n, d, ldd, l, ldl, swork);
+      __syncthreads();
+   
+      // Block info
+      // int bx = blockIdx.x;
+      // int by = blockIdx.y;
+      // Thread info
+      int tx = threadIdx.x;
+      int ty = threadIdx.y;
+
+      // printf("[dev_llt_block] bx = %d, tx = %d, ty = %d\n", bx, tx, ty);
+
+      // Compute cholesky factor of W in shared memory  
+      for (int k = 0; k < n; ++k) {
+
+         __half d11 = swork[k+ld_swork*k];
+         // if ( d11 <=  0.0 ) {
+         if(__hle(d11, 0.0)) {
+            // zero or negative pivot detected , stop factorization
+            // and record column index
+            if ((bx == 0) && (ty == 0) && (tx == 0)) {
+               printf("[dev_llt_block] Zero or negative pivot detected, d11 = %.3e\n", d11);
+               stat[0] = k;
+            }
+            return;
+         }
+
+         // if (__hisnan(d11)) {
+         //    if ((bx == 0) && (ty == 0) && (tx == 0)) {
+         //       printf("[dev_llt_block] NaN detected\n");
+         //       // printf("[dev_llt_block] m = %d, n = %d\n", m, n);
+         //    }
+         //    return;
+         // }
+         // if(__hisinf(d11)) {
+         //    if ((bx == 0) && (ty == 0) && (tx == 0)) {
+         //       printf("[dev_llt_block] Inf detected\n");
+         //    }
+         //    return;
+         // }
+         
+         d11 = hsqrt(d11); // Compute pivot
+         __syncthreads();
+         
+         // Apply pivot
+         int idx = tx + ty*BLOCK_SIZE;
+         if (idx < ld_swork) {
+            // for (int idx = tx + ty*TILE_SIZE; idx < ld_swork; idx += TILE_SIZE*TILE_SIZE)
+            swork[idx + k*ld_swork] /= d11;
+
+            // T u = 1e-5; // Threshold
+            // T aik = swork[idx + k*ld_swork];
+            // if (isnan(aik) || isinf(aik)) {
+            //    continue;
+            //    // printf("[dev_llt_block] NaN enrty detected, aik = %.3e\n", aik);
+            // }
+            // else if (fabs(aik) > (1/u)) {
+            //    printf("[dev_llt_block] large enrty detected, aik = %.3e\n", aik);
+            // }
+
+            if(__hisinf(swork[idx + k*ld_swork])) {
+               printf("[dev_llt_block] Inf detected\n");
+               return;
+            }
+
+         }
+         __syncthreads();
+         
+         // Update trailing submatrix
+         if ((ty > k)) {
+            // Update A_kk
+            if (tx > k)
+               swork[tx + ty*ld_swork] -= swork[tx + k*ld_swork]*swork[ty + k*ld_swork];
+            
+            // Update A_ik
+            int sdata_x = tx + BLOCK_SIZE; // Row index in sdata
+            swork[sdata_x + ty*ld_swork] -= swork[sdata_x + k*ld_swork]*swork[ty + k*ld_swork];
+         }
+         __syncthreads();
+         
+      }
+
+      // We manage to eliminate all columns
+      if ((bx == 0) && (threadIdx.x == 0) && (threadIdx.y == 0))
+         stat[0] = n;
+      
+      // Store W into A (A_ik)
+      dev_block_store<__half, BLOCK_SIZE>(bx, m, n, swork, l, ldl);
       // dev_save_chol_fact<T, TILE_SIZE, 2>(bx, m, n, swork, l, ldl);
       __syncthreads();
 
@@ -265,6 +387,10 @@ namespace gpu {
          (m, n, d, ldd, a, lda, stat);
    }
 
+   // Half precision
+   template void factor_bcol<sylver::gpu::half>(
+         const cudaStream_t stream, int m, int n, sylver::gpu::half const *const d, int ldd,
+         sylver::gpu::half *const a, int lda, int *const stat);
    // Single precision
    template void factor_bcol<float>(
          const cudaStream_t stream, int m, int n, float const *const d, int ldd,
@@ -630,15 +756,17 @@ namespace gpu {
                 << std::endl;
 
       // Allocate buffer for computing the panel
-      float *d_a_tmp = nullptr;
+      // float *d_a_tmp = nullptr;
       // cuerr = cudaMalloc((void**)&d_a_tmp, nb*ldda*sizeof(float)); // nb columns wide panel      
-      cuerr = cudaMalloc((void**)&d_a_tmp, ib*ldda*sizeof(float)); // ib columns wide panel
-      sylver::gpu::cuda_check_error(cuerr, context, inform);      
+      // cuerr = cudaMalloc((void**)&d_a_tmp, ib*ldda*sizeof(float)); // ib columns wide panel
+      // sylver::gpu::cuda_check_error(cuerr, context, inform);      
       
       // Workspace holding the diagonal tile
-      float *d_d = nullptr;
+      // float *d_d = nullptr;
+      sylver::gpu::half *d_d = nullptr;
       int lddd = ib;
-      cuerr = cudaMalloc((void**)&d_d, lddd*ib*sizeof(float));
+      // cuerr = cudaMalloc((void**)&d_d, lddd*ib*sizeof(float));
+      cuerr = cudaMalloc((void**)&d_d, lddd*ib*sizeof(sylver::gpu::half));
       sylver::gpu::cuda_check_error(cuerr, context, inform);
       
       // float alpha = -1.0, beta = 1.0;
@@ -711,29 +839,42 @@ namespace gpu {
             int cblkm = m-ofs-iofs; // Block column height
             int cblkn = std::min(in-iofs, ib); // Block column width
 
-            sylver::gpu::convert(stream, updm, ib, &d_a_hp[ofs+iofs+(ofs+iofs)*ldda], ldda, d_a_tmp, ldda);
+            // sylver::gpu::convert(stream, updm, ib, &d_a_hp[ofs+iofs+(ofs+iofs)*ldda], ldda, d_a_tmp, ldda);
             // cudaStreamSynchronize(stream);
 
             // Copy diagonal tile into workspace d_d
+            // cuerr = cudaMemcpy2DAsync(
+            //       d_d, lddd*sizeof(float),
+            //       // &d_a_tmp[iofs+iofs*ldda], ldda*sizeof(float),
+            //       d_a_tmp, ldda*sizeof(float),
+            //       cblkn*sizeof(float), cblkn,
+            //       cudaMemcpyDeviceToDevice,
+            //       stream);
             cuerr = cudaMemcpy2DAsync(
-                  d_d, lddd*sizeof(float),
+                  d_d, lddd*sizeof(sylver::gpu::half),
                   // &d_a_tmp[iofs+iofs*ldda], ldda*sizeof(float),
-                  d_a_tmp, ldda*sizeof(float),
-                  cblkn*sizeof(float), cblkn,
+                  // d_a_tmp, ldda*sizeof(sylver::gpu::half),
+                  &d_a_hp[ofs+iofs+(ofs+iofs)*ldda], ldda*sizeof(sylver::gpu::half),
+                  cblkn*sizeof(sylver::gpu::half), cblkn,
                   cudaMemcpyDeviceToDevice,
                   stream);
             // cudaStreamSynchronize(stream);
             sylver::gpu::cuda_check_error(cuerr, context, inform, "Failed to copy diag tile into buffer");
             
+            // factor_bcol(
+            //       stream, cblkm, cblkn,
+            //       d_d, lddd,
+            //       // &d_a_tmp[iofs+iofs*ldda], ldda,
+            //       d_a_tmp, ldda,
+            //       d_info);
             factor_bcol(
                   stream, cblkm, cblkn,
                   d_d, lddd,
-                  // &d_a_tmp[iofs+iofs*ldda], ldda,
-                  d_a_tmp, ldda,
+                  &d_a_hp[ofs+iofs+(ofs+iofs)*ldda], ldda,
                   d_info);
             // cudaStreamSynchronize(stream);
 
-            sylver::gpu::convert(stream, updm, ib, d_a_tmp, ldda, &d_a_hp[ofs+iofs+(ofs+iofs)*ldda], ldda);
+            // sylver::gpu::convert(stream, updm, ib, d_a_tmp, ldda, &d_a_hp[ofs+iofs+(ofs+iofs)*ldda], ldda);
             // cudaStreamSynchronize(stream);
 
             // sylver::gpu::dev_potrf(
@@ -844,8 +985,8 @@ namespace gpu {
       sylver::gpu::cuda_check_error(cuerr, context, inform, "Failed to synchonize stream");
 
       // Cleanup memory
-      cuerr =  cudaFree(d_a_tmp);
-      sylver::gpu::cuda_check_error(cuerr, context, inform);
+      // cuerr =  cudaFree(d_a_tmp);
+      // sylver::gpu::cuda_check_error(cuerr, context, inform);
       // cublasDestroy(cuhandle);
       cuerr = cudaFree(d_d);
       sylver::gpu::cuda_check_error(cuerr, context, inform);

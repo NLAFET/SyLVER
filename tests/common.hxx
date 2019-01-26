@@ -111,7 +111,7 @@ namespace spldlt {
 
       template <typename T>
       T find_l_abs_max(int n, T *a, int lda) {
-         double best = 0.0;
+         T best = 0.0;
          for(int c=0; c<n; ++c)
             for(int r=c; r<n; ++r)
                best = std::max(best, std::abs(a[c*lda+r]));
@@ -600,25 +600,25 @@ namespace spldlt {
          int const ldrhs = m; // Assume ldrhs = m
          
          /* Allocate memory */
-         double *resid = new double[m];
-         double *rowsum = new double[n];
+         T *resid = new T[m];
+         T *rowsum = new T[n];
 
          // Calculate rowsums and anorm
-         memset(rowsum, 0, n*sizeof(double));
+         memset(rowsum, 0, n*sizeof(T));
          for(int j=0; j<n; ++j) {
             for(int i=0; i<m; ++i) {
                rowsum[j] += a[j*lda+i];
             }
          }
 
-         double anorm = 0.0;
+         T anorm = 0.0;
          for(int j=0; j<n; ++j)
             anorm = std::max(anorm, rowsum[j]);
          
          /* Calculate residual vector and anorm */
-         double worstbwderr = 0.0;
+         T worstbwderr = 0.0;
          for(int r=0; r<nrhs; ++r) {
-            memcpy(resid, &rhs[r*ldrhs], m*sizeof(double));
+            memcpy(resid, &rhs[r*ldrhs], m*sizeof(T));
             
             for(int j=0; j<n; ++j) {
                for(int i=0; i<m; ++i) {
@@ -627,7 +627,7 @@ namespace spldlt {
             }
 
             /* Check scaled backwards error */
-            double rhsnorm=0.0, residnorm=0.0, solnnorm=0.0;
+            T rhsnorm=0.0, residnorm=0.0, solnnorm=0.0;
             for(int i=0; i<m; ++i) {
                // Calculate max norms
                rhsnorm = std::max(rhsnorm, fabs(rhs[r*ldrhs+i]));

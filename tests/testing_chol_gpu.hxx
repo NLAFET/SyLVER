@@ -277,7 +277,8 @@ namespace tests {
       
       T fwderr = sylver::tests::forward_error(m, 1, soln, ldsoln);
       // printf("fwderr = %le\n", fwderr);
-      T bwderr = sylver::tests::backward_error(m, a, lda, b, 1, soln, m);
+      T bwderr = ::spldlt::tests::unsym_backward_error(m, m, a, lda, b, 1, soln, m);
+      // T bwderr = sylver::tests::backward_error(m, a, lda, b, 1, soln, m);
       printf("bwderr = %le\n", bwderr);
  
       double flops = ((double)m*m*m)/3.0;

@@ -40,7 +40,7 @@ namespace gpu {
 #pragma unroll
             for( int j=0; j < BLK_Y; ++j ) {
                dB[j*lddb] = __float2half( dA[j*ldda] );
-               // if (isnan(dA[j*lddb]) || isinf(dA[j*lddb])) {
+               // if (__hisnan(dB[j*lddb]) || __hisnan(dB[j*lddb])) {
                //       printf("[convert_sp2hp_device] NaN detected\n");
                // }
             }
@@ -49,7 +49,7 @@ namespace gpu {
             // partial block-column
             for( int j=0; j < BLK_Y && iby+j < n; ++j ) {
                dB[j*lddb] = __float2half( dA[j*ldda] );
-               // if (isnan(dA[j*lddb]) || isinf(dA[j*lddb])) {
+               // if (__hisnan(dB[j*lddb]) || __hisnan(dB[j*lddb])) {
                //    printf("[convert_sp2hp_device] NaN detected\n");
                // }
             }
@@ -77,12 +77,18 @@ namespace gpu {
 #pragma unroll
             for( int j=0; j < BLK_Y; ++j ) {
                dB[j*lddb] = __half2float( dA[j*ldda] );
+               // if (__hisnan(dA[j*ldda]) || __hisnan(dA[j*ldda])) {
+               //       printf("[convert_sp2hp_device] NaN detected\n");
+               // }
             }
          }
          else {
             // partial block-column
             for( int j=0; j < BLK_Y && iby+j < n; ++j ) {
                dB[j*lddb] = __half2float( dA[j*ldda] );
+               // if (__hisnan(dA[j*ldda]) || __hisnan(dA[j*ldda])) {
+               //       printf("[convert_sp2hp_device] NaN detected\n");
+               // }
             }
          }
       }
