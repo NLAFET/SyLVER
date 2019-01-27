@@ -9,6 +9,7 @@
 #include <iomanip>
 #include <iostream>
 #include <vector>
+#include <random>
 
 // SSIDS
 #include "ssids/cpu/kernels/wrappers.hxx"
@@ -731,6 +732,116 @@ namespace tests {
             a[j*lda+j] += fabs(a[j*lda+i]);
             a[i*lda+i] += fabs(a[j*lda+i]);
          }
+   }
+
+   // Generates a random dense positive definte matrix.
+   template<typename T>
+   void gen_posdef_cond(int n, T* a, int lda) {
+      // /* Get general sym indef matrix */
+      // gen_sym_indef(n, a, lda);
+      // /* Make diagonally dominant */
+      // for(int i=0; i<n; ++i) a[i*lda+i] = fabs(a[i*lda+i]) + 0.1;
+      // for(int j=0; j<n; ++j)
+      //    for(int i=j; i<n; ++i) {
+      //       a[j*lda+j] += fabs(a[j*lda+i]);
+      //       a[i*lda+i] += fabs(a[j*lda+i]);
+      //    }
+
+      T cond = 2e4;
+      std::default_random_engine generator;
+      std::uniform_int_distribution<long long int> distribution(1,cond);
+ 
+      // Generate diagonal matrix with eigen values 
+      T d = 1.0;
+      for(int i=0; i<n; ++i) a[i*lda+i] = (T)1.0/(distribution(generator));
+      for(int j=0; j<n; ++j) {
+         for(int i=0; i<n; ++i) {
+            if (i != j)
+               a[j*lda+i] = 0.0;
+         }
+      }
+      // a[0] = (T)1.0/cond;
+      // a[(n-1)*lda+(n-1)] = (T)1.0/cond;
+      // std::cout << "ann = " << a[(n-1)*lda+(n-1)] << std::endl;
+      
+      T *lambda = new T[lda*n];
+      T *tau = new T[n];
+      T worksz;
+      sylver::host_geqrf(n, n,
+                         lambda, lda,
+                         tau,
+                         &worksz, -1);
+      
+      // std::cout << "geqrf worksz = " << worksz << std::endl;
+
+      // Fill up lambda with random values
+      ::spldlt::tests::gen_mat(n, n, lambda, lda);
+      int lwork = (int)worksz;
+      T *work = new T[lwork];
+
+      sylver::host_geqrf(n, n,
+                         lambda, lda,
+                         tau,
+                         work, lwork);
+
+      // delete [] work;
+      
+      // sylver::host_ormqr(
+      //       sylver::SIDE_LEFT, sylver::OP_N,
+      //       n, n, n,
+      //       lambda, lda, tau,
+      //       a, lda,
+      //       &worksz, -1);
+
+      // std::cout << "ormqr worksz = " << worksz << std::endl;
+
+      // lwork = (int)worksz;
+      // work = new T[lwork];
+      
+      // A = Q * D
+      sylver::host_ormqr(
+            sylver::SIDE_LEFT, sylver::OP_N,
+            n, n, n,
+            lambda, lda, tau,
+            a, lda,
+            work, lwork);
+
+      // A = A * Q^T
+      sylver::host_ormqr(
+            sylver::SIDE_RIGHT, sylver::OP_T,
+            n, n, n,
+            lambda, lda, tau,
+            a, lda,
+            work, lwork);
+
+      delete[] lambda;
+      delete[] work;
+      delete[] tau;
+      
+      // T *c = nullptr;
+      // lambda = new T[lda*n];
+      // c = new T[lda*n];
+
+      // // Matrix with condition number equal to one
+      // ::spldlt::tests::gen_mat(n, n, lambda, lda);
+      
+      // T alpha = 1.0, beta = 0.0;
+      // sylver::host_gemm(sylver::OP_N, sylver::OP_N,
+      //                   n, n, n, alpha,
+      //                   lambda, lda,
+      //                   a, lda,
+      //                   beta,
+      //                   c, lda);
+
+      // sylver::host_gemm(sylver::OP_N, sylver::OP_T,
+      //                   n, n, n, alpha,
+      //                   c, lda,
+      //                   lambda, lda,
+      //                   beta,
+      //                   a, lda);
+      
+      // delete[] lambda;
+      // delete[] c;
    }
 
    // Generate one or more right-hand sides corresponding to soln x =

@@ -278,20 +278,29 @@ namespace /* anon */ {
             //    printf("[dev_llt_block] large enrty detected, aik = %.3e\n", aik);
             // }
 
-            if(__hisinf(swork[idx + k*ld_swork])) {
-               printf("[dev_llt_block] Inf detected\n");
-               return;
-            }
-
+            // if(__hisinf(swork[idx + k*ld_swork])) {
+            //    printf("[dev_llt_block] Inf detected\n");
+            //    return;
+            // }
          }
          __syncthreads();
          
          // Update trailing submatrix
          if ((ty > k)) {
             // Update A_kk
-            if (tx > k)
+            if (tx > k) {
                swork[tx + ty*ld_swork] -= swork[tx + k*ld_swork]*swork[ty + k*ld_swork];
-            
+               // if(__hisinf(swork[tx + ty*ld_swork])) {
+               //    if (bx == 0) {
+               //       // printf("[dev_llt_block] Inf detected\n");
+               //       printf("[dev_llt_block] Inf detected, aik = %e, ajk = %e, aij = %e, d11 = %e\n",
+               //              swork[tx + k*ld_swork], swork[ty + k*ld_swork], swork[tx + ty*ld_swork], d11);
+               //       printf("[dev_llt_block] Inf detected, i = %d, j = %d, k = %d\n", tx, ty, k);
+
+               //    }
+               //    return;
+               // }
+            }
             // Update A_ik
             int sdata_x = tx + BLOCK_SIZE; // Row index in sdata
             swork[sdata_x + ty*ld_swork] -= swork[sdata_x + k*ld_swork]*swork[ty + k*ld_swork];

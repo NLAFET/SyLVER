@@ -42,8 +42,10 @@ namespace tests {
       int lda = spral::ssids::cpu::align_lda<T>(m);
       std::cout << "[chol_test] m = " << m << ", lda = " << lda << std::endl;
       a = new T[m*lda];
-      sylver::tests::gen_posdef(m, a, lda);
+      // sylver::tests::gen_posdef(m, a, lda);
+      sylver::tests::gen_posdef_cond(m, a, lda);
 
+      
       // Generate a RHS based on x=1, b=Ax
       b = new T[m];
       sylver::tests::gen_rhs(m, a, lda, b);
@@ -52,6 +54,7 @@ namespace tests {
       l = new T[m*lda];
       memcpy(l, a, lda*m*sizeof(T));
       // ::spldlt::tests::print_mat_unsym("%12.3e", m, l, lda);
+      //
       // ::spldlt::tests::print_mat_unsym("%12.3e", m, a, lda);
 
       cudaError_t cuerr;

@@ -34,7 +34,7 @@ namespace sylver {
 
    /* _TRSM */
    template <typename T>
-   void host_trsm(enum sylver::side side,enum sylver::fillmode uplo,
+   void host_trsm(enum sylver::side side, enum sylver::fillmode uplo,
                   enum sylver::operation transa, enum sylver::diagonal diag,
                   int m, int n, T alpha, const T* a, int lda, T* b, int ldb);
 
@@ -52,4 +52,15 @@ namespace sylver {
    // GETRF
    template <typename T>
    int host_getrf(int m, int n, T* a, int lda, int *ipiv);
+
+
+   // GEQRF
+   template <typename T>
+   int host_geqrf(int m, int n, T *a, int lda, T *tau, T *work, int lwork);
+
+   // ORMQR
+   template <typename T>
+   int host_ormqr(enum sylver::side side, enum sylver::operation trans,
+                  int m, int n, int k, T *a, int lda, T *tau, T *c, int ldc,
+                  T *work, int lwork);
 }
