@@ -41,4 +41,40 @@ namespace gpu {
          const T *a, int lda,
          T *b, int ldb);
    
+   // _GEQRF bufferSize
+   template <typename T>
+   cusolverStatus_t dev_geqrf_buffersize(
+         cusolverDnHandle_t handle, int m, int n, T *a, int lda, int *lwork);
+      
+   // _GEQRF
+   template <typename T>
+   cusolverStatus_t dev_geqrf(
+         cusolverDnHandle_t handle,
+         int m, int n, T *a, int lda,
+         T *tau, T *work, int lwork,
+         int *info);
+
+   // _ORMQR bufferSize
+   template <typename T>
+   cusolverStatus_t dev_ormqr_buffersize(
+         cusolverDnHandle_t handle,
+         cublasSideMode_t side, cublasOperation_t trans,
+         int m, int n, int k,
+         const T *a, int lda,
+         const T *tau,
+         const T *c, int ldc,
+         int *lwork);
+
+   // _ORMQR
+   template <typename T>
+   cusolverStatus_t dev_ormqr(
+         cusolverDnHandle_t handle,
+         cublasSideMode_t side, cublasOperation_t trans,
+         int m, int n, int k,
+         const T *a, int lda,
+         const T *tau,
+         T *c, int ldc,
+         T *work, int lwork,
+         int *dinfo);
+         
 }}

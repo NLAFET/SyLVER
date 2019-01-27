@@ -23,8 +23,8 @@ int main(int argc, char** argv) {
    std::cout << "[factor_node_test] Matrix m = " << opts.m << ", n = " << opts.m
              << std::endl;
    
-   // ret = chol_test<double>(opts.m, opts.algo);
-   ret = chol_test<float>(opts.m, opts.algo);
+   // ret = chol_test<double>(opts.m, opts.algo, opts.usetc);
+   ret = chol_test<float>(opts.m, opts.algo, opts.usetc);
    
    return ret;
 }

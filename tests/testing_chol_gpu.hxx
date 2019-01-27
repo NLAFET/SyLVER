@@ -27,9 +27,11 @@
 
 namespace sylver {
 namespace tests {   
-      
+
+   /// @param algo Algo to be tested
+   /// @param usetc Set to false in order to disable tensor cores
    template<typename T>
-   int chol_test(int m, enum algo algo) {
+   int chol_test(int m, enum algo algo, bool usetc) {
 
       std::string context = "chol_test";
       bool failed = false;
@@ -41,10 +43,10 @@ namespace tests {
       // Generate test matrix
       int lda = spral::ssids::cpu::align_lda<T>(m);
       std::cout << "[chol_test] m = " << m << ", lda = " << lda << std::endl;
+      std::cout << "[chol_test] usetc = " << usetc << std::endl;
       a = new T[m*lda];
       // sylver::tests::gen_posdef(m, a, lda);
-      sylver::tests::gen_posdef_cond(m, a, lda);
-
+      sylver::tests::gen_posdef_cond(m, a, lda, (T)3.8e3);
       
       // Generate a RHS based on x=1, b=Ax
       b = new T[m];
@@ -148,7 +150,7 @@ namespace tests {
          }
 
          custat = cublasSetStream(cuhandle, stream);
-      
+         
          start = std::chrono::high_resolution_clock::now();
 
          // Launch factorization on device
@@ -189,7 +191,12 @@ namespace tests {
          sylver::gpu::cublas_check_error(custat, context);
          custat = cublasSetStream(cuhandle, stream); // Set CUDA stream
          sylver::gpu::cublas_check_error(custat, context);
-
+         // Select math mode
+         if (usetc) custat = cublasSetMathMode(cuhandle, CUBLAS_TENSOR_OP_MATH);
+         else       custat = cublasSetMathMode(cuhandle, CUBLAS_DEFAULT_MATH);
+            
+         sylver::gpu::cublas_check_error(custat, context, inform);
+         
          start = std::chrono::high_resolution_clock::now();
          sylver::spldlt::gpu::factor_ll_hp(cuhandle, m, m, d_l, lda, inform, d_inform);
          end = std::chrono::high_resolution_clock::now();
@@ -215,6 +222,9 @@ namespace tests {
          sylver::gpu::cublas_check_error(custat, context);
          custat = cublasSetStream(cuhandle, stream); // Set CUDA stream
          sylver::gpu::cublas_check_error(custat, context);
+         // Select math mode
+         if (usetc) custat = cublasSetMathMode(cuhandle, CUBLAS_TENSOR_OP_MATH);
+         else       custat = cublasSetMathMode(cuhandle, CUBLAS_DEFAULT_MATH);
 
          start = std::chrono::high_resolution_clock::now();
          sylver::spldlt::gpu::factor_ll_hp_c16(cuhandle, m, m, d_l, lda, inform, d_inform);

@@ -448,8 +448,10 @@ namespace gpu {
 
       // Set Math mode
       // custat = cublasSetMathMode(cuhandle, CUBLAS_DEFAULT_MATH);
-      custat = cublasSetMathMode(cuhandle, CUBLAS_TENSOR_OP_MATH);
-      sylver::gpu::cublas_check_error(custat, context, inform);
+      // custat = cublasSetMathMode(cuhandle, CUBLAS_TENSOR_OP_MATH);
+      // sylver::gpu::cublas_check_error(custat, context, inform);
+      cublasMath_t mode;
+      cublasGetMathMode(cuhandle, &mode);
       
       // Allocate memory to accomodate half prec representation of
       // matrix A
@@ -513,7 +515,7 @@ namespace gpu {
 
          // Copy panel into temporary buffer
          // start = std::chrono::high_resolution_clock::now();
-         sylver::gpu::convert(stream, updm, in, &d_a_hp[ofs+ofs*ldda], ldda, d_a_tmp, ldda);
+         // sylver::gpu::convert(stream, updm, in, &d_a_hp[ofs+ofs*ldda], ldda, d_a_tmp, ldda);
          // cudaStreamSynchronize(stream);
          // end = std::chrono::high_resolution_clock::now();
          // tconv =  
@@ -540,21 +542,22 @@ namespace gpu {
             
             custat = cublasGemmEx(cuhandle, CUBLAS_OP_N, CUBLAS_OP_T,
                                   updm, in, ofs, 
-                                  // &alpha_hp,
-                                  &alpha,
+                                  &alpha_hp,
+                                  // &alpha,
                                   &d_a_hp[ofs], CUDA_R_16F, ldda,
                                   &d_a_hp[ofs], CUDA_R_16F, ldda,
-                                  // &beta_hp,
-                                  &beta,
+                                  &beta_hp,
+                                  // &beta,
                                   // &d_a[ofs+ofs*ldda], CUDA_R_16F, ldda,
-                                  d_a_tmp, CUDA_R_32F, ldda,
-                                  // &d_a_hp[ofs+ofs*ldda], CUDA_R_16F, ldda,
-                                  CUDA_R_32F,
-                                  // CUDA_R_16F,
+                                  // d_a_tmp, CUDA_R_32F, ldda,
+                                  &d_a_hp[ofs+ofs*ldda], CUDA_R_16F, ldda,
+                                  // CUDA_R_32F,
+                                  CUDA_R_16F,
+                                  (mode==CUBLAS_TENSOR_OP_MATH) ? CUBLAS_GEMM_DEFAULT_TENSOR_OP : CUBLAS_GEMM_DEFAULT
                                   // CUBLAS_GEMM_DEFAULT
                                   // CUBLAS_GEMM_ALGO0
                                   // CUBLAS_GEMM_ALGO1
-                                  CUBLAS_GEMM_DEFAULT_TENSOR_OP
+                                  // CUBLAS_GEMM_DEFAULT_TENSOR_OP
                                   // CUBLAS_GEMM_ALGO0_TENSOR_OP
                   );
             // custat = sylver::gpu::dev_gemm(
@@ -568,7 +571,7 @@ namespace gpu {
             // cudaStreamSynchronize(stream);
          }
 
-         // sylver::gpu::convert(stream, updm, in, &d_a_hp[ofs+ofs*ldda], ldda, d_a_tmp, ldda);
+         sylver::gpu::convert(stream, updm, in, &d_a_hp[ofs+ofs*ldda], ldda, d_a_tmp, ldda);
 
          // Factor outer block
          for (int k = 0; k < inc; ++k) {
@@ -712,7 +715,7 @@ namespace gpu {
          ) {
       
       // Error handling
-      std::string context = "spldlt::gpu::factor_ll_hp";
+      std::string context = "spldlt::gpu::factor_ll_hp_c16";
       cudaError_t cuerr; // CUDA error
       cublasStatus_t custat; // CuBLAS status
       
@@ -734,8 +737,8 @@ namespace gpu {
 
       // Set Math mode
       // custat = cublasSetMathMode(cuhandle, CUBLAS_DEFAULT_MATH);
-      custat = cublasSetMathMode(cuhandle, CUBLAS_TENSOR_OP_MATH);
-      sylver::gpu::cublas_check_error(custat, context, inform);
+      // custat = cublasSetMathMode(cuhandle, CUBLAS_TENSOR_OP_MATH);
+      // sylver::gpu::cublas_check_error(custat, context, inform);
       
       // Allocate memory to accomodate half prec representation of
       // matrix A

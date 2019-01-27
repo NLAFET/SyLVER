@@ -63,7 +63,7 @@ namespace spldlt {
             else if ( !strcmp("-ngpu", argv[i]) && i+1 < argc ) {
                ngpu =  std::atoi( argv[++i] );
             }
-            else if ( !strcmp("--notc", argv[i]) ) {
+            else if ( !strcmp("--disable-tc", argv[i]) ) {
                std::cout << "Tensor cores deactivated" << std::endl;
                usetc =  false;
             }

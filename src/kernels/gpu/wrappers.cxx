@@ -92,4 +92,62 @@ namespace gpu {
       return cublasDtrsm(handle, side, uplo, trans, diag, m, n, alpha, a, lda, b, ldb);
    }
 
+   ////////////////////////////////////////
+
+   // SGEQRF BufferSize
+   template<>
+   cusolverStatus_t dev_geqrf_buffersize<float>(
+         cusolverDnHandle_t handle, int m, int n, float *a, int lda, int *lwork) {
+      return cusolverDnSgeqrf_bufferSize(handle, m, n, a, lda, lwork);
+   }
+
+   // SGEQRF
+   template<>
+   cusolverStatus_t dev_geqrf<float>(
+         cusolverDnHandle_t handle,
+         int m, int n, float *a, int lda,
+         float *tau, float *work, int lwork,
+         int *info) {
+      return cusolverDnSgeqrf(handle, m, n, a, lda, tau, work, lwork, info);
+   }
+
+   ////////////////////////////////////////
+
+   // SORMQR BufferSize
+   template <>
+   cusolverStatus_t dev_ormqr_buffersize<float>(
+         cusolverDnHandle_t handle,
+         cublasSideMode_t side, cublasOperation_t trans,
+         int m, int n, int k,
+         const float *a, int lda,
+         const float *tau,
+         const float *c, int ldc,
+         int *lwork) {
+      return cusolverDnSormqr_bufferSize(
+            handle, side, trans, m, n, k,
+            a, lda, tau, c, ldc,
+            lwork);
+   }
+
+   // SORMQR
+   template <>
+   cusolverStatus_t dev_ormqr<float>(
+         cusolverDnHandle_t handle,
+         cublasSideMode_t side, cublasOperation_t trans,
+         int m, int n, int k,
+         const float *a, int lda,
+         const float *tau,
+         float *c, int ldc,
+         float *work, int lwork,
+         int *dinfo) {
+      return cusolverDnSormqr(
+            handle, side, trans,
+            m, n, k,
+            a, lda,
+            tau,
+            c, ldc,
+            work, lwork,
+            dinfo);
+   }
+
 }}

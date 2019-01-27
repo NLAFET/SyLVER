@@ -1,7 +1,11 @@
 #pragma once
 
-// SpLDLT
+// SyLVER
 #include "NumericFront.hxx"
+#if defined(SPLDLT_USE_GPU)
+#include "kernels/gpu/common.hxx"
+#include "kernels/gpu/wrappers.hxx"
+#endif
 
 #include <cstdio>
 #include <cmath>
@@ -15,6 +19,12 @@
 #include "ssids/cpu/kernels/wrappers.hxx"
 #include "ssids/cpu/cpu_iface.hxx"
 #include "ssids/cpu/kernels/ldlt_app.hxx"
+
+#if defined(SPLDLT_USE_GPU)
+#include <cuda.h>
+#include <cublas_v2.h>
+#include <cusolverDn.h>
+#endif
 
 //using namespace spral::ssids::cpu;
 
@@ -736,7 +746,7 @@ namespace tests {
 
    // Generates a random dense positive definte matrix.
    template<typename T>
-   void gen_posdef_cond(int n, T* a, int lda) {
+   void gen_posdef_cond(int n, T* a, int lda, T cond) {
       // /* Get general sym indef matrix */
       // gen_sym_indef(n, a, lda);
       // /* Make diagonally dominant */
@@ -747,7 +757,12 @@ namespace tests {
       //       a[i*lda+i] += fabs(a[j*lda+i]);
       //    }
 
-      T cond = 2e4;
+      // Error handling
+      std::string context = "gen_posdef_cond";
+      // Timers
+      std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
+      
+      // T cond = 1e2;
       std::default_random_engine generator;
       std::uniform_int_distribution<long long int> distribution(1,cond);
  
@@ -765,17 +780,93 @@ namespace tests {
       // std::cout << "ann = " << a[(n-1)*lda+(n-1)] << std::endl;
       
       T *lambda = new T[lda*n];
+      // Fill up lambda with random values
+      ::spldlt::tests::gen_mat(n, n, lambda, lda);
+
+#if defined(SPLDLT_USE_GPU)
+      cudaError_t cuerr; // CUDA error
+      cublasStatus_t custat; // cuBLAS status 
+      T *d_lambda = nullptr;
+      cuerr = cudaMalloc((void**)&d_lambda, n*lda*sizeof(T));      
+      sylver::gpu::cuda_check_error(cuerr, context);
+      // Send lambda to the GPU
+      custat = cublasSetMatrix(n, n, sizeof(T), lambda, lda, d_lambda, lda);
+      sylver::gpu::cublas_check_error(custat, context);
+      T *d_a = nullptr;
+      cuerr = cudaMalloc((void**)&d_a, n*lda*sizeof(T));      
+      sylver::gpu::cuda_check_error(cuerr, context);
+      // Send A to the GPU
+      custat = cublasSetMatrix(n, n, sizeof(T), a, lda, d_a, lda);
+      sylver::gpu::cublas_check_error(custat, context);
+
+      cusolverStatus_t cusolstat;
+      cusolverDnHandle_t cusolhandle;
+      cusolstat = cusolverDnCreate(&cusolhandle);
+      int lwork; // Workspace dimensions
+      sylver::gpu::dev_geqrf_buffersize(cusolhandle, n, n, d_lambda, lda, &lwork);
+      std::cout << "[" << context << "]" <<" dev_geqrf lwork = " << lwork << std::endl;
+      // Workspace on the device
+      T *d_work;
+      cuerr = cudaMalloc((void**)&d_work, lwork*sizeof(T));      
+      sylver::gpu::cuda_check_error(cuerr, context);
+      T *d_tau;
+      cuerr = cudaMalloc((void**)&d_tau, n*sizeof(T));      
+      sylver::gpu::cuda_check_error(cuerr, context);
+      // Allocate info paramater on device
+      int *dinfo;
+      cuerr = cudaMalloc((void**)&dinfo, sizeof(int));      
+      sylver::gpu::cuda_check_error(cuerr, context);
+
+      start = std::chrono::high_resolution_clock::now();
+      sylver::gpu::dev_geqrf(
+            cusolhandle, n, n, d_lambda, lda,
+            d_tau, d_work, lwork,
+            dinfo);
+
+      // A = Q * D
+      sylver::gpu::dev_ormqr(
+            cusolhandle,
+            CUBLAS_SIDE_LEFT, CUBLAS_OP_N,
+            n, n, n,
+            d_lambda, lda, d_tau,
+            d_a, lda,
+            d_work, lwork,
+            dinfo);
+
+      // A = A * Q^T
+      sylver::gpu::dev_ormqr(
+            cusolhandle,
+            CUBLAS_SIDE_RIGHT, CUBLAS_OP_T,
+            n, n, n,
+            d_lambda, lda, d_tau,
+            d_a, lda,
+            d_work, lwork,
+            dinfo);
+      end = std::chrono::high_resolution_clock::now();
+
+      // Retrieve A on the host
+      custat = cublasGetMatrix(n, n, sizeof(T), d_a, lda, a, lda);
+      sylver::gpu::cublas_check_error(custat, context);
+
+      // Cleanup
+      cusolstat = cusolverDnDestroy(cusolhandle);
+
+      cuerr = cudaFree(dinfo);      
+      cuerr = cudaFree(d_tau);      
+      cuerr = cudaFree(d_work);      
+      cuerr = cudaFree(d_a);      
+      cuerr = cudaFree(d_lambda);      
+
+#else
+      
       T *tau = new T[n];
       T worksz;
       sylver::host_geqrf(n, n,
                          lambda, lda,
                          tau,
                          &worksz, -1);
-      
       // std::cout << "geqrf worksz = " << worksz << std::endl;
 
-      // Fill up lambda with random values
-      ::spldlt::tests::gen_mat(n, n, lambda, lda);
       int lwork = (int)worksz;
       T *work = new T[lwork];
 
@@ -814,34 +905,19 @@ namespace tests {
             a, lda,
             work, lwork);
 
-      delete[] lambda;
       delete[] work;
       delete[] tau;
+#endif
       
-      // T *c = nullptr;
-      // lambda = new T[lda*n];
-      // c = new T[lda*n];
+      delete[] lambda;
 
-      // // Matrix with condition number equal to one
-      // ::spldlt::tests::gen_mat(n, n, lambda, lda);
-      
-      // T alpha = 1.0, beta = 0.0;
-      // sylver::host_gemm(sylver::OP_N, sylver::OP_N,
-      //                   n, n, n, alpha,
-      //                   lambda, lda,
-      //                   a, lda,
-      //                   beta,
-      //                   c, lda);
+      // Calculate walltime
+      long ttotal =  
+         std::chrono::duration_cast<std::chrono::nanoseconds>
+         (end-start).count();
 
-      // sylver::host_gemm(sylver::OP_N, sylver::OP_T,
-      //                   n, n, n, alpha,
-      //                   c, lda,
-      //                   lambda, lda,
-      //                   beta,
-      //                   a, lda);
-      
-      // delete[] lambda;
-      // delete[] c;
+      std::cout << "[" << context << "]" <<" matrix generation time (s) = " << ttotal*1e-9 << std::endl;
+
    }
 
    // Generate one or more right-hand sides corresponding to soln x =
