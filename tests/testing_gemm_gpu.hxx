@@ -100,17 +100,17 @@ namespace tests {
          // Perfom GEMM
          sa = std::chrono::high_resolution_clock::now();
          custat = sylver::gpu::dev_gemm(
-               cuhandle, CUBLAS_OP_N, CUBLAS_OP_T,
+               cuhandle, CUBLAS_OP_N, CUBLAS_OP_N,
                m, n, k, &alpha,
                d_a, ldda,
                d_b, lddb,
                &beta,
                d_c, ldda);
-         // cuerr = cudaStreamSynchronize(stream);
-         sylver::gpu::cublas_check_error(custat, context);
-         // Wait for completion
+         sylver::gpu::cublas_check_error(custat, context, "Failed to launch GEMM on device");
          cuerr = cudaStreamSynchronize(stream);
-         sylver::gpu::cuda_check_error(cuerr, context);
+         // Wait for completion
+         // cuerr = cudaStreamSynchronize(stream);
+         sylver::gpu::cuda_check_error(cuerr, context, "Failed to synchronize stream");
          en = std::chrono::high_resolution_clock::now();
 
          // Cleanup cuBLAS handle
@@ -157,7 +157,7 @@ namespace tests {
          sylver::gpu::half alpha_hp = -1.0;
          sylver::gpu::half beta_hp = 1.0;
          sa = std::chrono::high_resolution_clock::now();         
-         custat = cublasGemmEx(cuhandle, CUBLAS_OP_N, CUBLAS_OP_T,
+         custat = cublasGemmEx(cuhandle, CUBLAS_OP_N, CUBLAS_OP_N,
                                m, n, k, &alpha_hp,
                                d_a_hp, CUDA_R_16F, ldda,
                                d_b_hp, CUDA_R_16F, lddb,
@@ -190,7 +190,7 @@ namespace tests {
       }
       
       cuerr = cudaDeviceSynchronize();
-      sylver::gpu::cuda_check_error(cuerr, context);
+      sylver::gpu::cuda_check_error(cuerr, context, "Failed to synchronize device");
 
       long ttotal = 
          std::chrono::duration_cast<std::chrono::nanoseconds>
