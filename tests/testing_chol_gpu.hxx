@@ -23,7 +23,7 @@
 // CUDA, CuBLAS and CuSOLVER
 #include <cuda_runtime.h>
 #include <cusolverDn.h>
-#include "cublas_v2.h"
+#include <cublas_v2.h>
 
 namespace sylver {
 namespace tests {   
@@ -46,7 +46,7 @@ namespace tests {
       std::cout << "[chol_test] usetc = " << usetc << std::endl;
       a = new T[m*lda];
       // sylver::tests::gen_posdef(m, a, lda);
-      sylver::tests::gen_posdef_cond(m, a, lda, (T)3.8e3);
+      sylver::tests::gen_posdef_cond(m, a, lda, (T)5e0);
       
       // Generate a RHS based on x=1, b=Ax
       b = new T[m];
@@ -143,13 +143,13 @@ namespace tests {
          
          // Initialize factorization
          custat = cublasCreate(&cuhandle);
-         if (custat != CUBLAS_STATUS_SUCCESS) {    
-            std::cout << "[chol_test][error] Failed to create cuBLAS handle "
-                      << "(" << custat << ")" << std::endl;
-            std::exit(1);
-         }
-
+         sylver::gpu::cublas_check_error(custat, context);
          custat = cublasSetStream(cuhandle, stream);
+         sylver::gpu::cublas_check_error(custat, context);
+         // Select math mode
+         if (usetc) custat = cublasSetMathMode(cuhandle, CUBLAS_TENSOR_OP_MATH);
+         else       custat = cublasSetMathMode(cuhandle, CUBLAS_DEFAULT_MATH);            
+
          
          start = std::chrono::high_resolution_clock::now();
 
@@ -193,8 +193,7 @@ namespace tests {
          sylver::gpu::cublas_check_error(custat, context);
          // Select math mode
          if (usetc) custat = cublasSetMathMode(cuhandle, CUBLAS_TENSOR_OP_MATH);
-         else       custat = cublasSetMathMode(cuhandle, CUBLAS_DEFAULT_MATH);
-            
+         else       custat = cublasSetMathMode(cuhandle, CUBLAS_DEFAULT_MATH);            
          sylver::gpu::cublas_check_error(custat, context, inform);
          
          start = std::chrono::high_resolution_clock::now();
