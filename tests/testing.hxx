@@ -16,7 +16,7 @@ namespace spldlt {
       SpldltOpts():
          ncpu(1), ngpu(0), m(256), n(256), k(256), nb(256), ib(256), posdef(false), 
          check(true), chol(false), diagdom(false), algo(sylver::tests::algo::SyLVER),
-         usetc(true)
+         usetc(true), prec(sylver::tests::prec::FP64)
       {}
 
       void parse_opts(int argc, char** argv) {
@@ -100,6 +100,18 @@ namespace spldlt {
             else if ( !strcmp("--algo=cusolver-hp", argv[i]) ) {
                algo = sylver::tests::algo::cuSOLVER_HP;
             }
+
+            // Working precision
+            else if ( !strcmp("--fp16", argv[i]) ) {
+               prec = sylver::tests::prec::FP16;
+            }
+            else if ( !strcmp("--fp32", argv[i]) ) {
+               prec = sylver::tests::prec::FP32;
+            }
+            else if ( !strcmp("--fp64", argv[i]) ) {
+               prec = sylver::tests::prec::FP64;
+            }
+
             else {
                std::cout << "Unrecognized command " << i << std::endl;
             }
@@ -120,6 +132,7 @@ namespace spldlt {
       bool chol; // Use Cholesky factorization
       bool diagdom; // Diagonally dominant matrix (unsymmetric case)
       enum sylver::tests::algo algo; // Algorithm to use
-      bool usetc; // Use tensor cores on GPU 
+      bool usetc; // Use tensor cores on GPU
+      enum sylver::tests::prec prec; // Working precision
    };
 }

@@ -9,6 +9,7 @@
 #include "factor.hxx"
 #include "kernels/llt.hxx"
 #if defined(SPLDLT_USE_STARPU)
+#include "StarPU/common.hxx"
 #include "StarPU/scheduler.h"
 #include "StarPU/kernels.hxx"
 #endif
@@ -29,12 +30,13 @@
 namespace spldlt { namespace tests {
 
       template<typename T>
-      int factor_node_posdef_test(int m, int n, int blksz, int ncpu, int ngpu, bool check) {
+      int factor_node_posdef_test(int m, int n, int blksz, int ncpu, int ngpu, bool check, bool usetc) {
 
          bool failed = false;
          int ret;
 
          printf("[factor_node_posdef_test] m = %d, n =  %d, blksz = %d\n", m, n, blksz);
+         std::cout << "[chol_test] usetc = " << usetc << std::endl;
 
          ////////////////////////////////////////
          // Setup test matrix and rhs
@@ -95,7 +97,7 @@ namespace spldlt { namespace tests {
          }
          else {
             ASSERT_TRUE(m == n); // FIXME: does not work for non square fronts
-            sylver::tests::gen_posdef(m, a, lda);
+            sylver::tests::gen_posdef(m, front.lcol, lda);
          }
 
          // Allocate contribution blocks
@@ -131,6 +133,9 @@ namespace spldlt { namespace tests {
          STARPU_CHECK_RETURN_VALUE(ret, "starpu_init");
 #if defined(SPLDLT_USE_GPU)
       starpu_cublas_init();
+      // Select math mode
+      if (usetc) sylver::starpu::enable_tc();
+      else       sylver::starpu::disable_tc();
 #endif
 #endif
 

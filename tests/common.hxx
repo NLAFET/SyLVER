@@ -703,6 +703,16 @@ namespace tests {
       cuSOLVER_HP,
    };
 
+   // Working precision
+   enum prec {
+      // Halh
+      FP16,
+      // Single
+      FP32,
+      // Single
+      FP64
+   };
+
    // Generates a random dense positive definte matrix. Entries are
    // Unif[-1,1]. Only lower triangle is used, rest is filled with
    // NaNs.

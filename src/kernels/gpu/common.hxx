@@ -12,7 +12,8 @@
 
 // CUDA
 #include <cuda.h>
-#include "cublas_v2.h"
+#include <cuda_runtime_api.h>
+#include <cublas_v2.h>
 
 namespace sylver {
 namespace gpu {
