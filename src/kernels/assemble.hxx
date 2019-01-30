@@ -4,11 +4,13 @@
 /// @author Florent Lopez
 #pragma once
 
+// SyLVER
 #include "ssids/cpu/cpu_iface.hxx"
-#include "ssids/cpu/kernels/assemble.hxx"
-
+// #include "ssids/cpu/kernels/assemble.hxx"
+#include "ssids/contrib.h"
+// STD
 #include <assert.h>
-
+// SSIDS
 #include "kernels/ldlt_app.hxx"
 #include "NumericFront.hxx"
 
@@ -282,7 +284,21 @@ namespace spldlt {
       }
 
    } // namespace spldlt::starpu
+
 #endif
+
+   // @brief Retrieve contrib data from subtree for assembly
+   // operations
+   // Note: See assemble.cxx for specialized routine
+   template <typename T>
+   void contrib_get_data(
+         const void *const contrib, int *const n,
+         const T* *const val, int *const ldval, const int* *const rlist,
+         int *const ndelay, const int* *const delay_perm,
+         const T* *const delay_val, int *const lddelay) {
+      
+      throw std::runtime_error("[contrib_get_data] factor_subtree NOT implemented for working precision");
+   }
    
    ////////////////////////////////////////////////////////////////////////////////
    // Activate frontal matrix: allocate data structures
@@ -320,8 +336,8 @@ namespace spldlt {
       T *scaling = NULL;
 
       /* Rebind allocators */
-      typedef typename std::allocator_traits<FactorAlloc>::template rebind_traits<double> FADoubleTraits;
-      typename FADoubleTraits::allocator_type factor_alloc_double(factor_alloc);
+      typedef typename std::allocator_traits<FactorAlloc>::template rebind_traits<T> FATypeTraits;
+      typename FATypeTraits::allocator_type factor_alloc_type(factor_alloc);
       typedef typename std::allocator_traits<FactorAlloc>::template rebind_traits<int> FAIntTraits;
       typename FAIntTraits::allocator_type factor_alloc_int(factor_alloc);
       typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> PoolAllocInt;
@@ -336,9 +352,9 @@ namespace spldlt {
 
       /* Get space for node now we know it size using Fortran allocator + zero it*/
       // NB L is  nrow x ncol and D is 2 x ncol (but no D if posdef)
-      size_t ldl = spral::ssids::cpu::align_lda<double>(nrow);
+      size_t ldl = spral::ssids::cpu::align_lda<T>(nrow);
       size_t len = ldl    * ncol;  // posdef
-      front.lcol = FADoubleTraits::allocate(factor_alloc_double, len);
+      front.lcol = FATypeTraits::allocate(factor_alloc_type, len);
 
       // Get space for contribution block + (explicitly do not zero it!)
       // node.alloc_contrib();
@@ -360,8 +376,8 @@ namespace spldlt {
       T *scaling = NULL;
 
       /* Rebind allocators */
-      typedef typename std::allocator_traits<FactorAlloc>::template rebind_traits<double> FADoubleTraits;
-      typename FADoubleTraits::allocator_type factor_alloc_double(factor_alloc);
+      typedef typename std::allocator_traits<FactorAlloc>::template rebind_traits<T> FATypeTraits;
+      typename FATypeTraits::allocator_type factor_alloc_type(factor_alloc);
       typedef typename std::allocator_traits<FactorAlloc>::template rebind_traits<int> FAIntTraits;
       typename FAIntTraits::allocator_type factor_alloc_int(factor_alloc);
       typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> PoolAllocInt;
@@ -379,9 +395,10 @@ namespace spldlt {
          } 
          else {
             int cn, ldcontrib, ndelay, lddelay;
-            double const *cval, *delay_val;
+            T const *cval, *delay_val;
             int const *crlist, *delay_perm;
-            spral_ssids_contrib_get_data(
+            // spral_ssids_contrib_get_data(
+            contrib_get_data(
                   child_contrib[child->symb.contrib_idx], &cn, &cval, &ldcontrib, &crlist,
                   &ndelay, &delay_perm, &delay_val, &lddelay
                   );
@@ -399,7 +416,7 @@ namespace spldlt {
       //    : (ldl+2) * ncol; // indef (includes D)
       size_t len =  (ldl+2) * ncol; // indef (includes D)
 
-      front.lcol = FADoubleTraits::allocate(factor_alloc_double, len);
+      front.lcol = FATypeTraits::allocate(factor_alloc_type, len);
       // front.lcol = new T[len];
       // DEBUG
       // TODO remove explicit zeroing
@@ -951,9 +968,10 @@ namespace spldlt {
 
       // Retreive contribution block from subtrees
       int cn, ldcontrib, ndelay, lddelay;
-      double const *cval, *delay_val;
+      T const *cval, *delay_val;
       int const *crlist, *delay_perm;
-      spral_ssids_contrib_get_data(
+      // spral_ssids_contrib_get_data(
+      contrib_get_data(
             child_contrib[contrib_idx], &cn, &cval, &ldcontrib, &crlist,
             &ndelay, &delay_perm, &delay_val, &lddelay
             );
@@ -1010,9 +1028,10 @@ namespace spldlt {
 
       // Retreive contribution block from subtrees
       int cn, ldcontrib, ndelay, lddelay;
-      double const *cval, *delay_val;
+      T const *cval, *delay_val;
       int const *crlist, *delay_perm;
-      spral_ssids_contrib_get_data(
+      // spral_ssids_contrib_get_data(
+      contrib_get_data(
             child_contrib[csnode.contrib_idx], &cn, &cval, &ldcontrib, &crlist,
             &ndelay, &delay_perm, &delay_val, &lddelay
             );
@@ -1059,9 +1078,10 @@ namespace spldlt {
 
       // Retreive contribution block from subtrees
       int cn, ldcontrib, ndelay, lddelay;
-      double const *cval, *delay_val;
+      T const *cval, *delay_val;
       int const *crlist, *delay_perm;
-      spral_ssids_contrib_get_data(
+      // spral_ssids_contrib_get_data(
+      contrib_get_data(
             child_contrib[csnode.contrib_idx], &cn, &cval, &ldcontrib, &crlist,
             &ndelay, &delay_perm, &delay_val, &lddelay
             );
@@ -1258,7 +1278,8 @@ namespace spldlt {
             int cn, ldcontrib, ndelay, lddelay;
             double const *cval, *delay_val;
             int const *crlist, *delay_perm;
-            spral_ssids_contrib_get_data(
+            // spral_ssids_contrib_get_data(
+            contrib_get_data(
                   child_contrib[csnode.contrib_idx], &cn, &cval, &ldcontrib, &crlist,
                   &ndelay, &delay_perm, &delay_val, &lddelay
                   );

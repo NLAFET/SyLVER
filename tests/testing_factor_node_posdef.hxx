@@ -7,6 +7,7 @@
 #include "SymbolicFront.hxx"
 #include "NumericFront.hxx"
 #include "factor.hxx"
+#include "kernels/llt.hxx"
 #if defined(SPLDLT_USE_STARPU)
 #include "StarPU/scheduler.h"
 #include "StarPU/kernels.hxx"
@@ -44,11 +45,10 @@ namespace spldlt { namespace tests {
          T* b = nullptr;
          if (check) {
             a = new T[m*lda];
-            gen_posdef(m, a, lda);
-
+            sylver::tests::gen_posdef(m, a, lda);
             // Generate a RHS based on x=1, b=Ax
             b = new T[m];
-            gen_rhs(m, a, lda, b);
+            sylver::tests::gen_rhs(m, a, lda, b);
          }
 
          // Print out matrices if requested
@@ -95,7 +95,7 @@ namespace spldlt { namespace tests {
          }
          else {
             ASSERT_TRUE(m == n); // FIXME: does not work for non square fronts
-            gen_posdef(m, front.lcol, lda);
+            sylver::tests::gen_posdef(m, a, lda);
          }
 
          // Allocate contribution blocks
@@ -228,15 +228,22 @@ namespace spldlt { namespace tests {
                memcpy(&soln[r*ldsoln], b, m*sizeof(T));
 
             printf("[factor_node_posdef_test] Solve..\n");
-         
-            cholesky_solve_fwd(m, n, l, lda, nrhs, soln, ldsoln);
-            host_trsm<T>(SIDE_LEFT, FILL_MODE_LWR, OP_N, DIAG_NON_UNIT, m-n, nrhs, 1.0, &l[n*lda+n], lda, &soln[n], ldsoln);
-            host_trsm<T>(SIDE_LEFT, FILL_MODE_LWR, OP_T, DIAG_NON_UNIT, m-n, nrhs, 1.0, &l[n*lda+n], lda, &soln[n], ldsoln);
-            cholesky_solve_bwd(m, n, l, lda, nrhs, soln, ldsoln);
+            sylver::spldlt::cholesky_solve_fwd(m, n, l, lda, nrhs, soln, ldsoln);
+            host_trsm<T>(
+                  sylver::SIDE_LEFT, sylver::FILL_MODE_LWR, 
+                  sylver::OP_N, sylver::DIAG_NON_UNIT, 
+                  m-n, nrhs, 1.0, &l[n*lda+n], lda, 
+                  &soln[n], ldsoln);
+            host_trsm<T>(
+                  sylver::SIDE_LEFT, sylver::FILL_MODE_LWR, 
+                  sylver::OP_T, sylver::DIAG_NON_UNIT, 
+                  m-n, nrhs, 1.0, &l[n*lda+n], lda, 
+                  &soln[n], ldsoln);
+            sylver::spldlt::cholesky_solve_bwd(m, n, l, lda, nrhs, soln, ldsoln);
 
             printf("[factor_node_posdef_test] Done\n");
 
-            T bwderr = backward_error(m, a, lda, b, 1, soln, m);
+            T bwderr = sylver::tests::backward_error(m, a, lda, b, 1, soln, m);
             printf("bwderr = %le\n", bwderr);
 
             delete[] l;

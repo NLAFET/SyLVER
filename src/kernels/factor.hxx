@@ -8,14 +8,12 @@
 #include "kernels/wrappers.hxx"
 
 // SSIDS
-// #include "ssids/cpu/kernels/common.hxx"
-// #include "ssids/cpu/kernels/wrappers.hxx"
-
-// using namespace spral::ssids::cpu;
+#include "ssids/cpu/cpu_iface.hxx"
+#include "ssids/cpu/ThreadStats.hxx"
 
 namespace spldlt {
 
-   // Factor subtree kernel
+   // @brief Factor subtree kernel in double precision
    extern "C" void spldlt_factor_subtree_c(
          void *akeep, 
          void *fkeep,
@@ -24,8 +22,21 @@ namespace spldlt {
          void **child_contrib, 
          struct spral::ssids::cpu::cpu_factor_options *options,
          spral::ssids::cpu::ThreadStats *stats);
-   
-   
+
+   // @brief Factor subtree kernel in double precision
+   template <typename T>
+   void factor_subtree(
+         void *akeep,
+         void *fkeep,
+         int p,
+         T *aval, 
+         void **child_contrib, 
+         struct spral::ssids::cpu::cpu_factor_options *options,
+         spral::ssids::cpu::ThreadStats *stats) {
+      
+      throw std::runtime_error("[factor_subtree] factor_subtree NOT implemented for working precision");
+   }
+      
    /// @param m Number of rows in block
    /// @param n Number of columns in block
    template <typename T>
@@ -39,10 +50,10 @@ namespace spldlt {
                sylver::SIDE_RIGHT, sylver::FILL_MODE_LWR,
                sylver::OP_T, sylver::DIAG_NON_UNIT,
                m-n, n,
-               1.0,
+               (T)1.0,
                a, lda,
                &a[n], lda);
-      }
+}
    }
 
    
@@ -65,18 +76,16 @@ namespace spldlt {
                sylver::SIDE_RIGHT, sylver::FILL_MODE_LWR,
                sylver::OP_T, sylver::DIAG_NON_UNIT,
                m-n, n,
-               1.0,
+               (T)1.0,
                a, lda,
                &a[n], lda);
          
          if(upd) {
-            
-            double rbeta = zero_upd ? 0.0 : 1.0;
-            
+            T rbeta = zero_upd ? 0.0 : 1.0;            
             sylver::host_syrk(
                   sylver::FILL_MODE_LWR, sylver::OP_N, 
                   m-n, n, 
-                  -1.0,
+                  (T)-1.0,
                   &a[n], lda, 
                   rbeta, 
                   upd, ldupd);
@@ -97,7 +106,7 @@ namespace spldlt {
       sylver::host_trsm(
             sylver::SIDE_RIGHT, sylver::FILL_MODE_LWR,
             sylver::OP_T, sylver::DIAG_NON_UNIT,
-            m, n, 1.0, a_kk, ld_a_kk, a_ik, ld_a_ik);
+            m, n, (T)1.0, a_kk, ld_a_kk, a_ik, ld_a_ik);
 
    }
 
@@ -107,27 +116,27 @@ namespace spldlt {
    /// @param upd Contribution block
    template <typename T>
    void solve_block(
-         int m, int n, 
-         T *a_kk, int ld_a_kk, 
+         int m, int n,
+         T *a_kk, int ld_a_kk,
          T *a_ik, int ld_a_ik,
          T *upd, int ldupd,
-         bool zero_upd,  
+         bool zero_upd,
          int blksz
          ) {
 
       sylver::host_trsm(
             sylver::SIDE_RIGHT, sylver::FILL_MODE_LWR,
             sylver::OP_T, sylver::DIAG_NON_UNIT,
-            m, n, 1.0, a_kk, ld_a_kk, a_ik, ld_a_ik);
+            m, n, (T)1.0, a_kk, ld_a_kk, a_ik, ld_a_ik);
 
       if (n<blksz && upd) {
 
-         double rbeta = zero_upd ? 0.0 : 1.0;
+         T rbeta = zero_upd ? 0.0 : 1.0;
 
          sylver::host_gemm(
                sylver::OP_N, sylver::OP_T,
                m, blksz-n, n,
-               -1.0,
+               (T)-1.0,
                a_ik, ld_a_ik,
                &a_kk[n], ld_a_kk,
                rbeta,
@@ -152,10 +161,10 @@ namespace spldlt {
       sylver::host_gemm(
             sylver::OP_N, sylver::OP_T,
             m, n, k,
-            -1.0,
+            (T)-1.0,
             a_ik, ld_a_ik,
             a_kj, ld_a_kj,
-            1.0,
+            (T)1.0,
             a_ij, ld_a_ij);
 
    }
@@ -182,17 +191,15 @@ namespace spldlt {
 
       sylver::host_gemm(
             sylver::OP_N, sylver::OP_T,
-            m, n, k, -1.0, a_ik, ld_a_ik,
-            a_kj, ld_a_kj, 1.0, a_ij, ld_a_ij);
+            m, n, k, (T)-1.0, a_ik, ld_a_ik,
+            a_kj, ld_a_kj, (T)1.0, a_ij, ld_a_ij);
       
       if(n<blksz && upd) {
-
-         double rbeta = zero_upd ? 0.0 : 1.0;
-
+         T rbeta = zero_upd ? 0.0 : 1.0;
          sylver::host_gemm(
                sylver::OP_N, sylver::OP_T,
                updm, updn, k, 
-               -1.0,
+               (T)-1.0,
                &a_ik[m-updm], ld_a_ik, 
                &a_kj[n], ld_a_kj, 
                rbeta,
@@ -223,7 +230,7 @@ namespace spldlt {
       sylver::host_gemm(
             sylver::OP_N, sylver::OP_T, 
             m, n, k,
-            -1.0,
+            (T)-1.0,
             a_ik, ld_a_ik,
             a_kj, ld_a_kj, 
             rbeta, 
@@ -240,22 +247,24 @@ namespace spldlt {
          T *a_ik, int ld_a_ik, 
          T *a_kj, int ld_a_kj) {
       
+      // Udpate triangular part of block
       sylver::host_syrk(
             sylver::FILL_MODE_LWR, sylver::OP_N,
-            n, k, -1.0, 
+            n, k, 
+            (T)-1.0, 
             a_ik, ld_a_ik,
-            1.0, 
+            (T)1.0,
             a_ij, ld_a_ij);
 
+      // Udpate rectangular part if present
       if (m > n) {
-
          sylver::host_gemm(
                sylver::OP_N, sylver::OP_T,
                m-n, n, k,
-               -1.0,
+               (T)-1.0,
                &a_ik[n], ld_a_ik,
                a_kj, ld_a_kj,
-               1.0,
+               (T)1.0,
                &a_ij[n], ld_a_ij);
       }      
    }

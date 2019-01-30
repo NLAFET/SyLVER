@@ -581,37 +581,6 @@ namespace spldlt {
 
       assemble_subtree(front, csfront, child_contrib, contrib_idx);
 
-      // // Retreive contribution block from subtrees
-      // int cn, ldcontrib, ndelay, lddelay;
-      // double const *cval, *delay_val;
-      // int const *crlist, *delay_perm;
-      // spral_ssids_contrib_get_data(
-      //       child_contrib[contrib_idx], &cn, &cval, &ldcontrib, &crlist,
-      //       &ndelay, &delay_perm, &delay_val, &lddelay
-      //       );
-
-      // printf("[subtree_assemble_task] contrib_idx: %d, cn: %d, ndelay: %d\n", 
-      //        contrib_idx+1, cn, ndelay);
-      // // continue;
-      // if(!cval) return; // child was all delays, nothing more to do
-      // // int* cache = work[omp_get_thread_num()].get_ptr<int>(cn);
-      // for(int j = 0; j < cn; ++j) {
-               
-      //    int c = cmap[ j ]; // Destination column
-                  
-      //    T const* src = &cval[j*ldcontrib];
-
-      //    if (c < sfront.ncol) {
-
-      //       int ldd = front.get_ldl();
-      //       T *dest = &front.lcol[c*ldd];
-
-      //       for (int i = j ; i < cn; ++i) {
-      //          // Assemble destination block
-      //          dest[ cmap[ i ]] += src[i];
-      //       }
-      //    }
-      // }
 #endif
    }
    
