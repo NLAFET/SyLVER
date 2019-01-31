@@ -423,7 +423,9 @@ target_link_libraries(splu_test ${SPRAL_LIBRARIES})
 
 ########################################
 # CUTLASS
-
+if (${HAVE_CUTLASS} MATCHES "ON")
+  include_directories( ${CUTLASS_HEADERS} )
+endif()
 
 ################################################################################
 # Test drivers
@@ -439,10 +441,17 @@ if (${KERNEL_TESTS} MATCHES "ON")
     tests/*.hxx
     tests/*.F90)
   add_library(spldlt_tests ${test_src})
-
-  add_executable(spldlt_tests_factor_node tests/drivers/factor_node_test.cxx)
-  add_executable(spldlt_tests_kernels tests/drivers/kernel_test.cxx)
-
+  set(TESTS_LIBS ${TESTS_LIBS} spldlt_tests)
+  
+  if(${USE_GPU} MATCHES ON)
+    file(
+      GLOB
+      cuda_tests_sources 
+      tests/*.cu)
+    cuda_add_library(sylver_cuda_tests ${cuda_tests_sources})
+      set(TESTS_LIBS ${TESTS_LIBS} sylver_cuda_tests)
+  endif()
+  
   if(${USE_GPU} MATCHES ON)
 
     add_executable(spldlt_tests_update_block_gpu tests/drivers/update_block_gpu_test.cxx)
@@ -453,7 +462,7 @@ if (${KERNEL_TESTS} MATCHES "ON")
     target_link_libraries(spldlt_tests_update_block_gpu ${obj})
     target_link_libraries(spldlt_tests_update_block_gpu ${SPRAL_LIBRARIES})
     target_link_libraries(spldlt_tests_update_block_gpu ${LIBS})
-    target_link_libraries(spldlt_tests_update_block_gpu spldlt_tests)
+    target_link_libraries(spldlt_tests_update_block_gpu ${TESTS_LIBS})
 
     add_executable(sylver_tests_factor_gpu tests/drivers/factor_gpu_test.cxx)
 
@@ -463,30 +472,37 @@ if (${KERNEL_TESTS} MATCHES "ON")
     target_link_libraries(sylver_tests_factor_gpu ${obj})
     target_link_libraries(sylver_tests_factor_gpu ${SPRAL_LIBRARIES})
     target_link_libraries(sylver_tests_factor_gpu ${LIBS})
-    target_link_libraries(sylver_tests_factor_gpu spldlt_tests)
-    target_link_libraries(sylver_tests_factor_gpu cusolver) # CuSOLVER
+    target_link_libraries(sylver_tests_factor_gpu ${TESTS_LIBS})
+    # target_link_libraries(sylver_tests_factor_gpu cusolver) # CuSOLVER
 
     add_executable(sylver_tests_gemm_gpu tests/drivers/gemm_gpu_test.cxx)
 
     target_include_directories(sylver_tests_gemm_gpu PUBLIC ${SPRAL_DIR})
     target_include_directories(sylver_tests_gemm_gpu PUBLIC "${SpLDLT_SOURCE_DIR}/tests")
+    if (${HAVE_CUTLASS} MATCHES "ON")
+      target_include_directories(sylver_tests_gemm_gpu PUBLIC ${CUTLASS_HEADERS})
+    endif()    
     target_link_libraries(sylver_tests_gemm_gpu spldlt)
     target_link_libraries(sylver_tests_gemm_gpu ${obj})
     target_link_libraries(sylver_tests_gemm_gpu ${SPRAL_LIBRARIES})
     target_link_libraries(sylver_tests_gemm_gpu ${LIBS})
-    target_link_libraries(sylver_tests_gemm_gpu spldlt_tests)
-    target_link_libraries(sylver_tests_gemm_gpu cusolver) # CuSOLVER
+    target_link_libraries(sylver_tests_gemm_gpu ${TESTS_LIBS})
+    # target_link_libraries(sylver_tests_gemm_gpu cusolver) # CuSOLVER
 
   endif()
-  
+
+  add_executable(spldlt_tests_factor_node tests/drivers/factor_node_test.cxx)
+
   target_include_directories(spldlt_tests_factor_node PUBLIC "${SpLDLT_SOURCE_DIR}/tests")
   target_include_directories(spldlt_tests_factor_node PUBLIC ${SPRAL_DIR})
   target_link_libraries(spldlt_tests_factor_node spldlt)
   target_link_libraries(spldlt_tests_factor_node ${obj})
   target_link_libraries(spldlt_tests_factor_node ${SPRAL_LIBRARIES})
-  target_link_libraries(spldlt_tests_factor_node spldlt_tests)
+  target_link_libraries(spldlt_tests_factor_node ${TESTS_LIBS})
   target_link_libraries(spldlt_tests_factor_node ${LIBS})
 
+  add_executable(spldlt_tests_kernels tests/drivers/kernel_test.cxx)
+  
   target_include_directories(spldlt_tests_kernels PUBLIC ${SpLDLT_SOURCE_DIR}/tests)
   target_include_directories(spldlt_tests_kernels PUBLIC ${SPRAL_DIR})
   target_link_libraries(spldlt_tests_kernels spldlt_tests)
@@ -494,6 +510,7 @@ if (${KERNEL_TESTS} MATCHES "ON")
   target_link_libraries(spldlt_tests_kernels ${obj})
   target_link_libraries(spldlt_tests_kernels ${SPRAL_LIBRARIES})
   target_link_libraries(spldlt_tests_kernels ${LIBS})
+  target_link_libraries(spldlt_tests_kernels ${TESTS_LIBS})
 
 endif()
 

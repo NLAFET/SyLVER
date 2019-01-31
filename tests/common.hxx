@@ -701,6 +701,8 @@ namespace tests {
       cuSOLVER,
       /// Use routine from cuSOLVER using half precision
       cuSOLVER_HP,
+      /// Use the CUTLASS library
+      CUTLASS
    };
 
    // Working precision

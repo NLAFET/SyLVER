@@ -100,6 +100,9 @@ namespace spldlt {
             else if ( !strcmp("--algo=cusolver-hp", argv[i]) ) {
                algo = sylver::tests::algo::cuSOLVER_HP;
             }
+            else if ( !strcmp("--algo=cutlass", argv[i]) ) {
+               algo = sylver::tests::algo::CUTLASS;
+            }
 
             // Working precision
             else if ( !strcmp("--fp16", argv[i]) ) {

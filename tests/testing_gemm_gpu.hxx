@@ -14,8 +14,15 @@
 #include <chrono>
 
 namespace sylver {
-namespace tests {   
-
+namespace tests {
+      
+   template<typename T>
+   cudaError_t cutlass_gemm_test(
+         cudaStream_t stream,
+         int m, int n, int k, T alpha,
+         T *a, int lda, T *b, int ldb, T beta,
+         T *c, int ldc);
+   
    template<typename T>
    int gemm_test(int m, int n, int k, enum algo algo, bool usetc = true) {
 
@@ -184,6 +191,16 @@ namespace tests {
          cudaFree(d_c_hp);
          
       }
+      else if(algo == sylver::tests::CUTLASS) {
+         std::cout << context << " CUTLASS" << std::endl;
+         sa = std::chrono::high_resolution_clock::now();         
+         cuerr = cutlass_gemm_test(
+               stream, m, n, k, alpha, d_a, ldda, d_b, lddb, beta, d_c, ldda);
+         sylver::gpu::cuda_check_error(cuerr, context, "Failed to launch CUTLASS GEMM");
+         cuerr = cudaStreamSynchronize(stream);
+         sylver::gpu::cuda_check_error(cuerr, context, "Failed to synchronize device");
+         en = std::chrono::high_resolution_clock::now();
+      }      
       else {
          std::cout << "[chol_test] Algo NOT implemented " << std::endl;
          std::exit(0);
