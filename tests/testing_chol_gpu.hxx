@@ -46,7 +46,8 @@ namespace tests {
       std::cout << "[chol_test] usetc = " << usetc << std::endl;
       a = new T[m*lda];
       // sylver::tests::gen_posdef(m, a, lda);
-      sylver::tests::gen_posdef_cond(m, a, lda, (T)5e0);
+      // sylver::tests::gen_posdef_cond(m, a, lda, (T)5e0);
+      sylver::tests::gen_posdef_cond(m, a, lda, (T)5.0e3);
       
       // Generate a RHS based on x=1, b=Ax
       b = new T[m];
@@ -94,6 +95,7 @@ namespace tests {
 
          cusolstat = cusolverDnCreate(&cusolhandle);
          cusolverDnSetStream(cusolhandle, stream);
+
          T *d_work = nullptr;
          int worksz = 0; // Workspace size
          cusolstat = sylver::gpu::dev_potrf_buffersize(
@@ -289,8 +291,8 @@ namespace tests {
       
       T fwderr = sylver::tests::forward_error(m, 1, soln, ldsoln);
       // printf("fwderr = %le\n", fwderr);
-      T bwderr = ::spldlt::tests::unsym_backward_error(m, m, a, lda, b, 1, soln, m);
-      // T bwderr = sylver::tests::backward_error(m, a, lda, b, 1, soln, m);
+      // double bwderr = ::spldlt::tests::unsym_backward_error(m, m, a, lda, b, 1, soln, m);
+      double bwderr = sylver::tests::backward_error(m, a, lda, b, 1, soln, m);
       printf("bwderr = %le\n", bwderr);
  
       double flops = ((double)m*m*m)/3.0;

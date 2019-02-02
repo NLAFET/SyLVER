@@ -103,6 +103,9 @@ namespace spldlt {
             else if ( !strcmp("--algo=cutlass", argv[i]) ) {
                algo = sylver::tests::algo::CUTLASS;
             }
+            else if ( !strcmp("--algo=cutlass-wmma-hp", argv[i]) ) {
+               algo = sylver::tests::algo::CUTLASS_WMMA_HP;
+            }
 
             // Working precision
             else if ( !strcmp("--fp16", argv[i]) ) {

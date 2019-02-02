@@ -22,7 +22,15 @@ namespace tests {
          int m, int n, int k, T alpha,
          T *a, int lda, T *b, int ldb, T beta,
          T *c, int ldc);
-   
+
+   // WMMA
+   template<typename T>
+   cudaError_t cutlass_wmma_gemm_test(
+         cudaStream_t stream,
+         int m, int n, int k, T alpha,
+         T *a, int lda, T *b, int ldb, T beta,
+         T *c, int ldc);
+
    template<typename T>
    int gemm_test(int m, int n, int k, enum algo algo, bool usetc = true) {
 
@@ -201,6 +209,48 @@ namespace tests {
          sylver::gpu::cuda_check_error(cuerr, context, "Failed to synchronize device");
          en = std::chrono::high_resolution_clock::now();
       }      
+      else if(algo == sylver::tests::CUTLASS_WMMA_HP) {
+
+         std::cout << context << " CUTLASS WMMA half prec" << std::endl;
+
+         half *d_a_hp = nullptr;
+         half *d_b_hp = nullptr;
+         half *d_c_hp = nullptr;
+
+         // Allocate memory for matrices on the device
+         cuerr = cudaMalloc((void**)&d_a_hp, ldda*k*sizeof(half));
+         sylver::gpu::cuda_check_error(cuerr, context);
+         sylver::gpu::convert(stream, m, k, d_a, ldda, d_a_hp, ldda);
+         cudaFree(d_a);
+         d_a = nullptr;
+         cuerr = cudaMalloc((void**)&d_b_hp, lddb*n*sizeof(half));
+         sylver::gpu::cuda_check_error(cuerr, context);
+         sylver::gpu::convert(stream, k, n, d_b, lddb, d_b_hp, lddb);
+         cudaFree(d_b);
+         d_b = nullptr;
+         cuerr = cudaMalloc((void**)&d_c_hp, ldda*n*sizeof(half));
+         sylver::gpu::cuda_check_error(cuerr, context);
+         sylver::gpu::convert(stream, m, n, d_c, ldda, d_c_hp, ldda);
+         cudaFree(d_c);
+         d_c = nullptr;
+
+         half alpha_hp = -1.0;
+         half beta_hp = 1.0;
+         sa = std::chrono::high_resolution_clock::now();
+         cuerr = cutlass_wmma_gemm_test(
+               stream, m, n, k, alpha_hp,
+               d_a_hp, ldda,  d_b_hp, lddb,
+               beta_hp, d_c_hp, ldda);         
+         sylver::gpu::cuda_check_error(cuerr, context);
+         cuerr = cudaStreamSynchronize(stream);
+         sylver::gpu::cuda_check_error(cuerr, context);
+         en = std::chrono::high_resolution_clock::now();
+         
+         cudaFree(d_a_hp);
+         cudaFree(d_b_hp);
+         cudaFree(d_c_hp);
+
+      }
       else {
          std::cout << "[chol_test] Algo NOT implemented " << std::endl;
          std::exit(0);

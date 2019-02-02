@@ -14,17 +14,25 @@ using namespace sylver::tests;
 int main(int argc, char** argv) {
 
    int ret = 0;
+   std::string context = "factor_node_test";
    
-   printf("[factor_gpu_test]\n");
-
    spldlt::SpldltOpts opts;
    opts.parse_opts(argc, argv);
 
-   std::cout << "[factor_node_test] Matrix m = " << opts.m << ", n = " << opts.m
+   std::cout << "[" << context << "]" << " Matrix m = " << opts.m << ", n = " << opts.m
              << std::endl;
    
+   switch (opts.prec) {
+   case sylver::tests::prec::FP32:
+      ret = chol_test<float>(opts.m, opts.algo, opts.usetc);
+      break;
+   case sylver::tests::prec::FP64:
+      ret = chol_test<double>(opts.m, opts.algo, opts.usetc);
+      break;
+   default: std::cout << "[" <<  context << "]" <<  " Requested working precision NOT available" << std::endl;
+   }
+
    // ret = chol_test<double>(opts.m, opts.algo, opts.usetc);
-   ret = chol_test<float>(opts.m, opts.algo, opts.usetc);
    
    return ret;
 }

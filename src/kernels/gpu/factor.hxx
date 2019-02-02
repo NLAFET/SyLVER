@@ -45,7 +45,11 @@ namespace gpu {
          int ldda, // Matrix leadind dim on device
          inform_t& inform, // Info host
          int *d_info // Info device
-         );
+         ) {
+
+      std::string context = "factor_ll_hp"; 
+      std::cout << "[" << context << "] NOT implemented for working prec" << std::endl;
+   }
 
    // Half prec with compute type 16F 
    template<typename T>
@@ -57,7 +61,10 @@ namespace gpu {
          int ldda, // Matrix leadind dim on device
          inform_t& inform, // Info host
          int *d_info // Info device
-         );
+         ) {
+      std::string context = "factor_ll_hp_c16"; 
+      std::cout << "[" << context << "] NOT implemented for working prec" << std::endl;
+   }
 
    // Perform the Cholesky factorization of a block-column matrix size
    // m x n with m >= n and n <= TILE_SIZE

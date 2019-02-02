@@ -611,43 +611,45 @@ namespace spldlt {
          int const ldrhs = m; // Assume ldrhs = m
          
          /* Allocate memory */
-         T *resid = new T[m];
-         T *rowsum = new T[n];
+         double *resid = new double[m];
+         double *rowsum = new double[n];
 
-         // Calculate rowsums and anorm
-         memset(rowsum, 0, n*sizeof(T));
+         memset(rowsum, 0, n*sizeof(double));
          for(int j=0; j<n; ++j) {
             for(int i=0; i<m; ++i) {
-               rowsum[j] += a[j*lda+i];
+               rowsum[j] += static_cast<double>(a[j*lda+i]);
             }
-         }
-
-         T anorm = 0.0;
+         }         
+         double anorm = 0.0;
          for(int j=0; j<n; ++j)
             anorm = std::max(anorm, rowsum[j]);
-         
+
          /* Calculate residual vector and anorm */
-         T worstbwderr = 0.0;
+         double worstbwderr = 0.0;
          for(int r=0; r<nrhs; ++r) {
-            memcpy(resid, &rhs[r*ldrhs], m*sizeof(T));
+            // memcpy(resid, &rhs[r*ldrhs], m*sizeof(T));
+            for(int i=0; i<m; ++i)
+               resid[i] = static_cast<double>(rhs[r*ldsoln+i]);
             
             for(int j=0; j<n; ++j) {
                for(int i=0; i<m; ++i) {
-                  resid[i] -= a[j*lda+i]*soln[r*ldsoln+j]; 
+                  resid[i] -= static_cast<double>(a[j*lda+i])*static_cast<double>(soln[r*ldsoln+j]); 
                }
             }
 
             /* Check scaled backwards error */
-            T rhsnorm=0.0, residnorm=0.0, solnnorm=0.0;
+            double rhsnorm=0.0, residnorm=0.0, solnnorm=0.0;
             for(int i=0; i<m; ++i) {
                // Calculate max norms
-               rhsnorm = std::max(rhsnorm, fabs(rhs[r*ldrhs+i]));
+               rhsnorm = std::max(rhsnorm, fabs(static_cast<double>(rhs[r*ldrhs+i])));
                residnorm = std::max(residnorm, fabs(resid[i]));
                if(std::isnan(resid[i])) residnorm = resid[i]; 
-               solnnorm = std::max(solnnorm, fabs(r*ldsoln+soln[i]));
-               
             }
 
+            for(int i=0; i<n; ++i) {
+               solnnorm = std::max(solnnorm, fabs(static_cast<double>(soln[i+r*ldsoln])));
+            }
+            
             worstbwderr = std::max(worstbwderr, residnorm/(anorm*solnnorm + rhsnorm));
             if(std::isnan(residnorm)) worstbwderr = residnorm;
          }
@@ -702,7 +704,9 @@ namespace tests {
       /// Use routine from cuSOLVER using half precision
       cuSOLVER_HP,
       /// Use the CUTLASS library
-      CUTLASS
+      CUTLASS,
+      /// Use the CUTLASS library using half precision
+      CUTLASS_WMMA_HP
    };
 
    // Working precision
@@ -779,7 +783,8 @@ namespace tests {
       std::uniform_int_distribution<long long int> distribution(1,cond);
  
       // Generate diagonal matrix with eigen values 
-      T d = 1.0;
+      // T d = 1.0;
+      // for(int i=0; i<n; ++i) a[i*lda+i] = (T)1.0;
       for(int i=0; i<n; ++i) a[i*lda+i] = (T)1.0/(distribution(generator));
       for(int j=0; j<n; ++j) {
          for(int i=0; i<n; ++i) {
@@ -962,37 +967,39 @@ namespace tests {
    // Calculate scaled backward error ||Ax-b|| / ( ||A|| ||x|| + ||b||
    // ). All norms are infinity norms.
    template<typename T>
-   T backward_error(int n, T const* a, int lda, T const* rhs, int nrhs, T const* soln, int ldsoln) {
+   double backward_error(int n, T const* a, int lda, T const* rhs, int nrhs, T const* soln, int ldsoln) {
       /* Allocate memory */
-      T *resid = new T[n];
-      T *rowsum = new T[n];
+      double *resid = new double[n];
+      double *rowsum = new double[n];
 
       /* Calculate residual vector and anorm*/
-      T worstbwderr = 0.0;
+      double worstbwderr = 0.0;
       for(int r=0; r<nrhs; ++r) {
-         memcpy(resid, rhs, n*sizeof(T));
-         memset(rowsum, 0, n*sizeof(T));
+         // memcpy(resid, rhs, n*sizeof(T));
+         for (int j=0; j<n; ++j)
+            resid[j] = (double)rhs[r*ldsoln+j];
+         memset(rowsum, 0, n*sizeof(double));
          for(int j=0; j<n; ++j) {
-            resid[j] -= a[j*lda+j] * soln[r*ldsoln+j];
-            rowsum[j] += fabs(a[j*lda+j]);
+            resid[j] -= (double)a[j*lda+j] * soln[r*ldsoln+j];
+            rowsum[j] += fabs((double)a[j*lda+j]);
             for(int i=j+1; i<n; ++i) {
-               resid[j] -= a[j*lda+i] * soln[r*ldsoln+i];
-               resid[i] -= a[j*lda+i] * soln[r*ldsoln+j];
-               rowsum[j] += fabs(a[j*lda+i]);
-               rowsum[i] += fabs(a[j*lda+i]);
+               resid[j] -= (double)a[j*lda+i] * soln[r*ldsoln+i];
+               resid[i] -= (double)a[j*lda+i] * soln[r*ldsoln+j];
+               rowsum[j] += fabs((double)a[j*lda+i]);
+               rowsum[i] += fabs((double)a[j*lda+i]);
             }
          }
-         T anorm = 0.0;
+         double anorm = 0.0;
          for(int i=0; i<n; ++i)
             anorm = std::max(anorm, rowsum[i]);
 
          /* Check scaled backwards error */
-         T rhsnorm=0.0, residnorm=0.0, solnnorm=0.0;
+         double rhsnorm=0.0, residnorm=0.0, solnnorm=0.0;
          for(int i=0; i<n; ++i) {
-            rhsnorm = std::max(rhsnorm, fabs(rhs[i]));
+            rhsnorm = std::max(rhsnorm, fabs((double)rhs[i]));
             residnorm = std::max(residnorm, fabs(resid[i]));
             if(std::isnan(resid[i])) residnorm = resid[i]; 
-            solnnorm = std::max(solnnorm, fabs(r*ldsoln+soln[i]));
+            solnnorm = std::max(solnnorm, fabs((double)soln[r*ldsoln+i]));
          }
 
          //printf("%e / %e %e %e\n", residnorm, anorm, solnnorm, rhsnorm);

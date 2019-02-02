@@ -100,6 +100,12 @@ namespace gpu {
          cusolverDnHandle_t handle, int m, int n, float *a, int lda, int *lwork) {
       return cusolverDnSgeqrf_bufferSize(handle, m, n, a, lda, lwork);
    }
+   // DGEQRF BufferSize
+   template<>
+   cusolverStatus_t dev_geqrf_buffersize<double>(
+         cusolverDnHandle_t handle, int m, int n, double *a, int lda, int *lwork) {
+      return cusolverDnDgeqrf_bufferSize(handle, m, n, a, lda, lwork);
+   }
 
    // SGEQRF
    template<>
@@ -109,6 +115,15 @@ namespace gpu {
          float *tau, float *work, int lwork,
          int *info) {
       return cusolverDnSgeqrf(handle, m, n, a, lda, tau, work, lwork, info);
+   }
+   // DGEQRF
+   template<>
+   cusolverStatus_t dev_geqrf<double>(
+         cusolverDnHandle_t handle,
+         int m, int n, double *a, int lda,
+         double *tau, double *work, int lwork,
+         int *info) {
+      return cusolverDnDgeqrf(handle, m, n, a, lda, tau, work, lwork, info);
    }
 
    ////////////////////////////////////////
@@ -128,6 +143,21 @@ namespace gpu {
             a, lda, tau, c, ldc,
             lwork);
    }
+   // DORMQR BufferSize
+   template <>
+   cusolverStatus_t dev_ormqr_buffersize<double>(
+         cusolverDnHandle_t handle,
+         cublasSideMode_t side, cublasOperation_t trans,
+         int m, int n, int k,
+         const double *a, int lda,
+         const double *tau,
+         const double *c, int ldc,
+         int *lwork) {
+      return cusolverDnDormqr_bufferSize(
+            handle, side, trans, m, n, k,
+            a, lda, tau, c, ldc,
+            lwork);
+   }
 
    // SORMQR
    template <>
@@ -141,6 +171,26 @@ namespace gpu {
          float *work, int lwork,
          int *dinfo) {
       return cusolverDnSormqr(
+            handle, side, trans,
+            m, n, k,
+            a, lda,
+            tau,
+            c, ldc,
+            work, lwork,
+            dinfo);
+   }
+   // DORMQR
+   template <>
+   cusolverStatus_t dev_ormqr<double>(
+         cusolverDnHandle_t handle,
+         cublasSideMode_t side, cublasOperation_t trans,
+         int m, int n, int k,
+         const double *a, int lda,
+         const double *tau,
+         double *c, int ldc,
+         double *work, int lwork,
+         int *dinfo) {
+      return cusolverDnDormqr(
             handle, side, trans,
             m, n, k,
             a, lda,

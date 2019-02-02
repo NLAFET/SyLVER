@@ -32,11 +32,12 @@ namespace spldlt { namespace tests {
       template<typename T>
       int factor_node_posdef_test(int m, int n, int blksz, int ncpu, int ngpu, bool check, bool usetc) {
 
+         std::string context = "factor_node_posdef_test";
          bool failed = false;
          int ret;
 
          printf("[factor_node_posdef_test] m = %d, n =  %d, blksz = %d\n", m, n, blksz);
-         std::cout << "[chol_test] usetc = " << usetc << std::endl;
+         std::cout << "[" << context << "]" << " usetc = " << usetc << std::endl;
 
          ////////////////////////////////////////
          // Setup test matrix and rhs
