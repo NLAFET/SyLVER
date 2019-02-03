@@ -308,8 +308,17 @@ if (${USE_GPU} MATCHES ON)
   # set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS};-g;-arch=compute_20;-code=compute_20,sm_20,sm_35" CACHE STRING "NVCC flags")
 
   # list(APPEND CUDA_NVCC_FLAGS "-g")
-  # list(APPEND CUDA_NVCC_FLAGS "-g -O2")
-  list(APPEND CUDA_NVCC_FLAGS "-g -O2 -arch=compute_70")
+  list(APPEND CUDA_NVCC_FLAGS "-g -O2")
+  # list(APPEND CUDA_NVCC_FLAGS "-g -O2 -arch=compute_60")
+  # list(APPEND CUDA_NVCC_FLAGS "-g -O2 -arch=compute_70")
+
+  set(SYLVER_NVCC_ARCHS "60;61;70;75" CACHE STRING "The SM architectures to build code for.")
+  # set(SYLVER_NVCC_ARCHS "50;60;61;70;75" CACHE STRING "The SM architectures to build code for.")
+
+  # Set NVCC arguments
+  foreach(ARCH ${SYLVER_NVCC_ARCHS})
+    string(APPEND CUDA_NVCC_FLAGS " -gencode arch=compute_${ARCH},code=sm_${ARCH}")
+  endforeach()
   
   MESSAGE( STATUS "CUDA found:         " ${CUDA_FOUND} )
   MESSAGE( STATUS "CUDA host compiler: " ${CUDA_HOST_COMPILER} )

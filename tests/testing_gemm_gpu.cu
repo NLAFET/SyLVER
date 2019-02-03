@@ -7,7 +7,7 @@
 #include <string>
 // CUTLASS
 #if defined(HAVE_CUTLASS)
-// #include "cutlass/wmma_matrix.h"
+#include "cutlass/wmma_matrix.h"
 #include "cutlass/gemm/gemm.h"
 #include "cutlass/gemm/sgemm_traits.h"
 #include "cutlass/gemm/wmma_gemm_traits.h"
@@ -117,6 +117,8 @@ namespace tests {
       return cuerr;
    }
 
+#if defined(CUTLASS_USE_WMMA_API)
+
    template<>
    cudaError_t cutlass_wmma_gemm_test<half>(
          cudaStream_t stream,
@@ -173,5 +175,6 @@ namespace tests {
       return cuerr;
    }
 
+#endif
    
 }} // End of namespace sylver::tests
