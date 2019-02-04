@@ -36,6 +36,13 @@ namespace spldlt {
    int const SOLVE_PRIO    = 1;
    int const UPDATE_PRIO   = 2;
 
+   // LWS
+   // int const FACTOR_PRIO   = 3;
+   // int const INIT_PRIO     = 3;
+   // int const ASSEMBLE_PRIO = 3;
+   // int const SOLVE_PRIO    = 2;
+   // int const UPDATE_PRIO   = 1;
+
 #else
 
    // LWS
@@ -201,9 +208,9 @@ namespace spldlt {
    // Factorize block on the diagonal
 
    template <typename T, typename PoolAlloc>
-   void factor_diag_block_task (
+   void factor_block_task (
          NumericFront<T, PoolAlloc> &node,
-         int kk, // block  column (and row) index
+         int kk, // Block  column/row index
          int prio) {
 
       SymbolicFront const& snode = node.symb;
@@ -211,8 +218,8 @@ namespace spldlt {
 
       int m = node.get_nrow();
       int n = node.get_ncol();
-      int nr = node.get_nr(); // number of block rows
-      int nc = node.get_nc(); // number of block columns
+      int nr = node.get_nr(); // Number of block rows
+      int nc = node.get_nc(); // Number of block columns
       
       int blkm = std::min(blksz, m - kk*blksz);
       int blkn = std::min(blksz, n - kk*blksz);
@@ -224,24 +231,26 @@ namespace spldlt {
 
 #if defined(SPLDLT_USE_STARPU)
 
-      // starpu_data_handle_t node_hdl = NULL;
-      // if (kk==0) node_hdl = snode.hdl;
       starpu_data_handle_t node_hdl = snode.hdl;
 
       if ((blkm > blkn) && (ldcontrib > 0)) {
-         // factorize_diag_block(blkm, blkn,
-         //                      &a[kk*blksz*(lda+1)], lda,
-         //                      contrib, ldcontrib,
-         //                      kk==0);
-
+         // Compute factors in the fully-summed and update part in the
+         // contribution block
          spldlt::starpu::insert_factor_block(
-               kk, snode.handles[kk*nr + kk], node.contrib_blocks[0].hdl,
-               snode.hdl, prio);
+               kk,
+               // snode.handles[kk*nr + kk],
+               node(kk, kk).get_hdl(),
+               node.contrib_blocks[0].hdl,
+               snode.hdl,
+               prio);
       }
       else {
-         // printf("blkm: %d, blkn: %d, ldcontrib:%d\n", blkm, blkn, ldcontrib);
+         // Compute factors in the fully-summed 
          spldlt::starpu::insert_factor_block(
-               snode.handles[kk*nr + kk], snode.hdl, prio);
+               // snode.handles[kk*nr + kk],
+               node(kk, kk).get_hdl(),
+               snode.hdl,
+               prio);
       }
 
 #else
@@ -286,9 +295,10 @@ namespace spldlt {
 
          spldlt::starpu::insert_solve_block(
                k, blksz,
-               snode.handles[k*nr + k], // diag block handle 
-               snode.handles[k*nr + i], // subdiag block handle
-               // snode.contrib_handles[i-rsa], // subdiag block handle
+               // snode.handles[k*nr + k], // diag block handle 
+               // snode.handles[k*nr + i], // subdiag block handle
+               node(k, k).get_hdl(),
+               node(i, k).get_hdl(),
                node.contrib_blocks[i-rsa].hdl, // subdiag block handle
                snode.hdl,
                prio);
@@ -296,8 +306,10 @@ namespace spldlt {
       else {
 
          spldlt::starpu::insert_solve_block(
-               snode.handles[k*nr + k], // diag block handle 
-               snode.handles[k*nr + i], // subdiag block handle
+               // snode.handles[k*nr + k], // diag block handle 
+               // snode.handles[k*nr + i], // subdiag block handle
+               node(k, k).get_hdl(),
+               node(i, k).get_hdl(),
                snode.hdl,
                prio);
       }
@@ -344,19 +356,24 @@ namespace spldlt {
 
          spldlt::starpu::insert_update_block(
                k, blksz,
-               snode.handles[j*nr + i], // A_ij block handle 
-               snode.handles[k*nr + i], // A_ik block handle
-               snode.handles[k*nr + j],  // A_jk block handle
-               // snode.contrib_handles[i-rsa],
+               // snode.handles[j*nr + i], // A_ij block handle 
+               // snode.handles[k*nr + i], // A_ik block handle
+               // snode.handles[k*nr + j],  // A_jk block handle
+               node(i, j).get_hdl(),
+               node(i, k).get_hdl(),
+               node(j, k).get_hdl(),
                node.contrib_blocks[i-rsa].hdl,
                snode.hdl,
                prio);
       }
       else {
          spldlt::starpu::insert_update_block(
-               snode.handles[j*nr + i], // A_ij block handle 
-               snode.handles[k*nr + i], // A_ik block handle
-               snode.handles[k*nr + j],  // A_jk block handle
+               // snode.handles[j*nr + i], // A_ij block handle 
+               // snode.handles[k*nr + i], // A_ik block handle
+               // snode.handles[k*nr + j],  // A_jk block handle
+               node(i, j).get_hdl(),
+               node(i, k).get_hdl(),
+               node(j, k).get_hdl(),
                snode.hdl,
                prio);
       }
@@ -441,13 +458,15 @@ namespace spldlt {
       int rsa = n/blksz;
       int ncontrib = nr-rsa;
 
-      spldlt::starpu::insert_update_contrib(k,
-                            // snode.contrib_handles[(i-rsa)+(j-rsa)*ncontrib],
-                            node.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib].hdl,
-                            snode.handles[k*nr + i],
-                            snode.handles[k*nr + j],
-                            snode.hdl,
-                            prio);
+      spldlt::starpu::insert_update_contrib(
+            k,
+            node.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib].hdl,
+            node(i, k).get_hdl(),
+            node(j, k).get_hdl(),
+            // snode.handles[k*nr + i],
+            // snode.handles[k*nr + j],
+            snode.hdl,
+            prio);
 
       // update_block(blkm, blkn,
       //              &contrib[((j*blksz-n)*ldcontrib) + (i*blksz)-n], ldcontrib,
@@ -560,7 +579,6 @@ namespace spldlt {
                if (rr==(r/blksz)) continue;
                rr = r/blksz;
                
-               // hdls[nh] = sfront.handles[cc*nr+rr];
                hdls[nh] = front.blocks[cc*nr+rr].get_hdl();
                nh++;            
             }

@@ -639,14 +639,28 @@ namespace spldlt {
 
       /// @Brief Return block (i,j) in the factors
       /// 
-      /// @param i row index of block in the frontal matrix 
-      /// @param j column index of block in the frontal matrix
-      // inline Tile<T, PoolAllocator>& get_block(int i, int j) {
+      /// @param i Block row index in the front 
+      /// @param j Block column index in the front
+      inline BlockSpec& get_block(int i, int j) {
 
-      //    int nr = get_nr();
-      //    return blocks[i+j*nr];
-      // }
+         int nr = get_nr();
 
+         assert(i < nr);
+         assert(j < get_nc());
+
+         return blocks[i+j*nr];
+      }
+
+      /// @Brief Return block (i,j) in the factors similarly to
+      /// get_block
+      /// 
+      /// @param i Block row index in the front 
+      /// @param j Block column index in the front
+      inline BlockSpec& operator()(int i, int j) {
+         return get_block(i,j);
+      }
+
+      // TODO Use generic type for sym and unsym blocks
       inline sylver::splu::BlockUnsym<T>& get_block_unsym(int i, int j) {
 
          int nr = get_nr();

@@ -36,10 +36,12 @@ namespace spldlt {
 
       for(int j = 0; j < nc; ++j) {
 
+         // std::cout << "[" << context << "]" << " j = " << j << std::endl;
+
          int blkn = std::min(blksz, n-j*blksz);
          int blkm = std::min(blksz, m-j*blksz);
          // Factor block         
-         factor_diag_block_task(node, j, FACTOR_PRIO);
+         factor_block_task(node, j, FACTOR_PRIO);
 
          // #if defined(SPLDLT_USE_STARPU)
          //             starpu_task_wait_for_all();
@@ -55,13 +57,6 @@ namespace spldlt {
                   &lcol[j*blksz*(lda+1)], lda,
                   &lcol[(j*blksz*lda) + (i*blksz)], lda,
                   SOLVE_PRIO);
-
-            // solve_block(blkm, blkn, 
-            //             &lcol[j*blksz*(lda+1)], lda, 
-            //             &lcol[(j*blksz*lda) + (i*blksz)], lda,
-            //             (contrib) ? &contrib[(i*blksz)-n] : nullptr, ldcontrib,
-            //             j==0, 
-            //             blksz);
 
             // #if defined(SPLDLT_USE_STARPU)
             //             starpu_task_wait_for_all();
