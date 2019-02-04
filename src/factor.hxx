@@ -18,8 +18,7 @@ namespace spldlt {
          struct cpu_factor_options const& options
          ) {
 
-      std::string context = "factor_front_posdef";
-      
+      std::string context = "factor_front_posdef";      
       SymbolicFront& snode = node.symb; // Symbolic front data 
 
       // Extract useful information about node
@@ -32,7 +31,7 @@ namespace spldlt {
       int const nr = node.get_nr(); // Number of block rows
       int const nc = node.get_nc(); // Number of block columns
    
-      std::cout << "[" << context << "]" << std::endl;
+      // std::cout << "[" << context << "]" << std::endl;
 
       for(int j = 0; j < nc; ++j) {
 
@@ -57,10 +56,6 @@ namespace spldlt {
                   &lcol[j*blksz*(lda+1)], lda,
                   &lcol[(j*blksz*lda) + (i*blksz)], lda,
                   SOLVE_PRIO);
-
-            // #if defined(SPLDLT_USE_STARPU)
-            //             starpu_task_wait_for_all();
-            // #endif
 
          }
 

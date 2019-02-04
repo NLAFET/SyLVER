@@ -75,35 +75,58 @@ namespace spldlt { namespace starpu {
       template <typename T, typename PoolAlloc>
       void init_node_cpu_func(void *buffers[], void *cl_arg) {
 
-         SymbolicFront *sfront = nullptr;
          NumericFront<T, PoolAlloc> *front = nullptr;
          T *aval;
 
          starpu_codelet_unpack_args(
                cl_arg,
-               &sfront,
                &front,
                &aval);
 
          init_node(*front, aval);
       }
 
-      // init_node codelet
+      // init_node StarPU codelet
       extern struct starpu_codelet cl_init_node;      
 
+      /// @brief Launch StarPU task for intializing a front
+      ///
+      /// @param front Frontal martix
+      /// @param node_hdl StarPU handle (symbolic) associated with the
+      /// front
+      /// @param aval Numerical values in the original matrix,
+      /// orginised according to a CSC format
+      /// @param prio Task priority
       template <typename T, typename PoolAlloc>
       void insert_init_node(
-            SymbolicFront *sfront,
             NumericFront<T, PoolAlloc> *front,
             starpu_data_handle_t node_hdl,
             T *aval, int prio) {
                   
          int ret;
 
+         int nr = front->get_nr();
+         int nc = front->get_nc();
+
+         int nhdls = nr*nc;
+         struct starpu_data_descr *descrs = new starpu_data_descr[nhdls+1];
+         
+         int nh = 0;
+         for(int j = 0; j < nc; ++j) {
+            for(int i = j; i < nr; ++i) {
+               descrs[nh].handle = front->get_block(i,j).get_hdl();
+               descrs[nh].mode = STARPU_RW;
+               ++nh;
+            }
+         }
+
+         descrs[nh].handle = node_hdl; descrs[nh].mode = STARPU_RW;
+         ++nh;
+         
          ret = starpu_insert_task(
                &cl_init_node,
-               STARPU_RW, node_hdl,
-               STARPU_VALUE, &sfront, sizeof(SymbolicFront*),
+               STARPU_DATA_MODE_ARRAY, descrs, nh,
+               // STARPU_RW, node_hdl,
                STARPU_VALUE, &front, sizeof(NumericFront<T, PoolAlloc>*),
                STARPU_VALUE, &aval, sizeof(T*),
                STARPU_PRIORITY, prio,
@@ -111,6 +134,7 @@ namespace spldlt { namespace starpu {
 
          STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
 
+         delete[] descrs;
       }
 
       ////////////////////////////////////////////////////////////////////////////////
@@ -1254,14 +1278,19 @@ namespace spldlt { namespace starpu {
       // assemble_contrib_block StarPU codelet
       extern struct starpu_codelet cl_assemble_contrib_block;
 
+      /// @brief Launch StarPU task for assembling block (ii,jj) in
+      /// cnode into node
+      ///
+      /// @param node Destination node
+      /// @param cnode Source node holding block (ii,jj)
+      /// @param cmap Mapping vector: i-th column in cnode must be
+      /// assembled in cmap(i) column of destination node
       template <typename T, typename PoolAlloc>
       void insert_assemble_contrib_block(
             NumericFront<T, PoolAlloc> *node, // Destinaton node
             NumericFront<T, PoolAlloc> *cnode,// Source node
             int ii, int jj,
-            int *cmap, // Mapping vector i.e. i-th column must be
-                       // assembled in cmap(i) column of destination
-                       // node
+            int *cmap,
             starpu_data_handle_t bc_hdl,
             starpu_data_handle_t *dest_hdls, int ndest,
             starpu_data_handle_t node_hdl, // Symbolic handle of destination node

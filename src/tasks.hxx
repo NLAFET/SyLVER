@@ -56,6 +56,16 @@ namespace spldlt {
 
    ////////////////////////////////////////////////////////////
 
+   /// @brief Wait for completion of all tasks previously submitted to
+   /// the runtime system
+   inline void sylver_task_wait_for_all() {
+#if defined(SPLDLT_USE_STARPU)
+            starpu_task_wait_for_all();
+#endif
+   }
+   
+   ////////////////////////////////////////////////////////////
+
    /// @brief Launches a task for activating a node.
    template <typename T, typename FactorAlloc, typename PoolAlloc>
    void activate_front_task(
@@ -99,22 +109,22 @@ namespace spldlt {
    // Initialize node.
    template <typename T, typename PoolAlloc>
    void init_node_task(
-         SymbolicFront &sfront, 
          NumericFront<T, PoolAlloc> &front,
          T *aval, int prio) {
 
 #if defined(SPLDLT_USE_STARPU)
       
       spldlt::starpu::insert_init_node(
-            &sfront, &front,
-            sfront.hdl,
-            aval, prio);
+            &front,
+            front.get_hdl(),
+            aval,
+            prio);
+
 #else
 
       init_node(front, aval);
 
 #endif
-
    }
 
    ////////////////////////////////////////////////////////////
@@ -129,9 +139,9 @@ namespace spldlt {
       int nr = node.get_nr();
       int nc = node.get_nc();
 
-      std::cout << "[fini_node_task] idx = " << node.symb.idx+1 << std::endl; 
-      std::cout << "[fini_node_task] nr = " << nr << ", nc = " << nc << std::endl; 
-      std::cout << "[fini_node_task] node.block size = " << node.blocks.size() << std::endl; 
+      // std::cout << "[fini_node_task] idx = " << node.symb.idx+1 << std::endl; 
+      // std::cout << "[fini_node_task] nr = " << nr << ", nc = " << nc << std::endl; 
+      // std::cout << "[fini_node_task] node.block size = " << node.blocks.size() << std::endl; 
       
       starpu_data_handle_t *hdls = new starpu_data_handle_t[nr*nc];
 
@@ -182,13 +192,15 @@ namespace spldlt {
 
       assert(nchild==nc);
       
-      // printf("[activate_init_front_task] node = %d, nchild = %d, fc = %d\n",
-      //        node.symb.idx+1, nchild, (node.first_child) ? node.first_child->symb.idx+1 : 0);
-
       spldlt::starpu::insert_activate_init_node(
-            node.get_hdl(), cnode_hdls, nc,
-            posdef, &node, child_contrib, &factor_alloc, 
-            &pool_alloc, aval);
+            node.get_hdl(),
+            cnode_hdls, nc,
+            posdef,
+            &node,
+            child_contrib,
+            &factor_alloc, 
+            &pool_alloc,
+            aval);
       
       delete[] cnode_hdls;
       
@@ -197,7 +209,7 @@ namespace spldlt {
       activate_front(
             posdef, node, child_contrib, factor_alloc); 
 
-      // Add coefficients from original matrix
+      // Assemble factors from original matrix
       init_node(node, aval);
 #endif
 
@@ -770,7 +782,8 @@ namespace spldlt {
          spldlt::starpu::insert_assemble_block(
                &node, &cnode, ii, jj, cmap,
                cb.hdl,
-               hdls, nh, node.get_hdl(), cnode.get_hdl(),
+               hdls, nh,
+               node.get_hdl(), cnode.get_hdl(),
                prio);
       }
 
@@ -785,9 +798,11 @@ namespace spldlt {
    }
 
    ////////////////////////////////////////////////////////////
-   // Assemble contrib block task.   
-   // ii: Row index in frontal matrix.
-   // jj: Col index in frontal matrix.
+   /// @brief Launch task for assembling block (ii,jj) in cnode into
+   /// the contrib block of node
+   ///
+   /// @param ii Row index in front cnode
+   /// @param jj Column index in front cnode
    template <typename T, typename PoolAlloc>   
    void assemble_contrib_block_task(
          NumericFront<T,PoolAlloc>& node, 
@@ -866,25 +881,22 @@ namespace spldlt {
       // Insert assembly tasks if there are contribution
       if (nh>0) {
          
-         // int cnr = (csnode.nrow-1)/blksz+1;  
-         // int crsa = csnode.ncol/blksz;
-         // int cncontrib = cnr-crsa;
-
-         // Contrib block to be assembled into current node
+         // Contrib block to assembled into node
          Tile<T, PoolAlloc>& cb = cnode.get_contrib_block(ii, jj);
 
          spldlt::starpu::insert_assemble_contrib_block(
                &node, &cnode, ii, jj, cmap, 
-               // cnode.contrib_blocks[(jj-crsa)*cncontrib+(ii-crsa)].hdl,
                cb.hdl,
-               hdls, nh, node.get_hdl(), node.contrib_hdl, cnode.get_hdl(),
-               &workspaces, prio);
+               hdls, nh,
+               node.get_hdl(), node.contrib_hdl,
+               cnode.get_hdl(),
+               &workspaces,
+               prio);
 
       }
 
       delete[] hdls;
 
-      // assemble_contrib_block(node, cnode, ii, jj, cmap, blksz);
 #else
 
       spral::ssids::cpu::Workspace& work = workspaces[0];

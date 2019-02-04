@@ -112,10 +112,12 @@ program spldlt_test
    !    stop
    ! endif
 
-   ssids_opt%ordering = 1 ! use Metis ordering
-   ssids_opt%scaling = 0 ! no scaling
+   ssids_opt%ordering = 1 ! Use Metis ordering
+   ssids_opt%scaling = 0 ! No scaling
 
    ! Perform spldlt analysis
+   options%prune_tree = .true. ! Deactivate tree pruning
+   ! options%prune_tree = .false. ! Deactivate tree pruning
    call spldlt_analyse(spldlt_akeep, n, ptr, row, options, inform, ncpu, val=val)
    ! print atree
    ! call spldlt_print_atree(akeep)
