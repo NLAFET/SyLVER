@@ -6,6 +6,31 @@
 
 namespace spldlt {
 
+   // @brief Factor subtree kernel in double precision
+   extern "C" void spldlt_factor_subtree_c(
+         void *akeep, 
+         void *fkeep,
+         int p,
+         double *aval, 
+         void **child_contrib, 
+         struct spral::ssids::cpu::cpu_factor_options *options,
+         spral::ssids::cpu::ThreadStats *stats);
+
+
+   template <typename T>
+   void factor_subtree(
+         void *akeep,
+         void *fkeep,
+         int p,
+         T *aval, 
+         void **child_contrib, 
+         struct spral::ssids::cpu::cpu_factor_options *options,
+         spral::ssids::cpu::ThreadStats *stats) {
+      
+      std::cout << "size of T = " << sizeof(T) << std::endl;
+      throw std::runtime_error("[factor_subtree] factor_subtree NOT implemented for working precision");
+   }
+
    template<>
    void factor_subtree<double>(
          void *akeep,

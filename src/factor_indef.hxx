@@ -34,27 +34,25 @@ namespace spldlt {
          struct cpu_factor_options& options
          ) {
 
-      int least_desc = root.symb.least_desc;
-      int rootidx = root.symb.idx;
+      int const least_desc = root.symb.least_desc;
+      int const rootidx = root.symb.idx;
       
       // Traverse subtree from least descenent to root
       for (int ni = least_desc; ni <= rootidx; ++ni) {
 
-         NumericFront<T, PoolAlloc>& front = fronts[ni];
-         
+         NumericFront<T, PoolAlloc>& front = fronts[ni];         
          // Call alloc instead of activate because we don't need to
          // register StarPU handles
          alloc_front_indef(front, child_contrib, factor_alloc);
-
+         // Assemble fully-summed from original matrix
          init_node(front, aval);
-
+         // Assemble fully-summed from child nodes contrib 
          assemble_notask(n, front, child_contrib, pool_alloc);  
-
-         // TODO factor front indef no task
+         // Compute factors and update contrib block 
          factor_front_indef_notask(front, options, work, pool_alloc);
-         
+         // Assemble cotrib block from child nodes contrib
          assemble_contrib_notask(front, child_contrib);
-
+         // Cleanup data structures and release temp memory
          for (auto* child=front.first_child; child!=NULL; child=child->next_child) {
             fini_node(*child);
          }

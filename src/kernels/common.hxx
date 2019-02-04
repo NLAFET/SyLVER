@@ -3,9 +3,13 @@
 /// @author Florent Lopez
 #pragma once
 
+// SyLVER
+#include "sylver_ciface.hxx"
+// STD
 #include <algorithm>
 #include <cstdio>
 #include <cassert>
+#include <iostream>
 
 namespace sylver {
 
@@ -110,4 +114,19 @@ namespace sylver {
       }
    }
 
-} // End of namespace splldlt
+   ////////////////////////////////////////////////////////////
+
+   // @brief Check SyLVER error and exit if error is detected
+   inline void sylver_check_error(
+         int err, std::string fname, 
+         std::string const& msg = std::string()) {
+      if (err != sylver::Flag::SUCCESS) {
+         std::cout << "[" << fname << "][SyLVER error] "
+                   << msg
+                   << " (" << err << ")" << std::endl;
+         std::exit(1);
+      }
+   }
+
+   
+} // End of namespace sylver

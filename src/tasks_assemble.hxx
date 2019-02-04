@@ -19,7 +19,9 @@ namespace spldlt {
    // fini child nodes
 
    template <typename T, typename PoolAlloc>
-   void fini_cnodes_task(NumericFront<T, PoolAlloc>& node) {
+   void fini_cnodes_task(
+         NumericFront<T, PoolAlloc>& node,
+         bool posdef) {
 
 #if defined(SPLDLT_USE_STARPU)
 
@@ -38,7 +40,7 @@ namespace spldlt {
       assert(nchild==nc);
       
       spldlt::starpu::insert_fini_cnodes(
-            node.get_hdl(), cnode_hdls, nchild, &node);
+            node.get_hdl(), cnode_hdls, nchild, &node, posdef);
 
       delete[] cnode_hdls;
 #else

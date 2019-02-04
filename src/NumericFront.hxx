@@ -414,6 +414,7 @@ namespace spldlt {
                   get_nrow(), get_ncol(), blksz, pool_alloc_);
       }
       
+      /// @brief Release backup
       void free_backup() {
          if(!backup) return;
          delete backup;
@@ -435,8 +436,17 @@ namespace spldlt {
       /// @brief Allocate blocks (structre only)
       /// Note: factor data must be allocated
       /// Note: cdata must be allocated and intialized
-      void alloc_blocks() {
+      int alloc_blocks() {
 
+         assert(lcol != nullptr);
+         assert(cdata != nullptr);
+
+         int ret = sylver::Flag::SUCCESS;
+         // Check if factor has been allocated
+         if (!lcol) return sylver::Flag::ERROR_UNKNOWN;
+         // Check if cdata has been allocated
+         if (!cdata) return sylver::Flag::ERROR_UNKNOWN;
+         
          int const m = get_nrow();
          int const n = get_ncol();
          int const ldl = get_ldl();
@@ -457,6 +467,8 @@ namespace spldlt {
 // #endif
             }
          }
+
+         return ret;
       }
 
       void alloc_blocks_unsym() {
@@ -684,7 +696,7 @@ namespace spldlt {
       spldlt::ldlt_app_internal::CopyBackup<T, PoolAllocator> *backup; // Stores backups of matrix blocks
       // Structures for indef factor
       spldlt::ldlt_app_internal::ColumnData<T, IntAlloc> *cdata;
-      std::vector<BlockSpec> blocks; // FIXME use array instead, using vector isn't really necessary here
+      std::vector<BlockSpec> blocks;
 #if defined(SPLDLT_USE_STARPU)
       starpu_data_handle_t contrib_hdl; // Symbolic handle for contribution blocks
 #endif

@@ -7,6 +7,8 @@
 #include "kernels/common.hxx"
 #include "kernels/wrappers.hxx"
 
+// STD
+#include <iostream>
 // SSIDS
 #include "ssids/cpu/cpu_iface.hxx"
 #include "ssids/cpu/ThreadStats.hxx"
@@ -14,28 +16,15 @@
 namespace spldlt {
 
    // @brief Factor subtree kernel in double precision
-   extern "C" void spldlt_factor_subtree_c(
-         void *akeep, 
-         void *fkeep,
-         int p,
-         double *aval, 
-         void **child_contrib, 
-         struct spral::ssids::cpu::cpu_factor_options *options,
-         spral::ssids::cpu::ThreadStats *stats);
-
-   // @brief Factor subtree kernel in double precision
    template <typename T>
    void factor_subtree(
          void *akeep,
          void *fkeep,
          int p,
-         T *aval, 
+         T *aval,
          void **child_contrib, 
          struct spral::ssids::cpu::cpu_factor_options *options,
-         spral::ssids::cpu::ThreadStats *stats) {
-      
-      throw std::runtime_error("[factor_subtree] factor_subtree NOT implemented for working precision");
-   }
+         spral::ssids::cpu::ThreadStats *stats);
       
    /// @param m Number of rows in block
    /// @param n Number of columns in block

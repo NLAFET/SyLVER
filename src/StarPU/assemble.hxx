@@ -15,12 +15,13 @@ namespace spldlt { namespace starpu {
       void fini_cnodes_cpu_func(void *buffers[], void *cl_arg) {
 
          NumericFront<T, PoolAlloc> *node = nullptr;
-
-         starpu_codelet_unpack_args(cl_arg, &node);
+         bool posdef;
+         
+         starpu_codelet_unpack_args(cl_arg, &node, &posdef);
       
          // printf("[fini_cnodes_cpu_func] idx = %d, exec_loc = %d\n", node->symb.idx, node->symb.exec_loc);
 
-         fini_cnodes(*node);
+         fini_cnodes(*node, posdef);
       }
 
       // fini_cnodes StarPU codelet
@@ -30,7 +31,8 @@ namespace spldlt { namespace starpu {
       void insert_fini_cnodes(
             starpu_data_handle_t node_hdl,
             starpu_data_handle_t *cnode_hdls, int nhdl, // Children node's symbolic handles
-            NumericFront<T, PoolAlloc> *node) {
+            NumericFront<T, PoolAlloc> *node,
+            bool posdef) {
 
          struct starpu_data_descr *descrs = new starpu_data_descr[nhdl+1];
 
@@ -47,6 +49,7 @@ namespace spldlt { namespace starpu {
          ret = starpu_task_insert(&cl_fini_cnodes,
                                   STARPU_DATA_MODE_ARRAY, descrs, nh,
                                   STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
+                                  STARPU_VALUE, &posdef, sizeof(bool),
                                   0);
          STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
 

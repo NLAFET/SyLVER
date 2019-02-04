@@ -41,6 +41,7 @@ namespace sylver {
       ERROR_ALLOCATION        = -50,
       ERROR_CUDA_UNKNOWN      = -51,
       ERROR_CUBLAS_UNKNOWN    = -52,
+      ERROR_UNKNOWN           = -99,
       
       WARNING_FACT_SINGULAR   = 7
    };

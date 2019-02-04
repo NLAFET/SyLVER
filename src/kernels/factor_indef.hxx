@@ -3,13 +3,12 @@
 /// @author Florent Lopez
 #pragma once
 
-// SpLDLT
+// SyLVER
 #include "NumericFront.hxx"
 #include "kernels/ldlt_app.hxx"
-
+// STD
 #include <assert.h>
 #include <chrono>
-
 // SSIDS
 #include "ssids/cpu/Workspace.hxx"
 #include "ssids/cpu/kernels/calc_ld.hxx"
@@ -30,10 +29,8 @@ namespace spldlt {
          ) {
 
       T rbeta = zero_upd ? 0.0 : 1.0;
-
-      // printf("[update_contrib_block] m = %d, n = %d, k = %d\n", m, n, k);
       
-      // Compute Lik Dk in workspace W
+      // Compute L_ik * D_k in workspace W
       spral::ssids::cpu::calcLD<spral::ssids::cpu::OP_N>(
             m, k, lik, ld_lik, dk, ld, ldld);
       

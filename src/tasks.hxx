@@ -30,20 +30,20 @@ namespace spldlt {
 #if defined(SPLDLT_USE_GPU)
 
    // Heteroprio
-   const int FACTOR_PRIO   = 0;
-   const int INIT_PRIO     = 0;
-   const int ASSEMBLE_PRIO = 0;
-   const int SOLVE_PRIO    = 1;
-   const int UPDATE_PRIO   = 2;
+   int const FACTOR_PRIO   = 0;
+   int const INIT_PRIO     = 0;
+   int const ASSEMBLE_PRIO = 0;
+   int const SOLVE_PRIO    = 1;
+   int const UPDATE_PRIO   = 2;
 
 #else
 
    // LWS
-   const int FACTOR_PRIO   = 3;
-   const int INIT_PRIO     = 3;
-   const int ASSEMBLE_PRIO = 3;
-   const int SOLVE_PRIO    = 2;
-   const int UPDATE_PRIO   = 1;
+   int const FACTOR_PRIO   = 3;
+   int const INIT_PRIO     = 3;
+   int const ASSEMBLE_PRIO = 3;
+   int const SOLVE_PRIO    = 2;
+   int const UPDATE_PRIO   = 1;
 
 #endif
 
@@ -114,16 +114,21 @@ namespace spldlt {
    // Terminate node
    template <typename T, typename PoolAlloc>
    void fini_node_task(
-         NumericFront<T, PoolAlloc> &node) {
+         NumericFront<T, PoolAlloc> &node,
+         bool posdef) {
 
 #if defined(SPLDLT_USE_STARPU)
 
-      int nh = 0;
       int nr = node.get_nr();
       int nc = node.get_nc();
+
+      std::cout << "[fini_node_task] idx = " << node.symb.idx+1 << std::endl; 
+      std::cout << "[fini_node_task] nr = " << nr << ", nc = " << nc << std::endl; 
+      std::cout << "[fini_node_task] node.block size = " << node.blocks.size() << std::endl; 
       
       starpu_data_handle_t *hdls = new starpu_data_handle_t[nr*nc];
 
+      int nh = 0;
       for(int j = 0; j < nc; ++j) {
          for(int i = j; i < nr; ++i) {
             hdls[nh] = node.blocks[j*nr+i].get_hdl();
@@ -132,7 +137,7 @@ namespace spldlt {
       }
       
       spldlt::starpu::insert_fini_node(
-            node.get_hdl(), hdls, nh, &node, INIT_PRIO);
+            node.get_hdl(), hdls, nh, &node, posdef, INIT_PRIO);
 
       delete[] hdls;
 #else
@@ -202,19 +207,13 @@ namespace spldlt {
          int prio) {
 
       SymbolicFront const& snode = node.symb;
-      int blksz = node.blksz;
+      int const blksz = node.blksz;
 
       int m = node.get_nrow();
       int n = node.get_ncol();
-
       int nr = node.get_nr(); // number of block rows
       int nc = node.get_nc(); // number of block columns
       
-      // printf("[factorize_diag_block_task] nr: %d, nc: %d, kk: %d\n", 
-      //        nr, nc, kk);
-
-      // printf("[factor_diag_block_task] \n");
-
       int blkm = std::min(blksz, m - kk*blksz);
       int blkn = std::min(blksz, n - kk*blksz);
 
@@ -658,9 +657,11 @@ namespace spldlt {
    }
 
    ////////////////////////////////////////////////////////////
-   // Assemble block task
-   // ii: Row index in frontal matrix node
-   // jj: Col index in frontal matrix node
+   // @brief Launch task for assembling block (ii,jj) in contrib block
+   // of cnode into node
+   //
+   // @param ii Row index of block in cnode
+   // @param jj Column index of block in cnode
    template <typename T, typename PoolAlloc>   
    void assemble_block_task(
          NumericFront<T,PoolAlloc>& node, 
@@ -671,11 +672,11 @@ namespace spldlt {
 
       // Node info
       SymbolicFront const& snode = node.symb;
-      int blksz = node.blksz;      
-      int nrow = node.get_nrow();
-      int ncol = node.get_ncol();
-      int nr = node.get_nr(); // Number of block-rows in destination node
-      int nc = node.get_nc(); // Number of block-columns in destination node
+      int const blksz = node.blksz;      
+      int const nrow = node.get_nrow();
+      int const ncol = node.get_ncol();
+      int const nr = node.get_nr(); // Number of block-rows in destination node
+      int const nc = node.get_nc(); // Number of block-columns in destination node
 
       // StarPU handle array holding destination blocks handles
       starpu_data_handle_t *hdls = new starpu_data_handle_t[nr*nc]; // Upperbound nr*nc handles 
@@ -750,7 +751,6 @@ namespace spldlt {
 
          spldlt::starpu::insert_assemble_block(
                &node, &cnode, ii, jj, cmap,
-               // cnode.contrib_blocks[(jj-crsa)*cncontrib+(ii-crsa)].hdl,
                cb.hdl,
                hdls, nh, node.get_hdl(), cnode.get_hdl(),
                prio);

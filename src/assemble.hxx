@@ -3,6 +3,7 @@
 /// @author    Florent Lopez
 #pragma once
 
+// SyLVER
 #include "SymbolicFront.hxx"
 #include "NumericFront.hxx"
 #include "tasks.hxx"
@@ -13,7 +14,9 @@ namespace spldlt {
    // fini_cnodes
 
    template <typename T, typename PoolAlloc>
-   void fini_cnodes(NumericFront<T,PoolAlloc>& node) {
+   void fini_cnodes(
+         NumericFront<T,PoolAlloc>& node,
+         bool posdef) {
 
       // Deactivate children fronts
       for (auto* child=node.first_child; child!=NULL; child=child->next_child) {
@@ -22,7 +25,7 @@ namespace spldlt {
 
          if (csnode.exec_loc == -1) {
             // fini_node(*child);
-            fini_node_task(*child);
+            fini_node_task(*child, posdef);
             // #if defined(SPLDLT_USE_STARPU)
             //             starpu_task_wait_for_all();
             // #endif

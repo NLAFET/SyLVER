@@ -3,19 +3,18 @@
 /// @author Florent Lopez
 #pragma once
 
-// SpLDLT
+// SyLVER
 #include "factor_failed.hxx"
 #include "kernels/ldlt_app.hxx"
 #include "kernels/factor_indef.hxx"
-
+// STD
+#include <assert.h>
+// StarPU
 #if defined(SPLDLT_USE_STARPU)
 #include "StarPU/kernels_indef.hxx"
 #include "StarPU/factor_indef.hxx"
 #include "StarPU/factor_failed.hxx"
 #endif
-
-#include <assert.h>
-
 // SSIDS 
 #include "ssids/cpu/cpu_iface.hxx"
 

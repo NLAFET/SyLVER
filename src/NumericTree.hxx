@@ -3,7 +3,7 @@
 /// @author Florent Lopez
 #pragma once
 
-// SpLDLT
+// SyLVER
 #include "kernels/ldlt_app.hxx"
 #include "BuddyAllocator.hxx"
 #include "SymbolicTree.hxx"
@@ -17,7 +17,7 @@
 #if defined(SPLDLT_USE_STARPU)
 #include "StarPU/codelets.hxx"
 #endif
-
+// STD
 #include <vector>
 #include <chrono>
 
@@ -259,7 +259,7 @@ namespace spldlt {
             
             SymbolicFront& sfront = symb_[ni];
             // Skip iteration if node is in a subtree
-            if (sfront.exec_loc != -1) continue;
+            if (sfront.is_in_subtree()) continue;
 
             // printf("[factor_mf_indef] ni = %d, exec_loc = %d\n", ni, sfront.exec_loc);
 
@@ -294,7 +294,6 @@ namespace spldlt {
             // #if defined(SPLDLT_USE_STARPU)
             //             starpu_task_wait_for_all();
             // #endif
-            // factor_front_posdef(sfront, fronts_[ni], options);
 
             // factor_front_indef_notask(
             //       options, pool_alloc_, fronts_[ni], workspaces[0], worker_stats[0]);
@@ -327,7 +326,7 @@ namespace spldlt {
             //             starpu_task_wait_for_all();
             // #endif
 
-            fini_cnodes_task(fronts_[ni]);
+            fini_cnodes_task(fronts_[ni], false);
 
             // #if defined(SPLDLT_USE_STARPU)
             //             starpu_task_wait_for_all();
@@ -340,7 +339,7 @@ namespace spldlt {
          // #endif
 
          // Finish root node
-         fini_cnodes_task(fronts_[symb_.nnodes_]);
+         fini_cnodes_task(fronts_[symb_.nnodes_], false);
          // starpu_resume();
 
          // #if defined(SPLDLT_USE_STARPU)
@@ -359,7 +358,6 @@ namespace spldlt {
             std::vector<ThreadStats>& worker_stats) {
 
          // printf("[factor_mf_posdef] nparts = %d\n", symb_.nparts_);
-         int INIT_PRIO = 4;
 
          // Blocking size
          int blksz = options.cpu_block_size;
@@ -408,14 +406,14 @@ namespace spldlt {
          // Loop over node in the assemnly tree
          for(int ni = 0; ni < symb_.nnodes_; ++ni) {
             
+            spldlt::NumericFront<T,PoolAllocator>& front = fronts_[ni];
             SymbolicFront& sfront = symb_[ni];
             
             // Skip iteration if node is in a subtree
-            if (sfront.exec_loc != -1) continue;
+            if (sfront.is_in_subtree()) continue;
             
             // Activate frontal matrix
-            activate_front(
-                  posdef, fronts_[ni], child_contrib, factor_alloc_);
+            activate_front(posdef, front, child_contrib, factor_alloc_);
 
             // Initialize frontal matrix 
             // init_node(sfront, fronts_[ni], aval); // debug
@@ -502,7 +500,7 @@ namespace spldlt {
                // if (child->contrib) {
                if (ldcontrib>0) {
                   // Skip iteration if child node is in a subtree
-                  if (child_sfront.exec_loc != -1) {
+                  if (child_sfront.is_in_subtree()) {
                      
                      // Assemble contribution block from subtrees into non
                      // fully-summed coefficients
@@ -548,9 +546,9 @@ namespace spldlt {
                //                      starpu_task_wait_for_all();
                // #endif
 
-               if (child_sfront.exec_loc == -1) {
+               if (!child_sfront.is_in_subtree()) {
                   // fini_node(*child);
-                  fini_node_task(*child);
+                  fini_node_task(*child, true);
                   // #if defined(SPLDLT_USE_STARPU)
                   //                   starpu_task_wait_for_all();
                   // #endif
@@ -566,7 +564,22 @@ namespace spldlt {
             // #if defined(SPLDLT_USE_STARPU)
             //             starpu_task_wait_for_all();
             // #endif
-         } // Loop over nodes in the assemnly tree  
+         } // Loop over nodes in the assemnly tree
+
+#if defined(SPLDLT_USE_STARPU)
+         starpu_task_wait_for_all();
+#endif
+
+         // Finish root node
+         NumericFront<T, PoolAllocator>& front = fronts_[symb_.nnodes_];
+         for (auto* child=front.first_child; child!=NULL; child=child->next_child) {
+            SymbolicFront const& child_sfront = symb_[child->symb.idx];
+            if (!child_sfront.is_in_subtree()) {
+               // fini_node(*child);
+               fini_node_task(*child, true);
+            }
+         }
+
       }
 
       void solve_fwd(int nrhs, double* x, int ldx) const {

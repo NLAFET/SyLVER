@@ -120,16 +120,19 @@ namespace spldlt { namespace starpu {
       void fini_node_cpu_func(void *buffers[], void *cl_arg) {
          
          NumericFront<T, PoolAlloc> *node = nullptr;
+         bool posdef;
          
-         starpu_codelet_unpack_args(cl_arg, &node);
+         starpu_codelet_unpack_args(cl_arg, &node, &posdef);
 
          // printf("[fini_node_cpu_func] node idx = %d\n", node->symb.idx+1);
-
-         // FIXME: implement posdef case
-         // unregister_node_submit(*node);
-         unregister_node_indef<T, PoolAlloc, true>(*node);
+         if (posdef) {
+            unregister_node_posdef<T, PoolAlloc, true>(*node);
+         }
+         else {
+            unregister_node_indef<T, PoolAlloc, true>(*node);
          // unregister_node_indef<T, PoolAlloc, false>(*node);
-
+         }
+         
          fini_node(*node);
       }
 
@@ -141,6 +144,7 @@ namespace spldlt { namespace starpu {
             starpu_data_handle_t node_hdl,
             starpu_data_handle_t *hdls, int nhdl, // Children node's symbolic handles
             NumericFront<T, PoolAlloc> *node,
+            bool posdef,
             int prio) {
 
          int ret;
@@ -160,6 +164,7 @@ namespace spldlt { namespace starpu {
                &cl_fini_node,
                STARPU_DATA_MODE_ARRAY, descrs, nh,
                STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
+               STARPU_VALUE, &posdef, sizeof(bool),
                STARPU_PRIORITY, prio,
                0);
 
