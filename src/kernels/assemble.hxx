@@ -369,7 +369,7 @@ namespace spldlt {
 
 #if defined(SPLDLT_USE_STARPU)
 #if defined(SPLDLT_USE_GPU)
-      starpu_memory_pin(front.lcol, len*sizeof(T));
+      // starpu_memory_pin(front.lcol, len*sizeof(T));
 #endif
 #endif
       int err;
