@@ -111,7 +111,7 @@ namespace spldlt {
             backup.release_all_memory(); // Release backup associated
                                          // to this front
             // Permute failed entries at the back of the front
-            FactorSymIndefSpec::permute_failed (
+            FactorSymIndefSpec::permute_failed(
                   nrow, ncol, front.perm, front.lcol, ldl,
                   front.nelim, cdata, front.blksz,
                   pool_alloc);

@@ -11,7 +11,8 @@ namespace spldlt {
    ////////////////////////////////////////////////////////////
    // factor_front_posdef
    //
-   /// @brief Factorize a supernode using a multifrontal mode
+
+   /// @brief Perform the Cholesky factorization of a frontal matrix
    template <typename T, typename PoolAlloc>
    void factor_front_posdef(
          NumericFront<T, PoolAlloc> &node,
