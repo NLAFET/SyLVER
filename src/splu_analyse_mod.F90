@@ -172,7 +172,8 @@ contains
     ! Tree prunnig
     integer, dimension(:), allocatable :: small
     integer, dimension(:), allocatable :: subtree_sa 
-    integer :: nth ! Number of regions on CPU
+    integer :: nth ! Number of CPU workers
+    integer :: ngpu ! Number of GPU workers
     integer, dimension(:), allocatable :: contrib_dest, exec_loc
     
     akeep => splu_akeep%akeep ! Point to SSIDS analyse data
@@ -238,7 +239,8 @@ contains
 
     ! Find out sequential subtrees
     if (options%prune_tree) then
-       call prune_tree(akeep%nnodes, akeep%sptr, akeep%sparent, akeep%rptr, nth, &
+       call prune_tree(akeep%nnodes, akeep%sptr, akeep%sparent, akeep%rptr, &
+            nth, ngpu, &
             splu_akeep%nsubtrees, small, contrib_dest, subtree_sa, &
             splu_akeep%subtree_en, exec_loc)
     end if

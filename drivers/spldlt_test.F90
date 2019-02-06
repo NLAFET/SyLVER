@@ -26,13 +26,10 @@ program spldlt_test
    integer(long), dimension(:), allocatable :: ptr
    integer, dimension(:), allocatable :: row
    real(wp), dimension(:), allocatable :: val
-
-   ! Block-size
-   integer :: nb
-   ! Number of CPUs
-   integer :: ncpu
-   ! Number of GPUs
-   integer :: ngpu
+   
+   integer :: nb ! Block-size
+   integer :: ncpu ! Number of CPUs
+   integer :: ngpu ! Number of GPUs
 
    ! right-hand side and solution
    integer :: nrhs
@@ -115,10 +112,10 @@ program spldlt_test
    ssids_opt%ordering = 1 ! Use Metis ordering
    ssids_opt%scaling = 0 ! No scaling
 
-   ! Perform spldlt analysis
+   ! Perform analysis
    options%prune_tree = .true. ! Deactivate tree pruning
    ! options%prune_tree = .false. ! Deactivate tree pruning
-   call spldlt_analyse(spldlt_akeep, n, ptr, row, options, inform, ncpu, val=val)
+   call spldlt_analyse(spldlt_akeep, n, ptr, row, options, inform, val=val, ncpu=ncpu, ngpu=ngpu)
    ! print atree
    ! call spldlt_print_atree(akeep)
    ! print atree with partitions
@@ -127,7 +124,7 @@ program spldlt_test
    ! Initialize SpLDLT
    call spldlt_init(ncpu, ngpu)
 
-   ! Factorize (SpLDLT)
+   ! Factorize matrix
    call system_clock(start_t, rate_t)
    call spldlt_factorize(spldlt_akeep, spldlt_fkeep, pos_def, val, options, inform)
    call system_clock(stop_t)

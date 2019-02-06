@@ -211,6 +211,9 @@ contains
        options, inform)
     use spral_core_analyse, only : basic_analyse
     use spral_ssids_cpu_subtree, only : construct_cpu_symbolic_subtree
+#if defined(SPLDLT_USE_GPU)
+    use spral_ssids_gpu_subtree, only : construct_gpu_symbolic_subtree
+#endif
     use spldlt_datatypes_mod, only: spldlt_options
     implicit none
 
@@ -240,11 +243,14 @@ contains
     type(c_ptr) :: cakeep
     ! Tree prunnig
     integer, dimension(:), allocatable :: small
-    integer :: nth
+    integer :: nth, ngpu
     integer, dimension(:), allocatable :: subtree_sa 
     integer, dimension(:), allocatable :: contrib_dest, exec_loc
+    integer :: loc ! Region index
+    integer :: device ! Device index
+    integer :: op ! Printing
     
-    context = 'ssids_analyse'
+    context = 'analyse_core'
     akeep => spldlt_akeep%akeep
     ssids_opts => options%super
 
@@ -302,10 +308,12 @@ contains
     ! print *, " contrib_idx = ", akeep%contrib_idx(1:akeep%nparts)
     ! print *, " contrib_dest = ", contrib_dest(1:akeep%nparts)
 
-    nth = size(akeep%topology) ! FIXME Use (total) number of procs
+    nth = akeep%topology(1)%nproc ! FIXME Use (total) number of procs
+    ngpu = size(akeep%topology(1)%gpus)
     ! nth = 1 ! debug
     ! nth = 4 ! debug
 
+    write(op, '(a)') context 
 #if defined(SPLDLT_USE_STARPU) && defined(SPLDLT_USE_OMP)
 
     nth = 2 ! FIXME Use number of NUMA sockets
@@ -328,7 +336,8 @@ contains
 
     ! Find out sequential subtrees
     if (options%prune_tree) then
-       call prune_tree(akeep%nnodes, akeep%sptr, akeep%sparent, akeep%rptr, nth, &
+       call prune_tree(akeep%nnodes, akeep%sptr, akeep%sparent, akeep%rptr, &
+            nth, ngpu, &
             spldlt_akeep%nsubtrees, small, contrib_dest, subtree_sa, &
             spldlt_akeep%subtree_en, exec_loc)
     end if
@@ -336,11 +345,12 @@ contains
     print *, "[analyse_core] nsubtrees = ", spldlt_akeep%nsubtrees
     ! print *, "[analyse_core] contrib_dest = ", contrib_dest(1:spldlt_akeep%nsubtrees)
     ! print *, "[analyse_core] subtrees = ", spldlt_akeep%subtree_en(1:spldlt_akeep%nsubtrees)
-#if defined(SPLDLT_USE_STARPU) && defined(SPLDLT_USE_OMP)
+! #if defined(SPLDLT_USE_STARPU) && defined(SPLDLT_USE_OMP)
     print *, "[analyse_core] exec_loc = ", exec_loc(1:spldlt_akeep%nsubtrees)
-#endif    
+! #endif    
     ! dump atree in a dot file
-    call spldlt_print_atree(akeep%nnodes, akeep%sptr, akeep%sparent, akeep%rptr, small)
+    call spldlt_print_atree(akeep%nnodes, akeep%sptr, akeep%sparent, akeep%rptr, small, exec_loc)
+    ! call spldlt_print_atree_part(akeep)
     
     ! Construct symbolic subtrees
     ! allocate(akeep%subtree(akeep%nparts))
@@ -352,15 +362,28 @@ contains
        ! akeep%subtree(i)%exec_loc = exec_loc(i)
        akeep%subtree(i)%exec_loc = 1
        ! if (akeep%subtree(i)%exec_loc .eq. -1) cycle
-       ! CPU
-       akeep%subtree(i)%ptr => construct_cpu_symbolic_subtree(akeep%n,   &
-            subtree_sa(i), spldlt_akeep%subtree_en(i)+1,                              &
-            !akeep%part(i), akeep%part(i+1),                              &
-            akeep%sptr, akeep%sparent,                                   &
-            akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist,            &
-            ! contrib_dest(akeep%contrib_ptr(i):akeep%contrib_ptr(i+1)-1), &
-            contrib_dest(1:0), &
-            ssids_opts)
+       loc = akeep%subtree(i)%exec_loc
+       print *, "loc = ", loc, ", nth = ", nth
+       if(loc.le.nth) then ! nth is treated as the number of CPU regions
+          ! CPU
+          akeep%subtree(i)%ptr => construct_cpu_symbolic_subtree(akeep%n,   &
+               subtree_sa(i), spldlt_akeep%subtree_en(i)+1,                              &
+               !akeep%part(i), akeep%part(i+1),                              &
+               akeep%sptr, akeep%sparent,                                   &
+               akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist,            &
+               ! contrib_dest(akeep%contrib_ptr(i):akeep%contrib_ptr(i+1)-1), &
+               contrib_dest(1:0), &
+               ssids_opts)
+#if defined(SPLDLT_USE_GPU)
+       else
+          ! GPU
+          device = (loc-1) / nth ! device indexes are 0-indexed
+          akeep%subtree(i)%ptr => construct_gpu_symbolic_subtree(device, &
+               akeep%n, subtree_sa(i), spldlt_akeep%subtree_en(i)+1, &
+               akeep%sptr, akeep%sparent, akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist, &
+               ssids_opts)
+#endif
+       end if
     end do
 
     ! call C++ analyse routine
@@ -397,7 +420,7 @@ contains
   !> @brief Analyse phase for symmetric matrix.
   !>
   ! TODO 32-bits wrapper
-  subroutine spldlt_analyse(spldlt_akeep, n, ptr, row, options, inform, ncpu, order, val)
+  subroutine spldlt_analyse(spldlt_akeep, n, ptr, row, options, inform, order, val, ncpu, ngpu)
     use spral_ssids, only: ssids_free
     use spral_metis_wrapper, only : metis_order
     use spral_ssids_akeep, only: ssids_akeep
@@ -409,14 +432,15 @@ contains
     implicit none
     
     type(spldlt_akeep_type), target, intent(inout) :: spldlt_akeep ! spldlt akeep structure 
-    integer, intent(in) :: n
+    integer, intent(in) :: n ! Matrix dimension
     integer(long), intent(in) :: ptr(:)
     integer, intent(in) :: row(:)
-    type(spldlt_options), target, intent(in) :: options
+    type(spldlt_options), target, intent(in) :: options ! SpLDLT options
     type(ssids_inform), intent(inout) :: inform
-    integer, intent(inout) :: ncpu ! number of CPU workers
     integer, dimension(:), allocatable, optional, intent(in) :: order
-    real(wp), optional, intent(in) :: val(:)
+    real(wp), optional, intent(in) :: val(:) ! Matrix numerical values
+    integer, optional, intent(inout) :: ncpu ! Number of CPU workers
+    integer, optional, intent(inout) :: ngpu ! Number of GPU workers
 
     character(50)  :: context      ! Procedure name (used when printing).
     logical :: check = .false. ! TODO input parameter
@@ -431,12 +455,12 @@ contains
     ! class(cpu_symbolic_subtree), pointer :: subtree_ptr => null()
     ! Error flags
     integer :: free_flag
-    integer :: flag         ! error flag for metis
+    integer :: flag ! Error flag for metis
 
     integer, dimension(:), allocatable :: order2
     integer(long), dimension(:), allocatable :: ptr2 ! col ptrs for expanded mat
     integer, dimension(:), allocatable :: row2 ! row indices for expanded matrix
-    integer ncpu_topo
+    integer :: ncpu_topo, ngpu_topo
     
     ! Prepare analysis phase
     akeep => spldlt_akeep%akeep
@@ -489,18 +513,30 @@ contains
        ! TODO
     end select
 
-    ncpu_topo = ncpu
+    ! Define the number of CPU workers
+    if (present(ncpu)) then
+       ncpu_topo = ncpu
+    else
+       ncpu_topo = 1
+    endif
+    
+    ! Define the number of GPU workers
+    if (present(ngpu)) then
+       ngpu_topo = ngpu
+    else
+       ngpu_topo = 0
+    endif
+
     ! ncpu = 2
     ! ncpu_topo = 2*ncpu
 
-    ! Figure out topology
-    ! Create simple topology with ncpu regions, one for each CPU
-    ! worker
+    ! Create flat topology
     if (allocated(akeep%topology)) deallocate(akeep%topology, stat=st)
-    allocate(akeep%topology(ncpu_topo), stat=st)
-    do i = 1, ncpu_topo
-       akeep%topology(i)%nproc = 1
-       allocate(akeep%topology(i)%gpus(0), stat=st)
+    allocate(akeep%topology(1), stat=st)
+    akeep%topology(1)%nproc = ncpu_topo
+    allocate(akeep%topology(1)%gpus(ngpu_topo), stat=st)
+    do i = 1, ngpu_topo
+       akeep%topology(1)%gpus(i) = i
     end do
     ! print *, "Input topology"
     ! do i = 1, size(akeep%topology)
@@ -1067,7 +1103,7 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Tree pruning method. Inspired by the strategy employed in qr_mumps
   ! for pruning the atree.
-  subroutine prune_tree(nnodes, sptr, sparent, rptr, nth, nsubtrees, small, &
+  subroutine prune_tree(nnodes, sptr, sparent, rptr, nth, ngpu, nsubtrees, small, &
        contrib_dest, subtree_sa, subtree_en, exec_loc)
     use spldlt_utils_mod, only: sort
     implicit none
@@ -1081,7 +1117,8 @@ contains
     integer, dimension(nnodes+1), intent(in) :: sptr
     integer, dimension(nnodes), intent(in) :: sparent
     integer(long), dimension(nnodes+1), intent(in) :: rptr
-    integer, intent(in) :: nth ! Number of workers
+    integer, intent(in) :: nth ! Number of CPU workers
+    integer, intent(in) :: ngpu ! Number of GPU workers
     integer, intent(out) :: nsubtrees ! Number of partititons: top part plus subtrees
     integer, dimension(:), allocatable, intent(inout) :: small ! Nodes below the lzero layer  
     integer, dimension(:), allocatable, intent(inout) :: contrib_dest ! Node to which each partition contrirbute
@@ -1108,8 +1145,19 @@ contains
     integer, allocatable :: nchild(:) ! nchild(i) contains the number of child nodes for node i
     type(node_type), allocatable :: nodes(:)
     integer, allocatable :: loc(:) ! locality of node
+    integer :: nregion ! Number of workers of regions (NUMA nodes and GPUs)
+    
+    character(50) :: context = 'prune_tree'! Procedure name (used when printing).
 
-    print *, "[prune_tree] nth = ", nth
+    print *, '[prune_tree]', ' nth = ', nth, 'ngpu = ', ngpu 
+
+    ! nregion = ngpu
+    ! if (nth .gt. 0) then
+    !    nregion = ngpu+1 ! Count 1 region for the CPUs
+    ! end if
+
+    ! Use nth as the number of CPU regions i.e NUMA nodes
+    nregion = ngpu+nth 
 
     ! Count flops below each node
     allocate(weight(nnodes+1))
@@ -1122,9 +1170,8 @@ contains
     
     allocate(lzero_w (nnodes+1))
     allocate(lzero   (nnodes+1))
-    allocate(proc_w  (nth))
+    allocate(proc_w  (nregion))
     allocate(loc     (nnodes+1))
-
     
     ! count number of children per node
     allocate(nchild(nnodes+1))
@@ -1156,7 +1203,7 @@ contains
     totleaves = 0
     small = 0
     nsubtrees = 0
-    loc = nth+1 ! Global context by default
+    loc = nregion+1 ! Global context by default
     
     totflops = weight(nnodes+1)
 !     ! write(*,*)'totflops: ', totflops
@@ -1183,7 +1230,7 @@ contains
 !     !    if(keep%nodes(node)%nchild .eq. 0) totleaves = totleaves+1
 !     ! end do
 
-    node = nnodes+1 ! root node (symbolic)
+    node = nnodes+1 ! Root node (symbolic)
     nlz = nlz+1
     lzero(nlz) = node
     lzero_w(nlz) = -weight(node)
@@ -1222,8 +1269,8 @@ contains
        rm = real(minval(proc_w))/real(maxval(proc_w))
        !print *, "rm: ", rm
 
-       if(nlz .gt. nth*max(2.d0,(log(real(nth,kind(1.d0)))/log(2.d0))**2)) exit ! exit if already too many nodes in l0
-       if((rm .gt. 0.9) .and. (nlz .ge. 1*nth)) exit ! if balance is higher than 90%, we're happy
+       if(nlz .gt. nregion*max(2.d0,(log(real(nregion,kind(1.d0)))/log(2.d0))**2)) exit ! exit if already too many nodes in l0
+       if((rm .gt. 0.9) .and. (nlz .ge. 1*nregion)) exit ! if balance is higher than 90%, we're happy
 
        ! if load is not balanced, replace heaviest node with its kids (if any)
        found = .false.
@@ -1231,7 +1278,7 @@ contains
           if(leaves .eq. totleaves) exit godown ! reached the bottom of the tree
 
           if(leaves .eq. nlz) then
-             if(nlz .ge. nth*max(2.d0,(log(real(nth,kind(1.d0)))/log(2.d0))**2)) then 
+             if(nlz .ge. nregion*max(2.d0,(log(real(nregion,kind(1.d0)))/log(2.d0))**2)) then 
                 exit godown ! all the nodes in l0 are leaves. nothing to do
              else
                 smallth = smallth/2.d0
@@ -1329,7 +1376,7 @@ contains
           c = nodes(n)%child(j)
           ! print *, "c: ", c
           ! write(*,*)'desc: ', fkeep%nodes(c)%least_desc
-          if (small(c) .eq. 0) then
+          if (small(c) .eq. 0) then ! Check if we havn't flaged it already
              small(nodes(c)%least_desc:c) = -c
              small(c) = 1
              nsubtrees = nsubtrees + 1 ! add new partition
@@ -1430,7 +1477,7 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !> @brief Print assembly tree in a dot file
-  subroutine spldlt_print_atree(nnodes, sptr, sparent, rptr, small)
+  subroutine spldlt_print_atree(nnodes, sptr, sparent, rptr, small, exec_loc)
     use spral_ssids_akeep, only: ssids_akeep
     ! use spral_ssids
 
@@ -1439,6 +1486,7 @@ contains
     integer, dimension(nnodes), intent(in) :: sparent
     integer(long), dimension(nnodes+1), intent(in) :: rptr
     integer, dimension(:), allocatable, intent(in) :: small ! nodes below the lzero layer  
+    integer, dimension(:), allocatable, optional, intent(in) :: exec_loc
     
     integer :: node
     integer :: n, m ! node sizes
@@ -1446,7 +1494,8 @@ contains
     integer(long), dimension(:), allocatable :: flops
     integer :: j
     real :: tot_weight, weight
-    
+    ! integer, allocatable :: loc(:) ! locality of node
+
     ! Count flops below each node
     allocate(flops(nnodes+1))
     flops(:) = 0
@@ -1486,6 +1535,9 @@ contains
        write(2, '("m:", i5,"\n")', advance="no")m
        write(2, '("n:", i5,"\n")', advance="no")n
        write(2, '("w:", f6.2,"\n")', advance="no")100*weight
+       ! if (small(node) .eq. 1) then
+       !    if (present(exec_loc)) write(2, '("loc:", i4,"\n")', advance="no")exec_loc(node)
+       ! end if
        write(2, '("""")', advance="no")
        if (small(node) .eq. 1) then
           write(2, '(" fillcolor=lightgrey")', advance="no")
@@ -1533,139 +1585,111 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !> @brief Print assembly tree (including partitions) in a dot file
-  subroutine spldlt_print_atree_part(akeep)
-    use spral_ssids_akeep, only: ssids_akeep
-    ! use spral_ssids
-    implicit none
+  ! subroutine print_atree_part(nnodes, sptr, sparent, rptr, topology, nparts, & 
+  !      part, exec_loc)
+  !   implicit none
 
-    type(ssids_akeep), intent(in) :: akeep
+  !   integer, intent(in) :: nnodes
+  !   integer, dimension(nnodes+1), intent(in) :: sptr
+  !   integer, dimension(nnodes), intent(in) :: sparent
+  !   integer(long), dimension(nnodes+1), intent(in) :: rptr
+  !   type(numa_region), dimension(:), intent(in) :: topology
+  !   integer, intent(in) :: nparts
+  !   integer, dimension(:), allocatable, intent(in) :: part
+  !   integer, dimension(:), allocatable, intent(in) :: exec_loc
 
-    integer :: num_nodes
-    integer :: node
-    integer :: n, m ! node sizes
-    integer :: region ! region of execution for node
-    integer :: i, j
+  !   integer :: node
+  !   integer :: n, m ! Node dimensions
+  !   integer :: region ! Where to execute node
+  !   integer(long), dimension(:), allocatable :: flops
+  !   real :: tot_weight, weight
+  !   integer :: i, j
+  !   character(len=5) :: part_str 
+  !   real :: small
 
-    integer(long), dimension(:), allocatable :: flops
-    real :: tot_weight, weight
-    character(len=5) :: part_str 
+  !   ! print *, "[print_atree_part] topology size = ", size(topology)
+    
+  !   small = 0.001
 
-    ! Count flops below each node
-    allocate(flops(akeep%nnodes+1))
-    flops(:) = 0
-    do node = 1, akeep%nnodes
-       flops(node) = flops(node) + compute_flops(akeep%nnodes, akeep%sptr, akeep%rptr, node)
-       j = akeep%sparent(node)
-       flops(j) = flops(j) + flops(node)
-       !print *, "Node ", node, "parent", j, " flops ", flops(node)
-    end do
+  !   ! Count flops below each node
+  !   allocate(flops(nnodes+1))
+  !   flops(:) = 0
+  !   do node = 1, nnodes
+  !      flops(node) = flops(node) + compute_flops(nnodes, sptr, rptr, node)
+  !      j = sparent(node)
+  !      if(j .gt. 0) flops(j) = flops(j) + flops(node)
+  !      !print *, "Node ", node, "parent", j, " flops ", flops(node)
+  !   end do
+  !   tot_weight = real(flops(nnodes))
 
-    print *, "Print atree"
+  !   open(2, file="atree_part.dot")
 
-    num_nodes = akeep%nnodes
-    tot_weight = real(flops(akeep%nnodes))
+  !   write(2, '("graph atree {")')
+  !   write(2, '("node [")')
+  !   write(2, '("style=filled")')
+  !   write(2, '("]")')
 
-    print *, "num_nodes: ", num_nodes
+  !   do i = 1, nparts
 
-    open(2, file="atree_part.dot")
+  !      region = mod((exec_loc(i)-1), size(topology))+1
+  !      ! print *, "part = ", i, ", exec_loc = ", exec_loc(i), ", region = ", region 
 
-    write(2, '("graph atree {")')
-    write(2, '("node [")')
-    write(2, '("style=filled")')
-    write(2, '("]")')
+  !      write(part_str, '(i5)')part(i)
+  !      write(2, *)"subgraph cluster"// adjustl(trim(part_str)) // " {"
+  !      if ( exec_loc(i) .gt. size(topology)) then ! GPU subtree
+  !         write(2, *)"color=red"
+  !      else
+  !         write(2, *)"color=black"
+  !      end if
+  !      write(2, '("label=""")', advance="no")
+  !      write(2, '("part:", i5,"\n")', advance="no")i
+  !      write(2, '("region:", i5,"\n")', advance="no")region
+  !      write(2, '("exec_loc:", i5,"\n")', advance="no")exec_loc(i)
+  !      write(2, '("""")', advance="no")
 
-    ! Root node
-    write(2, '(i5," [label=", i5,"]")')akeep%nnodes+1, akeep%nnodes+1
+  !      do node = part(i), part(i+1)-1
 
-    do i = 1, akeep%nparts
-       
-       ! Execution region for part i
-       region = akeep%subtree(i)%exec_loc
-       ! region = mod((akeep%subtree(i)%exec_loc-1), size(akeep%topology))+1
-       ! print *, "[spldlt_print_atree_part] exec_loc = ", akeep%subtree(i)%exec_loc, &
-       !      ", region = ", region, "size topology = ", size(akeep%topology)
-       
-       if (region .eq. -1) then
+  !         weight = real(flops(node)) / tot_weight 
+  !         if (weight .lt. small) cycle ! Prune smallest nodes
 
-          write(part_str, '(i5)')akeep%part(i)
-          write(2, *)"subgraph cluster"// adjustl(trim(part_str)) // " {"
-          write(2, *)"color=black"
+  !         n = sptr(node+1) - sptr(node) 
+  !         m = int(rptr(node+1) - rptr(node))
 
-          ! write(2, '("subgraph part", i5, " {")')akeep%part(i)
+  !         ! node idx
+  !         write(2, '(i10)', advance="no") node
+  !         write(2, '(" ")', advance="no")
+  !         write(2, '("[")', advance="no")
 
-          do node = akeep%part(i), akeep%part(i+1)-1
+  !         ! Node label 
+  !         write(2, '("label=""")', advance="no")
+  !         write(2, '("node:", i5,"\n")', advance="no")node
+  !         write(2, '("m:", i5,"\n")', advance="no")m
+  !         write(2, '("n:", i5,"\n")', advance="no")n
+  !         write(2, '("w:", f6.2,"\n")', advance="no")100*weight
+  !         write(2, '("""")', advance="no")
 
-             n = akeep%sptr(node+1) - akeep%sptr(node) 
-             m = int(akeep%rptr(node+1) - akeep%rptr(node))
-             weight = real(flops(node)) / tot_weight 
+  !         ! Node color
+  !         write(2, '(" fillcolor=white")', advance="no")
 
-             ! Node id
-             write(2, '(i10)', advance="no") node
-             write(2, '(" ")', advance="no")
-             write(2, '("[")', advance="no")
+  !         write(2, '("]")', advance="no")
+  !         write(2, '(" ")')
 
-             ! Node info
-             write(2, '("label=""")', advance="no")
-             write(2, '("node:", i5,"\n")', advance="no")node
-             write(2, '("m:", i5,"\n")', advance="no")m
-             write(2, '("n:", i5,"\n")', advance="no")n
-             write(2, '("w:", f6.2,"\n")', advance="no")100*weight
-             write(2, '("""")', advance="no")
-             write(2, '(" fillcolor=white")', advance="no")
-             write(2, '(" style=filled")', advance="no")
-             write(2, '("]")', advance="no")
-             write(2, '(" ")')
+  !      end do
 
-             ! Parent node
-             ! if(akeep%sparent(node) .ne. -1) write(2, '(i10, "--", i10)')akeep%sparent(node), node
+  !      write(2, '("}")') ! Subgraph
 
-          end do
+  !      do node = part(i), part(i+1)-1
+  !         weight = real(flops(node)) / tot_weight
+  !         if (weight .lt. small) cycle ! Prune smallest nodes
+  !         if(sparent(node) .ne. -1) write(2, '(i10, "--", i10)')sparent(node), node
+  !      end do
 
-          write(2, '("}")')
+  !   end do
 
-          do node = akeep%part(i), akeep%part(i+1)-1
-             if(akeep%sparent(node) .ne. -1) write(2, '(i10, "--", i10)')akeep%sparent(node), node
-          end do
+  !   write(2, '("}")') ! Graph
 
-          ! ! Contributing subtrees
-          ! do j = akeep%contrib_ptr(i), akeep%contrib_ptr(i+1)-1
-          !    write(2, '(i10, "--", i10)')node, akeep%part(akeep%contrib_idx(j))             
-          ! end do
+  !   close(2)
 
-       else
-
-          node = akeep%part(i+1)-1
-          weight = real(flops(node)) / tot_weight 
-
-          ! part id
-          write(2, '(i10)', advance="no") node 
-          write(2, '(" ")', advance="no")
-          write(2, '("[")', advance="no")
-          
-          ! part info
-          write(2, '("label=""")', advance="no")
-          write(2, '("part:", i5,"\n")', advance="no")i
-          write(2, '("node sa:", i5,"\n")', advance="no")akeep%part(i)
-          write(2, '("node en:", i5,"\n")', advance="no")akeep%part(i+1)-1
-          write(2, '("region:", i5,"\n")', advance="no")region
-          write(2, '("w:", f6.2,"\n")', advance="no")100*weight
-          write(2, '("""")', advance="no")
-          write(2, '(" fillcolor=lightgrey")', advance="no")
-          write(2, '(" style=filled")', advance="no")
-          write(2, '("]")', advance="no")
-          write(2, '(" ")')
-
-          ! Parent node
-          if(akeep%sparent(node) .ne. -1) write(2, '(i10, "--", i10)')akeep%sparent(node), node
-          
-       end if
-       
-    end do
-
-    write(2, '("}")')
-
-    close(2)
-
-  end subroutine spldlt_print_atree_part
+  ! end subroutine print_atree_part
 
 end module spldlt_analyse_mod
