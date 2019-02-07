@@ -112,6 +112,9 @@ program spldlt_test
    ssids_opt%ordering = 1 ! Use Metis ordering
    ssids_opt%scaling = 0 ! No scaling
 
+   ! Initialize SpLDLT
+   call spldlt_init(ncpu, ngpu)
+
    ! Perform analysis
    options%prune_tree = .true. ! Deactivate tree pruning
    ! options%prune_tree = .false. ! Deactivate tree pruning
@@ -120,9 +123,7 @@ program spldlt_test
    ! call spldlt_print_atree(akeep)
    ! print atree with partitions
    ! call spldlt_print_atree_part(spldlt_akeep%akeep)
-
-   ! Initialize SpLDLT
-   call spldlt_init(ncpu, ngpu)
+   ! stop
 
    ! Factorize matrix
    call system_clock(start_t, rate_t)
@@ -131,7 +132,6 @@ program spldlt_test
    write(*, "(a)") "ok"
    print *, "Factor took ", (stop_t - start_t)/real(rate_t)
    smfact = (stop_t - start_t)/real(rate_t)
-   ! stop
 
    ! Shutdown SpLDLT
    call spldlt_finalize()

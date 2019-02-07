@@ -310,6 +310,7 @@ contains
 
     nth = akeep%topology(1)%nproc ! FIXME Use (total) number of procs
     ngpu = size(akeep%topology(1)%gpus)
+
     ! nth = 1 ! debug
     ! nth = 4 ! debug
 
@@ -347,7 +348,7 @@ contains
     ! print *, "[analyse_core] subtrees = ", spldlt_akeep%subtree_en(1:spldlt_akeep%nsubtrees)
 ! #if defined(SPLDLT_USE_STARPU) && defined(SPLDLT_USE_OMP)
     print *, "[analyse_core] exec_loc = ", exec_loc(1:spldlt_akeep%nsubtrees)
-! #endif    
+! #endif
     ! dump atree in a dot file
     call spldlt_print_atree(akeep%nnodes, akeep%sptr, akeep%sparent, akeep%rptr, small, exec_loc)
     ! call spldlt_print_atree_part(akeep)
@@ -360,10 +361,11 @@ contains
     do i = 1, spldlt_akeep%nsubtrees
     
        ! akeep%subtree(i)%exec_loc = exec_loc(i)
-       akeep%subtree(i)%exec_loc = 1
+       ! akeep%subtree(i)%exec_loc = 1
        ! if (akeep%subtree(i)%exec_loc .eq. -1) cycle
-       loc = akeep%subtree(i)%exec_loc
-       print *, "loc = ", loc, ", nth = ", nth
+       loc = exec_loc(i)
+       akeep%subtree(i)%exec_loc = loc
+       ! print *, "loc = ", loc, ", nth = ", nth
        if(loc.le.nth) then ! nth is treated as the number of CPU regions
           ! CPU
           akeep%subtree(i)%ptr => construct_cpu_symbolic_subtree(akeep%n,   &
@@ -377,7 +379,8 @@ contains
 #if defined(SPLDLT_USE_GPU)
        else
           ! GPU
-          device = (loc-1) / nth ! device indexes are 0-indexed
+          device = mod(loc, nth)-1 ! device indexes are 0-indexed
+          print *, "root = ", spldlt_akeep%subtree_en(i), ", device = ", device
           akeep%subtree(i)%ptr => construct_gpu_symbolic_subtree(device, &
                akeep%n, subtree_sa(i), spldlt_akeep%subtree_en(i)+1, &
                akeep%sptr, akeep%sparent, akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist, &
@@ -1157,7 +1160,7 @@ contains
     ! end if
 
     ! Use nth as the number of CPU regions i.e NUMA nodes
-    nregion = ngpu+nth 
+    nregion = ngpu + nth 
 
     ! Count flops below each node
     allocate(weight(nnodes+1))
@@ -1390,12 +1393,12 @@ contains
     end do
     
     ! debug
-    j = 0
-    do i = 1, nnodes
-       if (small(i) .eq. 1) then
-          j = j+1
-       end if
-    end do
+    ! j = 0
+    ! do i = 1, nnodes
+    !    if (small(i) .eq. 1) then
+    !       j = j+1
+    !    end if
+    ! end do
 
     ! print *, "[prune_tree] nubtrees 2 = ", j
 
@@ -1406,58 +1409,6 @@ contains
     ! small(nodes(n)%least_desc:n) = -n
     ! small(n) = 1
     ! nsubtrees = nsubtrees + 1 ! add new partition             
-    ! contrib_dest(nsubtrees) = 0
-    ! if (n .lt. nnodes) then
-    !    j = sparent(n) ! get parent node
-    !    if (j .lt. nnodes) contrib_dest(nsubtrees) = j
-    ! end if
-    ! subtree_sa(nsubtrees) = nodes(n)%least_desc
-    ! subtree_en(nsubtrees) = n
-    
-    ! n = 709
-
-    ! small(nodes(n)%least_desc:n) = -n
-    ! small(n) = 1
-    ! nsubtrees = nsubtrees + 1 ! add new partition                 
-    ! contrib_dest(nsubtrees) = 0
-    ! if (n .lt. nnodes) then
-    !    j = sparent(n) ! get parent node
-    !    if (j .lt. nnodes) contrib_dest(nsubtrees) = j
-    ! end if
-    ! subtree_sa(nsubtrees) = nodes(n)%least_desc
-    ! subtree_en(nsubtrees) = n
-
-    ! n = 1039
-
-    ! small(nodes(n)%least_desc:n) = -n
-    ! small(n) = 1
-    ! nsubtrees = nsubtrees + 1 ! add new partition                 
-    ! contrib_dest(nsubtrees) = 0
-    ! if (n .lt. nnodes) then
-    !    j = sparent(n) ! get parent node
-    !    if (j .lt. nnodes) contrib_dest(nsubtrees) = j
-    ! end if
-    ! subtree_sa(nsubtrees) = nodes(n)%least_desc
-    ! subtree_en(nsubtrees) = n
-
-    ! n = 1378
-
-    ! small(nodes(n)%least_desc:n) = -n
-    ! small(n) = 1
-    ! nsubtrees = nsubtrees + 1 ! add new partition                 
-    ! contrib_dest(nsubtrees) = 0
-    ! if (n .lt. nnodes) then
-    !    j = sparent(n) ! get parent node
-    !    if (j .lt. nnodes) contrib_dest(nsubtrees) = j
-    ! end if
-    ! subtree_sa(nsubtrees) = nodes(n)%least_desc
-    ! subtree_en(nsubtrees) = n
-
-    ! n = 1379
-
-    ! small(nodes(n)%least_desc:n) = -n
-    ! small(n) = 1
-    ! nsubtrees = nsubtrees + 1 ! add new partition                 
     ! contrib_dest(nsubtrees) = 0
     ! if (n .lt. nnodes) then
     !    j = sparent(n) ! get parent node

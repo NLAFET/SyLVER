@@ -100,7 +100,8 @@ namespace spldlt {
             int idx = subtrees[p]-1; // subtrees is Fortran indexed
             fronts_[idx].part = p;
             fronts_[idx].contrib_idx = p;
-#if defined(SPLDLT_USE_STARPU) && defined(SPLDLT_USE_OMP)
+// #if defined(SPLDLT_USE_STARPU) && defined(SPLDLT_USE_OMP)
+#if defined(SPLDLT_USE_STARPU)
             fronts_[idx].exec_loc = exec_loc[p];
 #endif
          }

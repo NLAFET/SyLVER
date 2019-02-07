@@ -313,9 +313,14 @@ contains
     use spral_ssids_akeep, only : ssids_akeep
     use spral_ssids_fkeep, only : ssids_fkeep
     use spral_ssids_cpu_subtree, only : cpu_numeric_subtree, cpu_symbolic_subtree
+#if defined(SPLDLT_USE_GPU)
+    use spral_ssids_gpu_subtree, only : gpu_numeric_subtree, gpu_symbolic_subtree
+#endif
     use spral_ssids_cpu_iface, only : cpu_factor_options
     ! use starpu_f_mod ! debug
     use spral_ssids_contrib, only : contrib_type
+    use spral_ssids_inform, only : ssids_inform
+    use spral_ssids_datatypes, only : ssids_options
     implicit none
 
     type(c_ptr), value :: cakeep
@@ -333,7 +338,12 @@ contains
     type(c_ptr) :: ptr
     type(contrib_type), pointer :: contrib
     logical(C_BOOL) :: posdef
+    type(ssids_options) :: options
+    type(ssids_inform) :: inform
+    type(contrib_type), dimension(:), target, allocatable :: contribs
 
+    allocate(contribs(0))
+    
     call c_f_pointer(cakeep, akeep)
     call c_f_pointer(cfkeep, fkeep)
 
@@ -348,6 +358,13 @@ contains
     type is (cpu_symbolic_subtree)
        fkeep%subtree(part)%ptr => spldlt_factor_subtree_cpu( &
             subtree_ptr, posdef, val, child_contrib_c, coptions, cstats)
+    type is (gpu_symbolic_subtree)
+       ! print *, "[spldlt_factor_subtree_c] gpu_numeric_subtree"
+       fkeep%subtree(part)%ptr => akeep%subtree(part)%ptr%factor( &
+            fkeep%pos_def, val, &
+            contribs, &
+            options, inform &
+            )
     end select
 
     !if (akeep%contrib_idx(part) .le. akeep%nparts) then
