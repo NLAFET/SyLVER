@@ -231,6 +231,9 @@ namespace spldlt { namespace starpu {
       // factor_subtree StarPU codelet
       struct starpu_codelet cl_factor_subtree;
 
+      // factor_subtree_gpu StarPU codelet
+      struct starpu_codelet cl_factor_subtree_gpu;
+
       // subtree_assemble StarPU codelet
       struct starpu_codelet cl_subtree_assemble;
 

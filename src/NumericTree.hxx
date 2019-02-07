@@ -20,7 +20,6 @@
 // STD
 #include <vector>
 #include <chrono>
-
 // SSIDS
 #include "ssids/cpu/cpu_iface.hxx"
 #include "ssids/cpu/kernels/cholesky.hxx"

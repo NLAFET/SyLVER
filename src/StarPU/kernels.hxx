@@ -926,6 +926,8 @@ namespace starpu {
 #endif
    // factor_subtree StarPU codelet
    extern struct starpu_codelet cl_factor_subtree;
+   // factor_subtree StarPU codelet
+   extern struct starpu_codelet cl_factor_subtree_gpu;
 
    // Debug
    template <typename T>
@@ -1641,6 +1643,14 @@ namespace starpu {
       cl_factor_subtree.nbuffers = STARPU_VARIABLE_NBUFFERS;
       cl_factor_subtree.name = "FactorSubtree";
       cl_factor_subtree.cpu_funcs[0] = factor_subtree_cpu_func<T>;
+
+      // facto_subtree_gpu StarPU codelet
+      starpu_codelet_init(&cl_factor_subtree_gpu);
+      cl_factor_subtree_gpu.where = STARPU_CUDA;
+      cl_factor_subtree_gpu.nbuffers = STARPU_VARIABLE_NBUFFERS;
+      cl_factor_subtree_gpu.name = "FactorSubtreeGPU";
+      // This function can handle subtrees on the GPU
+      cl_factor_subtree_gpu.cuda_funcs[0] = factor_subtree_cpu_func<T>; 
 
    }
 }} // namespaces spldlt::starpu

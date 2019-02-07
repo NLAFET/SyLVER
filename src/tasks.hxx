@@ -502,6 +502,8 @@ namespace spldlt {
    ////////////////////////////////////////////////////////////////////////////////
    // Factor subtree task
 
+   int subtree_get_devid(void *akeep, int p);
+
    template <typename T>
    inline void factor_subtree_task(
          void *akeep,
@@ -512,12 +514,20 @@ namespace spldlt {
          struct spral::ssids::cpu::cpu_factor_options *options,
          std::vector<ThreadStats>& worker_stats) {
 
+      std::string context = "factor_subtree_task";
 #if defined(SPLDLT_USE_STARPU)
 
       int loc = 0;
 #if defined(SPLDLT_USE_OMP)
       loc = root.exec_loc;
 #endif
+
+      // int workerid;
+      // workerid = starpu_worker_get_by_devid(STARPU_CUDA_WORKER, 0);
+      // std::cout << "[" << context << "] device = 0, workerid = " << workerid << std::endl;
+      // workerid = starpu_worker_get_by_devid(STARPU_CUDA_WORKER, 1);
+      // std::cout << "[" << context << "] device = 1, workerid = " << workerid << std::endl;
+
       // printf("[factor_subtree_task] loc = %d\n", loc);
       spldlt::starpu::insert_factor_subtree(
             root.hdl, akeep, fkeep, p, aval, child_contrib, options,

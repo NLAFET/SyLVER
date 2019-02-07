@@ -197,6 +197,21 @@ contains
     nptr(nnodes+1) = pp
   end subroutine build_map
 
+  subroutine subtree_get_devid_c(cakeep, p) bind(C)
+    use, intrinsic :: iso_c_binding
+
+    type(c_ptr), value :: cakeep
+    integer(c_int), value :: p
+
+    type(spldlt_akeep_type), pointer :: akeep => null() ! spldlt akeep structure 
+
+    call c_f_pointer(cakeep, akeep)
+    
+    
+
+  end subroutine subtree_get_devid_c
+
+
 !****************************************************************************
 
 !
