@@ -38,6 +38,11 @@ public:
    : next(next), mem_(calloc(sz+align, 1)), ptr_(mem_), space_(sz+align)
    {
       if(!mem_) throw std::bad_alloc();
+// #if defined(SPLDLT_USE_STARPU)
+// #if defined(SPLDLT_USE_GPU)
+//       starpu_memory_pin(mem_, space_);
+// #endif
+// #endif
    }
    ~Page() {
 #ifdef MEM_STATS

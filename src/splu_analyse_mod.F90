@@ -240,7 +240,7 @@ contains
     ! Find out sequential subtrees
     if (options%prune_tree) then
        call prune_tree(akeep%nnodes, akeep%sptr, akeep%sparent, akeep%rptr, &
-            nth, ngpu, &
+            nth, ngpu, options%gpu_perf_coeff, &
             splu_akeep%nsubtrees, small, contrib_dest, subtree_sa, &
             splu_akeep%subtree_en, exec_loc)
     end if

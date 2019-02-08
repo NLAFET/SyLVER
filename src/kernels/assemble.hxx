@@ -367,11 +367,11 @@ namespace spldlt {
       size_t len = ldl * ncol;  // posdef
       front.lcol = FATypeTraits::allocate(factor_alloc_type, len);
 
-#if defined(SPLDLT_USE_STARPU)
-#if defined(SPLDLT_USE_GPU)
-      // starpu_memory_pin(front.lcol, len*sizeof(T));
-#endif
-#endif
+// #if defined(SPLDLT_USE_STARPU)
+// #if defined(SPLDLT_USE_GPU)
+//       starpu_memory_pin(front.lcol, len*sizeof(T));
+// #endif
+// #endif
       int err;
       // Get space for contribution block + (explicitly do not zero it!)
       front.alloc_contrib_blocks();

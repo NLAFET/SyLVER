@@ -929,7 +929,43 @@ namespace starpu {
    // factor_subtree StarPU codelet
    extern struct starpu_codelet cl_factor_subtree_gpu;
 
-   // Debug
+   /// @brief Launch StarPU task for factorizing a subtree on a specific worker
+   template <typename T>
+   void insert_factor_subtree_worker(
+         starpu_data_handle_t root_hdl, // Symbolic handle on root node
+         void *akeep,
+         void *fkeep,
+         int p, // Subtree index
+         T *aval,
+         void **child_contrib,
+         struct spral::ssids::cpu::cpu_factor_options *options,
+         std::vector<ThreadStats> *worker_stats,
+         int workerid // Worker index
+         ) {
+
+      int ret;
+
+      enum starpu_worker_archtype archtype = starpu_worker_get_type(workerid);
+
+      ret = starpu_task_insert(
+            (archtype==STARPU_CUDA_WORKER) ? &cl_factor_subtree_gpu : &cl_factor_subtree,
+            STARPU_EXECUTE_ON_WORKER, workerid, 
+            STARPU_RW, root_hdl,
+            STARPU_VALUE, &akeep, sizeof(void*),
+            STARPU_VALUE, &fkeep, sizeof(void*),
+            STARPU_VALUE, &p, sizeof(int),
+            STARPU_VALUE, &aval, sizeof(T*),
+            STARPU_VALUE, &child_contrib, sizeof(void**),
+            STARPU_VALUE, &options, sizeof(struct spral::ssids::cpu::cpu_factor_options*),
+            STARPU_VALUE, &worker_stats, sizeof(std::vector<ThreadStats>*),
+            0);      
+      
+      STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");  
+   }
+
+   /// @brief Launch StarPU task for factorizing a subtree
+   ///
+   /// @param root_hdl
    template <typename T>
    void insert_factor_subtree(
          starpu_data_handle_t root_hdl, // Symbolic handle on root node
@@ -1644,6 +1680,7 @@ namespace starpu {
       cl_factor_subtree.name = "FactorSubtree";
       cl_factor_subtree.cpu_funcs[0] = factor_subtree_cpu_func<T>;
 
+#if defined(SPLDLT_USE_GPU)
       // facto_subtree_gpu StarPU codelet
       starpu_codelet_init(&cl_factor_subtree_gpu);
       cl_factor_subtree_gpu.where = STARPU_CUDA;
@@ -1651,6 +1688,7 @@ namespace starpu {
       cl_factor_subtree_gpu.name = "FactorSubtreeGPU";
       // This function can handle subtrees on the GPU
       cl_factor_subtree_gpu.cuda_funcs[0] = factor_subtree_cpu_func<T>; 
+#endif
 
    }
 }} // namespaces spldlt::starpu

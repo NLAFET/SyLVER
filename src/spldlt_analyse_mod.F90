@@ -197,19 +197,35 @@ contains
     nptr(nnodes+1) = pp
   end subroutine build_map
 
-  subroutine subtree_get_devid_c(cakeep, p) bind(C)
+  !> @brief Return the GPU device index associated with subtree
+  !> p. Return -1 if subtree is mapped to a NUMA node
+  !> @param cakeep C pointer on akeep structure
+  !> @param p Subtree index
+  integer(c_int) function subtree_get_devid_c(cakeep, p) bind(C)
     use, intrinsic :: iso_c_binding
 
     type(c_ptr), value :: cakeep
     integer(c_int), value :: p
 
     type(spldlt_akeep_type), pointer :: akeep => null() ! spldlt akeep structure 
-
+    integer :: nth
+    integer :: loc
+    integer :: device
+    
     call c_f_pointer(cakeep, akeep)
     
+    nth = akeep%akeep%topology(1)%nproc 
+    loc = akeep%akeep%subtree(p)%exec_loc
+    ! print *, "subtree = ", p , ", loc = ", loc
+    if (loc.le.nth) then
+       device = -1
+    else
+       device = mod(loc, nth)-1
+    end if
     
-
-  end subroutine subtree_get_devid_c
+    subtree_get_devid_c = device
+    
+  end function subtree_get_devid_c
 
 
 !****************************************************************************
@@ -323,7 +339,8 @@ contains
     ! print *, " contrib_idx = ", akeep%contrib_idx(1:akeep%nparts)
     ! print *, " contrib_dest = ", contrib_dest(1:akeep%nparts)
 
-    nth = akeep%topology(1)%nproc ! FIXME Use (total) number of procs
+    ! FIXME Use total number of procs on each NUMA nodes
+    nth = akeep%topology(1)%nproc 
     ngpu = size(akeep%topology(1)%gpus)
 
     ! nth = 1 ! debug
@@ -353,7 +370,7 @@ contains
     ! Find out sequential subtrees
     if (options%prune_tree) then
        call prune_tree(akeep%nnodes, akeep%sptr, akeep%sparent, akeep%rptr, &
-            nth, ngpu, &
+            nth, ngpu, options%super%gpu_perf_coeff, &
             spldlt_akeep%nsubtrees, small, contrib_dest, subtree_sa, &
             spldlt_akeep%subtree_en, exec_loc)
     end if
@@ -372,7 +389,6 @@ contains
     ! allocate(akeep%subtree(akeep%nparts))
     allocate(akeep%subtree(spldlt_akeep%nsubtrees))
 
-    !do i = 1, akeep%nparts
     do i = 1, spldlt_akeep%nsubtrees
     
        ! akeep%subtree(i)%exec_loc = exec_loc(i)
@@ -395,7 +411,7 @@ contains
        else
           ! GPU
           device = mod(loc, nth)-1 ! device indexes are 0-indexed
-          print *, "root = ", spldlt_akeep%subtree_en(i), ", device = ", device
+          print *, "subtree = ", i, ", loc = ", loc, ", device = ", device
           akeep%subtree(i)%ptr => construct_gpu_symbolic_subtree(device, &
                akeep%n, subtree_sa(i), spldlt_akeep%subtree_en(i)+1, &
                akeep%sptr, akeep%sparent, akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist, &
@@ -1121,8 +1137,8 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Tree pruning method. Inspired by the strategy employed in qr_mumps
   ! for pruning the atree.
-  subroutine prune_tree(nnodes, sptr, sparent, rptr, nth, ngpu, nsubtrees, small, &
-       contrib_dest, subtree_sa, subtree_en, exec_loc)
+  subroutine prune_tree(nnodes, sptr, sparent, rptr, nth, ngpu, gpu_perf_coeff, &
+       nsubtrees, small, contrib_dest, subtree_sa, subtree_en, exec_loc)
     use spldlt_utils_mod, only: sort
     implicit none
 
@@ -1137,6 +1153,7 @@ contains
     integer(long), dimension(nnodes+1), intent(in) :: rptr
     integer, intent(in) :: nth ! Number of CPU workers
     integer, intent(in) :: ngpu ! Number of GPU workers
+    real, intent(in) :: gpu_perf_coeff
     integer, intent(out) :: nsubtrees ! Number of partititons: top part plus subtrees
     integer, dimension(:), allocatable, intent(inout) :: small ! Nodes below the lzero layer  
     integer, dimension(:), allocatable, intent(inout) :: contrib_dest ! Node to which each partition contrirbute
@@ -1275,7 +1292,11 @@ contains
        do i=1, nlz
           ! find the least loaded proc
           p = minloc(proc_w,1)
-          proc_w(p) = proc_w(p) + abs(lzero_w(i))
+          if (p .gt. nth) then ! GPU device
+             proc_w(p) = proc_w(p) + int((real(abs(lzero_w(i)))/gpu_perf_coeff), kind=long)
+          else ! NUMA node
+             proc_w(p) = proc_w(p) + abs(lzero_w(i))
+          end if
           loc(lzero(i)) = p
           ! print *, "node = ", lzero(i)
           ! print *, "proc_w = ", proc_w

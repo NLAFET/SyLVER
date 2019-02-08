@@ -502,8 +502,8 @@ namespace spldlt {
    ////////////////////////////////////////////////////////////////////////////////
    // Factor subtree task
 
-   int subtree_get_devid(void *akeep, int p);
-
+   extern "C" int subtree_get_devid_c(void *akeep, int p);
+   
    template <typename T>
    inline void factor_subtree_task(
          void *akeep,
@@ -521,18 +521,26 @@ namespace spldlt {
 #if defined(SPLDLT_USE_OMP)
       loc = root.exec_loc;
 #endif
+      int workerid = -1;
+#if defined(SPLDLT_USE_GPU)
+      int devid = subtree_get_devid_c(akeep, p);
+      workerid = starpu_worker_get_by_devid(STARPU_CUDA_WORKER, devid);
+      // std::cout << "[" << context << "] subtree = " << p << ", devid = " << devid << ", workerid = " << workerid << std::endl;
+#endif
 
-      // int workerid;
-      // workerid = starpu_worker_get_by_devid(STARPU_CUDA_WORKER, 0);
-      // std::cout << "[" << context << "] device = 0, workerid = " << workerid << std::endl;
-      // workerid = starpu_worker_get_by_devid(STARPU_CUDA_WORKER, 1);
-      // std::cout << "[" << context << "] device = 1, workerid = " << workerid << std::endl;
-
-      // printf("[factor_subtree_task] loc = %d\n", loc);
-      spldlt::starpu::insert_factor_subtree(
-            root.hdl, akeep, fkeep, p, aval, child_contrib, options,
-            &worker_stats, loc);
-
+      if (workerid>=0) {
+         // Map the execution of the factor_subtree task to worker
+         // with index workerid
+         spldlt::starpu::insert_factor_subtree_worker(
+               root.hdl, akeep, fkeep, p, aval, child_contrib, options,
+               &worker_stats, workerid);
+      }
+      else {
+         spldlt::starpu::insert_factor_subtree(
+               root.hdl, akeep, fkeep, p, aval, child_contrib, options,
+               &worker_stats, loc);
+      }
+      
 #else
       ThreadStats& stats = worker_stats[0];
       spldlt_factor_subtree_c(

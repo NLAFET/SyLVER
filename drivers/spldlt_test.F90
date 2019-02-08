@@ -242,6 +242,12 @@ program spldlt_test
         case("--failed-pivot-method=pass")
            ssids_opts%failed_pivot_method = 2
            print *, 'Failed pivot method PASS'
+       case("--gpu-perf-coeff")
+          call get_command_argument(argnum, argval)
+          argnum = argnum + 1
+          read (argval, *) ssids_opts%gpu_perf_coeff
+          print *, 'GPU Performance coefficient = ', &
+               ssids_opts%gpu_perf_coeff
         case default
            print *, "Unrecognised command line argument: ", argval
            stop

@@ -134,6 +134,8 @@ module spldlt_datatypes_mod
      ! GPU-specific
      !     
      logical :: use_gpu = .true. ! Whether GPU should be used
+     real :: gpu_perf_coeff = 1.0 ! How many times better is a GPU than a
+       ! single NUMA region's worth of processors
 
      !
      ! Undocumented

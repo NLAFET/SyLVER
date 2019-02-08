@@ -13,6 +13,7 @@
 #endif /* _OPENMP */
 
 #if defined(SPLDLT_USE_STARPU)
+// #include <starpu.h>
 #include <mutex>
 #endif
 #include <vector>
@@ -77,6 +78,11 @@ public:
       /* Allocate memory of sufficient size and align it */
       mem_ = std::allocator_traits<CharAllocator>::allocate(alloc_, size_+align);
       size_t space = size_+align; 
+// #if defined(SPLDLT_USE_STARPU)
+// #if defined(SPLDLT_USE_GPU)
+//       starpu_memory_pin(mem_, space);
+// #endif
+// #endif
       void* to_align = mem_;
       std::align(align, size, to_align, space);
       base_ = static_cast<char*>(to_align);
