@@ -370,20 +370,23 @@ namespace spldlt {
             starpu_void_data_register(&(fronts_[ni].contrib_hdl));
          }
 #endif
+
+
+#if defined(SPLDLT_USE_STARPU) && defined(SPLDLT_USE_OMP)
+
+         struct starpu_cluster_machine *clusters;
+         clusters = starpu_cluster_machine(
+               HWLOC_OBJ_SOCKET, 
+               STARPU_CLUSTER_PARTITION_ONE, STARPU_CLUSTER_NB, 2,
+               STARPU_CLUSTER_TYPE, STARPU_CLUSTER_OPENMP,
+               0);
+         printf("[factor_mf_indef] machine id = %d\n", clusters->id);
+         starpu_cluster_print(clusters);
+         // starpu_uncluster_machine(clusters);
+         auto subtree_start = std::chrono::high_resolution_clock::now();                  
+
+#endif
          
-         // for(int p = 0; p < symb_.nparts_; ++p) {
-
-         //    int root = symb_.part_[p+1]-2; // Part is 1-indexed
-         //    // printf("[factor_mf] part = %d, root = %d\n", p, root);
-
-         //    // Check if current partition is a subtree
-         //    if (symb_[root].exec_loc != -1) {
-
-         //       factor_subtree_task(
-         //             symb_.akeep_, fkeep_, symb_[root], aval, p, child_contrib, 
-         //             &options);
-         //    }
-         // }
          for(int p = 0; p < symb_.nsubtrees_; ++p) {
             int root = symb_.subtrees_[p]-1; // subtrees is 1-indexed
             // printf("[factor_mf] nsubtrees = %d, p = %d, root = %d\n", symb_.nsubtrees_, p, root);
@@ -391,6 +394,17 @@ namespace spldlt {
                   symb_.akeep_, fkeep_, symb_[root], aval, p, child_contrib,
                   &options, worker_stats);
          }
+
+#if defined(SPLDLT_USE_STARPU) && defined(SPLDLT_USE_OMP)
+
+         starpu_task_wait_for_all(); // FIXME Can we avoid this synchronization
+         
+         starpu_uncluster_machine(clusters);
+         auto subtree_end = std::chrono::high_resolution_clock::now();                  
+         long t_subtree = std::chrono::duration_cast<std::chrono::nanoseconds>(subtree_end-subtree_start).count();
+         printf("[factor_mf_indef] factor subtrees: %e\n", 1e-9*t_subtree);
+
+#endif
 
          // Allocate mapping array
          int *map = new int[symb_.n+1];

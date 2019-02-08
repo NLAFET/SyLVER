@@ -201,22 +201,29 @@ contains
   !> p. Return -1 if subtree is mapped to a NUMA node
   !> @param cakeep C pointer on akeep structure
   !> @param p Subtree index
-  integer(c_int) function subtree_get_devid_c(cakeep, p) bind(C)
+  integer(c_int) function subtree_get_devid_c(cakeep, p_c) bind(C)
     use, intrinsic :: iso_c_binding
 
     type(c_ptr), value :: cakeep
-    integer(c_int), value :: p
+    integer(c_int), value :: p_c
 
     type(spldlt_akeep_type), pointer :: akeep => null() ! spldlt akeep structure 
+    integer :: p
     integer :: nth
     integer :: loc
     integer :: device
     
     call c_f_pointer(cakeep, akeep)
+
+    p = p_c+1 ! p_c is zero-indexed
     
-    nth = akeep%akeep%topology(1)%nproc 
+    nth = akeep%akeep%topology(1)%nproc
+#if defined(SPLDLT_USE_STARPU) && defined(SPLDLT_USE_OMP)
+    nth = 2 ! FIXME Use number of NUMA sockets
+#endif
+
     loc = akeep%akeep%subtree(p)%exec_loc
-    ! print *, "subtree = ", p , ", loc = ", loc
+    ! print *, "[subtree_get_devid_c] subtree = ", p , ", loc = ", loc, ", nth = ", nth
     if (loc.le.nth) then
        device = -1
     else
