@@ -31,6 +31,23 @@ namespace spldlt {
       throw std::runtime_error("[factor_subtree] factor_subtree NOT implemented for working precision");
    }
 
+   template void factor_subtree<float>(
+         void *akeep, void *fkeep, int p, float *aval, void **child_contrib, 
+         struct spral::ssids::cpu::cpu_factor_options *options,
+         spral::ssids::cpu::ThreadStats *stats);
+   
+   // template<>
+   // void factor_subtree<float>(
+   //       void *akeep,
+   //       void *fkeep,
+   //       int p,
+   //       float *aval, 
+   //       void **child_contrib, 
+   //       struct spral::ssids::cpu::cpu_factor_options *options,
+   //       spral::ssids::cpu::ThreadStats *stats) {
+   //    throw std::runtime_error("[factor_subtree] factor_subtree NOT implemented for working precision");
+   // }
+
    template<>
    void factor_subtree<double>(
          void *akeep,
