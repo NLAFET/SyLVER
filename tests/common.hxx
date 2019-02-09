@@ -760,9 +760,11 @@ namespace tests {
          }
    }
 
-   // Generates a random dense positive definte matrix.
+   /// @brief Generates a random, dense, positive-definte matrix with
+   /// a condition specific condition number and eignen value
+   /// distribution.
    template<typename T>
-   void gen_posdef_cond(int n, T* a, int lda, T cond) {
+   void gen_posdef_cond(int n, T* a, int lda, T cond, T gamma) {
       // /* Get general sym indef matrix */
       // gen_sym_indef(n, a, lda);
       // /* Make diagonally dominant */
@@ -778,14 +780,14 @@ namespace tests {
       // Timers
       std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
       
-      // T cond = 1e2;
-      std::default_random_engine generator;
-      std::uniform_int_distribution<long long int> distribution(1,cond);
+      // std::default_random_engine generator;
+      // std::uniform_int_distribution<long long int> distribution(1,cond);
  
       // Generate diagonal matrix with eigen values 
       // T d = 1.0;
       // for(int i=0; i<n; ++i) a[i*lda+i] = (T)1.0;
-      for(int i=0; i<n; ++i) a[i*lda+i] = (T)1.0/(distribution(generator));
+      // for(int i=0; i<n; ++i) a[i*lda+i] = (T)1.0/(distribution(generator));
+      for(int i=0; i<n; ++i) a[i*lda+i] = std::pow(10,-cond*std::pow(((T)i)/((T)n-1),gamma));
       for(int j=0; j<n; ++j) {
          for(int i=0; i<n; ++i) {
             if (i != j)

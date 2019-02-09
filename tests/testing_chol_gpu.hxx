@@ -47,7 +47,7 @@ namespace tests {
       a = new T[m*lda];
       // sylver::tests::gen_posdef(m, a, lda);
       // sylver::tests::gen_posdef_cond(m, a, lda, (T)5e0);
-      sylver::tests::gen_posdef_cond(m, a, lda, (T)5.0e3);
+      sylver::tests::gen_posdef_cond(m, a, lda, (T)3.0, (T)1.0);
       
       // Generate a RHS based on x=1, b=Ax
       b = new T[m];
