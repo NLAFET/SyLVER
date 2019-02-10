@@ -63,4 +63,10 @@ namespace sylver {
    int host_ormqr(enum sylver::side side, enum sylver::operation trans,
                   int m, int n, int k, T *a, int lda, T *tau, T *c, int ldc,
                   T *work, int lwork);
+
+   // GEMV
+   template <typename T>
+   void host_gemv(enum sylver::operation trans, int m, int n, T alpha, T const* a, int lda,
+             T const* x, int incx, T beta, T *y, int incy);
+             
 }

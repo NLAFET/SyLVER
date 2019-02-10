@@ -4,6 +4,8 @@
 #pragma once
 
 #include "kernels/common.hxx"
+// STD
+#include <vector>
 
 namespace sylver {
 namespace spldlt {
@@ -36,4 +38,13 @@ namespace spldlt {
       // }
    }
 
+   template<typename T>
+   void pcg(int m, T const* a, int lda, T const* rhs, T tol, int maxit, T* x) {
+
+      std::vector<T> r(m); 
+
+      
+      
+   }
+   
 }}

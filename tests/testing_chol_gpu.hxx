@@ -7,6 +7,7 @@
 #include "common.hxx"
 #include "sylver_ciface.hxx"
 #include "kernels/wrappers.hxx"
+#include "kernels/llt.hxx"
 #include "kernels/gpu/common.hxx"
 #include "kernels/gpu/wrappers.hxx"
 #include "kernels/gpu/factor.hxx"
@@ -267,24 +268,27 @@ namespace tests {
       // host_trsm<T>(SIDE_LEFT, FILL_MODE_LWR, OP_T, DIAG_NON_UNIT, m-n, nrhs, 1.0, &l[n*lda+n], lda, &soln[n], ldsoln);
       // spral::ssids::cpu::cholesky_solve_bwd(m, m, l, lda, nrhs, soln, ldsoln);
 
-      // Fwd substitution
-      sylver::host_trsm(
-            sylver::SIDE_LEFT, sylver::FILL_MODE_LWR,
-            sylver::OP_N, sylver::DIAG_NON_UNIT,
-            m, nrhs,
-            (T) 1.0,
-            l, lda,
-            soln, ldsoln);
+      // // Fwd substitution
+      // sylver::host_trsm(
+      //       sylver::SIDE_LEFT, sylver::FILL_MODE_LWR,
+      //       sylver::OP_N, sylver::DIAG_NON_UNIT,
+      //       m, nrhs,
+      //       (T) 1.0,
+      //       l, lda,
+      //       soln, ldsoln);
 
-      // Bwd substitution
-      sylver::host_trsm(
-            sylver::SIDE_LEFT, sylver::FILL_MODE_LWR,
-            sylver::OP_T, sylver::DIAG_NON_UNIT,
-            m, nrhs,
-            (T) 1.0,
-            l, lda,
-            soln, ldsoln);
+      // // Bwd substitution
+      // sylver::host_trsm(
+      //       sylver::SIDE_LEFT, sylver::FILL_MODE_LWR,
+      //       sylver::OP_T, sylver::DIAG_NON_UNIT,
+      //       m, nrhs,
+      //       (T) 1.0,
+      //       l, lda,
+      //       soln, ldsoln);
 
+      sylver::spldlt::cholesky_solve_fwd(m, m, l, lda, nrhs, soln, ldsoln);
+      sylver::spldlt::cholesky_solve_bwd(m, m, l, lda, nrhs, soln, ldsoln);
+      
       // Print useful info
       printf("Host to Device matrix transfer (s) = %e\n", 1e-9*t_transfer);
       

@@ -30,10 +30,28 @@ extern "C" {
    void dgeqrf_(int *m, int *n, double* a, int* lda, double *tau, double *work, int *lwork, int *info);
    // ORMQR
    void sormqr_(char *side, char* trans, int *m, int *n, int *k, float* a, int* lda, float *tau, float* c, int* ldc, float *work, int *lwork, int *info);
+   // GEMV
+   void sgemv_(char* trans, int *m, int *n, float* alpha, float const* a, int* lda, const float *x, int const* incx, float *beta, float *y, int const *incy);
+   void dgemv_(char* trans, int *m, int *n, double* alpha, double const* a, int* lda, const double *x, int const* incx, double *beta, double *y, int const *incy);
 }
 
 namespace sylver {
 
+   // SGEMV
+   template<>
+   void host_gemv<float>(enum sylver::operation trans, int m, int n, float alpha, float const* a, int lda,
+                    float const* x, int incx, float beta, float *y, int incy) {
+      char ftrans = (trans==sylver::OP_N) ? 'N' : 'T';
+      sgemv_(&ftrans, &m, &n, &alpha, a, &lda, x, &incx, &beta, y, &incy);
+   }
+   // DGEMV
+   template<>
+   void host_gemv<double>(enum sylver::operation trans, int m, int n, double alpha, double const* a, int lda,
+                    double const* x, int incx, double beta, double *y, int incy) {
+      char ftrans = (trans==sylver::OP_N) ? 'N' : 'T';
+      dgemv_(&ftrans, &m, &n, &alpha, a, &lda, x, &incx, &beta, y, &incy);
+   }
+   
    // _LASWP
    template<>
    void host_laswp<double>(int n, double *a, int lda, int k1, int k2, int *perm, int incx) {
