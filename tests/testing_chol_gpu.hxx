@@ -31,7 +31,7 @@ namespace tests {
    /// @param algo Algo to be tested
    /// @param usetc Set to false in order to disable tensor cores
    template<typename T>
-   int chol_test(int m, enum algo algo, bool usetc) {
+   int chol_test(int m, enum algo algo, bool usetc, T cond) {
 
       std::string context = "chol_test";
       bool failed = false;
@@ -46,8 +46,7 @@ namespace tests {
       std::cout << "[chol_test] usetc = " << usetc << std::endl;
       a = new T[m*lda];
       // sylver::tests::gen_posdef(m, a, lda);
-      // sylver::tests::gen_posdef_cond(m, a, lda, (T)5e0);
-      sylver::tests::gen_posdef_cond(m, a, lda, (T)3.0, (T)1.0);
+      sylver::tests::gen_posdef_cond(m, a, lda, cond, (T)1.0);
       
       // Generate a RHS based on x=1, b=Ax
       b = new T[m];

@@ -787,7 +787,7 @@ namespace tests {
       // T d = 1.0;
       // for(int i=0; i<n; ++i) a[i*lda+i] = (T)1.0;
       // for(int i=0; i<n; ++i) a[i*lda+i] = (T)1.0/(distribution(generator));
-      for(int i=0; i<n; ++i) a[i*lda+i] = std::pow(10,-cond*std::pow(((T)i)/((T)n-1),gamma));
+      for(int i=0; i<n; ++i) a[i*lda+i] = std::pow(10, (T)-1.0*cond*std::pow( ((T)i)/((T)n-1), gamma ) );
       for(int j=0; j<n; ++j) {
          for(int i=0; i<n; ++i) {
             if (i != j)

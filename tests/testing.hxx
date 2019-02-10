@@ -16,17 +16,16 @@ namespace spldlt {
       SpldltOpts():
          ncpu(1), ngpu(0), m(256), n(256), k(256), nb(256), ib(256), posdef(false), 
          check(true), chol(false), diagdom(false), algo(sylver::tests::algo::SyLVER),
-         usetc(true), prec(sylver::tests::prec::FP64)
+         usetc(true), prec(sylver::tests::prec::FP64), cond(1)
       {}
 
       void parse_opts(int argc, char** argv) {
          
          for( int i = 1; i < argc; ++i ) {
 
-            if ( !strcmp("--nb", argv[i]) && i+1 < argc ) {
-               nb = std::atoi( argv[++i] );
-            }
-            else if ( !strcmp("-nb", argv[i]) && i+1 < argc ) {
+            // Matrix properties
+            if ((!strcmp("--nb", argv[i]) || !strcmp("-nb", argv[i])) &&
+                 i+1 < argc ) {
                nb = std::atoi( argv[++i] );
             }
             else if ( !strcmp("--m", argv[i]) && i+1 < argc ) {
@@ -47,20 +46,19 @@ namespace spldlt {
             else if ( !strcmp("-k", argv[i]) && i+1 < argc ) {
                k =  std::atoi( argv[++i] );
             }
+            else if ( !strcmp("--cond", argv[i]) && i+1 < argc ) {
+               cond =  std::atoi( argv[++i] );
+            }
             // Number of workers
             
             // Number of CPU
-            else if ( !strcmp("--ncpu", argv[i]) && i+1 < argc ) {
-               ncpu =  std::atoi( argv[++i] );
-            }
-            else if ( !strcmp("-ncpu", argv[i]) && i+1 < argc ) {
+            else if ((!strcmp("--ncpu", argv[i]) || !strcmp("-ncpu", argv[i])) &&
+                     i+1 < argc ) {
                ncpu =  std::atoi( argv[++i] );
             }
             // Number of GPU
-            else if ( !strcmp("--ngpu", argv[i]) && i+1 < argc ) {
-               ngpu =  std::atoi( argv[++i] );
-            }
-            else if ( !strcmp("-ngpu", argv[i]) && i+1 < argc ) {
+            else if ((!strcmp("--ngpu", argv[i]) || !strcmp("-ngpu", argv[i])) &&
+                      i+1 < argc )  {
                ngpu =  std::atoi( argv[++i] );
             }
             else if ( !strcmp("--disable-tc", argv[i]) ) {
@@ -140,5 +138,6 @@ namespace spldlt {
       enum sylver::tests::algo algo; // Algorithm to use
       bool usetc; // Use tensor cores on GPU
       enum sylver::tests::prec prec; // Working precision
+      int cond;
    };
 }
