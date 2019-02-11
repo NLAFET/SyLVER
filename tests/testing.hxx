@@ -92,6 +92,9 @@ namespace spldlt {
             else if ( !strcmp("--algo=sylver-hp-c16", argv[i]) ) {
                algo = sylver::tests::algo::SyLVER_HP_C16;
             }
+            else if ( !strcmp("--algo=sylver-hp-u32", argv[i]) ) {
+               algo = sylver::tests::algo::SyLVER_HP_U32;
+            }
             else if ( !strcmp("--algo=cusolver", argv[i]) ) {
                algo = sylver::tests::algo::cuSOLVER;
             }

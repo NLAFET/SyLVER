@@ -237,6 +237,35 @@ namespace tests {
          sylver::gpu::cuda_check_error(cuerr, context);
 
       }
+      else if (algo == sylver::tests::SyLVER_HP_U32) {
+
+         std::cout << "[" << context << "]" << " Chol half prec compute type 16F and update 32F" << std::endl;
+
+         cublasHandle_t cuhandle;
+         inform_t inform; // Host side status
+
+         int *d_inform; // Device side status
+         cuerr = cudaMalloc((void**)&d_inform, sizeof(int));
+         sylver::gpu::cuda_check_error(cuerr, context);
+         // Initialize factorization
+         custat = cublasCreate(&cuhandle);
+         sylver::gpu::cublas_check_error(custat, context);
+         custat = cublasSetStream(cuhandle, stream); // Set CUDA stream
+         sylver::gpu::cublas_check_error(custat, context);
+         // Select math mode
+         if (usetc) custat = cublasSetMathMode(cuhandle, CUBLAS_TENSOR_OP_MATH);
+         else       custat = cublasSetMathMode(cuhandle, CUBLAS_DEFAULT_MATH);
+
+         start = std::chrono::high_resolution_clock::now();
+         sylver::spldlt::gpu::factor_ll_hp_u32(cuhandle, m, m, d_l, lda, inform, d_inform);
+         end = std::chrono::high_resolution_clock::now();
+
+         std::cout << "[chol_test] Inform flag = " << inform.flag << std::endl;
+
+         cuerr = cudaFree(d_inform);
+         sylver::gpu::cuda_check_error(cuerr, context);
+
+      }
       else {
          std::cout << "[chol_test] Algo NOT implemented " << std::endl;
          std::exit(0);
@@ -297,10 +326,23 @@ namespace tests {
       // double bwderr = ::spldlt::tests::unsym_backward_error(m, m, a, lda, b, 1, soln, m);
       double bwderr = sylver::tests::backward_error(m, a, lda, b, 1, soln, m);
       printf("bwderr = %le\n", bwderr);
- 
+
       double flops = ((double)m*m*m)/3.0;
       printf("factor time (s) = %e\n", 1e-9*ttotal);
       printf("GFlop/s = %.3f\n", flops/(double)ttotal);
+
+      int maxit = 300;
+      T tol = 1e-14;
+      T resid;
+      int iter;
+      start = std::chrono::high_resolution_clock::now();
+      sylver::spldlt::pcg(m, a, lda, b, tol, maxit, soln, resid, iter);
+      end = std::chrono::high_resolution_clock::now();
+      long tpcg =  
+         std::chrono::duration_cast<std::chrono::nanoseconds>
+         (end-start).count();
+      std::cout << "[" << context << "]" << " t pcg = " << 1e-9*tpcg << std::endl; 
+      std::cout << "[" << context << "]" << " resid = " << resid << ", iter = " << iter << std::endl; 
 
       // Cleanup memory
 

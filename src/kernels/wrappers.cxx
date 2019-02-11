@@ -9,7 +9,10 @@
 #include <stdexcept>
 
 extern "C" {
+   // AXPY
    void daxpy_(const int *n, const double *a, const double *x, const int *incx, double *y, const int *incy);
+   void saxpy_(const int *n, const float *a, const float *x, const int *incx, float *y, const int *incy);
+   // LANGE
    double dlange_(char *norm, int *m, int *n, const double *a, int *lda);
    // POTRF
    void dpotrf_(char *uplo, int *n, double *a, int *lda, int *info);
@@ -33,10 +36,39 @@ extern "C" {
    // GEMV
    void sgemv_(char* trans, int *m, int *n, float* alpha, float const* a, int* lda, const float *x, int const* incx, float *beta, float *y, int const *incy);
    void dgemv_(char* trans, int *m, int *n, double* alpha, double const* a, int* lda, const double *x, int const* incx, double *beta, double *y, int const *incy);
+   // NRM2
+   float snrm2_(int *n, float const* x, int const* incx);
+   double dnrm2_(int *n, double const* x, int const* incx);
+   // DOT
+   float sdot_(int *n, float const* x, int const* incx, float const* y, int const* incy);
+   double ddot_(int *n, double const* x, int const* incx, double const* y, int const* incy);
+   
 }
 
 namespace sylver {
 
+   // SDOT
+   template<>
+   float host_dot<float>(int n, float const* x, int incx, float const* y, int incy) {
+      return sdot_(&n, x, &incx, y, &incy);
+   }
+   // DDOT
+   template<>
+   double host_dot<double>(int n, double const* x, int incx, double const* y, int incy) {
+      return ddot_(&n, x, &incx, y, &incy);
+   }
+       
+   // SNRM2
+   template<>
+   float host_nrm2<float>(int n, float const* x, int incx) {
+      return snrm2_(&n, x, &incx);
+   }
+   // DNRM2
+   template<>
+   double host_nrm2<double>(int n, double const* x, int incx) {
+      return dnrm2_(&n, x, &incx);
+   }
+   
    // SGEMV
    template<>
    void host_gemv<float>(enum sylver::operation trans, int m, int n, float alpha, float const* a, int lda,
@@ -58,7 +90,12 @@ namespace sylver {
       dlaswp_(&n, a, &lda, &k1, &k2, perm, &incx);
    }
 
-   // _AXPY
+   // SAXPY
+   template<>
+   void host_axpy<float>(int n, float a, const float *x, int incx, float *y, int incy) {
+      saxpy_(&n, &a, x, &incx, y, &incy);
+   }
+   // DAXPY
    template<>
    void host_axpy<double>(int n, double a, const double *x, int incx, double *y, int incy) {
       daxpy_(&n, &a, x, &incx, y, &incy);

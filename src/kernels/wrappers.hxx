@@ -68,5 +68,12 @@ namespace sylver {
    template <typename T>
    void host_gemv(enum sylver::operation trans, int m, int n, T alpha, T const* a, int lda,
              T const* x, int incx, T beta, T *y, int incy);
-             
+
+   // NRM2
+   template <typename T>
+   T host_nrm2(int n, T const* x, int incx);
+
+   // DOT
+   template <typename T>
+   T host_dot(int n, T const* x, int incx, T const* y, int incy);
 }

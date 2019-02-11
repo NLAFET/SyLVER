@@ -699,6 +699,8 @@ namespace tests {
       SyLVER_HP,
       /// SyLVER routine using half precision and compute type 16F
       SyLVER_HP_C16,
+      /// SyLVER routine using half precision and compute type 16F
+      SyLVER_HP_U32,
       /// Use routine from cuSOLVER 
       cuSOLVER,
       /// Use routine from cuSOLVER using half precision
