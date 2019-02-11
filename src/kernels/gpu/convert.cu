@@ -22,6 +22,44 @@ namespace gpu {
 
    // MAGMA routine see magmablas/hlaconvert.cu
    static __device__
+   void convert_dp2hp_device(
+         int m, int n,
+         double const* dA, int ldda,
+         sylver::gpu::half *dB, int lddb )
+   {
+      int ind = blockIdx.x*BLK_X + threadIdx.x;
+      int iby = blockIdx.y*BLK_Y;
+      /* check if full block-column */
+      bool full = (iby + BLK_Y <= n);
+      /* do only rows inside matrix */
+      if ( ind < m ) {
+         dA += ind + iby*ldda;
+         dB += ind + iby*lddb;
+         if ( full ) {
+            // full block-column
+#pragma unroll
+            for( int j=0; j < BLK_Y; ++j ) {
+               dB[j*lddb] = __float2half( dA[j*ldda] );
+               // if (__hisnan(dB[j*lddb]) || __hisnan(dB[j*lddb])) {
+               //       printf("[convert_sp2hp_device] NaN detected\n");
+               // }
+            }
+         }
+         else {
+            // partial block-column
+            for( int j=0; j < BLK_Y && iby+j < n; ++j ) {
+               dB[j*lddb] = __float2half( dA[j*ldda] );
+               // if (__hisnan(dB[j*lddb]) || __hisnan(dB[j*lddb])) {
+               //    printf("[convert_sp2hp_device] NaN detected\n");
+               // }
+            }
+         }
+      }
+   }
+
+
+   // MAGMA routine see magmablas/hlaconvert.cu
+   static __device__
    void convert_sp2hp_device(
          int m, int n,
          const float  *dA, int ldda,
@@ -95,6 +133,66 @@ namespace gpu {
    }
 
    // MAGMA routine see magmablas/hlaconvert.cu
+   static __device__
+   void convert_hp2dp_device(
+         int m, int n,
+         const sylver::gpu::half *dA, int ldda,
+         double *dB, int lddb )
+   {
+      int ind = blockIdx.x*BLK_X + threadIdx.x;
+      int iby = blockIdx.y*BLK_Y;
+      /* check if full block-column */
+      bool full = (iby + BLK_Y <= n);
+      /* do only rows inside matrix */
+      if ( ind < m ) {
+         dA += ind + iby*ldda;
+         dB += ind + iby*lddb;
+         if ( full ) {
+            // full block-column
+#pragma unroll
+            for( int j=0; j < BLK_Y; ++j ) {
+               dB[j*lddb] = __half2float( dA[j*ldda] );
+               // if (__hisnan(dA[j*ldda]) || __hisnan(dA[j*ldda])) {
+               //       printf("[convert_sp2hp_device] NaN detected\n");
+               // }
+            }
+         }
+         else {
+            // partial block-column
+            for( int j=0; j < BLK_Y && iby+j < n; ++j ) {
+               dB[j*lddb] = __half2float( dA[j*ldda] );
+               // if (__hisnan(dA[j*ldda]) || __hisnan(dA[j*ldda])) {
+               //       printf("[convert_sp2hp_device] NaN detected\n");
+               // }
+            }
+         }
+      }
+   }
+
+   // MAGMA routine see magmablas/hlaconvert.cu
+   __global__
+   void convert_dp2hp_kernel(
+         int m, int n,
+         double const* dA, int ldda,
+         sylver::gpu::half *dB, int lddb )
+   {
+#if CUDA_VERSION >= 7500
+      convert_dp2hp_device(m, n, dA, ldda, dB, lddb);
+#endif
+   }
+   // MAGMA routine see magmablas/hlaconvert.cu
+   __global__
+   void convert_hp2dp_kernel(
+         int m, int n,
+         const sylver::gpu::half *dA, int ldda,
+         double *dB, int lddb )
+   {
+#if CUDA_VERSION >= 7500
+      convert_hp2dp_device(m, n, dA, ldda, dB, lddb);
+#endif
+   }
+
+   // MAGMA routine see magmablas/hlaconvert.cu
    __global__
    void convert_sp2hp_kernel(
          int m, int n,
@@ -125,11 +223,27 @@ namespace gpu {
    // Template specialization
    template<>
    __global__
+   void convert_kernel<double, sylver::gpu::half>(
+         int m, int n,
+         double const* dA, int ldda,
+         sylver::gpu::half *dB, int lddb ) {
+      convert_dp2hp_device(m, n, dA, ldda, dB, lddb);
+   }
+   template<>
+   __global__
    void convert_kernel<float, sylver::gpu::half>(
          int m, int n,
          const float  *dA, int ldda,
          sylver::gpu::half *dB, int lddb ) {
       convert_sp2hp_device(m, n, dA, ldda, dB, lddb);
+   }
+   template<>
+   __global__
+   void convert_kernel<sylver::gpu::half, double>(
+         int m, int n,
+         sylver::gpu::half const* dA, int ldda,
+         double *dB, int lddb ) {
+      convert_hp2dp_device(m, n, dA, ldda, dB, lddb);
    }
    template<>
    __global__
@@ -172,13 +286,21 @@ namespace gpu {
          }
       }
    }
-   
+   // FP32 to FP16
    template void convert<float, sylver::gpu::half>(
          cudaStream_t const stream, int m, int n, float *const a, int lda, 
          sylver::gpu::half *const aout, int ldaout);
-
+   // FP64 to FP16
+   template void convert<double, sylver::gpu::half>(
+         cudaStream_t const stream, int m, int n, double *const a, int lda, 
+         sylver::gpu::half *const aout, int ldaout);
+   // FP16 to FP32
    template void convert<sylver::gpu::half, float>(
          cudaStream_t const stream, int m, int n, sylver::gpu::half *const a, int lda, 
          float *const aout, int ldaout);
+   // FP16 to FP64
+   template void convert<sylver::gpu::half, double>(
+         cudaStream_t const stream, int m, int n, sylver::gpu::half *const a, int lda, 
+         double *const aout, int ldaout);
 
 }} // End of namespace sykver::gpu

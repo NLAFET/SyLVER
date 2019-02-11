@@ -994,12 +994,13 @@ namespace gpu {
    ////////////////////////////////////////
 
    // Using compute type 16F for updating panel
-   template<>
-   void factor_ll_hp_c16<float>(
+   // template<>
+   template<typename T>
+   void factor_ll_hp_c16(
          const cublasHandle_t cuhandle, 
          int m, // Number of rows 
          int n, // Number of columns
-         float *const d_a, // Matrix pointer on device 
+         T *const d_a, // Matrix pointer on device 
          int ldda, // Matrix leadind dim on device
          inform_t& inform, // Info host
          int *d_info // Info device
@@ -1297,5 +1298,27 @@ namespace gpu {
       sylver::gpu::cuda_check_error(cuerr, context, inform);
 
    }
+
+   // FP32
+   template void factor_ll_hp_c16<float>(
+         const cublasHandle_t cuhandle, 
+         int m, // Number of rows 
+         int n, // Number of columns
+         float *const d_a, // Matrix pointer on device 
+         int ldda, // Matrix leadind dim on device
+         inform_t& inform, // Info host
+         int *d_info // Info device
+         );
+   // FP64
+   template void factor_ll_hp_c16<double>(
+         const cublasHandle_t cuhandle, 
+         int m, // Number of rows 
+         int n, // Number of columns
+         double *const d_a, // Matrix pointer on device 
+         int ldda, // Matrix leadind dim on device
+         inform_t& inform, // Info host
+         int *d_info // Info device
+         );
+
 
 }}} // End of namespace sylver::spldlt::gpu

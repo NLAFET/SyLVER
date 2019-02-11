@@ -16,7 +16,7 @@ namespace spldlt {
       SpldltOpts():
          ncpu(1), ngpu(0), m(256), n(256), k(256), nb(256), ib(256), posdef(false), 
          check(true), chol(false), diagdom(false), algo(sylver::tests::algo::SyLVER),
-         usetc(true), prec(sylver::tests::prec::FP64), cond(1)
+         usetc(true), prec(sylver::tests::prec::FP64), cond(1), tol(1e-8)
       {}
 
       void parse_opts(int argc, char** argv) {
@@ -119,6 +119,11 @@ namespace spldlt {
                prec = sylver::tests::prec::FP64;
             }
 
+            // Refinement 
+            else if ( !strcmp("--tol", argv[i]) && i+1 < argc ) {
+               tol =  std::atof( argv[++i] );
+            }
+
             else {
                std::cout << "Unrecognized command " << i << std::endl;
             }
@@ -142,5 +147,6 @@ namespace spldlt {
       bool usetc; // Use tensor cores on GPU
       enum sylver::tests::prec prec; // Working precision
       int cond;
+      double tol;
    };
 }

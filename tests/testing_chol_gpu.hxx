@@ -15,6 +15,7 @@
 // STD
 #include <iostream>
 #include <string>
+#include <cstring>
 
 // SSIDS
 #include "ssids/cpu/cpu_iface.hxx"
@@ -32,7 +33,7 @@ namespace tests {
    /// @param algo Algo to be tested
    /// @param usetc Set to false in order to disable tensor cores
    template<typename T>
-   int chol_test(int m, enum algo algo, bool usetc, T cond) {
+   int chol_test(int m, enum algo algo, bool usetc, T cond, T tol) {
 
       std::string context = "chol_test";
       bool failed = false;
@@ -331,16 +332,20 @@ namespace tests {
       printf("factor time (s) = %e\n", 1e-9*ttotal);
       printf("GFlop/s = %.3f\n", flops/(double)ttotal);
 
+      // Refinement
+
       int maxit = 300;
-      T tol = 1e-14;
+      // T tol = 1e-8;
       T resid;
       int iter;
+      std::memset(soln, 0, nrhs*ldsoln*sizeof(T));
       start = std::chrono::high_resolution_clock::now();
       sylver::spldlt::pcg(m, a, lda, b, tol, maxit, soln, resid, iter);
       end = std::chrono::high_resolution_clock::now();
       long tpcg =  
          std::chrono::duration_cast<std::chrono::nanoseconds>
          (end-start).count();
+      std::cout << "[" << context << "]" << " tol = " << tol << std::endl; 
       std::cout << "[" << context << "]" << " t pcg = " << 1e-9*tpcg << std::endl; 
       std::cout << "[" << context << "]" << " resid = " << resid << ", iter = " << iter << std::endl; 
 
