@@ -259,7 +259,11 @@ namespace spldlt {
                size_t col_dimn = col_ld*blk_n;
                T *col = (col_dimn>0) ? 
                   PATraits::allocate(pool_alloc_, col_dimn) : nullptr;
-
+#if defined(SPLDLT_USE_STARPU)
+#if defined(SPLDLT_USE_GPU)
+      starpu_memory_pin(col, col_dimn*sizeof(T));
+#endif
+#endif
                for(int i = rsa; i < nr; i++) {
 
                   int row = std::max(i*blksz, n) - n; // First row in block

@@ -879,7 +879,6 @@ namespace starpu {
 #pragma omp single
          {
             // printf("[factor_subtree_cpu_func] nth: %d\n", nth);
-            // spldlt_factor_subtree_c(akeep, fkeep, p, aval, child_contrib, &subtree_opts, &stats);
             factor_subtree(akeep, fkeep, p, aval, child_contrib, &subtree_opts, &stats);
          }
       }
