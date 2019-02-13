@@ -380,7 +380,7 @@ namespace spldlt {
                // STARPU_CLUSTER_PARTITION_ONE, STARPU_CLUSTER_NB, 2,
                STARPU_CLUSTER_TYPE, STARPU_CLUSTER_OPENMP,
                0);
-         printf("[factor_mf_indef] machine id = %d\n", clusters->id);
+         printf("[factor_mf_posdef] machine id = %d\n", clusters->id);
          starpu_cluster_print(clusters);
          // starpu_uncluster_machine(clusters);
          auto subtree_start = std::chrono::high_resolution_clock::now();                  
@@ -402,7 +402,7 @@ namespace spldlt {
          starpu_uncluster_machine(clusters);
          auto subtree_end = std::chrono::high_resolution_clock::now();                  
          long t_subtree = std::chrono::duration_cast<std::chrono::nanoseconds>(subtree_end-subtree_start).count();
-         printf("[factor_mf_indef] factor subtrees: %e\n", 1e-9*t_subtree);
+         printf("[factor_mf_posdef] factor subtrees: %e\n", 1e-9*t_subtree);
 
 #endif
 
