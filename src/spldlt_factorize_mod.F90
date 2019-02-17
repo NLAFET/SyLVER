@@ -358,6 +358,7 @@ contains
     type is (cpu_symbolic_subtree)
        fkeep%subtree(part)%ptr => spldlt_factor_subtree_cpu( &
             subtree_ptr, posdef, val, child_contrib_c, coptions, cstats)
+#if defined(SPLDLT_USE_GPU)
     type is (gpu_symbolic_subtree)
        ! print *, "[spldlt_factor_subtree_c] gpu_numeric_subtree"
        fkeep%subtree(part)%ptr => akeep%subtree(part)%ptr%factor( &
@@ -365,6 +366,7 @@ contains
             contribs, &
             options, inform &
             )
+#endif
     end select
 
     !if (akeep%contrib_idx(part) .le. akeep%nparts) then
