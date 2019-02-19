@@ -209,12 +209,14 @@ namespace spldlt {
 
          struct starpu_cluster_machine *clusters;
          clusters = starpu_cluster_machine(
-               HWLOC_OBJ_SOCKET, 
-               // STARPU_CLUSTER_PARTITION_ONE, STARPU_CLUSTER_NB, 2,
+               // HWLOC_OBJ_SOCKET,
+               // HWLOC_OBJ_NUMANODE,
+               HWLOC_OBJ_MACHINE,
+               //STARPU_CLUSTER_PARTITION_ONE, STARPU_CLUSTER_NB, 2,
                STARPU_CLUSTER_TYPE, STARPU_CLUSTER_OPENMP,
                0);
          // printf("[factor_mf_indef] machine id = %d\n", clusters->id);
-         // starpu_cluster_print(clusters);
+         starpu_cluster_print(clusters);
          // starpu_uncluster_machine(clusters);
          auto subtree_start = std::chrono::high_resolution_clock::now();                  
 

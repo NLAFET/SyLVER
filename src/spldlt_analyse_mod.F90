@@ -219,7 +219,8 @@ contains
     
     nth = akeep%akeep%topology(1)%nproc
 #if defined(SPLDLT_USE_STARPU) && defined(SPLDLT_USE_OMP)
-    nth = 2 ! FIXME Use number of NUMA sockets
+    ! nth = 2 ! FIXME Use number of NUMA sockets
+    nth = 1 ! FIXME Use number of NUMA sockets
 #endif
 
     loc = akeep%akeep%subtree(p)%exec_loc
@@ -227,7 +228,7 @@ contains
     if (loc.le.nth) then
        device = -1
     else
-       device = mod(loc, nth)-1
+       device = loc-nth-1
     end if
     
     subtree_get_devid_c = device
@@ -333,19 +334,6 @@ contains
          akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist, st)
     if (st .ne. 0) go to 100
 
-    ! ! Sort out subtrees
-    ! call find_subtree_partition(akeep%nnodes, akeep%sptr, akeep%sparent,           &
-    !      akeep%rptr, options, akeep%topology, akeep%nparts, akeep%part,            &
-    !      exec_loc, akeep%contrib_ptr, akeep%contrib_idx, contrib_dest, inform, st)
-    ! if (st .ne. 0) go to 100
-    
-    ! print *, " nparts = ", akeep%nparts
-    ! print *, " part = ", akeep%part(1:akeep%nparts+1)
-    ! print *, " exec_loc = ", exec_loc(1:akeep%nparts)
-    ! print *, " contrib_ptr = ", akeep%contrib_ptr(1:akeep%nparts+1)
-    ! print *, " contrib_idx = ", akeep%contrib_idx(1:akeep%nparts)
-    ! print *, " contrib_dest = ", contrib_dest(1:akeep%nparts)
-
     ! FIXME Use total number of procs on each NUMA nodes
     nth = akeep%topology(1)%nproc 
     ngpu = size(akeep%topology(1)%gpus)
@@ -356,7 +344,8 @@ contains
     write(op, '(a)') context 
 #if defined(SPLDLT_USE_STARPU) && defined(SPLDLT_USE_OMP)
 
-    nth = 2 ! FIXME Use number of NUMA sockets
+    ! nth = 2 ! FIXME Use number of NUMA sockets
+    nth = 1 ! Flat topology
 
 #endif
     ! Allocate structures and init for tree prunning
@@ -376,10 +365,35 @@ contains
 
     ! Find out sequential subtrees
     if (options%prune_tree) then
-       call prune_tree(akeep%nnodes, akeep%sptr, akeep%sparent, akeep%rptr, &
-            nth, ngpu, options%super%gpu_perf_coeff, &
-            spldlt_akeep%nsubtrees, small, contrib_dest, subtree_sa, &
-            spldlt_akeep%subtree_en, exec_loc)
+       ! call prune_tree(akeep%nnodes, akeep%sptr, akeep%sparent, akeep%rptr, &
+       !      nth, ngpu, options%super%gpu_perf_coeff, &
+       !      spldlt_akeep%nsubtrees, small, contrib_dest, subtree_sa, &
+       !      spldlt_akeep%subtree_en, exec_loc)
+
+       ! Sort out subtrees
+       call find_subtree_partition(akeep%nnodes, akeep%sptr, akeep%sparent,           &
+            akeep%rptr, ssids_opts, akeep%topology, akeep%nparts, akeep%part,            &
+            exec_loc, akeep%contrib_ptr, akeep%contrib_idx, contrib_dest, inform, st)
+       if (st .ne. 0) go to 100
+
+       print *, "[analyse_core] nparts = ", akeep%nparts
+       ! print *, " part = ", akeep%part(1:akeep%nparts+1)
+       ! print *, " exec_loc = ", exec_loc(1:akeep%nparts)
+       ! print *, " contrib_ptr = ", akeep%contrib_ptr(1:akeep%nparts+1)
+       ! print *, " contrib_idx = ", akeep%contrib_idx(1:akeep%nparts)
+       ! print *, " contrib_dest = ", contrib_dest(1:akeep%nparts)
+       
+       do i = 1, akeep%nparts
+          print *, "[analyse_core] exec_loc(i) = ", exec_loc(i) 
+          if (exec_loc(i) .eq. -1) cycle
+          spldlt_akeep%nsubtrees = spldlt_akeep%nsubtrees +1
+          exec_loc(spldlt_akeep%nsubtrees) = exec_loc(i) 
+          small(akeep%part(i):akeep%part(i+1)-1) =  -(akeep%part(i+1)-1)
+          small(akeep%part(i+1)-1) =  1
+          subtree_sa(spldlt_akeep%nsubtrees) = akeep%part(i)
+          spldlt_akeep%subtree_en(spldlt_akeep%nsubtrees) = akeep%part(i+1)-1
+       end do
+              
     end if
 
     print *, "[analyse_core] nsubtrees = ", spldlt_akeep%nsubtrees
@@ -417,7 +431,8 @@ contains
 #if defined(SPLDLT_USE_GPU)
        else
           ! GPU
-          device = mod(loc, nth)-1 ! device indexes are 0-indexed
+          ! device = mod(loc, nth)-1 ! device indexes are 0-indexed
+          device = loc-nth-1 ! device indexes are 0-indexed
           print *, "subtree = ", i, ", loc = ", loc, ", device = ", device
           akeep%subtree(i)%ptr => construct_gpu_symbolic_subtree(device, &
                akeep%n, subtree_sa(i), spldlt_akeep%subtree_en(i)+1, &
@@ -1188,6 +1203,7 @@ contains
     type(node_type), allocatable :: nodes(:)
     integer, allocatable :: loc(:) ! locality of node
     integer :: nregion ! Number of workers of regions (NUMA nodes and GPUs)
+    real(kind(1.d0)) :: minlb ! Minimum load balance objective
     
     character(50) :: context = 'prune_tree'! Procedure name (used when printing).
 
@@ -1239,6 +1255,7 @@ contains
        nodes(j)%least_desc = min(nodes(node)%least_desc, nodes(j)%least_desc) ! update least descendent
     end do
 
+    minlb = 0.8
     smallth = 0.01
 
 10  continue
@@ -1316,7 +1333,7 @@ contains
        !print *, "rm: ", rm
 
        if(nlz .gt. nregion*max(2.d0,(log(real(nregion,kind(1.d0)))/log(2.d0))**2)) exit ! exit if already too many nodes in l0
-       if((rm .gt. 0.9) .and. (nlz .ge. 1*nregion)) exit ! if balance is higher than 90%, we're happy
+       if((rm .gt. minlb) .and. (nlz .ge. 1*nregion)) exit ! if balance is higher than 90%, we're happy
 
        ! if load is not balanced, replace heaviest node with its kids (if any)
        found = .false.
