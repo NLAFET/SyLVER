@@ -199,6 +199,7 @@ namespace tests {
          cudaFree(d_c_hp);
          
       }
+#if defined(HAVE_CUTLASS)
       else if(algo == sylver::tests::CUTLASS) {
          std::cout << context << " CUTLASS" << std::endl;
          sa = std::chrono::high_resolution_clock::now();         
@@ -251,6 +252,7 @@ namespace tests {
          cudaFree(d_c_hp);
 
       }
+#endif
       else {
          std::cout << "[chol_test] Algo NOT implemented " << std::endl;
          std::exit(0);
