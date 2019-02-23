@@ -36,6 +36,7 @@ namespace tests {
       std::cout << "[" << context << "] NOT implemented for working prec" << std::endl;
    }
 
+#if defined(HAVE_CUTLASS)
    template<>
    cudaError_t cutlass_gemm_test<float>(
          cudaStream_t stream,
@@ -175,6 +176,7 @@ namespace tests {
       return cuerr;
    }
 
+#endif
 #endif
    
 }} // End of namespace sylver::tests
