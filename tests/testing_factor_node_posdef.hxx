@@ -104,6 +104,10 @@ namespace spldlt { namespace tests {
          // Allocate contribution blocks
          front.alloc_contrib_blocks();
 
+         front.alloc_cdata();
+
+         front.alloc_blocks();
+
          ////////////////////////////////////////
          // Init runtime system
 #if defined(SPLDLT_USE_STARPU)
