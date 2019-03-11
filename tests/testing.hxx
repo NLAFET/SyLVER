@@ -16,7 +16,7 @@ namespace spldlt {
       SpldltOpts():
          ncpu(1), ngpu(0), m(256), n(256), k(256), nb(256), ib(256), posdef(false), 
          check(true), chol(false), diagdom(false), algo(sylver::tests::algo::SyLVER),
-         usetc(true), prec(sylver::tests::prec::FP64), cond(1), tol(1e-8)
+         usetc(true), prec(sylver::tests::prec::FP64), cond(1), itref(false), tol(1e-8)
       {}
 
       void parse_opts(int argc, char** argv) {
@@ -119,7 +119,10 @@ namespace spldlt {
                prec = sylver::tests::prec::FP64;
             }
 
-            // Refinement 
+            // Refinement
+            else if ( !strcmp("--itref", argv[i]) ) {
+               itref = true;
+            }
             else if ( !strcmp("--tol", argv[i]) && i+1 < argc ) {
                tol =  std::atof( argv[++i] );
             }
@@ -146,7 +149,9 @@ namespace spldlt {
       enum sylver::tests::algo algo; // Algorithm to use
       bool usetc; // Use tensor cores on GPU
       enum sylver::tests::prec prec; // Working precision
-      int cond;
-      double tol;
+      int cond; // Condition number of test matrix
+      // Iterative refinement
+      bool itref; // Control the use of iterative refinement
+      double tol; // Tolerence for iterative refinement
    };
 }

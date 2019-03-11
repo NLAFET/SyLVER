@@ -782,22 +782,23 @@ namespace tests {
       // Timers
       std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
       
-      // std::default_random_engine generator;
-      // std::uniform_int_distribution<long long int> distribution(1,cond);
+      std::default_random_engine generator;
+      std::uniform_int_distribution<long long int> distribution(1.0, cond);
  
       // Generate diagonal matrix with eigen values 
       // T d = 1.0;
       // for(int i=0; i<n; ++i) a[i*lda+i] = (T)1.0;
-      // for(int i=0; i<n; ++i) a[i*lda+i] = (T)1.0/(distribution(generator));
-      for(int i=0; i<n; ++i) a[i*lda+i] = std::pow(10, (T)-1.0*cond*std::pow( ((T)i)/((T)n-1), gamma ) );
+      // for(int i=0; i<n; ++i) a[i*lda+i] = std::pow(10.0, (T)1.0/(distribution(generator)));
+      for(int i=0; i<n; ++i) a[i*lda+i] = std::pow(10.0, (T)-1.0*cond*std::pow( ((T)i)/((T)n-1), gamma ) );
       for(int j=0; j<n; ++j) {
          for(int i=0; i<n; ++i) {
             if (i != j)
                a[j*lda+i] = 0.0;
          }
       }
-      // a[0] = (T)1.0/cond;
-      // a[(n-1)*lda+(n-1)] = (T)1.0/cond;
+      // a[0] = 1e-3;
+      // a[0] = (T)1.0/std::pow(10.0,cond);
+      // a[(n-1)*lda+(n-1)] = (T)1.0/std::pow(10.0,cond);
       // std::cout << "ann = " << a[(n-1)*lda+(n-1)] << std::endl;
       
       T *lambda = new T[lda*n];

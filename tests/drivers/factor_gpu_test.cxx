@@ -24,10 +24,10 @@ int main(int argc, char** argv) {
    
    switch (opts.prec) {
    case sylver::tests::prec::FP32:
-      ret = chol_test<float>(opts.m, opts.algo, opts.usetc, (float)opts.cond, (float)opts.tol);
+      ret = chol_test<float>(opts.m, opts.algo, opts.usetc, (float)opts.cond, opts.itref, (float)opts.tol);
       break;
    case sylver::tests::prec::FP64:
-      ret = chol_test<double>(opts.m, opts.algo, opts.usetc, (double)opts.cond, (double)opts.tol);
+      ret = chol_test<double>(opts.m, opts.algo, opts.usetc, (double)opts.cond, opts.itref, (double)opts.tol);
       break;
    default: std::cout << "[" <<  context << "]" <<  " Requested working precision NOT available" << std::endl;
    }
