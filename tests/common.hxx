@@ -779,17 +779,20 @@ namespace tests {
 
       // Error handling
       std::string context = "gen_posdef_cond";
+      std::cout << context << ", cond = " << cond << ", gamma = " << gamma << std::endl;
       // Timers
       std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
       
       std::default_random_engine generator;
-      std::uniform_int_distribution<long long int> distribution(1.0, cond);
+      // std::uniform_int_distribution<long long int> distribution(1.0, std::pow(10.0,cond));
+      std::uniform_real_distribution<double> distribution(std::pow(10.0, -cond), 1.0);
  
       // Generate diagonal matrix with eigen values 
       // T d = 1.0;
       // for(int i=0; i<n; ++i) a[i*lda+i] = (T)1.0;
-      // for(int i=0; i<n; ++i) a[i*lda+i] = std::pow(10.0, (T)1.0/(distribution(generator)));
-      for(int i=0; i<n; ++i) a[i*lda+i] = std::pow(10.0, (T)-1.0*cond*std::pow( ((T)i)/((T)n-1), gamma ) );
+      // for(int i=0; i<n; ++i) a[i*lda+i] = distribution(generator);
+      for(int i=0; i<n; ++i) a[i*lda+i] = std::pow(10.0, (T)-cond*std::pow( ((T)i)/((T)n-1), gamma ) );
+      // for(int i=0; i<n; ++i) a[i*lda+i] = (T)1.0 - ((T)i/(T)(n - 1))*(1.0 - std::pow(10.0,-cond));
       for(int j=0; j<n; ++j) {
          for(int i=0; i<n; ++i) {
             if (i != j)

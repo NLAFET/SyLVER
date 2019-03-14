@@ -48,7 +48,7 @@ namespace tests {
       std::cout << "[chol_test] usetc = " << usetc << std::endl;
       a = new T[m*lda];
       // sylver::tests::gen_posdef(m, a, lda);
-      sylver::tests::gen_posdef_cond(m, a, lda, cond, (T)1.0);
+      sylver::tests::gen_posdef_cond(m, a, lda, cond, (T)0.1);
       
       // Generate a RHS based on x=1, b=Ax
       b = new T[m];
