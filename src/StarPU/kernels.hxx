@@ -6,7 +6,9 @@
 // SpLDLT
 #include "kernels/assemble.hxx"
 #include "kernels/factor.hxx"
+#if defined(SPLDLT_USE_GPU)
 #include "kernels/gpu/wrappers.hxx"
+#endif
 // SSIDS
 #include "ssids/cpu/cpu_iface.hxx"
 #include "ssids/contrib.h"
