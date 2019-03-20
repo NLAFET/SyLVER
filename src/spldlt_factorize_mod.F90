@@ -610,7 +610,7 @@ contains
     use spral_ssids_subtree, only : numeric_subtree_base
     use spral_ssids_cpu_subtree, only : cpu_numeric_subtree
     use spldlt_analyse_mod
-    use spldlt_datatypes_mod, only: spldlt_options
+    use sylver_datatypes_mod, only: spldlt_options
     implicit none
     
     type(spldlt_akeep_type), intent(in) :: spldlt_akeep
@@ -701,12 +701,21 @@ contains
     return
   end subroutine spldlt_factorize
 
+  subroutine spldlt_solve(akeep, fkeep, nrhs, x, ldx, inform)
+    implicit none
+    
+    type(spldlt_fkeep_type), intent(in) :: fkeep
+    type(spldlt_akeep_type), intent(in) :: akeep
+
+  end subroutine spldlt_solve
+
   ! Solve phase
   subroutine solve(spldlt_fkeep, spldlt_akeep, nrhs, x, ldx, inform)
     use spral_ssids_datatypes
     use spral_ssids_inform, only : ssids_inform
     use spral_ssids_fkeep, only : ssids_fkeep
     use spldlt_analyse_mod
+    use sylver_inform_mod, only : sylver_inform
     implicit none
 
     class(spldlt_fkeep_type), target :: spldlt_fkeep
@@ -714,7 +723,7 @@ contains
     integer, intent(in) :: nrhs
     integer, intent(in) :: ldx
     real(wp), dimension(ldx,nrhs), intent(inout) :: x
-    type(ssids_inform), intent(inout) :: inform
+    type(sylver_inform), intent(inout) :: inform
 
     real(wp), dimension(:,:), allocatable :: x2
     type(ssids_akeep) :: akeep
@@ -900,7 +909,7 @@ contains
        inform, job)
     use spral_ssids_datatypes
     use spral_ssids_inform, only : ssids_inform
-    use spldlt_datatypes_mod, only: sylver_options
+    use sylver_datatypes_mod, only: sylver_options
     use spldlt_analyse_mod, only: spldlt_akeep_type
     use sylver_inform_mod, only: sylver_inform
     implicit none

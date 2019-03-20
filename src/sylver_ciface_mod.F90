@@ -25,7 +25,7 @@ contains
 
   !> @brief Copy Fortran options structure into interoperable one
   subroutine copy_options_f2c(foptions, coptions)
-    use spldlt_datatypes_mod, only: sylver_options 
+    use sylver_datatypes_mod, only: sylver_options 
     implicit none
 
     type(sylver_options), intent(in) :: foptions

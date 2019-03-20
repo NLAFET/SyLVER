@@ -253,7 +253,7 @@ contains
 #if defined(SPLDLT_USE_GPU)
     use spral_ssids_gpu_subtree, only : construct_gpu_symbolic_subtree
 #endif
-    use spldlt_datatypes_mod, only: spldlt_options
+    use sylver_datatypes_mod, only: spldlt_options
     implicit none
 
     type(spldlt_akeep_type), target, intent(inout) :: spldlt_akeep ! spldlt akeep structure 
@@ -483,7 +483,7 @@ contains
     use spral_ssids_datatypes
     use spral_ssids_anal, only : expand_pattern
     ! use spral_ssids_cpu_subtree, only : construct_cpu_symbolic_subtree, cpu_symbolic_subtree
-    use spldlt_datatypes_mod, only: spldlt_options
+    use sylver_datatypes_mod, only: spldlt_options
     use, intrinsic :: iso_c_binding
     implicit none
     

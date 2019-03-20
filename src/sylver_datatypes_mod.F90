@@ -1,7 +1,7 @@
 !> @file
 !> @copyright 2016- The Science and Technology Facilities Council (STFC)
 !> @author    Florent Lopez
-module spldlt_datatypes_mod
+module sylver_datatypes_mod
   use spral_ssids_datatypes
   implicit none
 
@@ -148,5 +148,4 @@ module spldlt_datatypes_mod
        !     >= 2  Pass straight to parent
      
   end type sylver_options
-
-end module spldlt_datatypes_mod
+end module sylver_datatypes_mod

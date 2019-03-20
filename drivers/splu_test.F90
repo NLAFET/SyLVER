@@ -1,7 +1,7 @@
 program splu_test
   use, intrinsic :: iso_c_binding
   use spral_ssids_datatypes
-  use spldlt_datatypes_mod, only: sylver_options 
+  use sylver_datatypes_mod, only: sylver_options 
   use spral_rutherford_boeing
   use spral_matrix_util
   use sylver_inform_mod
@@ -129,7 +129,7 @@ contains
   ! Get argument from command line
   subroutine proc_args(options, nrhs, ncpu, ngpu, matfile)
     use spral_ssids
-    use spldlt_datatypes_mod, only: sylver_options
+    use sylver_datatypes_mod, only: sylver_options
     implicit none
 
     type(sylver_options), target, intent(inout) :: options

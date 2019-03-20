@@ -144,7 +144,7 @@ contains
   subroutine analyse_core(splu_akeep, n, ptr, row, order, invp, options, inform)
     use spral_ssids_akeep, only: ssids_akeep
     use spral_core_analyse, only : basic_analyse
-    use spldlt_datatypes_mod
+    use sylver_datatypes_mod
     use sylver_inform_mod
     use spldlt_analyse_mod, only: spldlt_create_symbolic_tree_c, prune_tree, spldlt_print_atree
     implicit none
@@ -309,7 +309,7 @@ contains
     use spral_ssids, only: ssids_free
     use spral_metis_wrapper, only : metis_order
     use spral_ssids_akeep, only: ssids_akeep
-    use spldlt_datatypes_mod
+    use sylver_datatypes_mod
     use sylver_inform_mod
     implicit none
 

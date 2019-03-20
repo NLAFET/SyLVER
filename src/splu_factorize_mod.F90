@@ -38,7 +38,7 @@ module splu_factorize_mod
 contains
 
   subroutine factor_core(splu_akeep, splu_fkeep, val, options, inform)
-    use spldlt_datatypes_mod
+    use sylver_datatypes_mod
     use splu_analyse_mod, only: splu_akeep_type
     use sylver_inform_mod, only: sylver_inform
     use sylver_ciface_mod, only:options_c, copy_options_f2c
@@ -67,7 +67,7 @@ contains
   subroutine splu_factorize(splu_akeep, splu_fkeep, ptr, row, val, options, &
        inform)
     use spral_ssids_datatypes
-    use spldlt_datatypes_mod
+    use sylver_datatypes_mod
     use splu_analyse_mod, only: splu_akeep_type
     use sylver_inform_mod, only: sylver_inform
     implicit none

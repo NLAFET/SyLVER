@@ -6,14 +6,19 @@ program spldlt_test
    use spldlt_analyse_mod
    use spldlt_factorize_mod
    use spldlt_mod
-   use spldlt_datatypes_mod, only: spldlt_options 
+   ! use spldlt_datatypes_mod, only: spldlt_options 
+   use sylver_datatypes_mod
+   use sylver_inform_mod
    implicit none
 
    ! FIXME use the one defined in ssids for now
    ! integer, parameter :: wp = kind(0d0)
 
-   type(spldlt_options), target :: options
-   type(ssids_options), pointer :: ssids_opt
+   ! SyLVER structures
+   ! type(spldlt_options), target :: options
+   ! type(ssids_options), pointer :: ssids_opt
+   type(sylver_inform) :: inform ! SyLVER stats
+   type(sylver_options), target :: options
    logical :: pos_def ! if true, assume matrix is posdef
 
    ! matrix reader options
@@ -48,7 +53,7 @@ program spldlt_test
    ! integer :: flag, more
    
    ! ssids structures
-   type(ssids_inform) :: inform ! stats
+   ! type(ssids_inform) :: inform ! stats
    ! spldlt strucutres
    type(spldlt_akeep_type) :: spldlt_akeep
    type(spldlt_fkeep_type) :: spldlt_fkeep
@@ -63,16 +68,15 @@ program spldlt_test
    
    call proc_args(options, nrhs, pos_def, ncpu, ngpu, matfile)
 
-   ssids_opt => options%super ! Point to SSIDS options
+   ! ssids_opt => options%super ! Point to SSIDS options
    
-   ! ssids_opt%print_level = 1 ! enable printing
-   ssids_opt%print_level = 0 ! disable printing
-   ssids_opt%use_gpu = .false. ! disable GPU
+   options%print_level = 1 ! enable printing
+   ! options%print_level = 0 ! disable printing
    
    if (matfile.eq.'') matfile = "matrix.rb" 
 
-   print *, "[SpLDLT Test] ncpu: ", ncpu
-   print *, "[SpLDLT Test]   nb: ", ssids_opt%cpu_block_size
+   print *, "[spldlt_test] ncpu: ", ncpu
+   print *, "[spldlt_test]   nb: ", options%nb
 
    ! Read in a matrix
    write(*, "(a)") "Reading..."
@@ -108,26 +112,28 @@ program spldlt_test
    !    print *, "CSCL_VERIFY failed: ", flag, more
    !    stop
    ! endif
-
-   ssids_opt%ordering = 1 ! Use Metis ordering
-   ssids_opt%scaling = 0 ! No scaling
-
+   
    ! Initialize SpLDLT
    call spldlt_init(ncpu, ngpu)
 
-   ! Perform analysis
-   options%prune_tree = .true. ! Deactivate tree pruning
+   ! Setup options for analysis
+   options%ordering = 1 ! Use Metis ordering
+   options%scaling = 0 ! No scaling
+   ! options%prune_tree = .true. ! Enable tree pruning
    ! options%prune_tree = .false. ! Deactivate tree pruning
-   call spldlt_analyse(spldlt_akeep, n, ptr, row, options, inform, val=val, ncpu=ncpu, ngpu=ngpu)
-   ! print atree
+
+   ! Perform analysis
+   ! call spldlt_analyse(spldlt_akeep, n, ptr, row, options, inform, val=val, ncpu=ncpu, ngpu=ngpu)
+
+   ! Print assembly tree in dotfile
    ! call spldlt_print_atree(akeep)
-   ! print atree with partitions
+   ! Print atree including partitions
    ! call spldlt_print_atree_part(spldlt_akeep%akeep)
    ! stop
 
    ! Factorize matrix
    call system_clock(start_t, rate_t)
-   call spldlt_factorize(spldlt_akeep, spldlt_fkeep, pos_def, val, options, inform)
+   ! call spldlt_factorize(spldlt_akeep, spldlt_fkeep, pos_def, val, options, inform)
    call system_clock(stop_t)
    write(*, "(a)") "ok"
    print *, "Factor took ", (stop_t - start_t)/real(rate_t)
@@ -171,10 +177,12 @@ program spldlt_test
    ! Get argument from command line
    subroutine proc_args(options, nrhs, pos_def, ncpu, ngpu, matfile)
      use spral_ssids
-     use spldlt_datatypes_mod, only: spldlt_options
+     ! use spldlt_datatypes_mod, only: spldlt_options
+     use sylver_datatypes_mod, only: sylver_options
      implicit none
 
-     type(spldlt_options), target, intent(inout) :: options
+     type(sylver_options), target, intent(inout) :: options
+     ! type(spldlt_options), target, intent(inout) :: options
      integer, intent(inout) :: nrhs
      logical, intent(inout) :: pos_def
      integer, intent(inout) :: ncpu
@@ -183,9 +191,9 @@ program spldlt_test
 
      integer :: argnum, narg
      character(len=200) :: argval
-     type(ssids_options), pointer :: ssids_opts
+     ! type(ssids_options), pointer :: ssids_opts
      
-     ssids_opts => options%super
+     ! ssids_opts => options%super
 
      ! default values
      nb = 2
@@ -214,13 +222,13 @@ program spldlt_test
         case("--nemin")
            call get_command_argument(argnum, argval)
            argnum = argnum + 1
-           read( argval, * ) ssids_opts%nemin
-           print *, 'Supernode amalgamation nemin = ', ssids_opts%nemin
+           read( argval, * ) options%nemin
+           print *, 'Supernode amalgamation nemin = ', options%nemin
         case("--nb")
            call get_command_argument(argnum, argval)
            argnum = argnum + 1
-           read( argval, * ) ssids_opts%cpu_block_size
-           print *, 'CPU block size = ', ssids_opts%cpu_block_size
+           read( argval, * ) options%nb
+           print *, 'CPU block size = ', options%nb
         case("--ncpu")
            call get_command_argument(argnum, argval)
            argnum = argnum + 1
@@ -237,17 +245,17 @@ program spldlt_test
            read( argval, * ) matfile
            print *, 'Matrix = ', matfile
         case("--failed-pivot-method=tpp")
-           ssids_opts%failed_pivot_method = 1
+           options%failed_pivot_method = 1
            print *, 'Failed pivot method TPP'
         case("--failed-pivot-method=pass")
-           ssids_opts%failed_pivot_method = 2
+           options%failed_pivot_method = 2
            print *, 'Failed pivot method PASS'
        case("--gpu-perf-coeff")
           call get_command_argument(argnum, argval)
           argnum = argnum + 1
-          read (argval, *) ssids_opts%gpu_perf_coeff
+          read (argval, *) options%gpu_perf_coeff
           print *, 'GPU Performance coefficient = ', &
-               ssids_opts%gpu_perf_coeff
+               options%gpu_perf_coeff
         case default
            print *, "Unrecognised command line argument: ", argval
            stop

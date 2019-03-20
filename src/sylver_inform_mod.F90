@@ -4,7 +4,7 @@
 module sylver_inform_mod
   use spral_cuda, only : cudaGetErrorString
   use spral_scaling, only : auction_inform
-  use spldlt_datatypes_mod
+  use sylver_datatypes_mod
   implicit none
 
   !
