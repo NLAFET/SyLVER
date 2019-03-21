@@ -701,19 +701,11 @@ contains
     return
   end subroutine spldlt_factorize
 
-  subroutine spldlt_solve(akeep, fkeep, nrhs, x, ldx, inform)
-    implicit none
-    
-    type(spldlt_fkeep_type), intent(in) :: fkeep
-    type(spldlt_akeep_type), intent(in) :: akeep
-
-  end subroutine spldlt_solve
-
   ! Solve phase
   subroutine solve(spldlt_fkeep, spldlt_akeep, nrhs, x, ldx, inform)
     use spral_ssids_datatypes
-    use spral_ssids_inform, only : ssids_inform
     use spral_ssids_fkeep, only : ssids_fkeep
+    use spral_ssids_inform, only : ssids_inform
     use spldlt_analyse_mod
     use sylver_inform_mod, only : sylver_inform
     implicit none
@@ -725,6 +717,7 @@ contains
     real(wp), dimension(ldx,nrhs), intent(inout) :: x
     type(sylver_inform), intent(inout) :: inform
 
+    type(ssids_inform) :: ssids_info
     real(wp), dimension(:,:), allocatable :: x2
     type(ssids_akeep) :: akeep
     type(ssids_fkeep), pointer :: fkeep
@@ -763,8 +756,8 @@ contains
     ! do part = 1, akeep%nparts
     do part = 1, spldlt_akeep%nsubtrees
        if (akeep%subtree(part)%exec_loc .eq. -1) cycle
-       call fkeep%subtree(part)%ptr%solve_fwd(nrhs, x2, n, inform)
-       if (inform%stat .ne. 0) goto 100
+       call fkeep%subtree(part)%ptr%solve_fwd(nrhs, x2, n, ssids_info)
+       if (ssids_info%stat .ne. 0) goto 100
     end do
 
     ! Perform solve
@@ -801,8 +794,8 @@ contains
     !do part = akeep%nparts, 1, -1
     do part = spldlt_akeep%nsubtrees, 1, -1
        if (akeep%subtree(part)%exec_loc .eq. -1) cycle
-       call fkeep%subtree(part)%ptr%solve_diag_bwd(nrhs, x2, n, inform)
-       if (inform%stat .ne. 0) goto 100
+       call fkeep%subtree(part)%ptr%solve_diag_bwd(nrhs, x2, n, ssids_info)
+       if (ssids_info%stat .ne. 0) goto 100
     end do
 
     ! un-permute and un-scale
@@ -908,7 +901,7 @@ contains
   subroutine spldlt_solve(spldlt_akeep, spldlt_fkeep, nrhs, x, ldx, options, &
        inform, job)
     use spral_ssids_datatypes
-    use spral_ssids_inform, only : ssids_inform
+    ! use spral_ssids_inform, only : ssids_inform
     use sylver_datatypes_mod, only: sylver_options
     use spldlt_analyse_mod, only: spldlt_akeep_type
     use sylver_inform_mod, only: sylver_inform
@@ -937,7 +930,7 @@ contains
       ! job = 4 : diag and backsubs (D(PL)^TX = B) (indefinite case only)
       ! job absent: complete solve performed
 
-    type(ssids_inform) :: ssids_info
+    ! type(ssids_inform) :: ssids_info
     character(50) :: context  ! Procedure name (used when printing).
 
     context = 'spldlt_solve'
@@ -963,7 +956,7 @@ contains
     !         ldx
     ! end if
 
-   call spldlt_fkeep%solve(spldlt_akeep, nrhs, x, ldx, ssids_info)
+   call spldlt_fkeep%solve(spldlt_akeep, nrhs, x, ldx, inform)
 
    ! Print useful info if requested
    call inform%print_flag(options, context)

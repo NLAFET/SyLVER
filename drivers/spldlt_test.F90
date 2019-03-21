@@ -148,7 +148,9 @@ program spldlt_test
    ! Solve SpLDLT
    call system_clock(start_t, rate_t)
    soln = rhs ! init solution with RHS
-   call spldlt_fkeep%solve(spldlt_akeep, nrhs, soln, n, inform)
+   ! call spldlt_fkeep%solve(spldlt_akeep, nrhs, soln, n, inform)
+   call spldlt_solve(spldlt_akeep, spldlt_fkeep, nrhs, soln, n, options, &
+       inform)
    call system_clock(stop_t)
    write(*, "(a)") "ok"
    print *, "Solve took ", (stop_t - start_t)/real(rate_t)
