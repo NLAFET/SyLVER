@@ -3,9 +3,8 @@
 /// @author Florent Lopez
 #pragma once
 
-#include <assert.h>
-
-// SpLDLT
+// SyLVER
+#include "sylver_ciface.hxx"
 #include "SymbolicFront.hxx"
 #include "kernels/assemble.hxx"
 #include "kernels/factor.hxx"
@@ -13,6 +12,8 @@
 #include "StarPU/kernels.hxx"
 #include "StarPU/kernels_indef.hxx"
 #endif
+
+#include <assert.h>
 
 // SSIDS
 #include "ssids/cpu/cpu_iface.hxx"
@@ -511,8 +512,8 @@ namespace spldlt {
          SymbolicFront& root,
          T *aval,
          int p, void **child_contrib,
-         struct spral::ssids::cpu::cpu_factor_options *options,
-         std::vector<ThreadStats>& worker_stats) {
+         sylver::options_t *options,
+         std::vector<sylver::inform_t>& worker_stats) {
 
       std::string context = "factor_subtree_task";
 #if defined(SPLDLT_USE_STARPU)
@@ -530,7 +531,7 @@ namespace spldlt {
 
       if (workerid>=0) {
          // Map the execution of the factor_subtree task to worker
-         // with index workerid
+         // associated with index workerid
          spldlt::starpu::insert_factor_subtree_worker(
                root.hdl, akeep, fkeep, p, aval, child_contrib, options,
                &worker_stats, workerid);
@@ -542,7 +543,7 @@ namespace spldlt {
       }
       
 #else
-      ThreadStats& stats = worker_stats[0];
+      sylver::inform_t& stats = worker_stats[0];
       spldlt_factor_subtree_c(
             akeep, fkeep, p, aval, child_contrib, options, &stats);
 #endif

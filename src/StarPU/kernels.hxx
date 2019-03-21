@@ -4,6 +4,7 @@
 #pragma once
 
 // SpLDLT
+#include "sylver_ciface.hxx"
 #include "kernels/assemble.hxx"
 #include "kernels/factor.hxx"
 #if defined(SPLDLT_USE_GPU)
@@ -846,8 +847,8 @@ namespace starpu {
       int p;
       T *aval;
       void **child_contrib;
-      struct spral::ssids::cpu::cpu_factor_options *options;
-      std::vector<ThreadStats> *worker_stats;
+      sylver::options_t *options;
+      std::vector<sylver::inform_t> *worker_stats;
 
       starpu_codelet_unpack_args(
             cl_arg,
@@ -869,7 +870,8 @@ namespace starpu {
 
       int workerid = starpu_worker_get_id();
       // printf("[factor_subtree_cpu_func] workerid: %d\n", workerid);
-      ThreadStats& stats = (*worker_stats)[workerid];
+      sylver::inform_t& inform = (*worker_stats)[workerid];
+      ThreadStats stats;
 
       // options->failed_pivot_method = FailedPivotMethod::tpp;
          
@@ -885,6 +887,7 @@ namespace starpu {
          }
       }
 
+      inform += stats;
    }
 
 #else

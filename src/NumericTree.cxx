@@ -1,9 +1,10 @@
 /// @file
 /// @copyright 2016- The Science and Technology Facilities Council (STFC)
 /// @author Florent Lopez
-#include "ssids/cpu/ThreadStats.hxx"
-#include "ssids/cpu/cpu_iface.hxx"
+// #include "ssids/cpu/ThreadStats.hxx"
+// #include "ssids/cpu/cpu_iface.hxx"
 
+#include "sylver_ciface.hxx"
 #include "NumericTree.hxx"
 #include "AppendAlloc.hxx"
 
@@ -31,8 +32,8 @@ void *spldlt_create_numeric_tree_dbl(
       void *symbolic_tree_ptr,
       double *aval, // Values of A
       void** child_contrib, // Contributions from child subtrees
-      struct spral::ssids::cpu::cpu_factor_options *options, // Options in
-      ThreadStats* stats // Info out
+      sylver::options_t *options, // Options in
+      sylver::inform_t* stats // Info out
       ) {
 
    // Retreive SymbolicTree object from pointer
@@ -65,7 +66,7 @@ void spldlt_destroy_numeric_tree_dbl(bool posdef, void* target) {
 }
 
 extern "C"
-spral::ssids::cpu::Flag 
+sylver::Flag 
 spldlt_tree_solve_fwd_dbl(
       bool posdef,      // If true, performs A=LL^T, if false do pivoted A=LDL^T
       void const* tree_ptr, // pointer to relevant type of NumericTree
@@ -85,13 +86,13 @@ spldlt_tree_solve_fwd_dbl(
       }
 
    } catch(std::bad_alloc const&) {
-      return Flag::ERROR_ALLOCATION;
+      return sylver::Flag::ERROR_ALLOCATION;
    }
-   return spral::ssids::cpu::Flag::SUCCESS;
+   return sylver::Flag::SUCCESS;
 }
 
 extern "C"
-spral::ssids::cpu::Flag
+sylver::Flag
 spldlt_tree_solve_bwd_dbl(
       bool posdef,      // If true, performs A=LL^T, if false do pivoted A=LDL^T
       void const* tree_ptr, // pointer to relevant type of NumericTree
@@ -112,13 +113,13 @@ spldlt_tree_solve_bwd_dbl(
       }
       
    } catch(std::bad_alloc const&) {
-      return Flag::ERROR_ALLOCATION;
+      return sylver::Flag::ERROR_ALLOCATION;
    }
-   return spral::ssids::cpu::Flag::SUCCESS;
+   return sylver::Flag::SUCCESS;
 }
 
 extern "C"
-spral::ssids::cpu::Flag
+sylver::Flag
 spldlt_tree_solve_diag_bwd_dbl(
       bool posdef,      // If true, performs A=LL^T, if false do pivoted A=LDL^T
       void const* tree_ptr, // pointer to relevant type of NumericTree
@@ -137,14 +138,14 @@ spldlt_tree_solve_diag_bwd_dbl(
          tree.solve_diag_bwd(nrhs, x, ldx);
       }
    } catch(std::bad_alloc const&) {
-      return Flag::ERROR_ALLOCATION;
+      return sylver::Flag::ERROR_ALLOCATION;
    }
-   return spral::ssids::cpu::Flag::SUCCESS;
+   return sylver::Flag::SUCCESS;
 }
 
 
 extern "C"
-spral::ssids::cpu::Flag
+sylver::Flag
 spldlt_tree_solve_diag_dbl(
       bool posdef,      // If true, performs A=LL^T, if false do pivoted A=LDL^T
       void const* tree_ptr, // pointer to relevant type of NumericTree
@@ -163,7 +164,7 @@ spldlt_tree_solve_diag_dbl(
          tree.solve_diag(nrhs, x, ldx);
       }
    } catch(std::bad_alloc const&) {
-      return Flag::ERROR_ALLOCATION;
+      return sylver::Flag::ERROR_ALLOCATION;
    }
-   return spral::ssids::cpu::Flag::SUCCESS;
+   return sylver::Flag::SUCCESS;
 }

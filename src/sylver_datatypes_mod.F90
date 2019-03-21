@@ -128,7 +128,9 @@ module sylver_datatypes_mod
      !
      ! CPU-specific
      !     
-     integer :: nb = sylver_nb_default! Block size 
+     integer(long) :: small_subtree_threshold = 4*10**6 ! Flops below
+       ! which we treat a subtree as small and use the single core kernel
+     integer :: nb = sylver_nb_default! Block size used for the task generation 
 
      !
      ! GPU-specific

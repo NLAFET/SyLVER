@@ -4,6 +4,7 @@
 #pragma once
 
 // SyLVER
+#include "sylver_ciface.hxx"
 #include "kernels/ldlt_app.hxx"
 #include "BuddyAllocator.hxx"
 #include "SymbolicTree.hxx"
@@ -21,7 +22,7 @@
 #include <vector>
 #include <chrono>
 // SSIDS
-#include "ssids/cpu/cpu_iface.hxx"
+// #include "ssids/cpu/cpu_iface.hxx"
 #include "ssids/cpu/kernels/cholesky.hxx"
 #include "ssids/cpu/kernels/ldlt_app.hxx"
 #include "ssids/cpu/Workspace.hxx"
@@ -51,14 +52,14 @@ namespace spldlt {
             SymbolicTree& symbolic_tree, 
             T *aval,
             void** child_contrib,
-            struct spral::ssids::cpu::cpu_factor_options& options,
-            ThreadStats& stats)
+            sylver::options_t& options,
+            sylver::inform_t& inform)
          : fkeep_(fkeep), symb_(symbolic_tree),
            factor_alloc_(symbolic_tree.get_factor_mem_est(1.1)),
            pool_alloc_(symbolic_tree.get_pool_size<T>())
       {
          // Blocking size
-         int blksz = options.cpu_block_size;
+         int blksz = options.nb;
 
          // Associate symbolic fronts to numeric ones; copy tree structure
          fronts_.reserve(symbolic_tree.nnodes_+1);
@@ -78,7 +79,7 @@ namespace spldlt {
          printf("[NumericTree] nworkers = %d\n", nworkers);         
          printf("[NumericTree] blksz = %d\n", blksz);         
 
-         std::vector<ThreadStats> worker_stats(nworkers);
+         std::vector<sylver::inform_t> worker_stats(nworkers);
          std::vector<spral::ssids::cpu::Workspace> workspaces;
          // Prepare workspaces
          workspaces.reserve(nworkers);
@@ -125,17 +126,17 @@ namespace spldlt {
 #endif
 
          // Reduce thread_stats
-         stats = ThreadStats(); // initialise
-         for(auto tstats : worker_stats)
-            stats += tstats;
-         if(stats.flag < 0) return;
+         inform = sylver::inform_t(); // initialise
+         for(auto tinform : worker_stats)
+            inform += tinform;
+         if(inform.flag < 0) return;
 
          if(posdef) {
-            // all stats remain zero
+            // all inform remain zero
          } else { // indefinite
             for(int ni=0; ni<symb_.nnodes_; ni++) {
                int m = symb_[ni].nrow + fronts_[ni].ndelay_in;
-               stats.maxfront = std::max(stats.maxfront, m);
+               inform.maxfront = std::max(inform.maxfront, m);
                int n = symb_[ni].ncol + fronts_[ni].ndelay_in;
                int ldl = align_lda<T>(m);
                T *d = fronts_[ni].lcol + n*ldl;
@@ -146,19 +147,19 @@ namespace spldlt {
                      // 1x1 pivot (or zero)
                      if(a11 == 0.0) {
                         // NB: If we reach this stage, options.action must be true.
-                        stats.flag = Flag::WARNING_FACT_SINGULAR;
-                        stats.num_zero++;
+                        inform.flag = sylver::Flag::WARNING_FACT_SINGULAR;
+                        inform.num_zero++;
                      }
-                     if(a11 < 0.0) stats.num_neg++;
+                     if(a11 < 0.0) inform.num_neg++;
                      i++;
                   } else {
                      // 2x2 pivot
                      T a22 = d[2*i+3];
-                     stats.num_two++;
+                     inform.num_two++;
                      T det = a11*a22 - a21*a21; // product of evals
                      T trace = a11 + a22; // sum of evals
-                     if(det < 0) stats.num_neg++;
-                     else if(trace < 0) stats.num_neg+=2;
+                     if(det < 0) inform.num_neg++;
+                     else if(trace < 0) inform.num_neg+=2;
                      i+=2;
                   }
                }
@@ -172,8 +173,8 @@ namespace spldlt {
       void factor_mf_indef(
             T *aval, void** child_contrib, 
             std::vector<spral::ssids::cpu::Workspace>& workspaces,
-            struct spral::ssids::cpu::cpu_factor_options& options,
-            std::vector<ThreadStats>& worker_stats) {
+            sylver::options_t& options,
+            std::vector<sylver::inform_t>& worker_stats) {
 
          // printf("[factor_mf_indef] posdef = %d\n", posdef);
          // printf("[factor_mf_indef] nparts = %d\n", symb_.nparts_);
@@ -355,13 +356,13 @@ namespace spldlt {
       void factor_mf_posdef(
             T *aval, void** child_contrib,
             std::vector<spral::ssids::cpu::Workspace>& workspaces,
-            struct spral::ssids::cpu::cpu_factor_options& options,
-            std::vector<ThreadStats>& worker_stats) {
+            sylver::options_t& options,
+            std::vector<sylver::inform_t>& worker_stats) {
 
          // printf("[factor_mf_posdef] nparts = %d\n", symb_.nparts_);
 
          // Blocking size
-         int blksz = options.cpu_block_size;
+         int blksz = options.nb;
 
 #if defined(SPLDLT_USE_STARPU)
          // TODO move hdl registration to activate task

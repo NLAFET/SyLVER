@@ -27,28 +27,30 @@ module spldlt_factorize_mod
      procedure :: solve
   end type spldlt_fkeep_type
 
-  ! Numeric tree routines
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  ! routine to create a numeric subtree from the symbolic one
-  ! return a C ptr on the tree structure
+  ! Create a numeric subtree from the symbolic one and return a C ptr
+  ! on the tree structure
   interface spldlt_create_numeric_tree_c
      type(c_ptr) function spldlt_create_numeric_tree_dlb( &
-          posdef, fkeep, symbolic_tree, aval, child_contrib, options, stats) &
+          posdef, fkeep, symbolic_tree, aval, child_contrib, options, inform) &
           bind(C, name="spldlt_create_numeric_tree_dbl")
        use, intrinsic :: iso_c_binding
-       use spral_ssids_cpu_iface, only : cpu_factor_options, cpu_factor_stats
+       ! use spral_ssids_cpu_iface, only : cpu_factor_options, cpu_factor_stats
+       use sylver_datatypes_mod, only: sylver_options
+       use sylver_ciface_mod
        implicit none
        logical(c_bool), value :: posdef
        type(c_ptr), value :: fkeep
        type(c_ptr), value :: symbolic_tree
        real(c_double), dimension(*), intent(in) :: aval
        type(c_ptr), dimension(*), intent(inout) :: child_contrib
-       type(cpu_factor_options), intent(in) :: options ! SSIDS options
-       type(cpu_factor_stats), intent(out) :: stats
+       type(options_c), intent(in) :: options ! SSIDS options
+       type(inform_c), intent(out) :: inform
      end function spldlt_create_numeric_tree_dlb
   end interface spldlt_create_numeric_tree_c
 
-  ! destroy the C ptr on numeric tree strucutre
+  ! Destroy the C ptr on numeric tree strucutre
   interface spldlt_destroy_numeric_tree_c
      subroutine spldlt_destroy_numeric_tree_dlb(numeric_tree) &
           bind(C, name="spldlt_destroy_numeric_tree_dbl")          
@@ -57,7 +59,7 @@ module spldlt_factorize_mod
      end subroutine spldlt_destroy_numeric_tree_dlb
   end interface spldlt_destroy_numeric_tree_c
 
-  ! Solve routines
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   ! forward solve
   interface spldlt_tree_solve_fwd_c
@@ -504,15 +506,18 @@ contains
     use spral_ssids_akeep, only : ssids_akeep
     use spral_ssids_fkeep, only : ssids_fkeep
     use spral_ssids_contrib, only : contrib_type
-    use spral_ssids_inform, only : ssids_inform
+    ! use spral_ssids_inform, only : ssids_inform
     use spldlt_analyse_mod, only : spldlt_akeep_type
+    use sylver_datatypes_mod, only: sylver_options
+    use sylver_inform_mod, only : sylver_inform
+    use sylver_ciface_mod
     implicit none
 
     type(spldlt_akeep_type), target, intent(in) :: spldlt_akeep
     type(spldlt_fkeep_type), target, intent(inout) :: spldlt_fkeep
     real(wp), dimension(*), target, intent(in) :: val ! A values (lwr triangle)
-    type(ssids_options), intent(in) :: options
-    type(ssids_inform), intent(inout) :: inform
+    type(sylver_options), intent(in) :: options
+    type(sylver_inform), intent(inout) :: inform
 
     type(ssids_akeep), pointer :: akeep => null()
     type(ssids_fkeep), pointer :: fkeep => null()
@@ -521,9 +526,13 @@ contains
     type(C_PTR), dimension(:), allocatable :: child_contrib_c
     integer :: i
     type(c_ptr) :: cfkeep
-    type(cpu_factor_options) :: coptions
+    ! type(cpu_factor_options) :: coptions
     logical(c_bool) :: posdef
-    type(cpu_factor_stats) :: cstats
+    ! type(cpu_factor_stats) :: cstats
+    type(inform_c) :: cinform ! C interoperable inform
+    type(options_c) :: coptions ! C interoperable options 
+    type(c_ptr) :: scaling_c
+
     ! Error management
     character(50)  :: context      ! Procedure name (used when printing).
     integer :: st
@@ -579,13 +588,16 @@ contains
     cfkeep = c_loc(fkeep)
  
     spldlt_fkeep%numeric_tree%posdef = posdef
-    call cpu_copy_options_in(options, coptions)
+    scaling_c = c_null_ptr
+    if (allocated(fkeep%scaling)) scaling_c = C_LOC(fkeep%scaling)
+    ! call cpu_copy_options_in(options, coptions)
+    call copy_options_f2c(options, coptions) ! Create C interoperable option structure
     spldlt_fkeep%numeric_tree%ctree = spldlt_create_numeric_tree_c( &
          posdef, cfkeep, spldlt_akeep%symbolic_tree_c, val, &
-         child_contrib_c, coptions, cstats)
+         child_contrib_c, coptions, cinform)
 
     ! Extract to Fortran data structures
-    call cpu_copy_stats_out(cstats, inform)
+    call copy_inform_c2f(cinform, inform)
 
     ! Cleanup Memory
     deallocate(child_contrib_c)
@@ -594,33 +606,35 @@ contains
 
     return
 100 continue
-    
-    print *, "Error in ", context 
-    
+    inform%flag = SSIDS_ERROR_ALLOCATION
+    inform%stat = st
     return
   end subroutine factor_core
 
   subroutine spldlt_factorize(spldlt_akeep, spldlt_fkeep, posdef, val, &
        options, inform)
     use spral_ssids_datatypes
-    use spral_ssids_inform, only : ssids_inform
+    ! use spral_ssids_inform, only : ssids_inform
     use spral_ssids_akeep, only : ssids_akeep
     use spral_ssids_fkeep, only : ssids_fkeep
     use spral_ssids_contrib, only : contrib_type
     use spral_ssids_subtree, only : numeric_subtree_base
     use spral_ssids_cpu_subtree, only : cpu_numeric_subtree
     use spldlt_analyse_mod
-    use sylver_datatypes_mod, only: spldlt_options
+    use sylver_datatypes_mod, only: sylver_options
+    use sylver_inform_mod, only : sylver_inform
     implicit none
     
     type(spldlt_akeep_type), intent(in) :: spldlt_akeep
     type(spldlt_fkeep_type), target, intent(inout) :: spldlt_fkeep
     logical, intent(in) :: posdef 
     real(wp), dimension(*), target, intent(in) :: val ! A values (lwr triangle)
-    type(spldlt_options), target, intent(in) :: options
-    type(ssids_inform), intent(inout) :: inform
+    ! type(spldlt_options), target, intent(in) :: options
+    type(sylver_options), intent(in) :: options
+    ! type(ssids_inform), intent(inout) :: inform
+    type(sylver_inform), intent(inout) :: inform
 
-    type(ssids_options), pointer :: ssids_opts ! SSIDS options 
+    ! type(ssids_options), pointer :: ssids_opts ! SSIDS options 
     ! type(ssids_akeep), pointer :: akeep
     type(ssids_fkeep), pointer :: fkeep => null()
     integer :: i
@@ -633,7 +647,7 @@ contains
 
     fkeep => spldlt_fkeep%fkeep
     fkeep%pos_def = posdef
-    ssids_opts => options%super
+    ! ssids_opts => options%super
 
     !
     ! Perform scaling if required
@@ -667,31 +681,31 @@ contains
     end if
 
     ! Call main factorization routine
-    call factor_core(spldlt_akeep, spldlt_fkeep, val, ssids_opts, inform)
+    call factor_core(spldlt_akeep, spldlt_fkeep, val, options, inform)
 
-    ! if ((options%print_level .ge. 1) .and. (options%unit_diagnostics .ge. 0)) then
-    !    write (options%unit_diagnostics,'(/a)') &
-    !         ' Completed factorisation with:'
-    !    write (options%unit_diagnostics, &
-    !         '(a,2(/a,i12),2(/a,es12.4),5(/a,i12))') &
-    !         ' information parameters (inform%) :', &
-    !         ' flag                   Error flag                               = ',&
-    !         inform%flag, &
-    !         ' maxfront               Maximum frontsize                        = ',&
-    !         inform%maxfront, &
-    !         ' num_factor             Number of entries in L                   = ',&
-    !         real(inform%num_factor), &
-    !         ' num_flops              Number of flops performed                = ',&
-    !         real(inform%num_flops), &
-    !         ' num_two                Number of 2x2 pivots used                = ',&
-    !         inform%num_two, &
-    !         ' num_delay              Number of delayed eliminations           = ',&
-    !         inform%num_delay, &
-    !         ' rank                   Computed rank                            = ',&
-    !         inform%matrix_rank, &
-    !         ' num_neg                Computed number of negative eigenvalues  = ',&
-    !         inform%num_neg
-    ! end if
+    if ((options%print_level .ge. 1) .and. (options%unit_diagnostics .ge. 0)) then
+       write (options%unit_diagnostics,'(/a)') &
+            ' Completed factorisation with:'
+       write (options%unit_diagnostics, &
+            '(a,2(/a,i12),2(/a,es12.4),5(/a,i12))') &
+            ' information parameters (inform%) :', &
+            ' flag                   Error flag                               = ',&
+            inform%flag, &
+            ' maxfront               Maximum frontsize                        = ',&
+            inform%maxfront, &
+            ' num_factor             Number of entries in L                   = ',&
+            real(inform%num_factor), &
+            ' num_flops              Number of flops performed                = ',&
+            real(inform%num_flops), &
+            ' num_two                Number of 2x2 pivots used                = ',&
+            inform%num_two, &
+            ' num_delay              Number of delayed eliminations           = ',&
+            inform%num_delay, &
+            ' rank                   Computed rank                            = ',&
+            inform%matrix_rank, &
+            ' num_neg                Computed number of negative eigenvalues  = ',&
+            inform%num_neg
+    end if
 
     return
 100 continue
@@ -897,6 +911,7 @@ contains
   !> right-hand side for the jth system (j = 1,2,..., nrhs).  On exit,
   !> if i has been used to index a variable, x(i,j) holds solution for
   !> variable i to system j.
+  !> 
   !> @param ldx Leading dimension for x.
   subroutine spldlt_solve(spldlt_akeep, spldlt_fkeep, nrhs, x, ldx, options, &
        inform, job)
@@ -930,10 +945,10 @@ contains
       ! job = 4 : diag and backsubs (D(PL)^TX = B) (indefinite case only)
       ! job absent: complete solve performed
 
-    ! type(ssids_inform) :: ssids_info
+    integer :: n
     character(50) :: context  ! Procedure name (used when printing).
 
-    context = 'spldlt_solve'
+    inform%flag = SSIDS_SUCCESS
 
     ! Perform appropriate printing
     if ((options%print_level .ge. 1) .and. (options%unit_diagnostics .ge. 0)) then
@@ -956,10 +971,24 @@ contains
             ldx
     end if
 
-   call spldlt_fkeep%solve(spldlt_akeep, nrhs, x, ldx, inform)
+    context = 'spldlt_solve'
 
-   ! Print useful info if requested
-   call inform%print_flag(options, context)
+    if (spldlt_akeep%akeep%nnodes .eq. 0) return
+
+    n = spldlt_akeep%akeep%n
+    if (ldx .lt. n) then
+       inform%flag = SSIDS_ERROR_X_SIZE
+       call inform%print_flag(options, context)
+       if ((options%print_level .ge. 0) .and. (options%unit_error .gt. 0)) &
+            write (options%unit_error,'(a,i8,a,i8)') &
+            ' Increase ldx from ', ldx, ' to at least ', n
+       return
+    end if
+
+    call spldlt_fkeep%solve(spldlt_akeep, nrhs, x, ldx, inform)
+
+    ! Print useful info if requested
+    call inform%print_flag(options, context)
 
   end subroutine spldlt_solve
 

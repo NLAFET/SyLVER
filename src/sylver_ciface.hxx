@@ -1,9 +1,10 @@
-/** \file
- *  \copyright 2016- The Science and Technology Facilities Council (STFC)
- *  \author    Florent Lopez
- */
-
+/// @file
+/// @copyright 2016- The Science and Technology Facilities Council (STFC)
+/// @author Florent Lopez
 #pragma once
+
+#include "ssids/cpu/ThreadStats.hxx"
+#include "ssids/cpu/cpu_iface.hxx"
 
 namespace sylver {
    
@@ -24,9 +25,12 @@ namespace sylver {
       double small;
       double u;
       double multiplier;
+      long small_subtree_threshold;
       int nb; // Block size
       sylver::PivotMethod pivot_method;
       sylver::FailedPivotMethod failed_pivot_method;
+      
+      void copy(spral::ssids::cpu::cpu_factor_options const& other);
    };
    using options_t = struct options_c;
    
@@ -48,6 +52,17 @@ namespace sylver {
 
    struct inform_c {
       Flag flag = Flag::SUCCESS; ///< Error flag for thread
+      int num_delay = 0;   ///< Number of delays
+      int num_neg = 0;     ///< Number of negative pivots
+      int num_two = 0;     ///< Number of 2x2 pivots
+      int num_zero = 0;    ///< Number of zero pivots
+      int maxfront = 0;    ///< Maximum front size
+      int not_first_pass = 0;    ///< Number of pivots not eliminated in APP
+      int not_second_pass = 0;   ///< Number of pivots not eliminated in APP or TPP
+
+      inform_c& operator+=(inform_c const& other);
+      inform_c& operator+=(spral::ssids::cpu::ThreadStats const& other);
+
    };
    using inform_t = struct inform_c;
 
