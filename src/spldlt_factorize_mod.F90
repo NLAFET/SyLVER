@@ -935,26 +935,26 @@ contains
 
     context = 'spldlt_solve'
 
-    ! ! Perform appropriate printing
-    ! if ((options%print_level .ge. 1) .and. (options%unit_diagnostics .ge. 0)) then
-    !    write (options%unit_diagnostics,'(//a)') &
-    !         ' Entering ssids_solve with:'
-    !    write (options%unit_diagnostics,'(a,4(/a,i12),(/a,i12))') &
-    !         ' options parameters (options%) :', &
-    !         ' print_level         Level of diagnostic printing        = ', &
-    !         options%print_level, &
-    !         ' unit_diagnostics    Unit for diagnostics                = ', &
-    !         options%unit_diagnostics, &
-    !         ' unit_error          Unit for errors                     = ', &
-    !         options%unit_error, &
-    !         ' unit_warning        Unit for warnings                   = ', &
-    !         options%unit_warning, &
-    !         ' nrhs                                                    = ', &
-    !         nrhs
-    !    if (nrhs .gt. 1) write (options%unit_diagnostics,'(/a,i12)') &
-    !         ' ldx                                                     = ', &
-    !         ldx
-    ! end if
+    ! Perform appropriate printing
+    if ((options%print_level .ge. 1) .and. (options%unit_diagnostics .ge. 0)) then
+       write (options%unit_diagnostics,'(//a)') &
+            ' Entering ssids_solve with:'
+       write (options%unit_diagnostics,'(a,4(/a,i12),(/a,i12))') &
+            ' options parameters (options%) :', &
+            ' print_level         Level of diagnostic printing        = ', &
+            options%print_level, &
+            ' unit_diagnostics    Unit for diagnostics                = ', &
+            options%unit_diagnostics, &
+            ' unit_error          Unit for errors                     = ', &
+            options%unit_error, &
+            ' unit_warning        Unit for warnings                   = ', &
+            options%unit_warning, &
+            ' nrhs                                                    = ', &
+            nrhs
+       if (nrhs .gt. 1) write (options%unit_diagnostics,'(/a,i12)') &
+            ' ldx                                                     = ', &
+            ldx
+    end if
 
    call spldlt_fkeep%solve(spldlt_akeep, nrhs, x, ldx, inform)
 
