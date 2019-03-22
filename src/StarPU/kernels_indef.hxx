@@ -4,6 +4,7 @@
 #pragma once
 
 // SyLVER
+#include "sylver_ciface.hxx"
 #if defined(SPLDLT_USE_GPU)
 #include "kernels/gpu/factor_indef.hxx"
 #endif
@@ -68,7 +69,7 @@ namespace spldlt { namespace starpu {
          ColumnData<T,IntAlloc> *cdata = nullptr;
          // Column<T> *col = nullptr;
          Backup *backup = nullptr;
-         struct cpu_factor_options *options = nullptr;
+         sylver::options_t *options = nullptr;
          std::vector<spral::ssids::cpu::Workspace> *work = nullptr;
          // spral::ssids::cpu::Workspace *work = nullptr;
          Allocator *alloc = nullptr;
@@ -86,7 +87,7 @@ namespace spldlt { namespace starpu {
          // printf("[factor_block_app_cpu_func]\n");
          // print_block(m_a_kk, n_a_kk, a_kk, lda);
 
-         spldlt::ldlt_app_internal::Block<T, INNER_BLOCK_SIZE, IntAlloc> dblk(blk, blk, m, n, *cdata, a_kk, lda, options->cpu_block_size);
+         spldlt::ldlt_app_internal::Block<T, INNER_BLOCK_SIZE, IntAlloc> dblk(blk, blk, m, n, *cdata, a_kk, lda, options->nb);
 
          // printf("[factor_block_app_cpu_func] iblksz: %d, blksz: %d\n", iblksz, options->cpu_block_size);
          // printf("[factor_block_app_cpu_func] blk: %d, blksz: %d\n", blk, options->cpu_block_size);
@@ -123,7 +124,7 @@ namespace spldlt { namespace starpu {
             int m, int n, int blk,
             int *next_elim, int *perm, T* d,
             ColumnData<T,IntAlloc> *cdata, Backup *backup,
-            struct cpu_factor_options *options,
+            sylver::options_t *options,
             std::vector<spral::ssids::cpu::Workspace> *work, 
             Allocator *alloc,
             int prio) {
@@ -146,7 +147,7 @@ namespace spldlt { namespace starpu {
                STARPU_VALUE, &cdata, sizeof(ColumnData<T,IntAlloc>*),
                // STARPU_VALUE, &col, sizeof(Column<T>*),
                STARPU_VALUE, &backup, sizeof(Backup*),
-               STARPU_VALUE, &options, sizeof(struct cpu_factor_options *),
+               STARPU_VALUE, &options, sizeof(sylver::options_t *),
                STARPU_VALUE, &work, sizeof(std::vector<spral::ssids::cpu::Workspace>*),
                STARPU_VALUE, &alloc, sizeof(Allocator*),
                STARPU_PRIORITY, prio,
@@ -182,7 +183,7 @@ namespace spldlt { namespace starpu {
          int iblk; // row index of subdiagonal block
          ColumnData<T,IntAlloc> *cdata = nullptr;
          Backup *backup = nullptr;
-         struct cpu_factor_options *options = nullptr;
+         sylver::options_t *options = nullptr;
 
          // printf("[applyN_block_app_cpu_func]\n");
 
@@ -193,8 +194,8 @@ namespace spldlt { namespace starpu {
                &cdata, &backup,
                &options);
 
-         spldlt::ldlt_app_internal::Block<T, iblksz, IntAlloc> dblk(blk, blk, m, n, *cdata, a_kk, ld_a_kk, options->cpu_block_size);
-         spldlt::ldlt_app_internal::Block<T, iblksz, IntAlloc> rblk(iblk, blk, m, n, *cdata, a_ik, ld_a_ik, options->cpu_block_size);
+         spldlt::ldlt_app_internal::Block<T, iblksz, IntAlloc> dblk(blk, blk, m, n, *cdata, a_kk, ld_a_kk, options->nb);
+         spldlt::ldlt_app_internal::Block<T, iblksz, IntAlloc> rblk(iblk, blk, m, n, *cdata, a_ik, ld_a_ik, options->nb);
          
          // printf("[applyN_block_app_cpu_func] m = %d, n = %d\n", m, n);
          // printf("[applyN_block_app_cpu_func] ld_akk = %d, ld_aik = %d\n", ld_a_kk, ld_a_ik);
@@ -230,7 +231,7 @@ namespace spldlt { namespace starpu {
             starpu_data_handle_t col_hdl,
             int m, int n, int blk, int iblk,            
             ColumnData<T,IntAlloc> *cdata, Backup *backup,
-            struct cpu_factor_options *options,
+            sylver::options_t *options,
             int prio) {
 
          int ret;
@@ -246,7 +247,7 @@ namespace spldlt { namespace starpu {
                STARPU_VALUE, &iblk, sizeof(int),
                STARPU_VALUE, &cdata, sizeof(ColumnData<T,IntAlloc>*),
                STARPU_VALUE, &backup, sizeof(Backup*),
-               STARPU_VALUE, &options, sizeof(struct cpu_factor_options *),
+               STARPU_VALUE, &options, sizeof(sylver::options_t *),
                STARPU_PRIORITY, prio,
                0);
          STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");         
@@ -274,7 +275,7 @@ namespace spldlt { namespace starpu {
          int jblk; // column index of leftdiagonal block     
          ColumnData<T,IntAlloc> *cdata = nullptr;
          Backup *backup = nullptr;
-         struct cpu_factor_options *options = nullptr;
+         sylver::options_t *options = nullptr;
 
          starpu_codelet_unpack_args (
                cl_arg,
@@ -283,8 +284,8 @@ namespace spldlt { namespace starpu {
                &cdata, &backup,
                &options);
 
-         spldlt::ldlt_app_internal::Block<T, iblksz, IntAlloc> dblk(blk, blk, m, n, *cdata, a_kk, ld_a_kk, options->cpu_block_size);
-         spldlt::ldlt_app_internal::Block<T, iblksz, IntAlloc> cblk(blk, jblk, m, n, *cdata, a_kj, ld_a_kj, options->cpu_block_size);
+         spldlt::ldlt_app_internal::Block<T, iblksz, IntAlloc> dblk(blk, blk, m, n, *cdata, a_kk, ld_a_kk, options->nb);
+         spldlt::ldlt_app_internal::Block<T, iblksz, IntAlloc> cblk(blk, jblk, m, n, *cdata, a_kj, ld_a_kj, options->nb);
 
          // printf("[applyT_block_app_cpu_func] m = %d, n = %d\n", m, n);
          
@@ -311,7 +312,7 @@ namespace spldlt { namespace starpu {
             starpu_data_handle_t col_hdl,
             int m, int n, int blk, int jblk,            
             ColumnData<T,IntAlloc> *cdata, Backup *backup,
-            struct cpu_factor_options *options,
+            sylver::options_t *options,
             int prio) {
 
          int ret;
@@ -327,7 +328,7 @@ namespace spldlt { namespace starpu {
                STARPU_VALUE, &jblk, sizeof(int),
                STARPU_VALUE, &cdata, sizeof(ColumnData<T,IntAlloc>*),
                STARPU_VALUE, &backup, sizeof(Backup*),
-               STARPU_VALUE, &options, sizeof(struct cpu_factor_options *),
+               STARPU_VALUE, &options, sizeof(sylver::options_t *),
                STARPU_PRIORITY, prio,
                0);
          STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");

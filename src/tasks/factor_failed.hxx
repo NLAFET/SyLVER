@@ -3,6 +3,10 @@
 /// @author Florent Lopez
 #pragma once
 
+// SyLVER
+#include "sylver_ciface.hxx"
+
+// STD
 #include <assert.h>
 
 namespace spldlt {
@@ -14,8 +18,8 @@ namespace spldlt {
    void factor_front_indef_failed_task(
          NumericFront<T, PoolAlloc> &node,
          std::vector<spral::ssids::cpu::Workspace> &workspaces,
-         struct cpu_factor_options& options,
-         std::vector<ThreadStats>& worker_stats
+         sylver::options_t& options,
+         std::vector<sylver::inform_t>& worker_stats
          ) {
 
 #if defined(SPLDLT_USE_STARPU)

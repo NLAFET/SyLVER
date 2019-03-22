@@ -22,6 +22,7 @@ namespace sylver {
    /// @brief Interoperable subset of sylver_options
    struct options_c {
       int print_level;
+      bool action;
       double small;
       double u;
       double multiplier;
@@ -30,7 +31,9 @@ namespace sylver {
       sylver::PivotMethod pivot_method;
       sylver::FailedPivotMethod failed_pivot_method;
       
-      void copy(spral::ssids::cpu::cpu_factor_options const& other);
+      /// @brief Copy structure into a
+      /// spral::ssids::cpu::cpu_factor_options structure
+      void copy(spral::ssids::cpu::cpu_factor_options& other);
    };
    using options_t = struct options_c;
    

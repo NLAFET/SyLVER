@@ -4,14 +4,14 @@
 #pragma once
 
 // SyLVER
+#include "sylver_ciface.hxx"
 #include "NumericFront.hxx"
 #include "factor_failed.hxx"
 
-// StarPU
-#include <starpu.h>
 // SSIDS
 #include "ssids/cpu/Workspace.hxx"
-#include "ssids/cpu/ThreadStats.hxx"
+// StarPU
+#include <starpu.h>
 
 namespace spldlt { namespace starpu {
 
@@ -24,15 +24,15 @@ namespace spldlt { namespace starpu {
          
          NumericFront<T, PoolAlloc> *node = nullptr;
          std::vector<spral::ssids::cpu::Workspace> *workspaces = nullptr;
-         struct cpu_factor_options *options = nullptr;
-         std::vector<ThreadStats> *worker_stats = nullptr;
+         sylver::options_t *options = nullptr;
+         std::vector<sylver::inform_t> *worker_stats = nullptr;
 
          starpu_codelet_unpack_args(
                cl_arg, &node, &workspaces, &options, &worker_stats);
 
          int workerid = starpu_worker_get_id();
          // spral::ssids::cpu::Workspace& work = (*workspaces)[workerid];
-         spral::ssids::cpu::ThreadStats& stats = (*worker_stats)[workerid];
+         sylver::inform_t& stats = (*worker_stats)[workerid];
 
          factor_front_indef_failed(*node, *workspaces, *options, stats);
 
@@ -52,8 +52,8 @@ namespace spldlt { namespace starpu {
             starpu_data_handle_t *hdls, int nhdl,
             NumericFront<T, PoolAlloc> *node,
             std::vector<spral::ssids::cpu::Workspace> *workspaces,
-            struct cpu_factor_options *options,
-            std::vector<ThreadStats> *worker_stats
+            sylver::options_t *options,
+            std::vector<sylver::inform_t> *worker_stats
             ) {
 
          int ret;
@@ -79,8 +79,8 @@ namespace spldlt { namespace starpu {
                STARPU_DATA_MODE_ARRAY, descrs, nh,
                STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
                STARPU_VALUE, &workspaces, sizeof(std::vector<spral::ssids::cpu::Workspace>*),
-               STARPU_VALUE, &options, sizeof(struct cpu_factor_options*),
-               STARPU_VALUE, &worker_stats, sizeof(std::vector<ThreadStats>*),
+               STARPU_VALUE, &options, sizeof(sylver::options_t*),
+               STARPU_VALUE, &worker_stats, sizeof(std::vector<sylver::inform_t>*),
                0);
          STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
                

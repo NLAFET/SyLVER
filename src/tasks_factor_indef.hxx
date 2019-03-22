@@ -3,6 +3,7 @@
 /// @author Florent Lopez
 #pragma once
 
+#include "sylver_ciface.hxx"
 #include "factor_indef.hxx"
 #if defined(SPLDLT_USE_STARPU)
 #include "StarPU/factor_indef.hxx"
@@ -18,8 +19,8 @@ namespace spldlt {
          NumericFront<T, PoolAlloc>& node,
          std::vector<spral::ssids::cpu::Workspace>& workspaces,
          PoolAlloc& pool_alloc,
-         struct cpu_factor_options& options,
-         std::vector<ThreadStats>& worker_stats
+         sylver::options_t & options,
+         std::vector<sylver::inform_t>& worker_stats
          ) {
 
 #if defined(SPLDLT_USE_STARPU)
@@ -44,7 +45,7 @@ namespace spldlt {
          NumericFront<T, PoolAlloc> &node,
          std::vector<spral::ssids::cpu::Workspace> &workspaces,
          PoolAlloc& pool_alloc,
-         struct cpu_factor_options& options
+         sylver::options_t& options
          ) {
 
 #if defined(SPLDLT_USE_STARPU)
@@ -70,7 +71,6 @@ namespace spldlt {
          int blksz) {
 
 #if defined(SPLDLT_USE_STARPU)
-
 
       insert_form_contrib_front(
             node.get_hdl(), &node, blksz);

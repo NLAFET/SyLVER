@@ -4,6 +4,8 @@
 /// @author Florent Lopez
 #pragma once
 
+#include "sylver_ciface.hxx"
+
 #include <algorithm>
 #include <climits>
 #include <cmath>
@@ -40,7 +42,6 @@
 
 #include "BuddyAllocator.hxx"
 
-// namespace spral { namespace ssids { namespace cpu {
 namespace spldlt {
 
    const int INNER_BLOCK_SIZE = 32;
@@ -51,8 +52,8 @@ namespace spldlt {
 
 using namespace spral::ssids::cpu;
 
-template<typename T, typename Allocator>
-int ldlt_app_factor(int m, int n, int *perm, T *a, int lda, T *d, T beta, T* upd, int ldupd, struct cpu_factor_options const& options, std::vector<spral::ssids::cpu::Workspace>& work, Allocator const& alloc);
+// template<typename T, typename Allocator>
+// int ldlt_app_factor(int m, int n, int *perm, T *a, int lda, T *d, T beta, T* upd, int ldupd, struct cpu_factor_options const& options, std::vector<spral::ssids::cpu::Workspace>& work, Allocator const& alloc);
 
 template <typename T>
 void ldlt_app_solve_fwd(int m, int n, T const* l, int ldl, int nrhs, T* x, int ldx);
@@ -1049,7 +1050,7 @@ public:
     */
    template <typename Allocator>
    int factor(int next_elim, int* perm, T* d,
-              struct cpu_factor_options &options,
+              sylver::options_t &options,
               spral::ssids::cpu::Workspace& work, /* std::vector<spral::ssids::cpu::Workspace>& work, */Allocator const& alloc) {
       if(i_ != j_)
          throw std::runtime_error("factor called on non-diagonal block!");

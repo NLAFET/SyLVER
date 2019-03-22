@@ -113,7 +113,7 @@ program spldlt_test
    !    stop
    ! endif
    
-   ! Initialize SpLDLT
+   ! Initialization of SpLDLT
    call spldlt_init(ncpu, ngpu)
 
    ! Setup options for analysis
@@ -131,9 +131,9 @@ program spldlt_test
    ! call spldlt_print_atree_part(spldlt_akeep%akeep)
    ! stop
 
-   ! Factorize matrix
+   ! Factorize
    call system_clock(start_t, rate_t)
-   ! call spldlt_factorize(spldlt_akeep, spldlt_fkeep, pos_def, val, options, inform)
+   call spldlt_factorize(spldlt_akeep, spldlt_fkeep, pos_def, val, options, inform)
    call system_clock(stop_t)
    write(*, "(a)") "ok"
    print *, "Factor took ", (stop_t - start_t)/real(rate_t)
@@ -143,20 +143,15 @@ program spldlt_test
    call spldlt_finalize()
 
    ! Solve
-   write(*, "(a)") "[SpLDLT Test] Solve..."
-
+   write (*, "(a)") "Solve..."
    ! Solve SpLDLT
    call system_clock(start_t, rate_t)
    soln = rhs ! init solution with RHS
-   ! call spldlt_fkeep%solve(spldlt_akeep, nrhs, soln, n, inform)
    call spldlt_solve(spldlt_akeep, spldlt_fkeep, nrhs, soln, n, options, &
        inform)
    call system_clock(stop_t)
    write(*, "(a)") "ok"
    print *, "Solve took ", (stop_t - start_t)/real(rate_t)
-
-   ! print *, "RHS: ", rhs
-   ! print *, "soln: ", soln
 
    print *, "number bad cmp = ", count(abs(soln(1:n,1)-1.0).ge.1e-6)
    print *, "fwd error || ||_inf = ", maxval(abs(soln(1:n,1)-1.0))

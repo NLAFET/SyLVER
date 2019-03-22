@@ -6,11 +6,12 @@ module spldlt_factorize_mod
   ! use spral_ssids_datatypes
   use spral_ssids_cpu_iface ! fixme only
   use spral_ssids_fkeep, only : ssids_fkeep
+  use sylver_inform_mod
   implicit none
 
   type numeric_tree_type
      logical(C_BOOL) :: posdef
-     type(c_ptr) :: ctree ! pointer to the C structure
+     type(c_ptr) :: ctree = c_null_ptr ! pointer to the C structure
    contains
      procedure :: solve_fwd
      procedure :: solve_bwd
@@ -23,6 +24,8 @@ module spldlt_factorize_mod
      type(ssids_fkeep) :: fkeep
      ! Assemb;y tree
      type(numeric_tree_type) :: numeric_tree ! structure representing the numeric tree
+     ! Copy of inform on exit from factorize
+     type(sylver_inform) :: inform
    contains
      procedure :: solve
   end type spldlt_fkeep_type
@@ -623,31 +626,85 @@ contains
     use spldlt_analyse_mod
     use sylver_datatypes_mod, only: sylver_options
     use sylver_inform_mod, only : sylver_inform
+    use spral_rutherford_boeing, only : rb_write_options, rb_write
+    use spral_matrix_util, only : SPRAL_MATRIX_REAL_SYM_INDEF, &
+         SPRAL_MATRIX_REAL_SYM_PSDEF, &
+         convert_coord_to_cscl, clean_cscl_oop, &
+         apply_conversion_map
     implicit none
     
-    type(spldlt_akeep_type), intent(in) :: spldlt_akeep
-    type(spldlt_fkeep_type), target, intent(inout) :: spldlt_fkeep
+    type(spldlt_akeep_type), target, intent(in) :: spldlt_akeep ! Symbolic data from analyse
+    type(spldlt_fkeep_type), target, intent(inout) :: spldlt_fkeep ! Factor data
     logical, intent(in) :: posdef 
     real(wp), dimension(*), target, intent(in) :: val ! A values (lwr triangle)
     ! type(spldlt_options), target, intent(in) :: options
-    type(sylver_options), intent(in) :: options
+    type(sylver_options), intent(in) :: options ! User's options
     ! type(ssids_inform), intent(inout) :: inform
-    type(sylver_inform), intent(inout) :: inform
+    type(sylver_inform), intent(inout) :: inform ! Stat data
 
     ! type(ssids_options), pointer :: ssids_opts ! SSIDS options 
-    ! type(ssids_akeep), pointer :: akeep
+    type(ssids_akeep), pointer :: akeep
     type(ssids_fkeep), pointer :: fkeep => null()
     integer :: i
-
+    integer :: n ! Matrix size
+    integer :: flag
+    type(rb_write_options) :: rb_options
     ! Error management
     character(50)  :: context      ! Procedure name (used when printing).
     integer :: st
 
-    context = 'spldlt_factor'
-
+    akeep => spldlt_akeep%akeep
     fkeep => spldlt_fkeep%fkeep
     fkeep%pos_def = posdef
     ! ssids_opts => options%super
+
+    ! Setup for any printing we may require
+    context = 'spldlt_factor'
+
+    ! Print summary of input options (depending on print level etc.)
+    call options%print_summary_factor(posdef, context)
+
+    ! Check for error in call sequence
+    if ((.not. allocated(akeep%sptr)) .or. & 
+       (akeep%inform%flag .lt. 0)) then
+       ! Analyse cannot have been run
+       inform%flag = SYLVER_ERROR_CALL_SEQUENCE
+       goto 200
+    end if
+
+    ! Initialize
+    inform = spldlt_akeep%inform
+    st = 0
+    n = spldlt_akeep%akeep%n
+
+    ! Immediate return if analyse detected singularity and options%action=false
+    if ((.not. options%action) .and. (n .ne. akeep%inform%matrix_rank)) then
+       inform%flag = SYLVER_ERROR_SINGULAR
+       goto 200
+    end if
+
+    ! Immediate return for trivial matrix
+    if (akeep%nnodes .eq. 0) then
+       inform%flag = SYLVER_SUCCESS
+       inform%matrix_rank = 0
+       goto 200
+    end if
+
+    ! Dump matrix if required
+    ! if (allocated(options%rb_dump)) then
+    !    write(options%unit_warning,*) "Dumping matrix to '", options%rb_dump, "'"
+    !    ! if (akeep%check) then
+    !    !    call rb_write(options%rb_dump, SPRAL_MATRIX_REAL_SYM_INDEF, &
+    !    !         n, n, akeep%ptr, akeep%row, rb_options, flag, val=val2)
+    !    ! else
+    !       call rb_write(options%rb_dump, SPRAL_MATRIX_REAL_SYM_INDEF, &
+    !            n, n, ptr, row, rb_options, flag, val=val)
+    !    ! end if
+    !    if (flag .ne. 0) then
+    !       inform%flag = SSIDS_ERROR_UNKNOWN
+    !       goto 200
+    !    end if
+    ! end if
 
     !
     ! Perform scaling if required
@@ -707,12 +764,14 @@ contains
             inform%num_neg
     end if
 
+200 continue
+    spldlt_fkeep%inform = inform
+    call inform%print_flag(options, context)
     return
 100 continue
-    
-    print *, "[Error][spldlt_factorize] st: ", st
-
-    return
+    inform%flag = SSIDS_ERROR_ALLOCATION
+    inform%stat = st
+    goto 200
   end subroutine spldlt_factorize
 
   ! Solve phase
@@ -953,7 +1012,7 @@ contains
     ! Perform appropriate printing
     if ((options%print_level .ge. 1) .and. (options%unit_diagnostics .ge. 0)) then
        write (options%unit_diagnostics,'(//a)') &
-            ' Entering ssids_solve with:'
+            ' Entering spldlt_solve with:'
        write (options%unit_diagnostics,'(a,4(/a,i12),(/a,i12))') &
             ' options parameters (options%) :', &
             ' print_level         Level of diagnostic printing        = ', &
@@ -972,9 +1031,18 @@ contains
     end if
 
     context = 'spldlt_solve'
-
+    
     if (spldlt_akeep%akeep%nnodes .eq. 0) return
 
+    ! Check existence of factors
+    if (.not. allocated(spldlt_fkeep%fkeep%subtree)) then
+       ! factorize phase has not been performed
+       inform%flag = SSIDS_ERROR_CALL_SEQUENCE
+       call inform%print_flag(options, context)
+       return
+    end if
+
+    ! Check size of x 
     n = spldlt_akeep%akeep%n
     if (ldx .lt. n) then
        inform%flag = SSIDS_ERROR_X_SIZE
@@ -982,6 +1050,16 @@ contains
        if ((options%print_level .ge. 0) .and. (options%unit_error .gt. 0)) &
             write (options%unit_error,'(a,i8,a,i8)') &
             ' Increase ldx from ', ldx, ' to at least ', n
+       return
+    end if
+
+    ! Check size of rhs 
+    if (nrhs .lt. 1) then
+       inform%flag = SSIDS_ERROR_X_SIZE
+       call inform%print_flag(options, context)
+       if ((options%print_level .ge. 0) .and. (options%unit_error .gt. 0)) &
+            write (options%unit_error,'(a,i8,a,i8)') &
+            ' nrhs must be at least 1. nrhs = ', nrhs
        return
     end if
 

@@ -3,10 +3,8 @@
 /// @author Florent Lopez
 #pragma once
 
-// SSIDS
-#include "ssids/cpu/kernels/ldlt_nopiv.hxx"
-
-// SpLDLT
+// Sylver
+#include "sylver_ciface.hxx"
 #include "kernels/ldlt_app.hxx"
 #include "kernels/factor_indef.hxx"
 #include "kernels/assemble.hxx"
@@ -16,6 +14,9 @@
 #include "StarPU/kernels_indef.hxx"
 using namespace spldlt::starpu;
 #endif
+
+// SSIDS
+#include "ssids/cpu/kernels/ldlt_nopiv.hxx"
 
 namespace spldlt {
 
@@ -31,7 +32,7 @@ namespace spldlt {
          PoolAlloc& pool_alloc,
          T const* aval,
          spral::ssids::cpu::Workspace& work,
-         struct cpu_factor_options& options
+         sylver::options_t& options
          ) {
 
       int const least_desc = root.symb.least_desc;
@@ -68,11 +69,11 @@ namespace spldlt {
    /// factor_front_indef but using a STF model.
    template <typename T, typename PoolAlloc>
    void factor_front_indef_notask(
-         struct cpu_factor_options& options,
+         sylver::options_t& options,
          PoolAlloc& pool_alloc,
          NumericFront<T, PoolAlloc>& front,
          spral::ssids::cpu::Workspace& work,
-         spral::ssids::cpu::ThreadStats& stats) {
+         sylver::inform_t& stats) {
 
       typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
 
@@ -80,7 +81,7 @@ namespace spldlt {
       front.nelim = 0; // TODO add parameter from;
 
       // LDLT with APTP strategy
-      if (options.pivot_method==PivotMethod::app_block) {
+      if (options.pivot_method==sylver::PivotMethod::app_block) {
 
          typedef spldlt::ldlt_app_internal::CopyBackup<T, PoolAlloc> Backup;
          bool const debug = false;
@@ -134,8 +135,8 @@ namespace spldlt {
          NumericFront<T, PoolAlloc> &node,
          std::vector<spral::ssids::cpu::Workspace>& workspaces,
          PoolAlloc& pool_alloc,
-         struct cpu_factor_options& options,
-         std::vector<ThreadStats>& worker_stats) {
+         sylver::options_t& options,
+         std::vector<sylver::inform_t>& worker_stats) {
 
       typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
       
@@ -161,7 +162,7 @@ namespace spldlt {
       // Factorize from first column
       node.nelim = 0; // TODO add parameter from;
 
-      if (options.pivot_method==PivotMethod::app_block) {
+      if (options.pivot_method==sylver::PivotMethod::app_block) {
 
          typedef spldlt::ldlt_app_internal::CopyBackup<T, PoolAlloc> Backup;
          typedef FactorSymIndef<T, INNER_BLOCK_SIZE, Backup, debug, PoolAlloc> FactorSymIndefSpec;
@@ -264,7 +265,7 @@ namespace spldlt {
             BlockSpec& dblk, int& next_elim,
             int* perm, T* d,
             ColumnData<T,IntAlloc>& cdata, Backup& backup,
-            struct cpu_factor_options& options,
+            sylver::options_t& options,
             std::vector<spral::ssids::cpu::Workspace>& work,
             Allocator const& alloc) {
 
@@ -304,7 +305,7 @@ namespace spldlt {
       void applyN_block_app_task(
             BlockSpec& dblk, BlockSpec& rblk,
             ColumnData<T,IntAlloc>& cdata, Backup& backup,
-            struct cpu_factor_options& options) {
+            sylver::options_t& options) {
 
          int blk = dblk.get_col();
          int iblk = rblk.get_row();
@@ -340,7 +341,7 @@ namespace spldlt {
       void applyT_block_app_task(
             BlockSpec& dblk, BlockSpec& cblk,
             ColumnData<T,IntAlloc>& cdata, Backup& backup,
-            struct cpu_factor_options& options) {
+            sylver::options_t& options) {
 
          int blk = dblk.get_col();
          int jblk = cblk.get_col();
@@ -538,7 +539,7 @@ namespace spldlt {
       int factorize_indef_app_notask (
             int const m, int const n, int* perm, T* a,
             int const lda, T* d, ColumnData<T,IntAlloc>& cdata, Backup& backup,
-            struct cpu_factor_options& options, int const block_size,
+            sylver::options_t& options, int const block_size,
             T const beta, T* upd, int const ldupd, spral::ssids::cpu::Workspace& work,
             Allocator const& alloc, int const from_blk=0) {
 
@@ -815,7 +816,7 @@ namespace spldlt {
       int factorize_indef_app (
             int const m, int const n, int* perm, T* a,
             int const lda, T* d, ColumnData<T,IntAlloc>& cdata, Backup& backup,
-            struct cpu_factor_options& options, int const block_size,
+            sylver::options_t& options, int const block_size,
             T const beta, T* upd, int const ldupd, std::vector<spral::ssids::cpu::Workspace>& work,
             Allocator const& alloc, int const from_blk=0) {
 
@@ -1270,7 +1271,7 @@ namespace spldlt {
       static
       void factor_front_indef_app_notask(
             NumericFront<T, Allocator> &front,
-            struct cpu_factor_options& options,
+            sylver::options_t& options,
             spral::ssids::cpu::Workspace& work,
             Allocator const& alloc,
             int& next_elim, int const from_blk=0) {
@@ -1415,7 +1416,7 @@ namespace spldlt {
       static
       void factor_front_indef_app(
             NumericFront<T, Allocator> &node,
-            struct cpu_factor_options& options,
+            sylver::options_t& options,
             T const beta, T* upd, int const ldupd,
             std::vector<spral::ssids::cpu::Workspace>& workspaces,
             Allocator const& alloc, int& next_elim, int const from_blk=0
@@ -1866,8 +1867,10 @@ namespace spldlt {
       int ldlt_app_notask(int m, int n, int *perm, 
                           T *a, int lda, T *d, 
                           Backup& backup, 
-                          struct cpu_factor_options& options/*, PivotMethod pivot_method*/, int block_size, T beta, T* upd, int ldupd, 
-                          spral::ssids::cpu::Workspace& work, Allocator const& alloc=Allocator()) {
+                          sylver::options_t& options/*, PivotMethod pivot_method*/, 
+                          int block_size, T beta, T* upd, int ldupd, 
+                          spral::ssids::cpu::Workspace& work, 
+                          Allocator const& alloc=Allocator()) {
 
          /* Sanity check arguments */
          if(m < n) return -1;
@@ -1928,12 +1931,16 @@ namespace spldlt {
         to the back of the matrix.
       */
       static
-      int ldlt_app(int m, int n, int *perm, 
-                   T *a, int lda, T *d, 
-                   Backup& backup, 
-                   struct cpu_factor_options& options/*, PivotMethod pivot_method*/, int block_size, T beta, T* upd, int ldupd, 
-                   std::vector<spral::ssids::cpu::Workspace>& work, Allocator const& alloc=Allocator()) {
-
+      int ldlt_app(
+            int m, int n, 
+            int *perm, 
+            T *a, int lda, T *d, 
+            Backup& backup, 
+            sylver::options_t& options/*, PivotMethod pivot_method*/, 
+            int block_size, T beta, T* upd, int ldupd, 
+            std::vector<spral::ssids::cpu::Workspace>& work, 
+            Allocator const& alloc=Allocator()) {
+         
          /* Sanity check arguments */
          if(m < n) return -1;
          if(lda < n) return -4;

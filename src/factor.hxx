@@ -4,6 +4,7 @@
 #pragma once
 
 // SyLVER
+#include "sylver_ciface.hxx"
 #include "tasks.hxx"
 
 namespace spldlt {
@@ -16,7 +17,7 @@ namespace spldlt {
    template <typename T, typename PoolAlloc>
    void factor_front_posdef(
          NumericFront<T, PoolAlloc> &node,
-         struct cpu_factor_options const& options
+         sylver::options_t const& options
          ) {
 
       std::string context = "factor_front_posdef";      
@@ -28,7 +29,7 @@ namespace spldlt {
       int const lda = node.get_ldl(); // Leading dimensions
       T *lcol = node.lcol; // Pointer to L factor 
       int const ldcontrib = m-n; // Dimension of contrib block
-      int const blksz = options.cpu_block_size; // Block size
+      int const blksz = options.nb; // Block size
       int const nr = node.get_nr(); // Number of block rows
       int const nc = node.get_nc(); // Number of block columns
    

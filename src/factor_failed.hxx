@@ -3,7 +3,8 @@
 /// @author Florent Lopez
 #pragma once
 
-// SpLDLT
+// SyLVER
+#include "sylver_ciface.hxx"
 #include "kernels/factor_indef.hxx"
 #include "tasks/form_contrib.hxx"
 
@@ -26,8 +27,8 @@ namespace spldlt {
          NumericFront<T, PoolAlloc>& node,
          std::vector<spral::ssids::cpu::Workspace>& workspaces, 
          // spral::ssids::cpu::Workspace& work,
-         const struct cpu_factor_options& options,
-         spral::ssids::cpu::ThreadStats& stats) {
+         sylver::options_t& options,
+         sylver::inform_t& stats) {
 
       int m = node.get_nrow();
       int n = node.get_ncol();
@@ -55,7 +56,7 @@ namespace spldlt {
       if (node.nelim < n) {
          // printf("[factor_front_indef_failed] nelim = %d\n", node.nelim);
          nelim = node.nelim;
-         if(options.pivot_method!=PivotMethod::tpp)
+         if(options.pivot_method!=sylver::PivotMethod::tpp)
             stats.not_first_pass += n-nelim;
 
          // Use TPP factor to eliminate the remaining columns in the following cases:
@@ -63,8 +64,8 @@ namespace spldlt {
          // 2) We are at a root node;
          // 3) options.failed_pivot_method is set to tpp.
          if(m==n ||
-            options.pivot_method==PivotMethod::tpp ||
-            options.failed_pivot_method==FailedPivotMethod::tpp
+            options.pivot_method==sylver::PivotMethod::tpp ||
+            options.failed_pivot_method==sylver::FailedPivotMethod::tpp
                ) {
 
             T *ld = work.get_ptr<T>(m-nelim);
@@ -106,7 +107,7 @@ namespace spldlt {
 
             // printf("[factor_front_indef_failed] m = %d, n = %d, LDLT TPP = %e, form contrib = %e\n", m-nelim, n-nelim, 1e-9*t_factor, 1e-9*t_form_contrib);
 
-            if(options.pivot_method==PivotMethod::tpp) {
+            if(options.pivot_method==sylver::PivotMethod::tpp) {
                stats.not_first_pass += n - node.nelim;
             } else {
                // printf("[factor_front_indef_failed] Not second pass = %d\n", n-node.nelim);

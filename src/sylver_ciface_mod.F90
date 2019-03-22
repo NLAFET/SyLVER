@@ -8,6 +8,7 @@ module sylver_ciface_mod
   !> @brief Interoperable subset of sylver_options structure
   type , bind(c) :: options_c
      integer(C_INT) :: print_level
+     logical(C_BOOL) :: action
      real(C_DOUBLE) :: small
      real(C_DOUBLE) :: u
      real(C_DOUBLE) :: multiplier
@@ -40,6 +41,7 @@ contains
     type(options_c), intent(inout) :: coptions
 
     coptions%print_level    = foptions%print_level
+    coptions%action          = foptions%action
     coptions%small          = foptions%small
     coptions%u              = foptions%u
     coptions%small_subtree_threshold     = foptions%small_subtree_threshold

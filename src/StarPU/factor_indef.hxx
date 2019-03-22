@@ -4,6 +4,7 @@
 #pragma once
 
 // SyLVER
+#include "sylver_ciface.hxx"
 #include "factor_indef.hxx"
 
 // StarPU
@@ -21,8 +22,8 @@ namespace spldlt { namespace starpu {
          NumericFront<T, PoolAlloc> *node;
          std::vector<spral::ssids::cpu::Workspace> *workspaces;
          PoolAlloc *pool_alloc;
-         struct cpu_factor_options *options;
-         std::vector<ThreadStats> *worker_stats;
+         sylver::options_t *options;
+         std::vector<sylver::inform_t> *worker_stats;
       
          starpu_codelet_unpack_args (
                cl_arg, &node, &workspaces, &pool_alloc, &options, 
@@ -47,8 +48,8 @@ namespace spldlt { namespace starpu {
             NumericFront<T, PoolAlloc> *node,
             std::vector<spral::ssids::cpu::Workspace> *workspaces,
             PoolAlloc *pool_alloc,
-            struct cpu_factor_options *options,
-            std::vector<ThreadStats> *worker_stats
+            sylver::options_t *options,
+            std::vector<sylver::inform_t> *worker_stats
             ) {
 
          int ret;
@@ -59,8 +60,8 @@ namespace spldlt { namespace starpu {
                STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
                STARPU_VALUE, &workspaces, sizeof(std::vector<spral::ssids::cpu::Workspace>*),
                STARPU_VALUE, &pool_alloc, sizeof(PoolAlloc*),
-               STARPU_VALUE, &options, sizeof(struct cpu_factor_options *),
-               STARPU_VALUE, &worker_stats, sizeof(std::vector<ThreadStats> *),
+               STARPU_VALUE, &options, sizeof(sylver::options_t*),
+               STARPU_VALUE, &worker_stats, sizeof(std::vector<sylver::inform_t> *),
                0);
          STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
       }

@@ -864,7 +864,9 @@ namespace starpu {
       // options->failed_pivot_method);
 
       struct spral::ssids::cpu::cpu_factor_options subtree_opts;
-      subtree_opts = *options;
+      // Setup options for SSIDS
+      options->copy(subtree_opts);
+      // subtree_opts = *options;
       subtree_opts.cpu_block_size = 256; // TODO add new parameter for blksz in subtrees
       // printf("[factor_subtree_cpu_func] cpu_block_size = %d\n", subtree_opts.cpu_block_size);
 
@@ -942,8 +944,8 @@ namespace starpu {
          int p, // Subtree index
          T *aval,
          void **child_contrib,
-         struct spral::ssids::cpu::cpu_factor_options *options,
-         std::vector<ThreadStats> *worker_stats,
+         sylver::options_t *options,
+         std::vector<sylver::inform_t> *worker_stats,
          int workerid // Worker index
          ) {
 
@@ -960,9 +962,9 @@ namespace starpu {
             STARPU_VALUE, &p, sizeof(int),
             STARPU_VALUE, &aval, sizeof(T*),
             STARPU_VALUE, &child_contrib, sizeof(void**),
-            STARPU_VALUE, &options, sizeof(struct spral::ssids::cpu::cpu_factor_options*),
-            STARPU_VALUE, &worker_stats, sizeof(std::vector<ThreadStats>*),
-            0);      
+            STARPU_VALUE, &options, sizeof(sylver::options_t*),
+            STARPU_VALUE, &worker_stats, sizeof(std::vector<sylver::inform_t>*),
+            0);
       
       STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");  
    }
@@ -978,8 +980,8 @@ namespace starpu {
          int p, // Subtree index
          T *aval,
          void **child_contrib,
-         struct spral::ssids::cpu::cpu_factor_options *options,
-         std::vector<ThreadStats> *worker_stats,
+         sylver::options_t *options,
+         std::vector<sylver::inform_t> *worker_stats,
          int loc // Locality index
          ) {
 
@@ -994,8 +996,8 @@ namespace starpu {
                STARPU_VALUE, &p, sizeof(int),
                STARPU_VALUE, &aval, sizeof(T*),
                STARPU_VALUE, &child_contrib, sizeof(void**),
-               STARPU_VALUE, &options, sizeof(struct spral::ssids::cpu::cpu_factor_options*),
-               STARPU_VALUE, &worker_stats, sizeof(std::vector<ThreadStats>*),
+               STARPU_VALUE, &options, sizeof(sylver::options_t*),
+               STARPU_VALUE, &worker_stats, sizeof(std::vector<sylver::inform_t>*),
                STARPU_SCHED_CTX, loc,
                0);
 
@@ -1009,13 +1011,11 @@ namespace starpu {
                STARPU_VALUE, &p, sizeof(int),
                STARPU_VALUE, &aval, sizeof(T*),
                STARPU_VALUE, &child_contrib, sizeof(void**),
-               STARPU_VALUE, &options, sizeof(struct spral::ssids::cpu::cpu_factor_options*),
-               STARPU_VALUE, &worker_stats, sizeof(std::vector<ThreadStats>*),
+               STARPU_VALUE, &options, sizeof(sylver::options_t*),
+               STARPU_VALUE, &worker_stats, sizeof(std::vector<sylver::inform_t>*),
                0);
       }
-
       STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
-
    }
 
    // Get contrib task
