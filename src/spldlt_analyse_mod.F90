@@ -533,6 +533,11 @@ contains
     integer, dimension(:), allocatable :: order2
     integer(long), dimension(:), allocatable :: ptr2 ! col ptrs for expanded mat
     integer, dimension(:), allocatable :: row2 ! row indices for expanded matrix
+
+    ! The following are only used for matching-based orderings
+    real(wp), dimension(:), allocatable :: val2 ! expanded matrix if
+      ! val is present.
+
     integer :: ncpu_topo, ngpu_topo
     
     st = 0
@@ -609,6 +614,10 @@ contains
        call metis_order(n, ptr, row, order2, akeep%invp, &
             flag, inform%stat)
        call expand_pattern(n, nz, ptr, row, ptr2, row2)
+       if (flag .lt. 0) then
+          inform%flag = SYLVER_ERROR_ORDER
+          go to 200
+       end if
     case(2)
        ! matching-based ordering required
        ! Expand the matrix as more efficient to do it and then
