@@ -260,7 +260,7 @@ contains
 #if defined(SPLDLT_USE_GPU)
     use spral_ssids_gpu_subtree, only : construct_gpu_symbolic_subtree
 #endif
-    use sylver_datatypes_mod, only: spldlt_options
+    use sylver_datatypes_mod, only: spldlt_options, set_ssids_options
     implicit none
 
     type(spldlt_akeep_type), target, intent(inout) :: spldlt_akeep ! spldlt akeep structure 
@@ -274,12 +274,13 @@ contains
     integer, dimension(n), intent(out) :: invp 
       ! Work array. Used to hold inverse of order but
       ! is NOT set to inverse for the final order that is returned.
-    type(spldlt_options), target, intent(in) :: options
+    ! type(spldlt_options), target, intent(in) :: options
+    type(sylver_options), target, intent(in) :: options
     type(sylver_inform), intent(inout) :: inform
 
     character(50)  :: context ! Procedure name (used when printing).
     type(ssids_akeep), pointer :: akeep ! SSIDS akeep structure
-    type(ssids_options), pointer :: ssids_opts ! SSIDS options 
+    type(ssids_options) :: ssids_opts ! SSIDS options 
 
     integer :: nemin, flag
     integer :: i, j
@@ -298,10 +299,18 @@ contains
     
     context = 'analyse_core'
     akeep => spldlt_akeep%akeep
-    ssids_opts => options%super
+    ! Print status on entry
+    call options%print_summary_analyse(context)
+    if ((options%print_level .ge. 1) .and. (options%unit_diagnostics .ge. 0)) then
+       write (options%unit_diagnostics,'(a,i15)') &
+            ' n                         =  ',n
+    end if
+
+    ! Init SSIDS options using SyLVER options
+    call set_ssids_options(options, ssids_opts)
 
     ! Check nemin and set to default if out of range.
-    nemin = ssids_opts%nemin
+    nemin = options%nemin
     if (nemin .lt. 1) nemin = nemin_default
 
     ! Perform basic analysis so we can figure out subtrees we want to construct
@@ -370,10 +379,9 @@ contains
     subtree_sa = 0
     spldlt_akeep%subtree_en = 0
 
-    ! Find out sequential subtrees
     if (options%prune_tree) then
-
        ! Sort out subtrees
+
 #if defined(SPLDLT_USE_OMP)       
        call find_subtree_partition(akeep%nnodes, akeep%sptr, akeep%sparent,           &
             akeep%rptr, ssids_opts, akeep%topology, akeep%nparts, akeep%part,            &
@@ -400,7 +408,7 @@ contains
 #else
 
        call prune_tree(akeep%nnodes, akeep%sptr, akeep%sparent, akeep%rptr, &
-            nth, ngpu, options%super%gpu_perf_coeff, &
+            nth, ngpu, options%gpu_perf_coeff, &
             spldlt_akeep%nsubtrees, small, contrib_dest, subtree_sa, &
             spldlt_akeep%subtree_en, exec_loc)
 
@@ -502,7 +510,8 @@ contains
     integer, intent(in) :: n ! Matrix dimension
     integer(long), intent(in) :: ptr(:)
     integer, intent(in) :: row(:)
-    type(spldlt_options), target, intent(in) :: options ! SpLDLT options
+    ! type(spldlt_options), target, intent(in) :: options ! SpLDLT options
+    type(sylver_options), target, intent(in) :: options ! SpLDLT options
     type(sylver_inform), intent(inout) :: inform
     integer, dimension(:), allocatable, optional, intent(in) :: order
     real(wp), optional, intent(in) :: val(:) ! Matrix numerical values
@@ -516,7 +525,7 @@ contains
     ! integer, dimension(:), allocatable :: contrib_dest, exec_loc
     integer :: st ! Error management
     integer(long) :: nz     ! entries in expanded matrix
-    type(ssids_options), pointer :: ssids_opts ! SSIDS options 
+    ! type(ssids_options), pointer :: ssids_opts ! SSIDS options 
 
     ! Debug
     ! class(cpu_symbolic_subtree), pointer :: subtree_ptr => null()
@@ -531,7 +540,9 @@ contains
     
     ! Prepare analysis phase
     akeep => spldlt_akeep%akeep
-    ssids_opts => options%super
+    ! ssids_opts => options%super
+
+    
 
     ! Initialize
     context = 'spldlt_analyse'
@@ -563,7 +574,7 @@ contains
 
     allocate(akeep%invp(n),order2(n),ptr2(n+1),row2(2*nz),stat=st)
 
-    select case(ssids_opts%ordering)
+    select case(options%ordering)
     case(0)
        print *, "Not implemented"
        ! TODO
@@ -615,16 +626,18 @@ contains
     ! perform rest of analyse
     ! if (check) then
     ! else
-    call analyse_core(spldlt_akeep, n, ptr, row, ptr2, row2, order2, akeep%invp, &
-         options, inform)
+    call analyse_core(spldlt_akeep, n, ptr, row, ptr2, row2, order2, &
+         akeep%invp, options, inform)
     ! end if
 
+200 continue
+    spldlt_akeep%inform = inform
+    call inform%print_flag(options, context)
     return
 100 continue
-        
-    print *, "[Error][spldlt_analyse] st: ", st
-
-    return
+    inform%flag = SSIDS_ERROR_ALLOCATION
+    inform%stat = st
+    goto 200
   end subroutine spldlt_analyse  
   
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

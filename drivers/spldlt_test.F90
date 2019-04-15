@@ -123,7 +123,7 @@ program spldlt_test
    ! options%prune_tree = .false. ! Deactivate tree pruning
 
    ! Perform analysis
-   ! call spldlt_analyse(spldlt_akeep, n, ptr, row, options, inform, val=val, ncpu=ncpu, ngpu=ngpu)
+   call spldlt_analyse(spldlt_akeep, n, ptr, row, options, inform, val=val, ncpu=ncpu, ngpu=ngpu)
 
    ! Print assembly tree in dotfile
    ! call spldlt_print_atree(akeep)

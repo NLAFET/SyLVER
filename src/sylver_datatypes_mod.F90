@@ -100,7 +100,13 @@ module sylver_datatypes_mod
        ! 1 METIS ordering with default settings is used.
        ! 2 Matching with METIS on compressed matrix.
      integer :: nemin = sylver_nemin_default ! Amalgamation parameter.
+
+     !
+     ! Tree partitioning
+     !     
      logical :: prune_tree = .true. ! Partition tree using pruning 
+     integer(long) :: min_gpu_work = 5*10**9_long ! Only assign subtree to GPU
+       ! if it contains at least this many flops
      
      !
      ! Options used by splu_factor()
@@ -239,5 +245,29 @@ contains
             this%multiplier
     end if
   end subroutine print_summary_factor
+
+  !> @brief Initialize SSIDS options using SyLVER options
+  subroutine set_ssids_options(sylver_opts, ssids_opts)
+    use spral_ssids_datatypes
+    implicit none
+
+    type(sylver_options), target, intent(in) :: sylver_opts
+    type(ssids_options), target, intent(inout) :: ssids_opts
+
+    ! Printing
+    ssids_opts%print_level = sylver_opts%print_level
+    ssids_opts%unit_diagnostics = sylver_opts%unit_diagnostics
+    ssids_opts%unit_error = sylver_opts%unit_error
+    ssids_opts%unit_warning  = sylver_opts%unit_warning
+
+    ! GPU
+    ssids_opts%gpu_perf_coeff = sylver_opts%gpu_perf_coeff
+    ssids_opts%min_gpu_work = sylver_opts%min_gpu_work
+
+    ! CPU
+    ssids_opts%small_subtree_threshold = sylver_opts%small_subtree_threshold 
+    ! ssids_opts% = sylver_opts%
+
+  end subroutine set_ssids_options
 
 end module sylver_datatypes_mod
