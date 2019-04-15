@@ -8,7 +8,6 @@ module spldlt_analyse_mod
   use spral_ssids_cpu_iface ! fixme only
   use spral_ssids_datatypes
   use spral_hw_topology, only: numa_region
-  ! use spral_ssids_inform, only : ssids_inform
   use sylver_inform_mod
   implicit none
 
@@ -299,12 +298,6 @@ contains
     
     context = 'analyse_core'
     akeep => spldlt_akeep%akeep
-    ! Print status on entry
-    call options%print_summary_analyse(context)
-    if ((options%print_level .ge. 1) .and. (options%unit_diagnostics .ge. 0)) then
-       write (options%unit_diagnostics,'(a,i15)') &
-            ' n                         =  ',n
-    end if
 
     ! Init SSIDS options using SyLVER options
     call set_ssids_options(options, ssids_opts)
@@ -479,14 +472,16 @@ contains
     deallocate(subtree_sa)
     deallocate(exec_loc)
 
-    return
-    
+200 continue
+    spldlt_akeep%inform = inform
+    call inform%print_flag(options, context)
+    return    
 100 continue
     inform%stat = st
     if (inform%stat .ne. 0) then
        inform%flag = SYLVER_ERROR_ALLOCATION
     end if
-    return
+    goto 200
     
   end subroutine analyse_core
 
@@ -500,7 +495,8 @@ contains
     use spral_metis_wrapper, only : metis_order
     use spral_ssids_akeep, only: ssids_akeep
     use spral_ssids_datatypes
-    use spral_ssids_anal, only : expand_pattern
+    use spral_ssids_anal, only : expand_pattern, check_order
+  use spral_ssids_inform, only : ssids_inform
     ! use spral_ssids_cpu_subtree, only : construct_cpu_symbolic_subtree, cpu_symbolic_subtree
     use sylver_datatypes_mod, only: spldlt_options
     use, intrinsic :: iso_c_binding
@@ -513,7 +509,7 @@ contains
     ! type(spldlt_options), target, intent(in) :: options ! SpLDLT options
     type(sylver_options), target, intent(in) :: options ! SpLDLT options
     type(sylver_inform), intent(inout) :: inform
-    integer, dimension(:), allocatable, optional, intent(in) :: order
+    integer, dimension(:), allocatable, optional, intent(inout) :: order
     real(wp), optional, intent(in) :: val(:) ! Matrix numerical values
     integer, optional, intent(inout) :: ncpu ! Number of CPU workers
     integer, optional, intent(inout) :: ngpu ! Number of GPU workers
@@ -525,7 +521,8 @@ contains
     ! integer, dimension(:), allocatable :: contrib_dest, exec_loc
     integer :: st ! Error management
     integer(long) :: nz     ! entries in expanded matrix
-    ! type(ssids_options), pointer :: ssids_opts ! SSIDS options 
+    type(ssids_options) :: ssids_opts ! SSIDS options 
+    type(ssids_inform) :: ssids_info
 
     ! Debug
     ! class(cpu_symbolic_subtree), pointer :: subtree_ptr => null()
@@ -538,29 +535,48 @@ contains
     integer, dimension(:), allocatable :: row2 ! row indices for expanded matrix
     integer :: ncpu_topo, ngpu_topo
     
+    st = 0
     ! Prepare analysis phase
     akeep => spldlt_akeep%akeep
-    ! ssids_opts => options%super
-
-    
+    ! Init SSIDS options using SyLVER options
+    call set_ssids_options(options, ssids_opts)
 
     ! Initialize
     context = 'spldlt_analyse'
     call ssids_free(akeep, free_flag)
-    ! TODO Check error flags for ssids_free
-    ! if (free_flag .ne. 0) then
-    !    return
-    ! end if
+    if (free_flag .ne. 0) then
+       inform%flag = SYLVER_ERROR_CUDA_UNKNOWN
+       goto 200    
+    end if
+    ! Print status on entry
+    call options%print_summary_analyse(context)
+    if ((options%print_level .ge. 1) .and. (options%unit_diagnostics .ge. 0)) then
+       write (options%unit_diagnostics,'(a,i15)') &
+            ' n                         =  ',n
+    end if
 
     akeep%check = check
     akeep%n = n
-    
-    ! TODO As in SSIDS analyse_double routine
-    ! Checking of matrix data
-    ! Check options%ordering has a valid value
-    ! check val present when expected
 
-    st = 0
+    ! Checking of matrix data
+    if (n .lt. 0) then
+       inform%flag = SYLVER_ERROR_A_N_OOR
+       goto 200
+    end if
+
+    if (n .eq. 0) then
+       akeep%nnodes = 0
+       allocate(akeep%sptr(0), stat=st) ! used to check if analyse has been run
+       if (st .ne. 0) go to 100
+       goto 200
+    end if
+
+    ! check options%ordering has a valid value
+    if ((options%ordering .lt. 0) .or. (options%ordering .gt. 2)) then
+       inform%flag = SYLVER_ERROR_ORDER
+       goto 200
+    end if
+    
     ! if (check) then
     ! TODO
     ! else
@@ -576,8 +592,18 @@ contains
 
     select case(options%ordering)
     case(0)
-       print *, "Not implemented"
-       ! TODO
+       if (.not. present(order)) then
+          ! we have an error since user should have supplied the order
+          inform%flag = SYLVER_ERROR_ORDER
+          goto 200
+       end if
+       call check_order(n,order,akeep%invp,ssids_opts,ssids_info)
+       if (ssids_info%flag .lt. 0) then
+          inform%flag = SYLVER_ERROR_ORDER 
+          go to 200
+       end if
+       order2(1:n) = order(1:n)
+       call expand_pattern(n, nz, ptr, row, ptr2, row2)
     case(1)
        ! METIS ordering
        call metis_order(n, ptr, row, order2, akeep%invp, &
