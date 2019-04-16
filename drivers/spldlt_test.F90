@@ -123,7 +123,8 @@ program spldlt_test
    ! options%prune_tree = .false. ! Deactivate tree pruning
 
    ! Perform analysis
-   call spldlt_analyse(spldlt_akeep, n, ptr, row, options, inform, val=val, ncpu=ncpu, ngpu=ngpu)
+   call spldlt_analyse(spldlt_akeep, n, ptr, row, options, inform, val=val, &
+        ncpu=ncpu, ngpu=ngpu)
 
    ! Print assembly tree in dotfile
    ! call spldlt_print_atree(akeep)
@@ -205,6 +206,22 @@ program spldlt_test
         call get_command_argument(argnum, argval)
         argnum = argnum + 1
         select case(argval)
+        case("--scale=none")
+           options%scaling = 0 ! None
+           print *, "Set scaling to None"
+        case("--scale=mc64")
+           options%scaling = 1 ! MC64
+           print *, "Set scaling to MC64"
+        case("--scale=auction")
+           options%scaling = 2 ! Auction algorithm
+           print *, "Set scaling to Auction"
+        case("--scale=mc77")
+           options%scaling = 4 ! MC77 algorithm
+           print *, "Set scaling to MC77"
+        case("--ordering=mc64-metis")
+           options%ordering = 2 ! Matching-based ordering
+           options%scaling = 3 ! Scaling from matching ordering
+           print *, "Using matching-based ordering (scaling overwritten)"
         case("--nrhs")
            call get_command_argument(argnum, argval)
            argnum = argnum + 1

@@ -315,14 +315,14 @@ contains
        ! Do nothing
     case(-1)
        ! Allocation error
-       inform%flag = SSIDS_ERROR_ALLOCATION
+       inform%flag = SYLVER_ERROR_ALLOCATION
        return
     case(1)
        ! Zero row/column.
-       inform%flag = SSIDS_WARNING_ANAL_SINGULAR
+       inform%flag = SYLVER_WARNING_ANAL_SINGULAR
     case default
        ! Should never reach here
-       inform%flag = SSIDS_ERROR_UNKNOWN
+       inform%flag = SYLVER_ERROR_UNKNOWN
     end select
 
     ! set invp to hold inverse of order
@@ -495,8 +495,9 @@ contains
     use spral_metis_wrapper, only : metis_order
     use spral_ssids_akeep, only: ssids_akeep
     use spral_ssids_datatypes
-    use spral_ssids_anal, only : expand_pattern, check_order
-  use spral_ssids_inform, only : ssids_inform
+    use spral_ssids_anal, only : expand_pattern, check_order, expand_matrix
+    use spral_ssids_inform, only : ssids_inform
+    use spral_match_order, only : match_order_metis
     ! use spral_ssids_cpu_subtree, only : construct_cpu_symbolic_subtree, cpu_symbolic_subtree
     use sylver_datatypes_mod, only: spldlt_options
     use, intrinsic :: iso_c_binding
@@ -524,9 +525,8 @@ contains
     type(ssids_options) :: ssids_opts ! SSIDS options 
     type(ssids_inform) :: ssids_info
 
-    ! Debug
-    ! class(cpu_symbolic_subtree), pointer :: subtree_ptr => null()
     ! Error flags
+    integer :: mo_flag ! matching-based ordering flag
     integer :: free_flag
     integer :: flag ! Error flag for metis
 
@@ -537,13 +537,13 @@ contains
     ! The following are only used for matching-based orderings
     real(wp), dimension(:), allocatable :: val2 ! expanded matrix if
       ! val is present.
-
+    
     integer :: ncpu_topo, ngpu_topo
     
     st = 0
     ! Prepare analysis phase
     akeep => spldlt_akeep%akeep
-    ! Init SSIDS options using SyLVER options
+    ! Init SSIDS options with SyLVER options
     call set_ssids_options(options, ssids_opts)
 
     ! Initialize
@@ -581,6 +581,14 @@ contains
        inform%flag = SYLVER_ERROR_ORDER
        goto 200
     end if
+
+    ! check val present when expected
+    if (options%ordering .eq. 2) then
+       if (.not. present(val)) then
+          inform%flag = SYLVER_ERROR_VAL
+          goto 200
+       end if
+    end if
     
     ! if (check) then
     ! TODO
@@ -594,6 +602,11 @@ contains
     !
 
     allocate(akeep%invp(n),order2(n),ptr2(n+1),row2(2*nz),stat=st)
+    if (st .ne. 0) go to 100
+    if (options%ordering .eq. 2) then
+       allocate(akeep%scaling(n), val2(2*nz), stat=st)
+       if (st .ne. 0) go to 100
+    end if
 
     select case(options%ordering)
     case(0)
@@ -622,8 +635,27 @@ contains
        ! matching-based ordering required
        ! Expand the matrix as more efficient to do it and then
        ! call match_order_metis() with full matrix supplied
-       print *, "Not implemented"
-       ! TODO
+
+       call expand_matrix(n, nz, ptr, row, val, ptr2, row2, val2)
+
+       call match_order_metis(n, ptr2, row2, val2, order2, akeep%scaling, &
+            mo_flag, inform%stat)
+
+       select case(mo_flag)
+       case(0)
+          ! Success; do nothing
+       case(1)
+          ! singularity warning required
+          inform%flag = SYLVER_WARNING_ANAL_SINGULAR
+       case(-1)
+          inform%flag = SYLVER_ERROR_ALLOCATION
+          goto 200
+       case default
+          inform%flag = SYLVER_ERROR_UNKNOWN
+          goto 200
+       end select
+
+       deallocate(val2,stat=st)
     end select
 
     ! Define the number of CPU workers
@@ -639,9 +671,6 @@ contains
     else
        ngpu_topo = 0
     endif
-
-    ! ncpu = 2
-    ! ncpu_topo = 2*ncpu
 
     ! Create flat topology
     if (allocated(akeep%topology)) deallocate(akeep%topology, stat=st)
@@ -664,6 +693,10 @@ contains
     call analyse_core(spldlt_akeep, n, ptr, row, ptr2, row2, order2, &
          akeep%invp, options, inform)
     ! end if
+
+    if (present(order)) order(1:n) = abs(order2(1:n))
+    ! if (options%print_level .gt. DEBUG_PRINT_LEVEL) &
+    !      print *, "order = ", order2(1:n)
 
 200 continue
     spldlt_akeep%inform = inform

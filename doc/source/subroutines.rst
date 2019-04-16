@@ -37,6 +37,15 @@ SpLDLT
       <http://www.numerical.rl.ac.uk/spral/doc/latest/Fortran/csc_format.html>`_). Only
       used if a matching-based ordering is requested.
 
+   .. note::
+
+      If a user-supplied ordering is used, it may be altered by this
+      routine, with the altered version returned in order(:). This
+      version will be equivalent to the original ordering, except that
+      some supernodes may have been amalgamated, a topological
+      ordering may have been applied to the assembly tree and the
+      order of columns within a supernode may have been adjusted to
+      improve cache locality.
 
 .. f:subroutine::  spldlt_factor(akeep,fkeep,posdef,val,options,inform[,scale,ptr,row])
 
@@ -55,6 +64,13 @@ SpLDLT
       :math:`S_{ii}` of :math:`S`. Must be supplied by user if
       ``options%scaling=0`` (user-supplied scaling). On exit, return scaling
       used.
+   :o integer(long) ptr(n+1) [in]: column pointers for :math:`A`, only
+      required if scaling is required (options%scaling > 0) expect in
+      the case where matching-based ordering is done (options%scaling = 3)
+   :o integer row(ptr(n+1)-1) [in]: row indices for :math:`A`, only
+      required if scaling is required (options%scaling > 0) expect in
+      the case where matching-based ordering is done (options%scaling
+      = 3)
 
 .. f:subroutine:: spldlt_solve(akeep,fkeep,nrhs,x,ldx,options,inform[,job])
 

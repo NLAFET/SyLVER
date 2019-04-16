@@ -3,6 +3,7 @@
 !> @author    Florent Lopez
 module sylver_datatypes_mod
   use spral_ssids_datatypes
+  use spral_scaling, only : auction_options
   implicit none
 
   integer, parameter, public :: sylver_nemin_default = 32 ! Node amalgamation
@@ -156,6 +157,7 @@ module sylver_datatypes_mod
      !
      ! Undocumented
      !
+     type(auction_options) :: auction ! Auction algorithm parameters
      real(wp) :: multiplier = 1.1 ! size to multiply expected memory size by
        ! when doing initial memory allocation to allow for delays.
      integer :: failed_pivot_method = SYLVER_FAILED_PIVOT_METHOD_TPP

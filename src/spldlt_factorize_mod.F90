@@ -615,7 +615,7 @@ contains
   end subroutine factor_core
 
   subroutine spldlt_factorize(spldlt_akeep, spldlt_fkeep, posdef, val, &
-       options, inform)
+       options, inform, scale, ptr, row)
     use spral_ssids_datatypes
     ! use spral_ssids_inform, only : ssids_inform
     use spral_ssids_akeep, only : ssids_akeep
@@ -631,6 +631,10 @@ contains
          SPRAL_MATRIX_REAL_SYM_PSDEF, &
          convert_coord_to_cscl, clean_cscl_oop, &
          apply_conversion_map
+    use spral_scaling, only : auction_scale_sym, equilib_scale_sym, &
+         hungarian_scale_sym, &
+         equilib_options, equilib_inform, &
+         hungarian_options, hungarian_inform
     implicit none
     
     type(spldlt_akeep_type), target, intent(in) :: spldlt_akeep ! Symbolic data from analyse
@@ -641,6 +645,15 @@ contains
     type(sylver_options), intent(in) :: options ! User's options
     ! type(ssids_inform), intent(inout) :: inform
     type(sylver_inform), intent(inout) :: inform ! Stat data
+    real(wp), dimension(:), optional, intent(inout) :: scale ! used to hold
+      ! row and column scaling factors. Must be set on entry if
+      ! options%scaling <= 0
+      ! Note: Has to be assumed shape, not assumed size or fixed size to work
+      ! around funny compiler bug
+    integer(long), dimension(spldlt_akeep%akeep%n+1), optional, intent(in) :: ptr ! Must 
+    ! be provided if scaling is required
+    integer, dimension(*), optional, intent(in) :: row ! Must be
+    ! provided if scaling is required
 
     ! type(ssids_options), pointer :: ssids_opts ! SSIDS options 
     type(ssids_akeep), pointer :: akeep
@@ -652,11 +665,17 @@ contains
     ! Error management
     character(50)  :: context      ! Procedure name (used when printing).
     integer :: st
+    real(wp), dimension(:), allocatable :: scaling
 
-    akeep => spldlt_akeep%akeep
-    fkeep => spldlt_fkeep%fkeep
+    ! Types related to scaling routines
+    type(hungarian_options) :: hsoptions
+    type(hungarian_inform) :: hsinform
+    type(equilib_options) :: esoptions
+    type(equilib_inform) :: esinform
+
+    akeep => spldlt_akeep%akeep ! SSIDS analyse data
+    fkeep => spldlt_fkeep%fkeep ! SSIDS factor data
     fkeep%pos_def = posdef
-    ! ssids_opts => options%super
 
     ! Setup for any printing we may require
     context = 'spldlt_factor'
@@ -706,25 +725,138 @@ contains
     !    end if
     ! end if
 
-    !
+    !    
     ! Perform scaling if required
     !
-    ! if ((options%scaling .gt. 0) .or. present(scale)) then
-    !    if (allocated(fkeep%scaling)) then
-    !       if (size(fkeep%scaling) .lt. n) then
-    !          deallocate(fkeep%scaling, stat=st)
-    !          allocate(fkeep%scaling(n), stat=st)
-    !       end if
-    !    else
-    !       allocate(fkeep%scaling(n), stat=st)
-    !    end if
-    !    if (st .ne. 0) go to 10
-    ! else
-    !    deallocate(fkeep%scaling, stat=st)
-    ! end if
+    if ((options%scaling .gt. 0) .or. present(scale)) then
+       if (allocated(fkeep%scaling)) then
+          if (size(fkeep%scaling) .lt. n) then
+             deallocate(fkeep%scaling, stat=st)
+             allocate(fkeep%scaling(n), stat=st)
+          end if
+       else
+          allocate(fkeep%scaling(n), stat=st)
+       end if
+       if (st .ne. 0) go to 100
+    else
+       deallocate(fkeep%scaling, stat=st)
+    end if
 
-    ! TODO
-    ! ...
+    ! Check if scaling computed during analysis is being ignored 
+    if (allocated(akeep%scaling) .and. (options%scaling .ne. 3)) then
+       inform%flag = SYLVER_WARNING_MATCH_ORD_NO_SCALE
+       call inform%print_flag(options, context)
+    end if
+
+    select case (options%scaling)
+    case(:0) ! User supplied or none
+       if (present(scale)) then
+          do i = 1, n
+             fkeep%scaling(i) = scale(akeep%invp(i))
+          end do
+       end if
+    case(1) ! Matching-based scaling by Hungarian Algorithm (MC64 algorithm)
+       ! Allocate space for scaling
+       allocate(scaling(n), stat=st)
+       if (st .ne. 0) goto 100
+       ! Run Hungarian algorithm
+       hsoptions%scale_if_singular = options%action
+       ! if (akeep%check) then
+          ! call hungarian_scale_sym(n, akeep%ptr, akeep%row, val2, scaling, &
+               ! hsoptions, hsinform)
+       ! else
+       call hungarian_scale_sym(n, ptr, row, val, scaling, &
+            hsoptions, hsinform)
+       ! end if
+       select case(hsinform%flag)
+       case(-1)
+          ! Allocation error
+          st = hsinform%stat
+          goto 100
+       case(-2)
+          ! Structually singular matrix and control%action=.false.
+          inform%flag = SYLVER_ERROR_SINGULAR
+          goto 200
+       end select
+       ! Permute scaling to correct order
+       do i = 1, n
+          fkeep%scaling(i) = scaling(akeep%invp(i))
+       end do
+       ! Copy scaling(:) to user array scale(:) if present
+       if (present(scale)) then
+          scale(1:n) = scaling(1:n)
+       end if
+       ! Cleanup memory
+       deallocate(scaling, stat=st)
+
+    case(2) ! Matching-based scaling by Auction Algorithm
+       ! Allocate space for scaling
+       allocate(scaling(n), stat=st)
+       if (st .ne. 0) goto 100
+       ! Run auction algorithm
+       ! if (akeep%check) then
+          ! call auction_scale_sym(n, akeep%ptr, akeep%row, val2, scaling, &
+               ! options%auction, inform%auction)
+       ! else
+       call auction_scale_sym(n, ptr, row, val, scaling, &
+            options%auction, inform%auction)
+       ! end if
+       if (inform%auction%flag .ne. 0) then
+          ! only possible error is allocation failed
+          st = inform%auction%stat
+          goto 100 
+       end if
+       ! Permute scaling to correct order
+       do i = 1, n
+          fkeep%scaling(i) = scaling(akeep%invp(i))
+       end do
+       ! Copy scaling(:) to user array scale(:) if present
+       if (present(scale)) then
+          scale(1:n) = scaling(1:n)
+       end if
+       ! Cleanup memory
+       deallocate(scaling, stat=st)
+
+    case(3) ! Scaling generated during analyse phase for matching-based order
+       if (.not. allocated(akeep%scaling)) then
+          ! No scaling saved from analyse phase
+          inform%flag = SYLVER_ERROR_NO_SAVED_SCALING
+          goto 100
+       end if
+       do i = 1, n
+          fkeep%scaling(i) = akeep%scaling(akeep%invp(i))
+       end do
+
+    case(4:) ! Norm equilibriation algorithm (MC77 algorithm)
+       ! Allocate space for scaling
+       allocate(scaling(n), stat=st)
+       if (st .ne. 0) goto 100
+       ! Run equilibriation algorithm
+       ! if (akeep%check) then
+          ! call equilib_scale_sym(n, akeep%ptr, akeep%row, val2, scaling, &
+               ! esoptions, esinform)
+       ! else
+       call equilib_scale_sym(n, ptr, row, val, scaling, &
+            esoptions, esinform)
+       ! end if
+       if (esinform%flag .ne. 0) then
+          ! Only possible error is memory allocation failure
+          st = esinform%stat
+          goto 100
+       end if
+       ! Permute scaling to correct order
+       do i = 1, n
+          fkeep%scaling(i) = scaling(akeep%invp(i))
+       end do
+       ! Copy scaling(:) to user array scale(:) if present
+       if (present(scale)) then
+          do i = 1, n
+             scale(akeep%invp(i)) = fkeep%scaling(i)
+          end do
+       end if
+       ! Cleanup memory
+       deallocate(scaling, stat=st)
+    end select
 
     ! Setup data storage
     if (allocated(fkeep%subtree)) then
@@ -739,6 +871,17 @@ contains
 
     ! Call main factorization routine
     call factor_core(spldlt_akeep, spldlt_fkeep, val, options, inform)
+
+    ! if (akeep%n .ne. inform%matrix_rank) then
+    !    ! Rank deficient
+    !    ! Note: If we reach this point then must be options%action=.true.
+    !    if (options%action) then
+    !       inform%flag = SYLVER_WARNING_FACT_SINGULAR
+    !    else
+    !       inform%flag = SYLVER_ERROR_SINGULAR
+    !    end if
+    !    call inform%print_flag(options, context)
+    ! end if
 
     if ((options%print_level .ge. 1) .and. (options%unit_diagnostics .ge. 0)) then
        write (options%unit_diagnostics,'(/a)') &
@@ -775,7 +918,7 @@ contains
   end subroutine spldlt_factorize
 
   ! Solve phase
-  subroutine solve(spldlt_fkeep, spldlt_akeep, nrhs, x, ldx, inform)
+  subroutine solve(spldlt_fkeep, spldlt_akeep, nrhs, x, ldx, inform, job)
     use spral_ssids_datatypes
     use spral_ssids_fkeep, only : ssids_fkeep
     use spral_ssids_inform, only : ssids_inform
@@ -789,12 +932,15 @@ contains
     integer, intent(in) :: ldx
     real(wp), dimension(ldx,nrhs), intent(inout) :: x
     type(sylver_inform), intent(inout) :: inform
+    integer, intent(inout), optional :: job
 
     type(ssids_inform) :: ssids_info
     real(wp), dimension(:,:), allocatable :: x2
     type(ssids_akeep) :: akeep
     type(ssids_fkeep), pointer :: fkeep
+    integer :: local_job
 
+    integer :: i
     integer :: r
     integer :: n
     integer :: part
@@ -810,6 +956,10 @@ contains
 
     allocate(x2(n, nrhs), stat=inform%stat)
     if(inform%stat.ne.0) goto 100
+
+    if (.not. present(job)) then
+       local_job = SYLVER_SOLVE_JOB_ALL 
+    end if
 
     ! print *, "solve, nrhs: ", nrhs, ", ldx: ", ldx
     ! print *, "solve, x: ", x
@@ -871,12 +1021,22 @@ contains
        if (ssids_info%stat .ne. 0) goto 100
     end do
 
-    ! un-permute and un-scale
-    ! TODO
-    ! Just copy
-    do r = 1, nrhs
-       x(akeep%invp(1:n), r) = x2(1:n, r)
-    end do
+    if (allocated(fkeep%scaling) .and. ( &
+         local_job == SYLVER_SOLVE_JOB_ALL .or. &
+         local_job == SYLVER_SOLVE_JOB_BWD .or. &
+         local_job == SYLVER_SOLVE_JOB_DIAG_BWD)) then
+       ! Copy and scale
+       do r = 1, nrhs
+          do i = 1, n
+             x(akeep%invp(i),r) = x2(i,r) * fkeep%scaling(i)
+          end do
+       end do
+    else
+
+       do r = 1, nrhs
+          x(akeep%invp(1:n), r) = x2(1:n, r)
+       end do
+    end if
 
    100 continue
    inform%flag = SSIDS_ERROR_ALLOCATION
