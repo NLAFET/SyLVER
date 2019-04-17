@@ -79,13 +79,15 @@ namespace starpu {
 
       NumericFront<T, PoolAlloc> *front = nullptr;
       T *aval;
+      T *scaling;
 
       starpu_codelet_unpack_args(
             cl_arg,
             &front,
-            &aval);
+            &aval,
+            &scaling);
 
-      init_node(*front, aval);
+      init_node(*front, aval, scaling);
    }
 
    // init_node StarPU codelet
@@ -103,7 +105,7 @@ namespace starpu {
    void insert_init_node(
          NumericFront<T, PoolAlloc> *front,
          starpu_data_handle_t node_hdl,
-         T *aval, int prio) {
+         T *aval, T *scaling, int prio) {
                   
       int ret;
 
@@ -131,6 +133,7 @@ namespace starpu {
             // STARPU_RW, node_hdl,
             STARPU_VALUE, &front, sizeof(NumericFront<T, PoolAlloc>*),
             STARPU_VALUE, &aval, sizeof(T*),
+            STARPU_VALUE, &scaling, sizeof(T*),
             STARPU_PRIORITY, prio,
             0);
 
@@ -902,6 +905,7 @@ namespace starpu {
       void *fkeep;
       int p;
       T *aval;
+      T *scaling;
       void **child_contrib;
       struct spral::ssids::cpu::cpu_factor_options *options;
       std::vector<ThreadStats> *worker_stats;
@@ -912,6 +916,7 @@ namespace starpu {
             &fkeep,
             &p,
             &aval,
+            &scaling,
             &child_contrib,
             &options,
             &worker_stats);
@@ -927,7 +932,7 @@ namespace starpu {
          
       // printf("[factor_subtree_cpu_func] akeep = %p, fkeep = %p\n", akeep, fkeep);
       // spldlt_factor_subtree_c(akeep, fkeep, p, aval, child_contrib, options, &stats);
-      factor_subtree(akeep, fkeep, p, aval, child_contrib, options, &stats);
+      factor_subtree(akeep, fkeep, p, aval, scaling, child_contrib, options, &stats);
    }
 #endif
    // factor_subtree StarPU codelet
@@ -943,6 +948,7 @@ namespace starpu {
          void *fkeep,
          int p, // Subtree index
          T *aval,
+         T *scaling,
          void **child_contrib,
          sylver::options_t *options,
          std::vector<sylver::inform_t> *worker_stats,
@@ -961,6 +967,7 @@ namespace starpu {
             STARPU_VALUE, &fkeep, sizeof(void*),
             STARPU_VALUE, &p, sizeof(int),
             STARPU_VALUE, &aval, sizeof(T*),
+            STARPU_VALUE, &scaling, sizeof(T*),
             STARPU_VALUE, &child_contrib, sizeof(void**),
             STARPU_VALUE, &options, sizeof(sylver::options_t*),
             STARPU_VALUE, &worker_stats, sizeof(std::vector<sylver::inform_t>*),
@@ -979,6 +986,7 @@ namespace starpu {
          void *fkeep,
          int p, // Subtree index
          T *aval,
+         T *scaling,
          void **child_contrib,
          sylver::options_t *options,
          std::vector<sylver::inform_t> *worker_stats,
@@ -995,6 +1003,7 @@ namespace starpu {
                STARPU_VALUE, &fkeep, sizeof(void*),
                STARPU_VALUE, &p, sizeof(int),
                STARPU_VALUE, &aval, sizeof(T*),
+               STARPU_VALUE, &scaling, sizeof(T*),
                STARPU_VALUE, &child_contrib, sizeof(void**),
                STARPU_VALUE, &options, sizeof(sylver::options_t*),
                STARPU_VALUE, &worker_stats, sizeof(std::vector<sylver::inform_t>*),
@@ -1010,6 +1019,7 @@ namespace starpu {
                STARPU_VALUE, &fkeep, sizeof(void*),
                STARPU_VALUE, &p, sizeof(int),
                STARPU_VALUE, &aval, sizeof(T*),
+               STARPU_VALUE, &scaling, sizeof(T*),
                STARPU_VALUE, &child_contrib, sizeof(void**),
                STARPU_VALUE, &options, sizeof(sylver::options_t*),
                STARPU_VALUE, &worker_stats, sizeof(std::vector<sylver::inform_t>*),
@@ -1466,11 +1476,12 @@ namespace starpu {
       void** child_contrib;
       FactorAlloc *factor_alloc;
       PoolAlloc *pool_alloc;
-      T *aval;
+      T *aval = nullptr;
+      T *scaling = nullptr;
 
       starpu_codelet_unpack_args(
             cl_arg, &posdef, &node, &child_contrib, 
-            &factor_alloc, &pool_alloc, &aval);
+            &factor_alloc, &pool_alloc, &aval, &scaling);
 
       // printf("[activate_init_node_cpu_func] node idx = %d\n", node->symb.idx+1);
          
@@ -1479,7 +1490,7 @@ namespace starpu {
             posdef, *node, child_contrib, *factor_alloc);
       
       // Add coefficients from original matrix
-      init_node(*node, aval);
+      init_node(*node, aval, scaling);
    }
 
    // activate_init_node StarPU codelet
@@ -1494,7 +1505,7 @@ namespace starpu {
          void** child_contrib,
          FactorAlloc *factor_alloc,
          PoolAlloc *pool_alloc,
-         T *aval
+         T *aval, T *scaling
          ) {
 
       struct starpu_data_descr *descrs = new starpu_data_descr[nhdl+1];
@@ -1519,6 +1530,7 @@ namespace starpu {
                                STARPU_VALUE, &factor_alloc, sizeof(FactorAlloc*),
                                STARPU_VALUE, &pool_alloc, sizeof(PoolAlloc*),
                                STARPU_VALUE, &aval, sizeof(T*),
+                               STARPU_VALUE, &scaling, sizeof(T*),
                                0);
       STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
 

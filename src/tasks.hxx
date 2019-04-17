@@ -103,7 +103,7 @@ namespace spldlt {
       activate_front(
             posdef, snode, node, child_contrib, blksz, factor_alloc);
 #endif
-      
+ 
    }
 
    ////////////////////////////////////////////////////////////
@@ -111,7 +111,7 @@ namespace spldlt {
    template <typename T, typename PoolAlloc>
    void init_node_task(
          NumericFront<T, PoolAlloc> &front,
-         T *aval, int prio) {
+         T *aval, T *scaling, int prio) {
 
 #if defined(SPLDLT_USE_STARPU)
       
@@ -119,11 +119,12 @@ namespace spldlt {
             &front,
             front.get_hdl(),
             aval,
+            scaling,
             prio);
 
 #else
 
-      init_node(front, aval);
+      init_node(front, aval, scaling);
 
 #endif
    }
@@ -175,7 +176,7 @@ namespace spldlt {
          void** child_contrib,
          FactorAlloc& factor_alloc,
          PoolAlloc& pool_alloc,
-         T *aval) {
+         T *aval, T *scaling) {
 
 #if defined(SPLDLT_USE_STARPU)
 
@@ -201,7 +202,7 @@ namespace spldlt {
             child_contrib,
             &factor_alloc, 
             &pool_alloc,
-            aval);
+            aval, scaling);
       
       delete[] cnode_hdls;
       
@@ -211,7 +212,7 @@ namespace spldlt {
             posdef, node, child_contrib, factor_alloc); 
 
       // Assemble factors from original matrix
-      init_node(node, aval);
+      init_node(node, aval, scaling);
 #endif
 
    }
@@ -510,7 +511,7 @@ namespace spldlt {
          void *akeep,
          void *fkeep,
          SymbolicFront& root,
-         T *aval,
+         T *aval, T *scaling,
          int p, void **child_contrib,
          sylver::options_t *options,
          std::vector<sylver::inform_t>& worker_stats) {
@@ -533,19 +534,19 @@ namespace spldlt {
          // Map the execution of the factor_subtree task to worker
          // associated with index workerid
          spldlt::starpu::insert_factor_subtree_worker(
-               root.hdl, akeep, fkeep, p, aval, child_contrib, options,
+               root.hdl, akeep, fkeep, p, aval, scaling, child_contrib, options,
                &worker_stats, workerid);
       }
       else {
          spldlt::starpu::insert_factor_subtree(
-               root.hdl, akeep, fkeep, p, aval, child_contrib, options,
+               root.hdl, akeep, fkeep, p, aval, scaling, child_contrib, options,
                &worker_stats, loc);
       }
       
 #else
       sylver::inform_t& stats = worker_stats[0];
       spldlt_factor_subtree_c(
-            akeep, fkeep, p, aval, child_contrib, options, &stats);
+            akeep, fkeep, p, aval, scaling, child_contrib, options, &stats);
 #endif
    }
 

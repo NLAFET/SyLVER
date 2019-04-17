@@ -65,9 +65,10 @@ program spldlt_test
    ! integer :: cuda_error ! DEBUG not useful for now 
 
    pos_def = .false. ! Matrix assumed indef by default
-   ! Default scaling/ordering
+   ! Default options
    options%ordering = 1 ! Use Metis ordering
    options%scaling = 0 ! No scaling
+   options%prune_tree = .true. ! Enable tree pruning
    
    call proc_args(options, nrhs, pos_def, ncpu, ngpu, matfile)
 
@@ -273,6 +274,12 @@ program spldlt_test
           read (argval, *) options%gpu_perf_coeff
           print *, 'GPU Performance coefficient = ', &
                options%gpu_perf_coeff
+       case("--prune-tree")
+          print *, 'Enable tree pruning'
+          options%prune_tree = .true.
+       case("--no-prune-tree")
+          print *, 'Disable tree pruning'
+          options%prune_tree = .false.
         case default
            print *, "Unrecognised command line argument: ", argval
            stop

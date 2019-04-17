@@ -22,6 +22,7 @@ namespace spldlt {
          void *fkeep,
          int p,
          T *aval,
+         T *scaling,
          void **child_contrib, 
          struct spral::ssids::cpu::cpu_factor_options *options,
          spral::ssids::cpu::ThreadStats *stats);

@@ -372,6 +372,9 @@ contains
     subtree_sa = 0
     spldlt_akeep%subtree_en = 0
 
+    ! Init number of partitions in the etree
+    inform%num_part = 0 
+
     if (options%prune_tree) then
        ! Sort out subtrees
 
@@ -398,12 +401,17 @@ contains
           subtree_sa(spldlt_akeep%nsubtrees) = akeep%part(i)
           spldlt_akeep%subtree_en(spldlt_akeep%nsubtrees) = akeep%part(i+1)-1
        end do
+
+       inform%num_part = akeep%nparts
 #else
 
        call prune_tree(akeep%nnodes, akeep%sptr, akeep%sparent, akeep%rptr, &
             nth, ngpu, options%gpu_perf_coeff, &
             spldlt_akeep%nsubtrees, small, contrib_dest, subtree_sa, &
             spldlt_akeep%subtree_en, exec_loc)
+
+       ! Count the number of subtree plus the root subtree
+       inform%num_part = spldlt_akeep%nsubtrees+1
 
 #endif              
     end if

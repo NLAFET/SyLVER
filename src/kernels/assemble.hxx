@@ -512,9 +512,8 @@ namespace spldlt {
              typename PoolAlloc>
    void init_node(
          NumericFront<T,PoolAlloc>& front,
-         T const* aval) {
+         T const* aval, T const* scaling) {
 
-      T *scaling = nullptr;
       SymbolicFront const& sfront = front.symb;
 
       // printf("[init_node] node idx = %d, num_a = %d\n", sfront.idx+1, sfront.num_a);

@@ -38,6 +38,7 @@ module sylver_inform_mod
      integer :: nparts = 0
      integer(long) :: cpu_flops = 0
      integer(long) :: gpu_flops = 0
+     integer :: num_part = 0 ! Number of partitions in the etree
    contains
      procedure :: flag_to_character
      procedure :: print_flag

@@ -36,8 +36,8 @@ module spldlt_factorize_mod
   ! on the tree structure
   interface spldlt_create_numeric_tree_c
      type(c_ptr) function spldlt_create_numeric_tree_dlb( &
-          posdef, fkeep, symbolic_tree, aval, child_contrib, options, inform) &
-          bind(C, name="spldlt_create_numeric_tree_dbl")
+          posdef, fkeep, symbolic_tree, aval, scaling, child_contrib, options, &
+          inform) bind(C, name="spldlt_create_numeric_tree_dbl")
        use, intrinsic :: iso_c_binding
        ! use spral_ssids_cpu_iface, only : cpu_factor_options, cpu_factor_stats
        use sylver_datatypes_mod, only: sylver_options
@@ -47,6 +47,7 @@ module spldlt_factorize_mod
        type(c_ptr), value :: fkeep
        type(c_ptr), value :: symbolic_tree
        real(c_double), dimension(*), intent(in) :: aval
+       type(C_PTR), value :: scaling
        type(c_ptr), dimension(*), intent(inout) :: child_contrib
        type(options_c), intent(in) :: options ! SSIDS options
        type(inform_c), intent(out) :: inform
@@ -265,7 +266,7 @@ contains
   end subroutine spldlt_get_contrib_c
 
   function spldlt_factor_subtree_cpu(&
-       cpu_symb, posdef, val, child_contrib_c, coptions, cstats)
+       cpu_symb, posdef, val, scaling, child_contrib_c, coptions, cstats)
     use, intrinsic :: iso_c_binding
     use spral_ssids_subtree, only: numeric_subtree_base
     use spral_ssids_cpu_subtree, only : cpu_numeric_subtree, cpu_symbolic_subtree
@@ -274,6 +275,7 @@ contains
     class(cpu_symbolic_subtree), target, intent(inout) :: cpu_symb
     logical(C_BOOL), intent(in) :: posdef
     real(c_double), dimension(*), intent(in) :: val
+    real(c_double), dimension(*), target, intent(in) :: scaling
     type(c_ptr), dimension(*), intent(inout) :: child_contrib_c
     type(cpu_factor_options), intent(in) :: coptions ! SSIDS options
     type(cpu_factor_stats), intent(out) :: cstats
@@ -289,8 +291,9 @@ contains
     ! allocate(cpu_factor, stat=st)
     allocate(cpu_factor)
 
-    cscaling = c_null_ptr
+    ! cscaling = c_null_ptr
     ! if (present(scaling)) cscaling = C_LOC(scaling) ! TODO(Florent) Set scaling if needed
+    cscaling = C_LOC(scaling)
 
     cpu_factor%posdef = posdef 
     cpu_factor%symbolic => cpu_symb
@@ -313,7 +316,7 @@ contains
   end function spldlt_factor_subtree_cpu
   
   subroutine spldlt_factor_subtree_c( &
-       cakeep, cfkeep, p, val, child_contrib_c, coptions, cstats) &
+       cakeep, cfkeep, p, val, scaling, child_contrib_c, coptions, cstats) &
        bind(C, name="spldlt_factor_subtree_c")
     use spral_ssids_akeep, only : ssids_akeep
     use spral_ssids_fkeep, only : ssids_fkeep
@@ -332,6 +335,7 @@ contains
     type(c_ptr), value :: cfkeep
     integer(c_int), value :: p ! Partition number, C-indexed
     real(c_double), dimension(*), intent(in) :: val
+    real(c_double), dimension(*), intent(in) :: scaling
     type(c_ptr), dimension(*), intent(inout) :: child_contrib_c
     type(cpu_factor_options), intent(in) :: coptions ! SSIDS options
     type(cpu_factor_stats), intent(out) :: cstats ! Worker stats
@@ -362,15 +366,15 @@ contains
     select type(subtree_ptr => akeep%subtree(part)%ptr)
     type is (cpu_symbolic_subtree)
        fkeep%subtree(part)%ptr => spldlt_factor_subtree_cpu( &
-            subtree_ptr, posdef, val, child_contrib_c, coptions, cstats)
+            subtree_ptr, posdef, val, scaling, child_contrib_c, coptions, cstats)
 #if defined(SPLDLT_USE_GPU)
     type is (gpu_symbolic_subtree)
        ! print *, "[spldlt_factor_subtree_c] gpu_numeric_subtree"
        fkeep%subtree(part)%ptr => akeep%subtree(part)%ptr%factor( &
-            fkeep%pos_def, val, &
+            fkeep%pos_def, val, scaling, &
             contribs, &
             options, inform &
-            )
+            scaling)
 #endif
     end select
 
@@ -593,10 +597,9 @@ contains
     spldlt_fkeep%numeric_tree%posdef = posdef
     scaling_c = c_null_ptr
     if (allocated(fkeep%scaling)) scaling_c = C_LOC(fkeep%scaling)
-    ! call cpu_copy_options_in(options, coptions)
     call copy_options_f2c(options, coptions) ! Create C interoperable option structure
     spldlt_fkeep%numeric_tree%ctree = spldlt_create_numeric_tree_c( &
-         posdef, cfkeep, spldlt_akeep%symbolic_tree_c, val, &
+         posdef, cfkeep, spldlt_akeep%symbolic_tree_c, val, scaling_c, &
          child_contrib_c, coptions, cinform)
 
     ! Extract to Fortran data structures
@@ -1206,10 +1209,6 @@ contains
     
     if (spldlt_akeep%akeep%nnodes .eq. 0) return
 
-    if (.not. present(job)) then
-       local_job = SYLVER_SOLVE_JOB_ALL 
-    end if
-
     ! Check existence of factors
     if (.not. allocated(spldlt_fkeep%fkeep%subtree)) then
        ! factorize phase has not been performed
@@ -1239,8 +1238,23 @@ contains
        return
     end if
 
+    inform = spldlt_fkeep%inform
+
+    if (.not. present(job)) then
+       local_job = SYLVER_SOLVE_JOB_ALL 
+    else
+       if ((job .lt. SYLVER_SOLVE_JOB_FWD) .or. (job .gt. SYLVER_SOLVE_JOB_DIAG_BWD)) &
+            inform%flag = SYLVER_ERROR_JOB_OOR
+       if (spldlt_fkeep%fkeep%pos_def .and. (job .eq. SYLVER_SOLVE_JOB_DIAG)) &
+            inform%flag = SYLVER_ERROR_JOB_OOR
+       if (spldlt_fkeep%fkeep%pos_def .and. (job .eq. SYLVER_SOLVE_JOB_DIAG_BWD)) &
+            inform%flag = SYLVER_ERROR_JOB_OOR
+       if (inform%flag .eq. SYLVER_ERROR_JOB_OOR) goto 200
+    end if
+
     call spldlt_fkeep%solve(spldlt_akeep, nrhs, x, ldx, inform, local_job)
 
+200 continue
     ! Print useful info if requested
     call inform%print_flag(options, context)
     return

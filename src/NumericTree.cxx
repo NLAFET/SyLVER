@@ -31,6 +31,7 @@ void *spldlt_create_numeric_tree_dbl(
       void *fkeep,
       void *symbolic_tree_ptr,
       double *aval, // Values of A
+      const double *const scaling, // Scaling vector (NULL if none)
       void** child_contrib, // Contributions from child subtrees
       sylver::options_t *options, // Options in
       sylver::inform_t* stats // Info out
@@ -41,12 +42,12 @@ void *spldlt_create_numeric_tree_dbl(
 
    if (posdef) {
       auto* tree = new NumericTreePosdefDbl
-         (fkeep, symbolic_tree, aval, child_contrib, *options, *stats);
+         (fkeep, symbolic_tree, aval, const_cast<double*>(scaling), child_contrib, *options, *stats);
       return (void *) tree;
    }
    else {
       auto* tree = new NumericTreeIndefDbl
-         (fkeep, symbolic_tree, aval, child_contrib, *options, *stats);
+         (fkeep, symbolic_tree, aval, const_cast<double*>(scaling), child_contrib, *options, *stats);
       return (void *) tree;
    }
 }
