@@ -65,6 +65,9 @@ program spldlt_test
    ! integer :: cuda_error ! DEBUG not useful for now 
 
    pos_def = .false. ! Matrix assumed indef by default
+   ! Default scaling/ordering
+   options%ordering = 1 ! Use Metis ordering
+   options%scaling = 0 ! No scaling
    
    call proc_args(options, nrhs, pos_def, ncpu, ngpu, matfile)
 
@@ -75,8 +78,9 @@ program spldlt_test
    
    if (matfile.eq.'') matfile = "matrix.rb" 
 
-   print *, "[spldlt_test] ncpu: ", ncpu
-   print *, "[spldlt_test]   nb: ", options%nb
+   print *, "[spldlt_test]    ncpu: ", ncpu
+   print *, "[spldlt_test]      nb: ", options%nb
+   print *, "[spldlt_test] scaling: ", options%scaling
 
    ! Read in a matrix
    write(*, "(a)") "Reading..."
@@ -117,8 +121,6 @@ program spldlt_test
    call spldlt_init(ncpu, ngpu)
 
    ! Setup options for analysis
-   options%ordering = 1 ! Use Metis ordering
-   options%scaling = 0 ! No scaling
    ! options%prune_tree = .true. ! Enable tree pruning
    ! options%prune_tree = .false. ! Deactivate tree pruning
 
@@ -134,7 +136,8 @@ program spldlt_test
 
    ! Factorize
    call system_clock(start_t, rate_t)
-   call spldlt_factorize(spldlt_akeep, spldlt_fkeep, pos_def, val, options, inform)
+   call spldlt_factorize(spldlt_akeep, spldlt_fkeep, pos_def, val, options, &
+        inform, ptr=ptr, row=row)
    call system_clock(stop_t)
    write(*, "(a)") "ok"
    print *, "Factor took ", (stop_t - start_t)/real(rate_t)

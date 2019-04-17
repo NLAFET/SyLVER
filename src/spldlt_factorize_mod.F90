@@ -708,6 +708,17 @@ contains
        inform%matrix_rank = 0
        goto 200
     end if
+    
+    print *, "options%scaling = ", options%scaling
+    ! Check if ptr and row are present if needed for scaling
+    if (((options%scaling .eq. 1) .or. &
+         (options%scaling .eq. 2) .or. &
+         (options%scaling .eq. 4)) &
+         .and. &
+         ((.not. present(ptr)) .or. (.not. present(row)))) then       
+       inform%flag = SYLVER_ERROR_PTR_ROW
+       goto 200
+    end if
 
     ! Dump matrix if required
     ! if (allocated(options%rb_dump)) then
@@ -932,13 +943,14 @@ contains
     integer, intent(in) :: ldx
     real(wp), dimension(ldx,nrhs), intent(inout) :: x
     type(sylver_inform), intent(inout) :: inform
-    integer, intent(inout), optional :: job
+    integer, intent(inout) :: job
 
     type(ssids_inform) :: ssids_info
     real(wp), dimension(:,:), allocatable :: x2
     type(ssids_akeep) :: akeep
     type(ssids_fkeep), pointer :: fkeep
     integer :: local_job
+    character(50)  :: context  ! Procedure name (used when printing).
 
     integer :: i
     integer :: r
@@ -947,19 +959,17 @@ contains
     integer :: exec_loc
     
     logical(c_bool) :: posdef
-    
+
+    context = 'spldlt_solve'
     akeep = spldlt_akeep%akeep
     n = akeep%n
 
     posdef = spldlt_fkeep%fkeep%pos_def
     ! posdef = .true.
+    ssids_info%stat = 0
 
     allocate(x2(n, nrhs), stat=inform%stat)
     if(inform%stat.ne.0) goto 100
-
-    if (.not. present(job)) then
-       local_job = SYLVER_SOLVE_JOB_ALL 
-    end if
 
     ! print *, "solve, nrhs: ", nrhs, ", ldx: ", ldx
     ! print *, "solve, x: ", x
@@ -1032,15 +1042,16 @@ contains
           end do
        end do
     else
-
        do r = 1, nrhs
           x(akeep%invp(1:n), r) = x2(1:n, r)
        end do
     end if
 
-   100 continue
-   inform%flag = SSIDS_ERROR_ALLOCATION
-   return    
+200 continue    
+    return
+100 continue
+    inform%flag = SSIDS_ERROR_ALLOCATION
+    goto 200  
   end subroutine solve
 
   ! Fwd solve on numeric tree
@@ -1164,6 +1175,7 @@ contains
       ! job = 4 : diag and backsubs (D(PL)^TX = B) (indefinite case only)
       ! job absent: complete solve performed
 
+    integer :: local_job
     integer :: n
     character(50) :: context  ! Procedure name (used when printing).
 
@@ -1194,6 +1206,10 @@ contains
     
     if (spldlt_akeep%akeep%nnodes .eq. 0) return
 
+    if (.not. present(job)) then
+       local_job = SYLVER_SOLVE_JOB_ALL 
+    end if
+
     ! Check existence of factors
     if (.not. allocated(spldlt_fkeep%fkeep%subtree)) then
        ! factorize phase has not been performed
@@ -1223,11 +1239,11 @@ contains
        return
     end if
 
-    call spldlt_fkeep%solve(spldlt_akeep, nrhs, x, ldx, inform)
+    call spldlt_fkeep%solve(spldlt_akeep, nrhs, x, ldx, inform, local_job)
 
     ! Print useful info if requested
     call inform%print_flag(options, context)
-
+    return
   end subroutine spldlt_solve
 
 end module spldlt_factorize_mod

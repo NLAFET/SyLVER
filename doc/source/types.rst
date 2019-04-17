@@ -177,8 +177,7 @@ Information
    +-------------+-------------------------------------------------------------+
    | -6          | Matrix found not to be positive definite but posdef=true.   |
    +-------------+-------------------------------------------------------------+
-   | -7          | ptr(:) and/or row(:) not present, but required as           |
-   |             | :f:subr:`ssids_analyse()` was called with check=.false,.    |
+   | -7          | ptr(:) and/or row(:) not present although required.         |
    +-------------+-------------------------------------------------------------+
    | -8          | options%ordering out of range, or options%ordering=0 and    |
    |             | order parameter not provided or not a valid permutation.    |
