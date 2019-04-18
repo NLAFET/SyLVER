@@ -70,18 +70,18 @@ namespace spldlt { namespace tests {
       }
 
       // Setup options
-      struct cpu_factor_options options;
+      sylver::options_t options;
       options.action = true;
       options.multiplier = 2.0;
       options.small = small;
       options.u = u;
       options.print_level = 0;
       options.small_subtree_threshold = 100*100*100;
-      options.cpu_block_size = blksz;
-      options.pivot_method = PivotMethod::app_block  /*PivotMethod::app_aggressive*/;
+      options.nb = blksz;
+      options.pivot_method = sylver::PivotMethod::app_block  /*PivotMethod::app_aggressive*/;
       // options.pivot_method = (aggressive) ? PivotMethod::app_aggressive
       //                                     : PivotMethod::app_block;
-      options.failed_pivot_method = FailedPivotMethod::tpp;
+      options.failed_pivot_method = sylver::FailedPivotMethod::tpp;
       // options.failed_pivot_method = FailedPivotMethod::pass;
          
       // Setup pool allocator
@@ -177,7 +177,7 @@ namespace spldlt { namespace tests {
 #endif
 
       // Setup workspaces and thread stats
-      std::vector<ThreadStats> worker_stats(nworkers);
+      std::vector<sylver::inform_t> worker_stats(nworkers);
       std::vector<spral::ssids::cpu::Workspace> workspaces;
       const int PAGE_SIZE = 8*1024*1024; // 8 MB
 

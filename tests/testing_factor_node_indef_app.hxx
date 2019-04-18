@@ -58,18 +58,18 @@ namespace spldlt { namespace tests {
       gen_rhs(m, a, lda, b);
 
       // Setup options
-      struct cpu_factor_options options;
+      sylver::options_t options;
       options.action = true;
       options.multiplier = 2.0;
       options.small = small;
       options.u = u;
       options.print_level = 0;
       options.small_subtree_threshold = 100*100*100;
-      options.cpu_block_size = blksz;
-      options.pivot_method = PivotMethod::app_block  /*PivotMethod::app_aggressive*/;
+      options.nb = blksz;
+      options.pivot_method = sylver::PivotMethod::app_block  /*PivotMethod::app_aggressive*/;
       // options.pivot_method = (aggressive) ? PivotMethod::app_aggressive
       //                                     : PivotMethod::app_block;
-      options.failed_pivot_method = FailedPivotMethod::tpp;
+      options.failed_pivot_method = sylver::FailedPivotMethod::tpp;
 
       // Setup pool allocator
       typedef BuddyAllocator<T, std::allocator<T>> PoolAllocator;

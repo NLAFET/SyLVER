@@ -61,8 +61,8 @@ namespace spldlt { namespace tests {
          // }
 
          // Setup options
-         struct cpu_factor_options options;
-         options.cpu_block_size = blksz;
+         sylver::options_t options;
+         options.nb = blksz;
 
          // Setup pool allocator
          // typedef spldlt::BuddyAllocator<T,std::allocator<T>> PoolAllocator;

@@ -61,16 +61,16 @@ namespace spldlt { namespace tests {
       }
 
       // Setup options
-      struct cpu_factor_options options;
+      sylver::options_t options;
       options.action = true;
       options.multiplier = 2.0;
       options.small = small;
       options.u = u;
       options.print_level = 0;
       options.small_subtree_threshold = 100*100*100;
-      options.cpu_block_size = 256;
-      options.pivot_method = (aggressive) ? PivotMethod::app_aggressive
-                                          : PivotMethod::app_block;
+      options.nb = 256;
+      options.pivot_method = (aggressive) ? sylver::PivotMethod::app_aggressive
+                                          : sylver::PivotMethod::app_block;
 
       // Init factorization
       typedef BuddyAllocator<T,std::allocator<T>> PoolAllocator;

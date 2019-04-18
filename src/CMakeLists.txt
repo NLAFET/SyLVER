@@ -81,4 +81,4 @@ endif()
 
 # message(STATUS "Sources: ${sources}")
 
-add_library(spldlt ${sources})
+add_library(sylver ${sources})

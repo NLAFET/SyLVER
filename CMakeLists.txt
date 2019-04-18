@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 2.6)
 include(CheckFunctionExists)
 include(CheckFortranFunctionExists)
-project (SpLDLT)
+project (SyLVER)
 enable_language(Fortran)
 enable_language(C)
 enable_language(CXX)
@@ -121,12 +121,12 @@ include_directories(${SPRAL_SRC_DIR}/src)
 # MESSAGE(STATUS "spral source dir: " ${SPRAL_SRC_DIR})
 
 # Get object files 
-file(
-  GLOB_RECURSE
-  obj
-  ${SPRAL_DIR}/tests/ssids/kernels/*.o)
+# file(
+#   GLOB_RECURSE
+#   obj
+#   ${SPRAL_DIR}/tests/ssids/kernels/*.o)
 
-MESSAGE(STATUS "object files: " ${obj})
+# MESSAGE(STATUS "object files: " ${obj})
 # add_library(spral_ssids_tests STATIC IMPORTED ${obj})
 
 # Use GPUs
@@ -296,6 +296,8 @@ endif()
 # GPU
 if (${USE_GPU} MATCHES ON)
 
+  enable_language(CUDA)
+
   # Use GPU
   add_definitions(-DSPLDLT_USE_GPU)
 
@@ -312,12 +314,13 @@ if (${USE_GPU} MATCHES ON)
   # list(APPEND CUDA_NVCC_FLAGS "-g -O2 -arch=compute_60")
   # list(APPEND CUDA_NVCC_FLAGS "-g -O2 -arch=compute_70")
 
-  set(SYLVER_NVCC_ARCHS "60;61;70;75" CACHE STRING "The SM architectures to build code for.")
-  # set(SYLVER_NVCC_ARCHS "50;60;61;70;75" CACHE STRING "The SM architectures to build code for.")
+  set(SyLVER_NVCC_ARCHS "60;61;70;75" CACHE STRING "The SM architectures to build code for.")
+  # set(SyLVER_NVCC_ARCHS "50;60;61;70;75" CACHE STRING "The SM architectures to build code for.")
 
   # Set NVCC arguments
-  foreach(ARCH ${SYLVER_NVCC_ARCHS})
-    string(APPEND CUDA_NVCC_FLAGS " -gencode arch=compute_${ARCH},code=sm_${ARCH}")
+  foreach(ARCH ${SyLVER_NVCC_ARCHS})
+    # string(APPEND CUDA_NVCC_FLAGS " -gencode arch=compute_${ARCH},code=sm_${ARCH}")
+    string(APPEND CMAKE_CUDA_FLAGS " -gencode arch=compute_${ARCH},code=sm_${ARCH}")
   endforeach()
   
   MESSAGE( STATUS "CUDA found:         " ${CUDA_FOUND} )
@@ -349,7 +352,7 @@ if (${USE_GPU} MATCHES ON)
 endif()
 
 # Include source directory
-include_directories(${SpLDLT_SOURCE_DIR}/src)
+include_directories(${SyLVER_SOURCE_DIR}/src)
 
 ########################################
 # Runtime system
@@ -385,35 +388,14 @@ endif()
 add_subdirectory(src)
 
 add_executable(spldlt_test drivers/spldlt_test.F90)
-# add_executable(spldlt_test_debug drivers/spldlt_test_debug.F90)
 add_executable(splu_test drivers/splu_test.F90)
 
 ## spldlt_test
 target_include_directories(spldlt_test PUBLIC ${CMAKE_BINARY_DIR}/src)
-target_link_libraries(spldlt_test spldlt)
+target_link_libraries(spldlt_test sylver)
 ## splu_test
 target_include_directories(splu_test PUBLIC ${CMAKE_BINARY_DIR}/src)
-target_link_libraries(splu_test spldlt)
-
-## spldlt_test_debug
-# target_include_directories(spldlt_test_debug PUBLIC ${CMAKE_BINARY_DIR}/src)
-# target_link_libraries(spldlt_test_debug spldlt)
-
-# Kernel test driver
-# if (${KERNEL_TESTS} MATCHES "ON")
-
-#   file(
-#     GLOB_RECURSE
-#     test_src
-#     tests/*.cxx
-#     tests/*.hxx)
-  
-#   # add_executable(spldlt_kernel_test tests/kernel_test.cxx)  
-#   add_executable(spldlt_kernel_test ${test_src})
-#   target_link_libraries(spldlt_kernel_test ${obj})
-#   target_link_libraries(spldlt_kernel_test spldlt)
-
-# endif()
+target_link_libraries(splu_test sylver)
 
 ########################################
 ## spral
@@ -437,91 +419,93 @@ if (${HAVE_CUTLASS} MATCHES "ON")
 endif()
 
 ################################################################################
-# Test drivers
+# Tests
+
+add_subdirectory(tests)
 
 ########################################
 # Kernel test drivers
-if (${KERNEL_TESTS} MATCHES "ON")
+# if (${KERNEL_TESTS} MATCHES "ON")
 
-  file(
-    GLOB
-    test_src
-    tests/*.cxx
-    tests/*.hxx
-    tests/*.F90)
-  add_library(spldlt_tests ${test_src})
-  set(TESTS_LIBS ${TESTS_LIBS} spldlt_tests)
+#   file(
+#     GLOB
+#     test_src
+#     tests/*.cxx
+#     tests/*.hxx
+#     tests/*.F90)
+#   add_library(spldlt_tests ${test_src})
+#   set(TESTS_LIBS ${TESTS_LIBS} spldlt_tests)
   
-  if(${USE_GPU} MATCHES ON)
-    file(
-      GLOB
-      cuda_tests_sources 
-      tests/*.cu)
-    cuda_add_library(sylver_cuda_tests ${cuda_tests_sources})
-      set(TESTS_LIBS ${TESTS_LIBS} sylver_cuda_tests)
-  endif()
+#   if(${USE_GPU} MATCHES ON)
+#     file(
+#       GLOB
+#       cuda_tests_sources 
+#       tests/*.cu)
+#     cuda_add_library(sylver_cuda_tests ${cuda_tests_sources})
+#       set(TESTS_LIBS ${TESTS_LIBS} sylver_cuda_tests)
+#   endif()
   
-  if(${USE_GPU} MATCHES ON)
+#   if(${USE_GPU} MATCHES ON)
 
-    add_executable(spldlt_tests_update_block_gpu tests/drivers/update_block_gpu_test.cxx)
+#     add_executable(spldlt_tests_update_block_gpu tests/drivers/update_block_gpu_test.cxx)
 
-    target_include_directories(spldlt_tests_update_block_gpu PUBLIC "${SpLDLT_SOURCE_DIR}/tests")
-    target_include_directories(spldlt_tests_update_block_gpu PUBLIC ${SPRAL_DIR})
-    target_link_libraries(spldlt_tests_update_block_gpu spldlt)
-    target_link_libraries(spldlt_tests_update_block_gpu ${obj})
-    target_link_libraries(spldlt_tests_update_block_gpu ${SPRAL_LIBRARIES})
-    target_link_libraries(spldlt_tests_update_block_gpu ${LIBS})
-    target_link_libraries(spldlt_tests_update_block_gpu ${TESTS_LIBS})
+#     target_include_directories(spldlt_tests_update_block_gpu PUBLIC "${SyLVER_SOURCE_DIR}/tests")
+#     target_include_directories(spldlt_tests_update_block_gpu PUBLIC ${SPRAL_DIR})
+#     target_link_libraries(spldlt_tests_update_block_gpu spldlt)
+#     target_link_libraries(spldlt_tests_update_block_gpu ${obj})
+#     target_link_libraries(spldlt_tests_update_block_gpu ${SPRAL_LIBRARIES})
+#     target_link_libraries(spldlt_tests_update_block_gpu ${LIBS})
+#     target_link_libraries(spldlt_tests_update_block_gpu ${TESTS_LIBS})
 
-    add_executable(sylver_tests_factor_gpu tests/drivers/factor_gpu_test.cxx)
+#     add_executable(sylver_tests_factor_gpu tests/drivers/factor_gpu_test.cxx)
 
-    target_include_directories(sylver_tests_factor_gpu PUBLIC ${SPRAL_DIR})
-    target_include_directories(sylver_tests_factor_gpu PUBLIC "${SpLDLT_SOURCE_DIR}/tests")
-    target_link_libraries(sylver_tests_factor_gpu spldlt)
-    target_link_libraries(sylver_tests_factor_gpu ${obj})
-    target_link_libraries(sylver_tests_factor_gpu ${SPRAL_LIBRARIES})
-    target_link_libraries(sylver_tests_factor_gpu ${LIBS})
-    target_link_libraries(sylver_tests_factor_gpu ${TESTS_LIBS})
-    # target_link_libraries(sylver_tests_factor_gpu cusolver) # CuSOLVER
+#     target_include_directories(sylver_tests_factor_gpu PUBLIC ${SPRAL_DIR})
+#     target_include_directories(sylver_tests_factor_gpu PUBLIC "${SyLVER_SOURCE_DIR}/tests")
+#     target_link_libraries(sylver_tests_factor_gpu spldlt)
+#     target_link_libraries(sylver_tests_factor_gpu ${obj})
+#     target_link_libraries(sylver_tests_factor_gpu ${SPRAL_LIBRARIES})
+#     target_link_libraries(sylver_tests_factor_gpu ${LIBS})
+#     target_link_libraries(sylver_tests_factor_gpu ${TESTS_LIBS})
+#     # target_link_libraries(sylver_tests_factor_gpu cusolver) # CuSOLVER
 
-    add_executable(sylver_tests_gemm_gpu tests/drivers/gemm_gpu_test.cxx)
+#     add_executable(sylver_tests_gemm_gpu tests/drivers/gemm_gpu_test.cxx)
 
-    target_include_directories(sylver_tests_gemm_gpu PUBLIC ${SPRAL_DIR})
-    target_include_directories(sylver_tests_gemm_gpu PUBLIC "${SpLDLT_SOURCE_DIR}/tests")
-    if (${HAVE_CUTLASS} MATCHES "ON")
-      target_include_directories(sylver_tests_gemm_gpu PUBLIC ${CUTLASS_HEADERS})
-    endif()    
-    target_link_libraries(sylver_tests_gemm_gpu spldlt)
-    target_link_libraries(sylver_tests_gemm_gpu ${obj})
-    target_link_libraries(sylver_tests_gemm_gpu ${SPRAL_LIBRARIES})
-    target_link_libraries(sylver_tests_gemm_gpu ${LIBS})
-    target_link_libraries(sylver_tests_gemm_gpu ${TESTS_LIBS})
-    # target_link_libraries(sylver_tests_gemm_gpu cusolver) # CuSOLVER
+#     target_include_directories(sylver_tests_gemm_gpu PUBLIC ${SPRAL_DIR})
+#     target_include_directories(sylver_tests_gemm_gpu PUBLIC "${SyLVER_SOURCE_DIR}/tests")
+#     if (${HAVE_CUTLASS} MATCHES "ON")
+#       target_include_directories(sylver_tests_gemm_gpu PUBLIC ${CUTLASS_HEADERS})
+#     endif()    
+#     target_link_libraries(sylver_tests_gemm_gpu spldlt)
+#     target_link_libraries(sylver_tests_gemm_gpu ${obj})
+#     target_link_libraries(sylver_tests_gemm_gpu ${SPRAL_LIBRARIES})
+#     target_link_libraries(sylver_tests_gemm_gpu ${LIBS})
+#     target_link_libraries(sylver_tests_gemm_gpu ${TESTS_LIBS})
+#     # target_link_libraries(sylver_tests_gemm_gpu cusolver) # CuSOLVER
 
-  endif()
+#   endif()
 
-  add_executable(spldlt_tests_factor_node tests/drivers/factor_node_test.cxx)
+#   add_executable(spldlt_tests_factor_node tests/drivers/factor_node_test.cxx)
 
-  target_include_directories(spldlt_tests_factor_node PUBLIC "${SpLDLT_SOURCE_DIR}/tests")
-  target_include_directories(spldlt_tests_factor_node PUBLIC ${SPRAL_DIR})
-  target_link_libraries(spldlt_tests_factor_node spldlt)
-  target_link_libraries(spldlt_tests_factor_node ${obj})
-  target_link_libraries(spldlt_tests_factor_node ${SPRAL_LIBRARIES})
-  target_link_libraries(spldlt_tests_factor_node ${TESTS_LIBS})
-  target_link_libraries(spldlt_tests_factor_node ${LIBS})
+#   target_include_directories(spldlt_tests_factor_node PUBLIC "${SyLVER_SOURCE_DIR}/tests")
+#   target_include_directories(spldlt_tests_factor_node PUBLIC ${SPRAL_DIR})
+#   target_link_libraries(spldlt_tests_factor_node spldlt)
+#   target_link_libraries(spldlt_tests_factor_node ${obj})
+#   target_link_libraries(spldlt_tests_factor_node ${SPRAL_LIBRARIES})
+#   target_link_libraries(spldlt_tests_factor_node ${TESTS_LIBS})
+#   target_link_libraries(spldlt_tests_factor_node ${LIBS})
 
-  add_executable(spldlt_tests_kernels tests/drivers/kernel_test.cxx)
+#   add_executable(spldlt_tests_kernels tests/drivers/kernel_test.cxx)
   
-  target_include_directories(spldlt_tests_kernels PUBLIC ${SpLDLT_SOURCE_DIR}/tests)
-  target_include_directories(spldlt_tests_kernels PUBLIC ${SPRAL_DIR})
-  target_link_libraries(spldlt_tests_kernels spldlt_tests)
-  target_link_libraries(spldlt_tests_kernels spldlt)
-  target_link_libraries(spldlt_tests_kernels ${obj})
-  target_link_libraries(spldlt_tests_kernels ${SPRAL_LIBRARIES})
-  target_link_libraries(spldlt_tests_kernels ${LIBS})
-  target_link_libraries(spldlt_tests_kernels ${TESTS_LIBS})
+#   target_include_directories(spldlt_tests_kernels PUBLIC ${SyLVER_SOURCE_DIR}/tests)
+#   target_include_directories(spldlt_tests_kernels PUBLIC ${SPRAL_DIR})
+#   target_link_libraries(spldlt_tests_kernels spldlt_tests)
+#   target_link_libraries(spldlt_tests_kernels spldlt)
+#   target_link_libraries(spldlt_tests_kernels ${obj})
+#   target_link_libraries(spldlt_tests_kernels ${SPRAL_LIBRARIES})
+#   target_link_libraries(spldlt_tests_kernels ${LIBS})
+#   target_link_libraries(spldlt_tests_kernels ${TESTS_LIBS})
 
-endif()
+# endif()
 
 ########################################
 # Setup list of test drivers
@@ -547,7 +531,7 @@ endforeach()
 # Print summary
 
 message("--------------------------------------------------------------------------------")
-message("Configuration of SpLDLT done.")
+message("Configuration of SyLVER done.")
 message(" ")
 message(
   "Build type: ${CMAKE_BUILD_TYPE}\n"
