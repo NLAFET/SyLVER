@@ -1,47 +1,83 @@
-# SpLDLT
+# SyLVER
 
-SpLDLT is a DAG-based sparse direct solver for symmetric systems which
-can solve positive-definite and indefinite problems. The parallel
-execution of the DAG which includes task scheduling, dependency
-management and data coherency is handled by the
-[StarPU](http://starpu.gforge.inria.fr/) runtime system.
+SyLVER is a sparse direct solver for symmetric systems which may be
+positive-definite or indefinite. It implements DAG-based algorithms
+that enable an efficient exploitation of multicore architectures and
+heterogeneous GPU-accelerated systems. The code has been developed in
+the context of the EU H2020
+[NLAFET project](http://www.nlafet.eu/). The parallel implementation
+relies on the [StarPU](http://starpu.gforge.inria.fr/) runtime system
+developed and maintained by the STORM team at Inria Bordeaux
+Sud-Ouest.
 
 # Installation 
 
-We use [CMake](https://cmake.org/) tools for the compilation of this
-package. The solver can be installed using the following instructions:
+The compilation of the code is handled by the
+[CMake](https://cmake.org/) tools. For example, the compilation can be
+done as follow:
 
 ```bash
 mkdir build # create build directory
 cd build 
-cmake <path-to-source> # configure compilation
+cmake <path-to-source> -DRUNTIME=StarPU # configure compilation
 make # run compilation 
 ```
 
-# Runtime systems
+## SPRAL ##
 
-By default the code is compiled without any runtime system and is
-therefore sequential. A parallel version of the solver can be obtained
-by specifying the runtime system using the option `-DRUNTIME` when
-running the cmake `cmake <path-to-source>` command. For now, the two
-options for the RUNTIME option are either `STF` which provide a
-sequential version or `StarPU` which uses the StarPU runtime system
-for generating the parallel code.
+(SPRAL)[https://github.com/ralna/spral] is an open-source library for
+sparse linear algebra and associated algorithm that has important
+features used in SyLVER. Note that 
 
-For example, the compilation files for installing the sequential code
-can be setup as following:
+## MeTiS ##
+
+The [MeTiS](http://glaros.dtc.umn.edu/gkhome/metis/metis/overview)
+partitioning library is needed by the SPRAL library and therefore it
+is needed when linking the SyLVER package for example when generating
+test drivers, examples, and tests.
+
+## Runtime system ##
+
+By default, the compilation will produce a serial code that can be
+explicitly requested using the option `-DRUNTIME=STF`.  The
+`-DRUNTIME=StarPU` option indicates that you want to compile the
+parallel version of the code using StarPU in which case the StarPU
+version needs to be at least 1.3.0. The StarPU library is found with
+the `FindSTARPU.cmake` script located in the `cmake/Modules`
+directory. For this script to be able to find the StarPU library, you
+need to set the environment variable `STARPU_DIR` to the path of you
+StarPU install base directory.
+
+## BLAS and LAPACK libraries ##
+
+The BLAS and LAPACK libraries play an important role in the
+performance of the solver. We recommend using the
+[MKL](https://software.intel.com/mkl) library for best performance on
+Intel machines and
+[ESSL](https://www.ibm.com/support/knowledgecenter/en/SSFHY8/essl_welcome.html)
+when running on IBM machine. Alternative BLAS and LAPACK libraries
+include [OpenBLAS](https://www.openblas.net/). Note that SyLVER should
+be linked against the **sequential** BLAS and LAPACK libraries.
+
+These libraries are found via the CMake scripts
+[FindBLAS](https://cmake.org/cmake/help/latest/module/FindBLAS.html)
+and
+[FindLAPACK](https://cmake.org/cmake/help/latest/module/FindBLAS.html)
+and therefore it is possible to use the options `-DBLA_VENDOR` to
+indicate which libraries to use. For example:
 
 ```bash
-cmake -DRUNTIME=STF <path-to-source>
-
+cmake <path-to-source> -DBLA_VENDOR=Intel10_64lp_seq # configure compilation
 ```
 
-## StarPU
+selects and locates the sequential BLAS and LAPACK implementation for
+the compilation and when linking test drivers, example and tests.
 
-The compilation of a parallel version of the solver using the StarPU
-runtime system can be configured with the following instructions:
+If CMake is unable to locate the requested libraries via the
+`-DBLA_VENDOR`, it is still possible to give them explicitly using the
+`-DLLBAS` and `-DLLAPACK` options. For example:
 
 ```bash
-cmake -DRUNTIME=StarPU <path-to-source>
-
+cmake <path-to-source> -DLBLAS="/path/to/blas -lblas" -DLBLAS="/path/to/lapack -llapack" # configure compilation
 ```
+
