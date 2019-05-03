@@ -41,14 +41,15 @@ cd build
 ../configure CXX=g++ FC=gfortran CC=gcc CFLAGS="-g -O2 -march=native" CXXFLAGS="-g -O2 -march=native" FCFLAGS="-g -O2 -march=native" --with-metis="-L/path/to/metis -lmetis" --with-blas="-L/path/to/blas -lblas" --with-lapack="-L/path/to/lapack -llapack" --disable-openmp --disable-gpu
 make
 ```
-
-Note that we use the `--disable-openmp` option because SyLVER works
-with the serial version of SPRAL and in this example we disabled the
-compilation of GPU kernels using the `--disable-gpu` option. Also,
-note that **the compilation flags used for SPRAL must match the flags
+Note that **the compilation flags used for SPRAL must match the flags
 used in the compilation of SyLVER**. Here we use the flags `-g -O2
 -march=native` that corresponds to the `RelWithDebInfo` build type in
 SyLVER.
+
+In this example use the `--disable-openmp` option because SyLVER works
+with the serial version of SPRAL. Additionally, in this example we
+disabled the compilation of the SPRAL GPU kernels using the
+`--disable-gpu` option.
 
 **Sequential version** of BLAS and LAPACK should be used. We recommend
 using the [MKL](https://software.intel.com/mkl) library for best
