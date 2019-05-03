@@ -41,12 +41,21 @@ cd build
 make
 ```
 
-Note that we use the `--disable-openmp` because SyLVER works with the
-sequetial version of SPRAL and in this exmaple we disable the
-compilation of GPU kernels using `--disable-gpu`. Also, note that the
-compilation falgs used for SPRAL must match those used for the
-compilation of SyLVER. Here we use the flags `-g -O2 -march=native`
-that corresponds to the `RelWithDebInfo` build type in SyLVER.
+Note that we use the `--disable-openmp` option because SyLVER works
+with the serial version of SPRAL and in this example we disabled the
+compilation of GPU kernels using the `--disable-gpu` option. Also,
+note that the compilation falgs used for SPRAL must match those used
+for the compilation of SyLVER. Here we use the flags `-g -O2
+-march=native` that corresponds to the `RelWithDebInfo` build type in
+SyLVER.
+
+Sequential version of BLAS and LAPACK should be used. We recommend
+using the [MKL](https://software.intel.com/mkl) library for best
+performance on Intel machines and
+[ESSL](https://www.ibm.com/support/knowledgecenter/en/SSFHY8/essl_welcome.html)
+on IBM machines. The [MKL link line
+advisor](https://software.intel.com/en-us/articles/intel-mkl-link-line-advisor)
+can be useful to fill the `--with-blas` and `--with-lapack` options.
 
 ## MeTiS ##
 
