@@ -80,7 +80,7 @@ directory. For this script to be able to find the StarPU library, you
 need to set the environment variable `STARPU_DIR` to the path of you
 StarPU install base directory.
 
-### BLAS and LAPACK libraries ###
+### BLAS and LAPACK ###
 
 The BLAS and LAPACK libraries play an important role in the
 performance of the solver. We recommend using the
