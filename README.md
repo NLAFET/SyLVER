@@ -43,7 +43,7 @@ make
 ```
 Note that **the compilation flags used for SPRAL must match the flags
 used in the compilation of SyLVER**. Here we use the flags `-g -O2
--march=native` that corresponds to the `RelWithDebInfo` build type in
+-march=native` that correspond to the `RelWithDebInfo` build type in
 SyLVER.
 
 In this example use the `--disable-openmp` option because SyLVER works
