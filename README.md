@@ -25,28 +25,47 @@ make # run compilation
 
 ## SPRAL ##
 
-(SPRAL)[https://github.com/ralna/spral] is an open-source library for
-sparse linear algebra and associated algorithm that has important
-features used in SyLVER. Note that 
+[SPRAL](https://github.com/ralna/spral) is an open-source library for
+sparse linear algebra and associated algorithm and has numerous
+important features used un SyLVER. The latest verion of SPRAL can be
+found on its [GitHub
+repository](https://github.com/ralna/spral/releases). The compilation
+of SPRAL is handled by autotools and can be done as follow when using
+the GCC compilers:
+
+```bash
+cd spral
+mkdir build
+cd build
+../configure CXX=g++ FC=gfortran CC=gcc CFLAGS="-g -O2 -march=native" CXXFLAGS="-g -O2 -march=native" FCFLAGS="-g -O2 -march=native" --with-metis="-L/path/to/metis -lmetis" --with-blas="-L/path/to/blas -lblas" --with-lapack="-L/path/to/lapack -llapack" --disable-openmp --disable-gpu
+make
+```
+
+Note that we use the `--disable-openmp` because SyLVER works with the
+sequetial version of SPRAL and in this exmaple we disable the
+compilation of GPU kernels using `--disable-gpu`. Also, note that the
+compilation falgs used for SPRAL must match those used for the
+compilation of SyLVER. Here we use the flags `-g -O2 -march=native`
+that corresponds to the `RelWithDebInfo` build type in SyLVER.
 
 ## MeTiS ##
 
 The [MeTiS](http://glaros.dtc.umn.edu/gkhome/metis/metis/overview)
 partitioning library is needed by the SPRAL library and therefore it
-is needed when linking the SyLVER package for example when generating
-test drivers, examples, and tests.
+is needed when linking the SyLVER package when generating examples and
+test drivers.
 
 ## Runtime system ##
 
-By default, the compilation will produce a serial code that can be
-explicitly requested using the option `-DRUNTIME=STF`.  The
-`-DRUNTIME=StarPU` option indicates that you want to compile the
-parallel version of the code using StarPU in which case the StarPU
-version needs to be at least 1.3.0. The StarPU library is found with
-the `FindSTARPU.cmake` script located in the `cmake/Modules`
-directory. For this script to be able to find the StarPU library, you
-need to set the environment variable `STARPU_DIR` to the path of you
-StarPU install base directory.
+By default, CMake will confirgure the compilation for a serial version
+of SyLVER that can be explicitly requested using the option
+`-DRUNTIME=STF`.  The `-DRUNTIME=StarPU` option indicates that you
+want to compile the parallel version of the code using StarPU in which
+case the StarPU version needs to be at least 1.3.0. The StarPU library
+is found with the `FindSTARPU.cmake` script located in the
+`cmake/Modules` directory. For this script to be able to find the
+StarPU library, you need to set the environment variable `STARPU_DIR`
+to the path of you StarPU install base directory.
 
 ## BLAS and LAPACK libraries ##
 
