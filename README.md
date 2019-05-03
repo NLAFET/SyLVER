@@ -72,10 +72,10 @@ By default, CMake will confirgure the compilation for a serial version
 of SyLVER that can be explicitly requested using the option
 `-DRUNTIME=STF`.  
 
-The `-DRUNTIME=StarPU` option indicates that you want to compile the
-parallel version of the code using StarPU in which case the StarPU
-version needs to be at least 1.3.0. The StarPU library is found with
-the `FindSTARPU.cmake` script located in the `cmake/Modules`
+The `-DRUNTIME=StarPU` enables the compilation of the parallel version
+of SyLVER using StarPU runtime system. In this case the StarPU version
+needs to be at least 1.3.0. The StarPU library is found with the
+`FindSTARPU.cmake` script located in the `cmake/Modules`
 directory. For this script to be able to find the StarPU library, you
 need to set the environment variable `STARPU_DIR` to the path of you
 StarPU install base directory.
