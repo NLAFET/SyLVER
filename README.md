@@ -84,7 +84,7 @@ performance of the solver. We recommend using the
 [MKL](https://software.intel.com/mkl) library for best performance on
 Intel machines and the
 [ESSL](https://www.ibm.com/support/knowledgecenter/en/SSFHY8/essl_welcome.html)
-library when running on IBM machine. Alternative BLAS and LAPACK
+library when running on IBM machines. Alternative BLAS and LAPACK
 libraries include [OpenBLAS](https://www.openblas.net/). Note that
 SyLVER should be linked against the **sequential** BLAS and LAPACK
 libraries.
