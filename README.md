@@ -4,11 +4,10 @@ SyLVER is a sparse direct solver for symmetric systems which may be
 positive-definite or indefinite. It implements DAG-based algorithms
 that enable an efficient exploitation of multicore architectures and
 heterogeneous GPU-accelerated systems. The code has been developed in
-the context of the EU H2020
-[NLAFET project](http://www.nlafet.eu/). The parallel implementation
-relies on the [StarPU](http://starpu.gforge.inria.fr/) runtime system
-developed and maintained by the STORM team at Inria Bordeaux
-Sud-Ouest.
+the context of the EU H2020 [NLAFET
+project](http://www.nlafet.eu/). The parallel implementation relies on
+the [StarPU](http://starpu.gforge.inria.fr/) runtime system developed
+and maintained by the STORM team at Inria Bordeaux Sud-Ouest.
 
 # Installation 
 
@@ -23,7 +22,9 @@ cmake <path-to-source> -DRUNTIME=StarPU # configure compilation
 make # run compilation 
 ```
 
-## SPRAL ##
+## Third-party libraries ##
+
+### SPRAL ###
 
 [SPRAL](https://github.com/ralna/spral) is an open-source library for
 sparse linear algebra and associated algorithm and has numerous
@@ -57,14 +58,14 @@ on IBM machines. The [MKL link line
 advisor](https://software.intel.com/en-us/articles/intel-mkl-link-line-advisor)
 can be useful to fill the `--with-blas` and `--with-lapack` options.
 
-## MeTiS ##
+### MeTiS ###
 
 The [MeTiS](http://glaros.dtc.umn.edu/gkhome/metis/metis/overview)
 partitioning library is needed by the SPRAL library and therefore it
 is needed when linking the SyLVER package when generating examples and
 test drivers.
 
-## Runtime system ##
+### Runtime system ###
 
 By default, CMake will confirgure the compilation for a serial version
 of SyLVER that can be explicitly requested using the option
@@ -76,7 +77,7 @@ is found with the `FindSTARPU.cmake` script located in the
 StarPU library, you need to set the environment variable `STARPU_DIR`
 to the path of you StarPU install base directory.
 
-## BLAS and LAPACK libraries ##
+### BLAS and LAPACK libraries ###
 
 The BLAS and LAPACK libraries play an important role in the
 performance of the solver. We recommend using the
@@ -108,4 +109,3 @@ If CMake is unable to locate the requested libraries via the
 ```bash
 cmake <path-to-source> -DLBLAS="/path/to/blas -lblas" -DLBLAS="/path/to/lapack -llapack" # configure compilation
 ```
-
