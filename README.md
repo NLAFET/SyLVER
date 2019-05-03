@@ -82,11 +82,12 @@ to the path of you StarPU install base directory.
 The BLAS and LAPACK libraries play an important role in the
 performance of the solver. We recommend using the
 [MKL](https://software.intel.com/mkl) library for best performance on
-Intel machines and
+Intel machines and the
 [ESSL](https://www.ibm.com/support/knowledgecenter/en/SSFHY8/essl_welcome.html)
-when running on IBM machine. Alternative BLAS and LAPACK libraries
-include [OpenBLAS](https://www.openblas.net/). Note that SyLVER should
-be linked against the **sequential** BLAS and LAPACK libraries.
+library when running on IBM machine. Alternative BLAS and LAPACK
+libraries include [OpenBLAS](https://www.openblas.net/). Note that
+SyLVER should be linked against the **sequential** BLAS and LAPACK
+libraries.
 
 These libraries are found via the CMake scripts
 [FindBLAS](https://cmake.org/cmake/help/latest/module/FindBLAS.html)
