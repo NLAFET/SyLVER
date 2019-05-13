@@ -319,8 +319,8 @@ if (${USE_GPU} MATCHES ON)
 
   # Set NVCC arguments
   foreach(ARCH ${SyLVER_NVCC_ARCHS})
-    # string(APPEND CUDA_NVCC_FLAGS " -gencode arch=compute_${ARCH},code=sm_${ARCH}")
-    string(APPEND CMAKE_CUDA_FLAGS " -gencode arch=compute_${ARCH},code=sm_${ARCH}")
+    string(APPEND CUDA_NVCC_FLAGS " -gencode arch=compute_${ARCH},code=sm_${ARCH}")
+    # string(APPEND CMAKE_CUDA_FLAGS " -gencode arch=compute_${ARCH},code=sm_${ARCH}")
   endforeach()
   
   MESSAGE( STATUS "CUDA found:         " ${CUDA_FOUND} )
