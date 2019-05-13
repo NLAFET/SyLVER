@@ -849,6 +849,7 @@ namespace starpu {
       void *fkeep;
       int p;
       T *aval;
+      T *scaling;
       void **child_contrib;
       sylver::options_t *options;
       std::vector<sylver::inform_t> *worker_stats;
@@ -859,6 +860,7 @@ namespace starpu {
             &fkeep,
             &p,
             &aval,
+            &scaling,
             &child_contrib,
             &options,
             &worker_stats);
@@ -888,7 +890,7 @@ namespace starpu {
 #pragma omp single
          {
             // printf("[factor_subtree_cpu_func] nth: %d\n", nth);
-            factor_subtree(akeep, fkeep, p, aval, child_contrib, &subtree_opts, &stats);
+            factor_subtree(akeep, fkeep, p, aval, scaling, child_contrib, &subtree_opts, &stats);
          }
       }
 

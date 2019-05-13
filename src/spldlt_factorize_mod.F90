@@ -371,10 +371,10 @@ contains
     type is (gpu_symbolic_subtree)
        ! print *, "[spldlt_factor_subtree_c] gpu_numeric_subtree"
        fkeep%subtree(part)%ptr => akeep%subtree(part)%ptr%factor( &
-            fkeep%pos_def, val, scaling, &
+            fkeep%pos_def, val, &
             contribs, &
-            options, inform &
-            scaling)
+            options, inform, &
+            scaling=scaling)
 #endif
     end select
 

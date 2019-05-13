@@ -49,8 +49,10 @@ endif()
 if(${USE_GPU} MATCHES ON)
 
   file(
-    GLOB 
+    GLOB
     gpu_sources
+    gpu/*.cxx
+    gpu/*.hxx
     kernels/gpu/*.cxx
     kernels/gpu/*.hxx
     )  
