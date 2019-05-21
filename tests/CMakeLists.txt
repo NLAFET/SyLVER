@@ -27,13 +27,25 @@ file(
   tests_src
   *.cxx
   *.hxx
-  *.F90
-  *.cu)
+  *.F90)
+
+if(${USE_GPU} MATCHES ON)
+
+  # Sources
+  file(
+    GLOB
+    tests_cuda_src
+    *.cu
+    *.cuh)
+
+  cuda_add_library(sylver_tests_cuda ${tests_cuda_src})
+
+endif()
 
 add_library(sylver_tests ${tests_src})
-if (${KERNEL_TESTS} MATCHES "ON")
-  set_target_properties(sylver_tests PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
-endif()
+# if (${KERNEL_TESTS} MATCHES "ON")
+#   set_target_properties(sylver_tests PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+# endif()
 # set_target_properties(sylver_tests PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 foreach(tests_driver ${tests_drivers})
@@ -47,6 +59,9 @@ foreach(tests_driver ${tests_drivers})
   target_include_directories(${tests_driver_name} PUBLIC ${SyLVER_SOURCE_DIR}/tests)
   target_include_directories(${tests_driver_name} PUBLIC ${SyLVER_DIR})
   target_link_libraries(${tests_driver_name} sylver_tests)
+  if(${USE_GPU} MATCHES ON)
+    target_link_libraries(${tests_driver_name} sylver_tests_cuda)
+  endif()
   target_link_libraries(${tests_driver_name} sylver)
   target_link_libraries(${tests_driver_name} ${obj})
   target_link_libraries(${tests_driver_name} ${SPRAL_LIBRARIES})
