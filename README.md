@@ -1,5 +1,7 @@
 # SyLVER
 
+Documentation [![Documentation Status](https://readthedocs.org/projects/sylver/badge/?version=latest)](https://sylver.readthedocs.io/en/latest/?badge=latest)
+
 SyLVER is a sparse direct solver for symmetric systems which may be
 either positive-definite or indefinite. It implements DAG-based
 algorithms that enable an efficient exploitation of multicore
