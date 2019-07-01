@@ -6,6 +6,7 @@ if (${KERNEL_TESTS} MATCHES "ON")
   
   list(APPEND tests_drivers "drivers/factor_node_test.cxx")
   list(APPEND tests_drivers "drivers/kernel_test.cxx")
+  list(APPEND tests_drivers "drivers/sylver_test.F90")
 
   # GPU
   if(${USE_GPU} MATCHES ON)
@@ -58,6 +59,9 @@ foreach(tests_driver ${tests_drivers})
 
   target_include_directories(${tests_driver_name} PUBLIC ${SyLVER_SOURCE_DIR}/tests)
   target_include_directories(${tests_driver_name} PUBLIC ${SyLVER_DIR})
+  target_include_directories(${tests_driver_name} PUBLIC ${CMAKE_BINARY_DIR}/src)
+  target_include_directories(${tests_driver_name} PUBLIC ${CMAKE_BINARY_DIR}/tests)
+  target_include_directories(${tests_driver_name} PUBLIC ${SPRAL_DIR})
   target_link_libraries(${tests_driver_name} sylver_tests)
   if(${USE_GPU} MATCHES ON)
     target_link_libraries(${tests_driver_name} sylver_tests_cuda)

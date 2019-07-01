@@ -498,7 +498,7 @@ contains
   !> @brief Analyse phase for symmetric matrix.
   !>
   ! TODO 32-bits wrapper
-  subroutine spldlt_analyse(spldlt_akeep, n, ptr, row, options, inform, order, val, ncpu, ngpu)
+  subroutine spldlt_analyse(spldlt_akeep, n, ptr, row, options, inform, order, val, ncpu, ngpu, check)
     use spral_ssids, only: ssids_free
     use spral_metis_wrapper, only : metis_order
     use spral_ssids_akeep, only: ssids_akeep
@@ -506,7 +506,8 @@ contains
     use spral_ssids_anal, only : expand_pattern, check_order, expand_matrix
     use spral_ssids_inform, only : ssids_inform
     use spral_match_order, only : match_order_metis
-    ! use spral_ssids_cpu_subtree, only : construct_cpu_symbolic_subtree, cpu_symbolic_subtree
+    use spral_matrix_util, only : SPRAL_MATRIX_REAL_SYM_INDEF, &
+         SPRAL_MATRIX_REAL_SYM_PSDEF, clean_cscl_oop
     use sylver_datatypes_mod, only: spldlt_options
     use, intrinsic :: iso_c_binding
     implicit none
@@ -522,18 +523,20 @@ contains
     real(wp), optional, intent(in) :: val(:) ! Matrix numerical values
     integer, optional, intent(inout) :: ncpu ! Number of CPU workers
     integer, optional, intent(inout) :: ngpu ! Number of GPU workers
+    logical, optional, intent(in) :: check
 
     character(50)  :: context      ! Procedure name (used when printing).
-    logical :: check = .false. ! TODO input parameter
+    logical :: mycheck = .false.
     type(ssids_akeep), pointer :: akeep ! SSIDS akeep structure
     integer :: i
     ! integer, dimension(:), allocatable :: contrib_dest, exec_loc
     integer :: st ! Error management
     integer(long) :: nz     ! entries in expanded matrix
     type(ssids_options) :: ssids_opts ! SSIDS options 
-    type(ssids_inform) :: ssids_info
+    type(ssids_inform) :: ssids_info ! SSIDS inform
 
     ! Error flags
+    integer :: mu_flag      ! error flag for matrix_util routines
     integer :: mo_flag ! matching-based ordering flag
     integer :: free_flag
     integer :: flag ! Error flag for metis
@@ -543,6 +546,8 @@ contains
     integer, dimension(:), allocatable :: row2 ! row indices for expanded matrix
 
     ! The following are only used for matching-based orderings
+    real(wp), dimension(:), allocatable :: val_clean ! cleaned values if
+      ! val is present and checking is required. 
     real(wp), dimension(:), allocatable :: val2 ! expanded matrix if
       ! val is present.
     
@@ -568,7 +573,14 @@ contains
             ' n                         =  ',n
     end if
 
-    akeep%check = check
+    ! Input checking
+    if (present(check)) then
+       mycheck = check
+    else
+       mycheck = .false. ! No checking by default
+    end if
+       
+    akeep%check = mycheck
     akeep%n = n
 
     ! Checking of matrix data
@@ -597,12 +609,42 @@ contains
           goto 200
        end if
     end if
-    
-    ! if (check) then
-    ! TODO
-    ! else
-    nz = ptr(n+1)-1
-    ! end if
+
+    st = 0
+    if (akeep%check) then
+       allocate (akeep%ptr(n+1),stat=st)
+       if (st .ne. 0) go to 100
+
+       if (present(val)) then
+          call clean_cscl_oop(SPRAL_MATRIX_REAL_SYM_INDEF, n, n, ptr, row, &
+               akeep%ptr, akeep%row, mu_flag, val_in=val, val_out=val_clean, &
+               lmap=akeep%lmap, map=akeep%map, &
+               noor=inform%matrix_outrange, ndup=inform%matrix_dup)
+       else
+          call clean_cscl_oop(SPRAL_MATRIX_REAL_SYM_INDEF, n, n, ptr, row, &
+               akeep%ptr, akeep%row, mu_flag, lmap=akeep%lmap, map=akeep%map, &
+               noor=inform%matrix_outrange, ndup=inform%matrix_dup)
+       end if
+       ! Check for errors
+       if (mu_flag .lt. 0) then
+          if (mu_flag .eq. -1) inform%flag  = SYLVER_ERROR_ALLOCATION
+          if (mu_flag .eq. -5) inform%flag  = SYLVER_ERROR_A_PTR
+          if (mu_flag .eq. -6) inform%flag  = SYLVER_ERROR_A_PTR
+          if (mu_flag .eq. -10) inform%flag = SYLVER_ERROR_A_ALL_OOR
+          goto 200
+       end if
+
+       ! Check whether warning needs to be raised
+       ! Note: same numbering of positive flags as in matrix_util
+       if (mu_flag .gt. 0) then
+          inform%flag = mu_flag
+          call inform%print_flag(options, context)
+       end if
+       nz = akeep%ptr(n+1) - 1       
+       
+    else
+       nz = ptr(n+1)-1
+    end if
 
     !
     ! If the pivot order is not supplied, we need to compute an order.
@@ -629,12 +671,23 @@ contains
           go to 200
        end if
        order2(1:n) = order(1:n)
-       call expand_pattern(n, nz, ptr, row, ptr2, row2)
+       if (akeep%check) then
+          call expand_pattern(n, nz, akeep%ptr, akeep%row, ptr2, row2)
+       else
+          call expand_pattern(n, nz, ptr, row, ptr2, row2)
+       end if
+
     case(1)
        ! METIS ordering
-       call metis_order(n, ptr, row, order2, akeep%invp, &
-            flag, inform%stat)
-       call expand_pattern(n, nz, ptr, row, ptr2, row2)
+       if (akeep%check) then
+          call metis_order(n, akeep%ptr, akeep%row, order2, akeep%invp, &
+               flag, inform%stat)
+          call expand_pattern(n, nz, akeep%ptr, akeep%row, ptr2, row2)
+       else
+          call metis_order(n, ptr, row, order2, akeep%invp, &
+               flag, inform%stat)
+          call expand_pattern(n, nz, ptr, row, ptr2, row2)
+       end if
        if (flag .lt. 0) then
           inform%flag = SYLVER_ERROR_ORDER
           go to 200
@@ -644,7 +697,13 @@ contains
        ! Expand the matrix as more efficient to do it and then
        ! call match_order_metis() with full matrix supplied
 
-       call expand_matrix(n, nz, ptr, row, val, ptr2, row2, val2)
+       if (akeep%check) then
+          call expand_matrix(n, nz, akeep%ptr, akeep%row, val_clean, ptr2, &
+               row2, val2)
+          deallocate (val_clean,stat=st)
+       else
+          call expand_matrix(n, nz, ptr, row, val, ptr2, row2, val2)
+       end if
 
        call match_order_metis(n, ptr2, row2, val2, order2, akeep%scaling, &
             mo_flag, inform%stat)
@@ -696,11 +755,13 @@ contains
     ! end do
 
     ! perform rest of analyse
-    ! if (check) then
-    ! else
-    call analyse_core(spldlt_akeep, n, ptr, row, ptr2, row2, order2, &
-         akeep%invp, options, inform)
-    ! end if
+    if (check) then
+       call analyse_core(spldlt_akeep, n, akeep%ptr, akeep%row, ptr2, row2, &
+            order2, akeep%invp, options, inform)
+    else
+       call analyse_core(spldlt_akeep, n, ptr, row, ptr2, row2, order2, &
+            akeep%invp, options, inform)
+    end if
 
     if (present(order)) order(1:n) = abs(order2(1:n))
     ! if (options%print_level .gt. DEBUG_PRINT_LEVEL) &

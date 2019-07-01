@@ -2,7 +2,8 @@
 !> @copyright 2016- The Science and Technology Facilities Council (STFC)
 !> @author    Florent Lopez
 module spldlt_mod
-
+  use spldlt_analyse_mod
+  
 contains
 
   !> @brief Initialize SpLDLT solver, initialize runtime system.
