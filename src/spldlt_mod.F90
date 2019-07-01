@@ -3,6 +3,7 @@
 !> @author    Florent Lopez
 module spldlt_mod
   use spldlt_analyse_mod
+  use spldlt_factorize_mod
   
 contains
 
@@ -44,16 +45,17 @@ contains
   end subroutine spldlt_finalize
 
   !> @brief Release memory and cleanup data structure
-  subroutine spldlt_free(akeep, fkeep)
+  subroutine spldlt_free(spldlt_akeep, spldlt_fkeep)
     use spldlt_analyse_mod
     use spldlt_factorize_mod
     implicit none
     
-    type(spldlt_akeep_type), intent(inout) :: akeep
-    type(spldlt_fkeep_type), intent(inout) :: fkeep
+    type(spldlt_akeep_type), intent(inout) :: spldlt_akeep
+    type(spldlt_fkeep_type), intent(inout) :: spldlt_fkeep
 
-    ! TODO
-    
+    call spldlt_akeep%free()
+    call spldlt_fkeep%free()
+
   end subroutine spldlt_free
 
 end module spldlt_mod

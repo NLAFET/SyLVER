@@ -11,6 +11,9 @@ program main
   integer :: dl_unit = 12
   character(len=6) :: dl_file = "dl.out"
 
+  integer :: ncpu
+  integer :: ngpu
+  
   !we_unit = 11
   !dl_unit = 12
 
@@ -22,12 +25,25 @@ program main
   if(we_unit.gt.6) open(unit=we_unit,file=we_file,status="replace")
   if(dl_unit.gt.6) open(unit=dl_unit,file=dl_file,status="replace")
 
+  ncpu = 1
+#if defined(SPLDLT_USE_GPU)
+  ngpu = 1
+#else
+  ngpu = 0
+#endif
+  
+  ! Initilaize SyLVER
+  call spldlt_init(ncpu, ngpu)
+  
   errors = 0
 
   call test_warnings
   
   write(*, "(/a)") "=========================="
   write(*, "(a,i4)") "Total number of errors = ", errors
+
+  ! Shutdown SpLDLT
+  call spldlt_finalize()
 
   if(we_unit.gt.6) close(we_unit)
   if(dl_unit.gt.6) close(dl_unit)
@@ -86,6 +102,9 @@ contains
     call gen_rhs(a, rhs, x1, x, res, 1)
     call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true.)
     call print_result(info%flag, SYLVER_WARNING_IDX_OOR)
+    call chk_answer(posdef, a, akeep, options, rhs, x, res, &
+      SYLVER_WARNING_IDX_OOR)
+    call spldlt_akeep_free(akeep)
     
   end subroutine test_warnings
 

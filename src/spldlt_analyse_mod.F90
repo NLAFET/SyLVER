@@ -25,6 +25,8 @@ module spldlt_analyse_mod
      integer, dimension(:), allocatable :: subtree_en
      ! Inform at end of analyse phase
      type(sylver_inform) :: inform
+   contains
+      procedure, pass(spldlt_akeep) :: free => akeep_free
   end type spldlt_akeep_type
 
   interface spldlt_create_symbolic_tree_c
@@ -85,6 +87,27 @@ module spldlt_analyse_mod
 
 contains
 
+  subroutine akeep_free(spldlt_akeep)
+    implicit none
+
+    class(spldlt_akeep_type), intent(inout) :: spldlt_akeep
+
+    integer :: flag
+
+    call spldlt_akeep%akeep%free(flag)
+    
+  end subroutine akeep_free
+  
+  !> @brief Release memory and cleanup data structure
+  subroutine spldlt_akeep_free(spldlt_akeep)
+    implicit none
+
+    type(spldlt_akeep_type), intent(inout) :: spldlt_akeep
+
+    call spldlt_akeep%free()
+
+  end subroutine spldlt_akeep_free  
+  
   ! Debug
   ! subroutine allocate_cpu_symbolic_subtree()
   !   implicit none

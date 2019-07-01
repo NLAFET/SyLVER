@@ -28,6 +28,7 @@ module spldlt_factorize_mod
      type(sylver_inform) :: inform
    contains
      procedure :: solve
+     procedure, pass(spldlt_fkeep) :: free => fkeep_free ! Frees memory
   end type spldlt_fkeep_type
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -173,6 +174,28 @@ module spldlt_factorize_mod
   end interface
   
 contains
+
+  subroutine fkeep_free(spldlt_fkeep)
+    implicit none
+
+    class(spldlt_fkeep_type), intent(inout) :: spldlt_fkeep
+
+    integer :: flag
+
+    ! Cleanup SSIDS structure
+    call spldlt_fkeep%fkeep%free(flag)
+
+  end subroutine fkeep_free
+
+  !> @brief Release memory and cleanup data structure for fkeep
+  subroutine spldlt_fkeep_free(spldlt_fkeep)
+    implicit none
+    
+    type(spldlt_fkeep_type), intent(inout) :: spldlt_fkeep
+    
+    call spldlt_fkeep%free()
+
+  end subroutine spldlt_fkeep_free
 
   ! ! Print useful information for debugging
   ! subroutine spldlt_print_debuginfo_c(cakeep, cfkeep, p) bind(C)
@@ -658,17 +681,20 @@ contains
     integer, dimension(*), optional, intent(in) :: row ! Must be
     ! provided if scaling is required
 
+    real(wp), dimension(:), allocatable, target :: val2
     ! type(ssids_options), pointer :: ssids_opts ! SSIDS options 
     type(ssids_akeep), pointer :: akeep
     type(ssids_fkeep), pointer :: fkeep => null()
     integer :: i
     integer :: n ! Matrix size
+    integer(long) :: nz
     integer :: flag
     type(rb_write_options) :: rb_options
     ! Error management
     character(50)  :: context      ! Procedure name (used when printing).
     integer :: st
     real(wp), dimension(:), allocatable :: scaling
+    integer :: matrix_type
 
     ! Types related to scaling routines
     type(hungarian_options) :: hsoptions
@@ -679,6 +705,11 @@ contains
     akeep => spldlt_akeep%akeep ! SSIDS analyse data
     fkeep => spldlt_fkeep%fkeep ! SSIDS factor data
     fkeep%pos_def = posdef
+    if (posdef) then
+       matrix_type = SPRAL_MATRIX_REAL_SYM_PSDEF
+    else
+       matrix_type = SPRAL_MATRIX_REAL_SYM_INDEF
+    end if
 
     ! Setup for any printing we may require
     context = 'spldlt_factor'
@@ -712,17 +743,25 @@ contains
        goto 200
     end if
     
-    print *, "options%scaling = ", options%scaling
-    ! Check if ptr and row are present if needed for scaling
-    if (((options%scaling .eq. 1) .or. &
-         (options%scaling .eq. 2) .or. &
-         (options%scaling .eq. 4)) &
-         .and. &
-         ((.not. present(ptr)) .or. (.not. present(row)))) then       
-       inform%flag = SYLVER_ERROR_PTR_ROW
-       goto 200
+    ! If matrix has been checked, produce a clean version of val in val2
+    if (akeep%check) then
+       nz = akeep%ptr(n+1) - 1
+       allocate(val2(nz),stat=st)
+       if (st .ne. 0) go to 100
+       call apply_conversion_map(matrix_type, akeep%lmap, akeep%map, val, &
+            nz, val2)
+    else
+       ! print *, "options%scaling = ", options%scaling
+       ! Check if ptr and row are present if needed for scaling
+       if (((options%scaling .eq. 1) .or. &
+            (options%scaling .eq. 2) .or. &
+            (options%scaling .eq. 4)) &
+            .and. &
+            ((.not. present(ptr)) .or. (.not. present(row)))) then       
+          inform%flag = SYLVER_ERROR_PTR_ROW
+          goto 200
+       end if
     end if
-
     ! Dump matrix if required
     ! if (allocated(options%rb_dump)) then
     !    write(options%unit_warning,*) "Dumping matrix to '", options%rb_dump, "'"
@@ -775,13 +814,13 @@ contains
        if (st .ne. 0) goto 100
        ! Run Hungarian algorithm
        hsoptions%scale_if_singular = options%action
-       ! if (akeep%check) then
-          ! call hungarian_scale_sym(n, akeep%ptr, akeep%row, val2, scaling, &
-               ! hsoptions, hsinform)
-       ! else
-       call hungarian_scale_sym(n, ptr, row, val, scaling, &
-            hsoptions, hsinform)
-       ! end if
+       if (akeep%check) then
+          call hungarian_scale_sym(n, akeep%ptr, akeep%row, val2, scaling, &
+               hsoptions, hsinform)
+       else
+          call hungarian_scale_sym(n, ptr, row, val, scaling, &
+               hsoptions, hsinform)
+       end if
        select case(hsinform%flag)
        case(-1)
           ! Allocation error
@@ -808,13 +847,13 @@ contains
        allocate(scaling(n), stat=st)
        if (st .ne. 0) goto 100
        ! Run auction algorithm
-       ! if (akeep%check) then
-          ! call auction_scale_sym(n, akeep%ptr, akeep%row, val2, scaling, &
-               ! options%auction, inform%auction)
-       ! else
-       call auction_scale_sym(n, ptr, row, val, scaling, &
-            options%auction, inform%auction)
-       ! end if
+       if (akeep%check) then
+          call auction_scale_sym(n, akeep%ptr, akeep%row, val2, scaling, &
+               options%auction, inform%auction)
+       else
+          call auction_scale_sym(n, ptr, row, val, scaling, &
+               options%auction, inform%auction)
+       end if
        if (inform%auction%flag .ne. 0) then
           ! only possible error is allocation failed
           st = inform%auction%stat
@@ -846,13 +885,13 @@ contains
        allocate(scaling(n), stat=st)
        if (st .ne. 0) goto 100
        ! Run equilibriation algorithm
-       ! if (akeep%check) then
-          ! call equilib_scale_sym(n, akeep%ptr, akeep%row, val2, scaling, &
-               ! esoptions, esinform)
-       ! else
-       call equilib_scale_sym(n, ptr, row, val, scaling, &
-            esoptions, esinform)
-       ! end if
+       if (akeep%check) then
+          call equilib_scale_sym(n, akeep%ptr, akeep%row, val2, scaling, &
+               esoptions, esinform)
+       else
+          call equilib_scale_sym(n, ptr, row, val, scaling, &
+               esoptions, esinform)
+       end if
        if (esinform%flag .ne. 0) then
           ! Only possible error is memory allocation failure
           st = esinform%stat
@@ -884,8 +923,11 @@ contains
     end if
 
     ! Call main factorization routine
-    call factor_core(spldlt_akeep, spldlt_fkeep, val, options, inform)
-
+    if (akeep%check) then
+       call factor_core(spldlt_akeep, spldlt_fkeep, val2, options, inform)
+    else
+       call factor_core(spldlt_akeep, spldlt_fkeep, val, options, inform)
+    end if
     ! if (akeep%n .ne. inform%matrix_rank) then
     !    ! Rank deficient
     !    ! Note: If we reach this point then must be options%action=.true.

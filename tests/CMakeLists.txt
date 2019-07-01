@@ -1,6 +1,9 @@
 # List tests drivers
 set(tests_drivers)
 
+# Include modules files from SyLVER
+include_directories(${CMAKE_BINARY_DIR}/src)
+
 # Unit tests
 if (${KERNEL_TESTS} MATCHES "ON")
   

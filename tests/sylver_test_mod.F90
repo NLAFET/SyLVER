@@ -1,9 +1,15 @@
 module sylver_test_mod
   use spral_ssids_datatypes
   use spral_random
+  use sylver_mod
   implicit none
 
   integer :: errors
+
+  !   real(wp), parameter :: err_tol = 5e-12
+  !   real(wp), parameter :: err_tol_scale = 2e-10
+  real(wp), parameter :: err_tol = 5e-11
+  real(wp), parameter :: err_tol_scale = 1e-08
 
   type :: matrix_type
      integer :: n
@@ -142,5 +148,165 @@ contains
          10.0 /)
 
   end subroutine simple_mat
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  
+  subroutine simple_mat_lower(a,extra)
+    ! simple pos def test matrix (lower triangular part only)
+    type(matrix_type), intent(inout) :: a
+    integer, optional, intent(in) :: extra
+
+    integer :: myextra,st
+
+    myextra = 0
+    if(present(extra)) myextra = extra
+
+    !
+    ! Create the simple sparse matrix (lower triangular part only):
+    !
+    ! 10.0  2.0       3.0
+    !  2.0 10.0
+    !           10.0  4.0
+    !  3.0       4.0 10.0
+    !
+
+    a%n = 4
+    a%ne = 7
+    deallocate(a%ptr, a%row, a%col, a%val, stat=st)
+    allocate(a%ptr(a%n+1))
+    a%ptr = (/ 1, 4, 5, 7, 8 /)
+    allocate(a%col(a%ne+myextra))
+    allocate(a%row(a%ne+myextra))
+    allocate(a%val(a%ne+myextra))
+
+    a%col(1:7) = (/ 1, 1, 1,     2,    3, 3,    4 /)
+    a%row(1:7) = (/ 1, 2, 4,     2,    3, 4,    4 /)
+    a%val(1:7) = (/   10.0, 2.0, 3.0, &
+         10.0, &
+         10.0, 4.0, &
+         10.0 /)
+
+  end subroutine simple_mat_lower
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  
+  subroutine compute_resid(nrhs,a,x,lx,rhs,lrhs,res,lres)
+    integer, intent(in) :: nrhs, lrhs, lx, lres
+    type(matrix_type), intent(in) :: a
+    real(wp), intent(in) :: rhs(lrhs,nrhs)
+    real(wp), intent(in) :: x(lx,nrhs)
+    real(wp), intent(out) :: res(lres,nrhs)
+
+    real(wp), dimension(:), allocatable :: work
+
+    integer :: i, j, k
+    real(wp) :: anorm, atemp, bnorm(1:nrhs), xnorm(1:nrhs)
+
+    allocate(work(a%n))
+
+    anorm = 0
+    bnorm = 0
+    xnorm = 0
+    work = 0
+
+    ! Check residual
+    res(1:a%n,1:nrhs) = rhs(1:a%n,1:nrhs)
+    do k = 1, a%n
+       do j = a%ptr(k), a%ptr(k+1)-1
+          i = a%row(j)
+          if (i < 1 .or. i > a%n) cycle
+          atemp = a%val(j)
+          res(i, 1:nrhs) = res(i, 1:nrhs) - atemp*x(k,1:nrhs)
+          work(i) = work(i) + abs(atemp)
+          if(i.eq.k) cycle
+          res(k, 1:nrhs) = res(k, 1:nrhs) - atemp*x(i,1:nrhs)
+          work(k) = work(k) + abs(atemp)
+       end do
+    end do
+
+    do k = 1, a%n
+       anorm = max(anorm,work(k))
+       do i = 1,nrhs
+          bnorm(i) = max(bnorm(i),abs(rhs(k,i)))
+          xnorm(i) = max(xnorm(i),abs(x(k,i)))
+       end do
+    end do
+
+    do k = 1,a%n
+       do i = 1,nrhs
+          res(k,i) = res(k,i)/(anorm*xnorm(i) + bnorm(i))
+       end do
+    end do
+
+  end subroutine compute_resid
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  
+  subroutine chk_answer(posdef, a, spldlt_akeep, options, rhs, x, res, &
+       expected_flag, fs)
+    logical, intent(in) :: posdef
+    type(matrix_type), intent(inout) :: a
+    type(spldlt_akeep_type), target, intent(inout) :: spldlt_akeep
+    type(sylver_options), intent(in) :: options
+    real(wp), dimension(:,:), intent(inout) :: rhs
+    real(wp), dimension(:,:), intent(inout) :: x
+    real(wp), dimension(:,:), intent(inout) :: res
+    integer, intent(in) :: expected_flag
+    logical, optional, intent(in) :: fs
+
+    type(spldlt_fkeep_type) :: spldlt_fkeep
+    type(sylver_inform) :: info
+    integer :: nrhs, cuda_error
+    type(sylver_options) :: myoptions
+    type(ssids_akeep), pointer :: akeep ! SSIDS akeep structure
+
+    akeep => spldlt_akeep%akeep
+    
+    myoptions = options
+    myoptions%unit_warning = -1 ! disable printing warnings
+
+    write(*,"(a)",advance="no") " *    checking answer...................."
+
+    nrhs = 1
+    ! if(present(fs) .and. .false.) then
+    !    call ssids_factor_solve(posdef,a%val,nrhs,x,a%n,akeep,fkeep,myoptions, &
+    !         info)
+    !    if(info%flag .ne. expected_flag) then
+    !       write(*, "(a,2i4)") "fail on factor_solve",info%flag,expected_flag
+    !       errors = errors + 1
+    !       go to 99
+    !    endif
+    ! else
+    call spldlt_factorize(spldlt_akeep, spldlt_fkeep, posdef, a%val, myoptions, &
+         info, ptr=a%ptr, row=a%row)
+    if(info%flag .ne. expected_flag) then
+       write(*, "(a,2i4)") "fail on factor",info%flag,expected_flag
+       errors = errors + 1
+       go to 99
+    endif
+
+    call spldlt_solve(spldlt_akeep, spldlt_fkeep, nrhs, x, a%n, myoptions, info)
+    if(info%flag .ne. expected_flag) then
+       write(*, "(a,2i4)") "fail on solve", info%flag,expected_flag
+       errors = errors + 1
+       go to 99
+    endif
+    ! endif
+
+    ! Check residual
+    call compute_resid(nrhs,a,x,a%n,rhs,a%n,res,a%n)
+
+    if(maxval(abs(res(1:a%n,1:nrhs))) < err_tol) then
+       write(*, "(a)") "ok"
+    else
+       write(*, "(a,es12.4)") "fail residual = ", &
+            maxval(abs(res(1:a%n,1:nrhs)))
+       errors = errors + 1
+    endif
+
+    ! remember: must call finalise
+99  call spldlt_fkeep_free(spldlt_fkeep)
+
+  end subroutine chk_answer
 
 end module sylver_test_mod
