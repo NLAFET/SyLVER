@@ -95,6 +95,8 @@ contains
     integer :: flag
 
     call spldlt_akeep%akeep%free(flag)
+
+    deallocate(spldlt_akeep%subtree_en)
     
   end subroutine akeep_free
   

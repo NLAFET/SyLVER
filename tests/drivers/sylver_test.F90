@@ -105,7 +105,26 @@ contains
     call chk_answer(posdef, a, akeep, options, rhs, x, res, &
       SYLVER_WARNING_IDX_OOR)
     call spldlt_akeep_free(akeep)
-    
+
+    write(*,"(a)",advance="no") " * Testing out of range below............"
+    call simple_mat_lower(a,1)
+    ne = a%ne
+    a%ptr(a%n+1) = a%ptr(a%n+1) + 1
+    a%row(ne+1) = a%n + 1
+    a%val(ne+1) = 1.
+    a%ne = ne + 1
+    call gen_rhs(a, rhs, x1, x, res, 1)
+    if (allocated(order)) deallocate(order)
+    allocate (order(1:a%n))
+    do i = 1,a%n
+       order(i) = i
+    end do
+    call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true.)
+    call print_result(info%flag, SYLVER_WARNING_IDX_OOR)
+    call chk_answer(posdef, a, akeep, options, rhs, x, res, &
+         SYLVER_WARNING_IDX_OOR)
+    call spldlt_akeep_free(akeep)
+
   end subroutine test_warnings
 
 end program main
