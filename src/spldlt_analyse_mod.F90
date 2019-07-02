@@ -331,7 +331,7 @@ contains
 
     ! Check nemin and set to default if out of range.
     nemin = options%nemin
-    if (nemin .lt. 1) nemin = nemin_default
+    if (nemin .lt. 1) nemin = sylver_nemin_default
 
     ! Perform basic analysis so we can figure out subtrees we want to construct
     call basic_analyse(n, ptr2, row2, order, akeep%nnodes, akeep%sptr, &

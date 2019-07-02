@@ -393,7 +393,7 @@ subroutine test_errors
 
    ! tests on call to ssids_analyse (entry by columns)
 
-   write(*,"(/a)") " * Testing bad arguments ssids_analyse (columns)"
+   write(*,"(/a)") " * Testing bad arguments spldlt_analyse (columns)"
 
    options%ordering = 0
 
@@ -416,6 +416,36 @@ subroutine test_errors
    call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true.)
    call print_result(info%flag, SYLVER_ERROR_A_PTR)
    a%ptr(1) = temp ! reset ptr(1) value
+   call spldlt_akeep_free(akeep)
+
+   write(*,"(a)",advance="no") " * Testing non-monotonic ptr................."
+   temp = a%ptr(2)
+   a%ptr(2) = a%ptr(3)
+   a%ptr(3) = temp
+   call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true.)
+   call print_result(info%flag, SYLVER_ERROR_A_PTR)
+   a%ptr(3) = a%ptr(2) ! reset ptr(3) value
+   a%ptr(2) = temp ! reset ptr(2) value
+   call spldlt_akeep_free(akeep)
+
+   write(*,"(a)",advance="no") " * Testing all A%row oor....................."
+   a%row(1:a%ptr(2)-1) = 0
+   call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true.)
+   call print_result(info%flag, SYLVER_ERROR_A_ALL_OOR)
+   call spldlt_akeep_free(akeep)
+
+   write(*,"(a)",advance="no") " * Testing nemin oor........................."
+   call simple_mat_lower(a)
+   if (allocated(order)) deallocate(order)
+   allocate(order(a%n))
+   do i = 1,a%n
+      order(i) = i
+   end do
+   options%nemin = -1
+   call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true.)
+   call print_result(info%flag, SYLVER_SUCCESS)
+   call spldlt_akeep_free(akeep)
+   options%nemin = sylver_nemin_default ! Reset nemin value
 
  end subroutine test_errors
    

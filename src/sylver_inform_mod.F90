@@ -12,9 +12,9 @@ module sylver_inform_mod
   !
   type sylver_inform
      integer :: flag = SYLVER_SUCCESS ! Takes one of the enumerated flag values:
-     ! SSIDS_SUCCESS
-     ! SSIDS_ERROR_XXX
-     ! SSIDS_WARNING_XXX
+     ! SYLVER_SUCCESS
+     ! SYLVER_ERROR_XXX
+     ! SYLVER_WARNING_XXX
      integer :: matrix_dup = 0 ! Number of duplicated entries.
      integer :: matrix_missing_diag = 0 ! Number of missing diag. entries
      integer :: matrix_outrange = 0 ! Number of out-of-range entries.
@@ -71,8 +71,7 @@ contains
     case(SYLVER_ERROR_A_PTR)
        msg = 'Error in ptr'
     case(SYLVER_ERROR_A_ALL_OOR)
-       msg = 'All entries in a column out-of-range (ssids_analyse) &
-            &or all entries out-of-range (ssids_analyse_coord)'
+       msg = 'All entries in a column out-of-range (spldlt_analyse)'
     case(SYLVER_ERROR_SINGULAR)
        msg = 'Matrix found to be singular'
     case(SYLVER_ERROR_NOT_POS_DEF)
