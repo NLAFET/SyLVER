@@ -123,7 +123,7 @@ contains
     call print_result(info%flag, SYLVER_WARNING_IDX_OOR)
     call chk_answer(posdef, a, akeep, options, rhs, x, res, &
          SYLVER_WARNING_IDX_OOR)
-    call spldlt_akeep_free(akeep)
+    !call spldlt_akeep_free(akeep)
 
   end subroutine test_warnings
 

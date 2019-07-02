@@ -120,10 +120,6 @@ namespace spldlt {
          starpu_task_wait_for_all();
 
          starpu_data_unregister(spldlt::starpu::workspace_hdl);
-
-#if defined(SPLDLT_USE_GPU)
-         starpu_cublas_shutdown();
-#endif
 #endif
 
          // Reduce thread_stats

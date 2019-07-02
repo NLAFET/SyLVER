@@ -39,6 +39,10 @@ contains
     implicit none
 
 #if defined(SPLDLT_USE_STARPU)
+#if defined(SPLDLT_USE_GPU)
+    call starpu_f_cublas_shutdown();
+#endif
+
     call starpu_f_shutdown()
 #endif
 

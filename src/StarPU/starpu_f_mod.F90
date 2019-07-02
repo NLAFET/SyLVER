@@ -161,6 +161,11 @@ module starpu_f_mod
      end subroutine starpu_f_alloc_handle
   end interface
 
+  interface starpu_f_cublas_shutdown
+     subroutine starpu_cublas_shutdown() bind(c)
+     end subroutine starpu_cublas_shutdown
+  end interface starpu_f_cublas_shutdown
+  
 contains
 
   subroutine starpu_f_1dsmatrix_data_register(handle, host, a, ld, m, n)
