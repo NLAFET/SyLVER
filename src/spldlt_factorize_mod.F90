@@ -928,16 +928,19 @@ contains
     else
        call factor_core(spldlt_akeep, spldlt_fkeep, val, options, inform)
     end if
-    ! if (akeep%n .ne. inform%matrix_rank) then
-    !    ! Rank deficient
-    !    ! Note: If we reach this point then must be options%action=.true.
-    !    if (options%action) then
-    !       inform%flag = SYLVER_WARNING_FACT_SINGULAR
-    !    else
-    !       inform%flag = SYLVER_ERROR_SINGULAR
-    !    end if
-    !    call inform%print_flag(options, context)
-    ! end if
+
+    print *, 'n =', akeep%n
+    print *, 'rank =', inform%matrix_rank
+    if (akeep%n .ne. inform%matrix_rank) then
+       ! Rank deficient
+       ! Note: If we reach this point then must be options%action=.true.
+       if (options%action) then
+          inform%flag = SYLVER_WARNING_FACT_SINGULAR
+       else
+          inform%flag = SYLVER_ERROR_SINGULAR
+       end if
+       call inform%print_flag(options, context)
+    end if
 
     if ((options%print_level .ge. 1) .and. (options%unit_diagnostics .ge. 0)) then
        write (options%unit_diagnostics,'(/a)') &

@@ -123,8 +123,162 @@ contains
     call print_result(info%flag, SYLVER_WARNING_IDX_OOR)
     call chk_answer(posdef, a, akeep, options, rhs, x, res, &
          SYLVER_WARNING_IDX_OOR)
-    !call spldlt_akeep_free(akeep)
+    call spldlt_akeep_free(akeep)
 
+    write(*,"(a)",advance="no") " * Testing duplicates...................."
+    call simple_mat(a,2)
+    ne = a%ptr(a%n+1)-1
+    a%ne = ne
+    a%ptr(a%n+1) = a%ptr(a%n+1) + 1
+    a%row(ne+1) = a%n 
+    a%val(ne+1) = 10. 
+    a%ne = ne + 1
+    call gen_rhs(a, rhs, x1, x, res, 1)
+    if (allocated(order)) deallocate(order)
+    allocate (order(1:a%n))
+    do i = 1,a%n
+       order(i) = i
+    end do
+    call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true.)
+    call print_result(info%flag,SYLVER_WARNING_DUP_IDX)
+    call chk_answer(posdef, a, akeep, options, rhs, x, res, &
+         SYLVER_WARNING_DUP_IDX)
+    call spldlt_akeep_free(akeep)
+
+    write(*,"(a)",advance="no") " * Testing out of range and duplicates..."
+    call simple_mat_lower(a,2)
+    ne = a%ptr(a%n+1)-1
+    a%ne = ne
+    a%ptr(a%n+1) = a%ptr(a%n+1) + 2
+    a%row(ne+1) = a%n + 1
+    a%val(ne+1) = 10. 
+    a%row(ne+2) = a%n 
+    a%val(ne+2) = 10. 
+    a%ne = ne + 2
+    call gen_rhs(a, rhs, x1, x, res, 1)
+    if (allocated(order)) deallocate(order)
+    allocate (order(1:a%n))
+    do i = 1,a%n
+       order(i) = i
+    end do
+    call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true.)
+    call print_result(info%flag,SYLVER_WARNING_DUP_AND_OOR)
+    call chk_answer(posdef, a, akeep, options, rhs, x, res, &
+         SYLVER_WARNING_DUP_AND_OOR, fs=.true.)
+    call spldlt_akeep_free(akeep)
+
+    write(*,"(a)", advance="no") " * Testing missing diagonal entry (indef)....."
+    a%ptr = (/ 1, 4, 5, 6, 7 /)
+    a%row(1:6) = (/ 1, 2, 4,     2,    4,    4 /)
+    a%val(1:6) = (/   10.0, 2.0, 3.0, &
+         10.0, &
+         4.0, &
+         10.0 /)
+    posdef = .false.
+    call gen_rhs(a, rhs, x1, x, res, 1)
+    if (allocated(order)) deallocate(order)
+    allocate (order(1:a%n))
+    do i = 1,a%n
+       order(i) = i
+    end do
+    a%ne = a%ptr(a%n+1) - 1
+    call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true.)
+    call print_result(info%flag, SYLVER_WARNING_MISSING_DIAGONAL)
+    call chk_answer(posdef, a, akeep, options, rhs, x, res, &
+         SYLVER_WARNING_MISSING_DIAGONAL)
+    call spldlt_akeep_free(akeep)
+
+    write(*,"(a)", advance="no") " * Testing missing diagonal and out of range.."
+    posdef = .false.
+    call simple_mat_lower(a)
+    a%ptr = (/ 1, 4, 5, 6, 8 /)
+    a%row(1:7) = (/ 1, 2, 4,     2,    4,    4,   -1 /)
+    a%val(1:7) = (/   10.0, 2.0, 3.0, &
+         10.0, &
+         4.0, &
+         10.0, 1.0 /)
+    call gen_rhs(a, rhs, x1, x, res, 1)
+    if (allocated(order)) deallocate(order)
+    allocate (order(1:a%n))
+    do i = 1,a%n
+       order(i) = i
+    end do
+    a%ne = a%ptr(a%n+1) - 1
+    call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true.)
+    call print_result(info%flag, SYLVER_WARNING_MISS_DIAG_OORDUP)
+    call chk_answer(posdef, a, akeep, options, rhs, x, res, &
+         SYLVER_WARNING_MISS_DIAG_OORDUP)
+    call spldlt_akeep_free(akeep)
+
+    write(*,"(a)",advance="no") " * Testing arrays min size (zero diag)........"
+    posdef = .false.
+    call simple_mat_zero_diag(a)
+    a%ne = a%ptr(a%n+1) - 1
+    call gen_rhs(a, rhs, x1, x, res, 1)
+    call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true.)
+    call print_result(info%flag, SYLVER_WARNING_MISSING_DIAGONAL)
+    call chk_answer(posdef, a, akeep, options, rhs, x, res, &
+         SYLVER_WARNING_MISSING_DIAGONAL)
+    call spldlt_akeep_free(akeep)
+
+    write(*,"(a)", advance="no") " * Testing missing diagonal and duplicate....."
+    posdef = .false.
+    call simple_mat(a)
+    a%ptr = (/ 1, 5, 6, 7, 8 /)
+    a%row(1:7) = (/ 1, 2, 2, 4,     2,    4,    4 /)
+    a%val(1:7) = (/   10.0, 2.0, 3.0, 1.0, &
+         10.0, &
+         4.0, &
+         10.0 /)
+    call gen_rhs(a, rhs, x1, x, res, 1)
+    if (allocated(order)) deallocate(order)
+    allocate (order(1:a%n))
+    do i = 1,a%n
+       order(i) = i
+    end do
+    a%ne = a%ptr(a%n+1) - 1
+    call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true.)
+    call print_result(info%flag, SYLVER_WARNING_MISS_DIAG_OORDUP)
+    call chk_answer(posdef, a, akeep, options, rhs, x, res, &
+         SYLVER_WARNING_MISS_DIAG_OORDUP, fs=.true.)
+    call spldlt_akeep_free(akeep)
+
+    write(*,"(a)", advance="no") " * Testing analyse with structurally singular."
+    posdef = .false.
+    options%action = .true.
+    call simple_sing_mat2(a)
+    call gen_rhs(a, rhs, x1, x, res, 1)
+    if (allocated(order)) deallocate(order)
+    allocate(order(a%n))
+    do i=1,a%n
+       order(i) = i
+    end do
+    a%ne = a%ptr(a%n+1) - 1
+    call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true.)
+    call print_result(info%flag, SYLVER_WARNING_ANAL_SINGULAR)
+    
+    call chk_answer(posdef, a, akeep, options, rhs, x, res, &
+         SYLVER_WARNING_FACT_SINGULAR, fs=.true.)
+    call spldlt_akeep_free(akeep)
+    write(*,"(a)", advance="no") " * Testing analyse with structurally singular."
+    posdef = .false.
+    options%action = .true.
+    call simple_sing_mat2(a)
+    call gen_rhs(a, rhs, x1, x, res, 1)
+    if (allocated(order)) deallocate(order)
+    allocate(order(a%n))
+    do i=1,a%n
+       order(i) = i ! not set order(3) = 0 but code should still be ok
+       ! provided order holds permutation
+    end do
+    call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true.)
+    call print_result(info%flag, SYLVER_WARNING_ANAL_SINGULAR)
+    a%ne = a%ptr(a%n+1) - 1
+    call chk_answer(posdef, a, akeep, options, rhs, x, res, &
+         SYLVER_WARNING_FACT_SINGULAR, fs=.true.)
+    call spldlt_akeep_free(akeep)
+!!!!!!!!!
+    
   end subroutine test_warnings
 
 end program main

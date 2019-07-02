@@ -295,7 +295,7 @@ contains
 
     ! Check residual
     call compute_resid(nrhs,a,x,a%n,rhs,a%n,res,a%n)
-
+    ! print *, 'residual =', maxval(abs(res))
     if(maxval(abs(res(1:a%n,1:nrhs))) < err_tol) then
        write(*, "(a)") "ok"
     else
@@ -308,5 +308,87 @@ contains
 99  call spldlt_fkeep_free(spldlt_fkeep)
 
   end subroutine chk_answer
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  
+  subroutine simple_sing_mat(a)
+    type(matrix_type), intent(inout) :: a
+    integer :: st
+
+    !
+    ! Create the simple singular sparse matrix:
+    !
+    !  0.0  2.0 
+    !  2.0  0.0  1.0
+    !       1.0  0.0
+    !
+    ! we will not enter diagonal entries explicitly
+
+    a%n = 3
+    a%ne = 2
+    deallocate(a%ptr, a%row, a%val, stat=st)
+    allocate(a%ptr(a%n+1))
+    a%ptr = (/ 1, 2, 3, 3 /)
+    allocate(a%row(9))
+    allocate(a%val(9))
+    a%row(1:2) = (/ 2, 3 /)
+    a%val(1:2) = (/   2.0, 1.0 /)
+
+  end subroutine simple_sing_mat
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  subroutine simple_sing_mat2(a)
+    type(matrix_type), intent(inout) :: a
+    integer :: st
+
+    !
+    ! Create the simple singular sparse matrix:
+    !
+    ! -1.0  2.0  0.0
+    !  2.0  1.0  0.0
+    !  0.0  0.0  0.0
+    !
+    ! by entering null column.
+
+    a%n = 3
+    a%ne = 3
+    deallocate(a%ptr, a%row, a%val, stat=st)
+    allocate(a%ptr(a%n+1))
+    a%ptr = (/ 1, 3, 4, 4 /)
+    allocate(a%row(9))
+    allocate(a%val(9))
+    a%row(1:3) = (/ 1, 2, 2 /)
+    a%val(1:3) = (/  -1.0, 2.0, 1.0 /)
+
+  end subroutine simple_sing_mat2
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  
+  subroutine simple_mat_zero_diag(a)
+    type(matrix_type), intent(inout) :: a
+
+    integer :: st
+
+    !
+    ! Create the simple sparse matrix:
+    !
+    !  0.0  1.0  2.0
+    !  1.0  0.0  1.0
+    !  2.0  1.0  0.0
+
+    a%n = 3
+    a%ne = 3
+    deallocate(a%ptr, a%row, a%val, stat=st)
+    allocate(a%ptr(a%n+1))
+    a%ptr = (/ 1, 3, 4, 4 /)
+    allocate(a%row((a%ptr(a%n+1)-1+a%n)))
+    allocate(a%val((a%ptr(a%n+1)-1+a%n)))
+
+    a%row(1:3) = (/ 2,3,  3 /)
+    a%val(1:3) = (/   1.0, 2.0, &
+         1.0 /)
+
+  end subroutine simple_mat_zero_diag
 
 end module sylver_test_mod

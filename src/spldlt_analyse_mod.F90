@@ -320,6 +320,8 @@ contains
     integer :: loc ! Region index
     integer :: device ! Device index
     integer :: op ! Printing
+    integer, dimension(:), allocatable :: level
+    integer :: blkm, blkn
     
     context = 'analyse_core'
     akeep => spldlt_akeep%akeep
@@ -498,6 +500,24 @@ contains
          akeep%nlist, spldlt_akeep%nsubtrees, spldlt_akeep%subtree_en, small, &
          contrib_dest, exec_loc)
          !akeep%nparts, akeep%part, akeep%contrib_idx, exec_loc, contrib_dest)
+
+    ! Info
+    allocate(level(akeep%nnodes+1), stat=st)
+    if (st .ne. 0) go to 100
+    level(akeep%nnodes+1) = 0
+    inform%maxfront = 0
+    inform%maxdepth = 0
+    do i = akeep%nnodes, 1, -1
+       blkn = akeep%sptr(i+1) - akeep%sptr(i) 
+       blkm = int(akeep%rptr(i+1) - akeep%rptr(i))
+       level(i) = level(akeep%sparent(i)) + 1
+       inform%maxfront = max(inform%maxfront, blkn)
+       inform%maxdepth = max(inform%maxdepth, level(i))
+    end do
+    deallocate(level, stat=st)
+    if (st .ne. 0) go to 100
+    inform%matrix_rank = akeep%sptr(akeep%nnodes+1)-1
+    inform%num_sup = akeep%nnodes
 
     ! Clean memory
     deallocate(small)
@@ -780,7 +800,7 @@ contains
     ! end do
 
     ! perform rest of analyse
-    if (check) then
+    if (akeep%check) then
        call analyse_core(spldlt_akeep, n, akeep%ptr, akeep%row, ptr2, row2, &
             order2, akeep%invp, options, inform)
     else
