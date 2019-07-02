@@ -38,6 +38,7 @@ program main
   errors = 0
 
   call test_warnings
+  call test_errors
   
   write(*, "(/a)") "=========================="
   write(*, "(a,i4)") "Total number of errors = ", errors
@@ -166,7 +167,7 @@ contains
     call chk_answer(posdef, a, akeep, options, rhs, x, res, &
          SYLVER_WARNING_DUP_AND_OOR, fs=.true.)
     call spldlt_akeep_free(akeep)
-
+    
     write(*,"(a)", advance="no") " * Testing missing diagonal entry (indef)....."
     a%ptr = (/ 1, 4, 5, 6, 7 /)
     a%row(1:6) = (/ 1, 2, 4,     2,    4,    4 /)
@@ -256,7 +257,7 @@ contains
     a%ne = a%ptr(a%n+1) - 1
     call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true.)
     call print_result(info%flag, SYLVER_WARNING_ANAL_SINGULAR)
-    
+
     call chk_answer(posdef, a, akeep, options, rhs, x, res, &
          SYLVER_WARNING_FACT_SINGULAR, fs=.true.)
     call spldlt_akeep_free(akeep)
@@ -278,7 +279,144 @@ contains
          SYLVER_WARNING_FACT_SINGULAR, fs=.true.)
     call spldlt_akeep_free(akeep)
 !!!!!!!!!
-    
+
+    posdef = .false.
+    write(*,"(a)") " * Testing factor with singular matrix......."
+    call simple_sing_mat(a)
+    if (allocated(order)) deallocate(order)
+    allocate (order(1:a%n))
+    do i = 1,a%n
+       order(i) = i
+    end do
+    a%ne = a%ptr(a%n+1) - 1
+    call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true.)
+    if(info%flag < 0) then
+       write(*, "(a,i4)") &
+            "Unexpected error during analyse. flag = ", info%flag
+       errors = errors + 1
+       return
+    endif
+    options%action = .true.
+    call gen_rhs(a, rhs, x1, x, res, 1)
+    call chk_answer(posdef, a, akeep, options, rhs, x, res, &
+         SYLVER_WARNING_FACT_SINGULAR, fs=.true.)
+    call spldlt_akeep_free(akeep)
+
+    posdef = .false.
+    write(*,"(a)") " * Testing factor with match ord no scale...."
+    call simple_mat(a)
+    options%ordering = 2
+    a%ne = a%ptr(a%n+1) - 1
+    call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, val=a%val, check=.true.)
+    if(info%flag < 0) then
+       write(*, "(a,i4)") &
+            "Unexpected error during analyse. flag = ", info%flag
+       errors = errors + 1
+       return
+    endif
+    call gen_rhs(a, rhs, x1, x, res, 1)
+    call chk_answer(posdef, a, akeep, options, rhs, x, res, &
+         SYLVER_WARNING_MATCH_ORD_NO_SCALE, fs=.true.)
+    call spldlt_akeep_free(akeep)
+    options%ordering = 0 ! restore
+
+    ! write(*,"(/a/)") " * Testing warnings (coord)"
+
+    ! call simple_mat(a)
+    ! ne = a%ne
+
+    ! write(*,"(a)",advance="no") " * Testing out of range above............"
+    ! call simple_mat(a,2)
+    ! ne = a%ptr(a%n+1)-1
+    ! a%ptr(a%n+1) = a%ptr(a%n+1) + 1
+    ! a%row(ne+1) = -1
+    ! a%col(ne+1) = 1
+    ! a%val(ne+1) = 1.
+    ! a%ne = ne + 1
+    ! posdef = .true.
+    ! call gen_rhs(a, rhs, x1, x, res, 1)
+    ! options%ordering = 1
+    ! call ssids_analyse_coord(a%n, a%ne, a%row, a%col, akeep, options, info)
+    ! call print_result(info%flag,SSIDS_WARNING_IDX_OOR)
+    ! call chk_answer(posdef, a, akeep, options, rhs, x, res, &
+    !      SSIDS_WARNING_IDX_OOR)
+    ! call spldlt_akeep_free(akeep)
+
+    ! write(*,"(a)", advance="no") " * Testing analyse struct singular and MC80.."
+    ! posdef = .false.
+    ! call simple_sing_mat(a)
+    ! call gen_rhs(a, rhs, x1, x, res, 1)
+    ! options%ordering = 2
+    ! options%scaling = 3 ! scaling from Matching-based ordering
+    ! call ssids_analyse_coord(a%n, a%ne, a%row, a%col, akeep, options, info, &
+    !      val=a%val)
+    ! call print_result(info%flag, SSIDS_WARNING_ANAL_SINGULAR)
+    ! options%action = .true.
+    ! a%ne = a%ptr(a%n+1) - 1
+    ! call chk_answer(posdef, a, akeep, options, rhs, x, res, &
+    !      SSIDS_WARNING_FACT_SINGULAR, fs=.true.)
+    ! call ssids_free(akeep, cuda_error)
+
   end subroutine test_warnings
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+subroutine test_errors
+   type(matrix_type) :: a
+   type(sylver_options) :: options
+   type(spldlt_akeep_type) :: akeep
+   type(spldlt_fkeep_type) :: fkeep
+   type(sylver_inform) :: info
+
+   integer :: i
+   integer :: n
+   integer(long) :: ne
+   logical :: posdef
+   integer :: nrhs
+   integer :: temp
+   integer :: cuda_error
+   integer, dimension(:), allocatable :: order
+   real(wp), dimension(:,:), allocatable :: d, x
+   real(wp), dimension(:), allocatable :: x1, d1
+   type(random_state) :: state
+
+   options%unit_error = we_unit
+   options%unit_warning = we_unit
+
+   write(*,"(/a)") "======================"
+   write(*,"(a)") "Testing errors:"
+   write(*,"(a)") "======================"
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+   ! tests on call to ssids_analyse (entry by columns)
+
+   write(*,"(/a)") " * Testing bad arguments ssids_analyse (columns)"
+
+   options%ordering = 0
+
+   call simple_mat_lower(a)
+   if (allocated(order)) deallocate(order)
+   allocate(order(a%n))
+   do i = 1,a%n
+      order(i) = i
+   end do
+   write(*,"(a)",advance="no") " * Testing n<0..............................."
+   n = -1
+   call spldlt_analyse(akeep, n, a%ptr, a%row, options, info, order, check=.true.)
+   call print_result(info%flag, SYLVER_ERROR_A_N_OOR)
+   call spldlt_akeep_free(akeep)
+
+   call simple_mat_lower(a)
+   write(*,"(a)",advance="no") " * Testing ptr with zero component..........."
+   temp = a%ptr(1)
+   a%ptr(1) = 0
+   call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true.)
+   call print_result(info%flag, SYLVER_ERROR_A_PTR)
+   a%ptr(1) = temp ! reset ptr(1) value
+
+ end subroutine test_errors
+   
 end program main

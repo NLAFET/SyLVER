@@ -96,7 +96,7 @@ contains
 
     call spldlt_akeep%akeep%free(flag)
 
-    deallocate(spldlt_akeep%subtree_en)
+    if (allocated(spldlt_akeep%subtree_en)) deallocate(spldlt_akeep%subtree_en)
     
   end subroutine akeep_free
   
