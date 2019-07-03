@@ -311,6 +311,45 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   
+  subroutine simple_mat_indef(a,extra)
+    ! simple indef test matrix (lower triangular part)
+    type(matrix_type), intent(inout) :: a
+    integer, optional, intent(in) :: extra
+
+    integer :: myextra,st
+
+    myextra = 0
+    if(present(extra)) myextra = extra
+
+    !
+    ! Create the simple sparse matrix (lower and upper triangles):
+    !
+    !  1.0  2.0       3.0
+    !  2.0  1.0
+    !           1.0  4.0
+    !  3.0      4.0  1.0
+    !
+
+    a%n = 4
+    a%ne = 7
+    deallocate(a%ptr, a%row, a%col, a%val, stat=st)
+    allocate(a%ptr(a%n+1))
+    a%ptr = (/ 1, 4, 5, 7, 8 /)
+    allocate(a%row(a%ne+myextra))
+    allocate(a%col(a%ne+myextra))
+    allocate(a%val(a%ne+myextra))
+
+    a%row(1:7) = (/ 1,2,4,     2,    3, 4,  4 /)
+    a%col(1:7) = (/ 1,1,1,     2,    3, 3,  4 /)
+    a%val(1:7) = (/  1.0,  2.0, 3.0, &
+         1.0,      &
+         1.0,  4.0,      &
+         1.0 /)
+
+  end subroutine simple_mat_indef
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  
   subroutine simple_sing_mat(a)
     type(matrix_type), intent(inout) :: a
     integer :: st

@@ -519,6 +519,11 @@ contains
     inform%matrix_rank = akeep%sptr(akeep%nnodes+1)-1
     inform%num_sup = akeep%nnodes
 
+    print *, "n =", akeep%n 
+    print *, "matrix_rank =", inform%matrix_rank 
+    print *, "akeep%matrix_rank =", akeep%inform%matrix_rank 
+    ! akeep%inform%matrix_rank = inform%matrix_rank
+    
     ! Clean memory
     deallocate(small)
     deallocate(contrib_dest)

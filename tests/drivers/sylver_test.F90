@@ -391,7 +391,7 @@ subroutine test_errors
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   ! tests on call to ssids_analyse (entry by columns)
+   ! Tests on call to spldlt_analyse (entry by columns)
 
    write(*,"(/a)") " * Testing bad arguments spldlt_analyse (columns)"
 
@@ -433,7 +433,8 @@ subroutine test_errors
    call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true.)
    call print_result(info%flag, SYLVER_ERROR_A_ALL_OOR)
    call spldlt_akeep_free(akeep)
-
+   info%flag = SYLVER_SUCCESS ! Reset flag
+   
    write(*,"(a)",advance="no") " * Testing nemin oor........................."
    call simple_mat_lower(a)
    if (allocated(order)) deallocate(order)
@@ -446,7 +447,266 @@ subroutine test_errors
    call print_result(info%flag, SYLVER_SUCCESS)
    call spldlt_akeep_free(akeep)
    options%nemin = sylver_nemin_default ! Reset nemin value
+   info%flag = SYLVER_SUCCESS ! Reset flag
 
+   write(*,"(a)",advance="no") " * Testing order absent......................"
+   options%ordering = 0
+   call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, check=.true.)
+   call print_result(info%flag, SYLVER_ERROR_ORDER)
+   call spldlt_akeep_free(akeep)
+
+   write(*,"(a)",advance="no") " * Testing order too short..................."
+   if (allocated(order)) deallocate(order)
+   allocate(order(a%n-1))
+   order(1:a%n-1) = 1
+   call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true.)
+   call print_result(info%flag, SYLVER_ERROR_ORDER)
+   call spldlt_akeep_free(akeep)
+   deallocate(order)
+
+   call simple_mat(a)
+   write(*,"(a)",advance="no") " * Testing order out of range above.........."
+   allocate(order(a%n))
+   order(1) = a%n+1
+   do i = 2,a%n
+      order(i) = i
+   end do
+   call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true.)
+   call print_result(info%flag, SYLVER_ERROR_ORDER)
+   call spldlt_akeep_free(akeep)
+   deallocate(order)
+
+   call simple_mat(a)
+   write(*,"(a)",advance="no") " * Testing order out of range below.........."
+   allocate(order(a%n))
+   order(1) = 0
+   do i = 2,a%n
+      order(i) = i
+   end do
+   call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true.)
+   call print_result(info%flag, SYLVER_ERROR_ORDER)
+   call spldlt_akeep_free(akeep)
+
+   write(*,"(a)",advance="no") " * Testing options%ordering out of range....."
+   options%ordering = -1
+   call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true.)
+   call print_result(info%flag, SYLVER_ERROR_ORDER)
+   call spldlt_akeep_free(akeep)
+   options%ordering = 0 ! Reset ordering
+
+!!!!!!!!!!!!!!!!!!!!
+   
+   call simple_mat(a)
+   write(*,"(a)",advance="no") " * Testing options%ordering oor.............."
+   if (allocated(order)) deallocate(order)
+   allocate(order(a%n))
+   options%ordering = 3
+   call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true.)
+   call print_result(info%flag, SYLVER_ERROR_ORDER)
+   deallocate(order)
+   call spldlt_akeep_free(akeep)
+   options%ordering = 0
+
+!!!!!!!!!!!!!!!!!!!!
+   
+   call simple_mat(a)
+   write(*,"(a)",advance="no") " * Testing val absent........................"
+   if (allocated(order)) deallocate(order)
+   allocate(order(a%n))
+   options%ordering = 2
+   call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true.)
+   call print_result(info%flag, SYLVER_ERROR_VAL)
+   deallocate(order)
+   call spldlt_akeep_free(akeep)
+   options%ordering = 0 ! Reset ordering
+   info%flag = SYLVER_SUCCESS ! Reset error flag
+   
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   
+   ! Tests on call to spldlt_factorize
+
+   posdef = .false.
+   write(*,"(/a)") " * Testing errors from ssids_factor"
+
+   write(*,"(a)",advance="no") " * Testing after analyse error..............."
+   options%ordering = 2
+   ! Trigger error in analyse as ordering = 2 and val is not present
+   call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true.)
+   call spldlt_factorize(akeep, fkeep, posdef, a%val, options, &
+        info, ptr=a%ptr, row=a%row)
+   call print_result(info%flag, SYLVER_ERROR_CALL_SEQUENCE)
+   call spldlt_akeep_free(akeep)
+   options%ordering = 0 ! Reset ordering
+   info%flag = SYLVER_SUCCESS ! Reset error flag
+
+!!!!!!!!!!!!!!!!!!!!
+   
+   call simple_mat(a)
+   write(*,"(a)",advance="no") " * Testing not calling analyse..............."
+   posdef = .false.
+   call spldlt_factorize(akeep, fkeep, posdef, a%val, options, &
+        info, ptr=a%ptr, row=a%row)
+   call print_result(info%flag, SYLVER_ERROR_CALL_SEQUENCE)
+   call spldlt_akeep_free(akeep)
+   info%flag = SYLVER_SUCCESS ! Reset error flag
+
+!!!!!!!!!!!!!!!!!!!!
+   
+   call simple_mat(a)
+   posdef = .false.
+   write(*,"(a)",advance="no") " * Testing ptr absent........................"
+   if (.not. allocated(order)) allocate(order(a%n))
+   do i = 1,a%n
+      order(i) = i
+   end do
+   call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.false.)
+   if(info%flag .ne. SYLVER_SUCCESS) then
+      write(*, "(a,i4)") &
+           "Unexpected error during analyse. flag = ", info%flag
+      errors = errors + 1
+      call spldlt_akeep_free(akeep)
+      return
+   endif
+   ! Hungarian scaling
+   options%scaling = 1 
+   call spldlt_factorize(akeep, fkeep, posdef, a%val, options, &
+        info, row=a%row)
+   call print_result(info%flag, SYLVER_ERROR_PTR_ROW)
+   ! Auction scaling
+   options%scaling = 2 
+   call spldlt_factorize(akeep, fkeep, posdef, a%val, options, &
+        info, row=a%row)
+   call print_result(info%flag, SYLVER_ERROR_PTR_ROW)
+   ! Norm-equilibration scaling
+   options%scaling = 4 
+   call spldlt_factorize(akeep, fkeep, posdef, a%val, options, &
+        info, row=a%row)
+   call print_result(info%flag, SYLVER_ERROR_PTR_ROW)
+   call spldlt_akeep_free(akeep)
+   options%scaling = 0 ! Reset scaling
+   info%flag = SYLVER_SUCCESS ! Reset error flag
+
+!!!!!!!!!!!!!!!!!!!!
+
+   call simple_mat(a)
+   posdef = .false.
+   write(*,"(a)",advance="no") " * Testing row absent........................"
+   if (.not. allocated(order)) allocate(order(a%n))
+   do i = 1,a%n
+      order(i) = i
+   end do
+   call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.false.)
+   if(info%flag .ne. SYLVER_SUCCESS) then
+      write(*, "(a,i4)") &
+           "Unexpected error during analyse. flag = ", info%flag
+      errors = errors + 1
+      call spldlt_akeep_free(akeep)
+      return
+   endif
+   ! Hungarian scaling
+   options%scaling = 1 
+   call spldlt_factorize(akeep, fkeep, posdef, a%val, options, &
+        info, ptr=a%ptr)
+   call print_result(info%flag, SYLVER_ERROR_PTR_ROW)
+   ! Auction scaling
+   options%scaling = 2 
+   call spldlt_factorize(akeep, fkeep, posdef, a%val, options, &
+        info, ptr=a%ptr)
+   call print_result(info%flag, SYLVER_ERROR_PTR_ROW)
+   ! Norm-equilibration scaling
+   options%scaling = 4 
+   call spldlt_factorize(akeep, fkeep, posdef, a%val, options, &
+        info, ptr=a%ptr)
+   call print_result(info%flag, SYLVER_ERROR_PTR_ROW)
+   call spldlt_akeep_free(akeep)
+   options%scaling = 0 ! Reset scaling
+   info%flag = SYLVER_SUCCESS ! Reset error flag
+
+!!!!!!!!!!!!!!!!!!!!
+
+   write(*,"(a)",advance="no") " * Testing factor with singular matrix......."
+   call simple_sing_mat(a)
+   !call simple_mat(a)
+   options%ordering = 0
+   if (allocated(order)) deallocate(order)
+   allocate(order(a%n))
+   do i = 1,a%n
+      order(i) = i
+   end do
+
+   call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true.)
+   if(info%flag .lt. SYLVER_SUCCESS) then
+      write(*, "(a,i4)") &
+           "Unexpected error during analyse. flag = ", info%flag
+      errors = errors + 1
+      return
+   endif
+
+   options%action = .false.
+   posdef = .false.
+   call spldlt_factorize(akeep, fkeep, posdef, a%val, options, &
+        info, ptr=a%ptr, row=a%row)
+   call print_result(info%flag, SYLVER_ERROR_SINGULAR)
+   call spldlt_akeep_free(akeep)
+   call spldlt_fkeep_free(fkeep)
+   info%flag = SYLVER_SUCCESS ! Reset error flag
+
+! !!!!!!!!!!!!!!!!!!!!
+
+   write(*,"(a)",advance="no") &
+        " * Testing factor with singular matrix (MC64 scale)."
+   call simple_sing_mat(a)
+   options%ordering = 1
+   call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true.)
+   if(info%flag < 0) then
+      write(*, "(a,i4)") &
+           "Unexpected error during analyse. flag = ", info%flag
+      errors = errors + 1
+      return
+   endif
+   print *, "rank = ", akeep%akeep%inform%matrix_rank 
+
+   options%action = .false.
+   options%scaling = 1 ! MC64
+   posdef = .false.
+   call spldlt_factorize(akeep, fkeep, posdef, a%val, options, &
+        info, ptr=a%ptr, row=a%row)
+   call print_result(info%flag, SYLVER_ERROR_SINGULAR)
+   call spldlt_akeep_free(akeep)
+   call spldlt_fkeep_free(fkeep)
+   info%flag = SYLVER_SUCCESS ! Reset error flag
+   
+!!!!!!!!!!!!!!!!!!!!
+
+   write(*,"(a)",advance="no") " * Testing factor psdef with indef..........."
+   call simple_mat(a)
+   call simple_mat_indef(a)
+   call simple_sing_mat(a)
+   a%val(1) = -a%val(1)
+   options%ordering = 1
+   posdef = .true.
+   if (allocated(order)) deallocate(order)
+   allocate(order(a%n))
+   do i = 1,a%n
+      order(i) = i
+   end do
+   call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true.)
+   if(info%flag < 0) then
+      write(*, "(a,i4)") &
+           "Unexpected error during analyse. flag = ", info%flag
+      errors = errors + 1
+      return
+   endif
+   print *, "n = ", a%n
+   print *, "rank = ", akeep%akeep%inform%matrix_rank 
+   options%scaling = 0
+   call spldlt_factorize(akeep, fkeep, posdef, a%val, options, &
+        info, ptr=a%ptr, row=a%row)
+   call print_result(info%flag, SYLVER_ERROR_NOT_POS_DEF)
+   call spldlt_akeep_free(akeep)
+   call spldlt_fkeep_free(fkeep)
+   info%flag = SYLVER_SUCCESS ! Reset error flag
+   
  end subroutine test_errors
    
 end program main

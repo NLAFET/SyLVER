@@ -326,6 +326,7 @@ contains
     cpu_factor%csubtree = &
          c_create_numeric_subtree(posdef, cpu_factor%symbolic%csubtree, &
          val, cscaling, child_contrib_c, coptions, cstats)
+    !print *, "cstats%flag = ", cstats%flag
     if (cstats%flag .lt. 0) then
        call c_destroy_numeric_subtree(cpu_factor%posdef, cpu_factor%csubtree)
        deallocate(cpu_factor, stat=st)
@@ -390,6 +391,10 @@ contains
     type is (cpu_symbolic_subtree)
        fkeep%subtree(part)%ptr => spldlt_factor_subtree_cpu( &
             subtree_ptr, posdef, val, scaling, child_contrib_c, coptions, cstats)
+       if (cstats%flag .lt. 0) then
+          inform%flag = cstats%flag
+          return
+       end if
 #if defined(SPLDLT_USE_GPU)
     type is (gpu_symbolic_subtree)
        ! print *, "[spldlt_factor_subtree_c] gpu_numeric_subtree"
@@ -398,6 +403,8 @@ contains
             contribs, &
             options, inform, &
             scaling=scaling)
+       if (inform%flag .lt. 0) return
+
 #endif
     end select
 
@@ -712,7 +719,7 @@ contains
     end if
 
     ! Setup for any printing we may require
-    context = 'spldlt_factor'
+    context = 'spldlt_factorize'
 
     ! Print summary of input options (depending on print level etc.)
     call options%print_summary_factor(posdef, context)
@@ -731,7 +738,7 @@ contains
     n = spldlt_akeep%akeep%n
 
     ! Immediate return if analyse detected singularity and options%action=false
-    if ((.not. options%action) .and. (n .ne. akeep%inform%matrix_rank)) then
+    if ((.not. options%action) .and. (n .ne. spldlt_akeep%inform%matrix_rank)) then
        inform%flag = SYLVER_ERROR_SINGULAR
        goto 200
     end if
@@ -751,15 +758,12 @@ contains
        call apply_conversion_map(matrix_type, akeep%lmap, akeep%map, val, &
             nz, val2)
     else
-       ! print *, "options%scaling = ", options%scaling
-       ! Check if ptr and row are present if needed for scaling
-       if (((options%scaling .eq. 1) .or. &
-            (options%scaling .eq. 2) .or. &
-            (options%scaling .eq. 4)) &
-            .and. &
-            ((.not. present(ptr)) .or. (.not. present(row)))) then       
-          inform%flag = SYLVER_ERROR_PTR_ROW
-          goto 200
+       if ((options%scaling .eq. 1) .or. (options%scaling .eq. 2) .or. &
+            (options%scaling .eq. 4)) then
+          if ((.not. present(ptr)) .or. (.not. present(row))) then
+             inform%flag = SYLVER_ERROR_PTR_ROW
+             goto 200
+          end if
        end if
     end if
     ! Dump matrix if required
@@ -929,8 +933,6 @@ contains
        call factor_core(spldlt_akeep, spldlt_fkeep, val, options, inform)
     end if
 
-    print *, 'n =', akeep%n
-    print *, 'rank =', inform%matrix_rank
     if (akeep%n .ne. inform%matrix_rank) then
        ! Rank deficient
        ! Note: If we reach this point then must be options%action=.true.
