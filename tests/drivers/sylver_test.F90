@@ -679,17 +679,17 @@ subroutine test_errors
 !!!!!!!!!!!!!!!!!!!!
 
    write(*,"(a)",advance="no") " * Testing factor psdef with indef..........."
-   call simple_mat(a)
+   !call simple_mat(a)
    call simple_mat_indef(a)
-   call simple_sing_mat(a)
-   a%val(1) = -a%val(1)
+   ! call simple_sing_mat(a)
+   ! a%val(1) = -a%val(1)
    options%ordering = 1
    posdef = .true.
-   if (allocated(order)) deallocate(order)
-   allocate(order(a%n))
-   do i = 1,a%n
-      order(i) = i
-   end do
+   ! if (allocated(order)) deallocate(order)
+   ! allocate(order(a%n))
+   ! do i = 1,a%n
+   !    order(i) = i
+   ! end do
    call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true.)
    if(info%flag < 0) then
       write(*, "(a,i4)") &
@@ -706,7 +706,22 @@ subroutine test_errors
    call spldlt_akeep_free(akeep)
    call spldlt_fkeep_free(fkeep)
    info%flag = SYLVER_SUCCESS ! Reset error flag
-   
+
+!!!!!!!!!!!!!!!!!!!!
+
+   ! write(*,"(a)",advance="no") " * Testing factor psdef with indef, large..."
+   ! call gen_bordered_block_diag(.false., (/ 15, 455, 10 /), 20, a%n, a%ptr, &
+   !      a%row, a%val, state)
+   ! call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true.)
+   ! !posdef = .true.
+   ! posdef = .false.
+   ! call spldlt_factorize(akeep, fkeep, posdef, a%val, options, &
+   !      info, ptr=a%ptr, row=a%row)
+   ! call print_result(info%flag, SYLVER_ERROR_NOT_POS_DEF)
+   ! call spldlt_akeep_free(akeep)
+   ! call spldlt_fkeep_free(fkeep)
+   ! info%flag = SYLVER_SUCCESS ! Reset error flag
+
  end subroutine test_errors
    
 end program main

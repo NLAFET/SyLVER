@@ -430,4 +430,73 @@ contains
 
   end subroutine simple_mat_zero_diag
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  ! Generates a bordered block diagonal form
+  ! blocks have size and number given in dimn
+  ! border is width of border - however final var is only included in final block
+  ! to discourage merging with largest block during analysis
+  subroutine gen_bordered_block_diag(posdef, dimn, border, n, ptr, row, val, state)
+    logical, intent(in) :: posdef
+    integer, dimension(:), intent(in) :: dimn
+    integer, intent(in) :: border
+    integer, intent(out) :: n
+    integer(long), dimension(:), allocatable :: ptr
+    integer, dimension(:), allocatable :: row
+    real(wp), dimension(:), allocatable :: val
+    type(random_state), intent(inout) :: state
+
+    integer :: i, j, k, blk, blk_sa
+    integer :: nnz
+    integer :: st
+
+    ! Clear any previous allocs
+    if (allocated(ptr)) deallocate(ptr, stat=st)
+    if (allocated(row)) deallocate(row, stat=st)
+    if (allocated(val)) deallocate(val, stat=st)
+
+    ! allocate arrays
+    n = sum(dimn(:)) + border
+    nnz = 0
+    do blk = 1, size(dimn)
+       j = dimn(blk)
+       nnz = nnz + j*(j+1)/2 + j*border
+    end do
+    nnz = nnz + border*(border+1)/2
+    allocate(ptr(n+1), row(nnz), val(nnz))
+
+    ! Generate val = unif(-1,1)
+    do i = 1, nnz
+       val(i) = random_real(state)
+    end do
+
+    ! Generate ptr and row; make posdef if required
+    j = 1
+    blk_sa = 1
+    do blk = 1, size(dimn)
+       do i = blk_sa, blk_sa+dimn(blk)-1
+          ptr(i) = j
+          if(posdef) val(j) = abs(val(j)) + n ! make diagonally dominant
+          do k = i, blk_sa+dimn(blk)-1
+             row(j) = k
+             j = j + 1
+          end do
+          do k = n-border+1, n-1
+             row(j) = k
+             j = j + 1
+          end do
+       end do
+       blk_sa = blk_sa + dimn(blk)
+    end do
+    do i = n-border+1, n
+       ptr(i) = j
+       if(posdef) val(j) = abs(val(j)) + n ! make diagonally dominant
+       do k = i, n
+          row(j) = k
+          j = j + 1
+       end do
+    end do
+    ptr(n+1) = j
+  end subroutine gen_bordered_block_diag
+
 end module sylver_test_mod
