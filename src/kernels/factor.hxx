@@ -30,7 +30,7 @@ namespace spldlt {
    /// @param m Number of rows in block
    /// @param n Number of columns in block
    template <typename T>
-   void factorize_diag_block(int m, int n, T *a, int lda) {
+   int factorize_diag_block(int m, int n, T *a, int lda) {
 
       int flag = sylver::host_potrf(sylver::FILL_MODE_LWR, n, a, lda);
 
@@ -43,15 +43,16 @@ namespace spldlt {
                (T)1.0,
                a, lda,
                &a[n], lda);
-}
+      }
+      
+      return flag;
    }
-
    
    /// @param m Number of rows in block
    /// @param n Number of column in block
    /// @param upd Contribution block
    template <typename T>
-   void factorize_diag_block(
+   int factorize_diag_block(
          int m, int n,
          T *a, int lda,
          T* upd, int ldupd,
@@ -80,8 +81,9 @@ namespace spldlt {
                   rbeta, 
                   upd, ldupd);
          }
-
       }
+
+      return flag;
    }
 
    /*

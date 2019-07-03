@@ -3,6 +3,9 @@
 /// @author Florent Lopez
 #pragma once
 
+// STD
+#include <vector>
+
 // SpLDLT
 #include "sylver_ciface.hxx"
 #include "kernels/assemble.hxx"
@@ -212,7 +215,17 @@ namespace starpu {
       unsigned n = STARPU_MATRIX_GET_NY(buffers[0]);
       unsigned ld = STARPU_MATRIX_GET_LD(buffers[0]);
 
-      factorize_diag_block(m, n, blk, ld);
+      std::vector<sylver::inform_t> *worker_stats;      
+      starpu_codelet_unpack_args(cl_arg, &worker_stats);
+      int workerid = starpu_worker_get_id();
+      sylver::inform_t& inform = (*worker_stats)[workerid];
+      
+      int flag = factorize_diag_block(m, n, blk, ld);
+
+      if (flag > 0)
+         inform.flag = sylver::Flag::ERROR_NOT_POS_DEF;
+         
+      // std::cout << "[factorize_block_cpu_func] Error, flag = " << flag << std::endl;
    }
 
    // CPU kernel
@@ -230,13 +243,21 @@ namespace starpu {
       unsigned ldcontrib = STARPU_MATRIX_GET_LD(buffers[1]);
 
       int k;
-
+      std::vector<sylver::inform_t> *worker_stats;
       starpu_codelet_unpack_args(
             cl_arg,
-            &k);
+            &k,
+            &worker_stats);
+      int workerid = starpu_worker_get_id();
+      sylver::inform_t& inform = (*worker_stats)[workerid];
 
-      factorize_diag_block(m, n, blk, ld, contrib, ldcontrib,
-                           k==0);
+      int flag = factorize_diag_block(m, n, blk, ld, contrib, ldcontrib,
+                                      k==0);
+
+      if (flag > 0) 
+         inform.flag = sylver::Flag::ERROR_NOT_POS_DEF;
+      
+
    }
       
    /* FIXME: although it would be better to statically initialize
@@ -257,7 +278,8 @@ namespace starpu {
          starpu_data_handle_t bc_hdl,
          starpu_data_handle_t contrib_hdl,
          starpu_data_handle_t node_hdl, // Symbolic node handle
-         int prio);
+         int prio,
+         std::vector<sylver::inform_t> *worker_stats);
       
    ////////////////////////////////////////////////////////////////////////////////   
    // factorize_block
@@ -268,7 +290,8 @@ namespace starpu {
    void insert_factor_block(
          starpu_data_handle_t bc_hdl,
          starpu_data_handle_t node_hdl, // Symbolic node handle
-         int prio);
+         int prio,
+         std::vector<sylver::inform_t> *worker_stats);
       
    ////////////////////////////////////////////////////////////////////////////////
    // solve_block

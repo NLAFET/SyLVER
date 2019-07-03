@@ -483,8 +483,8 @@ namespace spldlt {
             } // Loop over child nodes
             // sylver_task_wait_for_all();
 
-            // Compute factors and Schur complement 
-            factor_front_posdef(fronts_[ni], options);
+            // Compute factors and Schur complement
+            factor_front_posdef(fronts_[ni], options, worker_stats);
             // sylver_task_wait_for_all();
 
             // Assemble front: non fully-summed columns i.e. contribution block 

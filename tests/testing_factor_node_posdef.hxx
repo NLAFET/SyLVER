@@ -163,6 +163,8 @@ namespace tests {
 #endif
 #endif
 
+      std::vector<sylver::inform_t> worker_stats(nworkers);
+
       ////////////////////////////////////////
       // Init factor
 #if defined(SPLDLT_USE_STARPU)
@@ -183,8 +185,8 @@ namespace tests {
       // Run matrix factorization
       auto start = std::chrono::high_resolution_clock::now();
 
-      factor_front_posdef(front, options);
-            
+      factor_front_posdef(front, options, worker_stats);
+
 #if defined(SPLDLT_USE_STARPU)
       starpu_task_wait_for_all();      
 #endif

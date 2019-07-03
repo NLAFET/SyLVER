@@ -295,7 +295,7 @@ contains
 
     ! Check residual
     call compute_resid(nrhs,a,x,a%n,rhs,a%n,res,a%n)
-    ! print *, 'residual =', maxval(abs(res))
+    !print *, 'residual =', maxval(abs(res))
     if(maxval(abs(res(1:a%n,1:nrhs))) < err_tol) then
        write(*, "(a)") "ok"
     else

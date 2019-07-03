@@ -1,6 +1,13 @@
 /// @file
 /// @copyright 2016- The Science and Technology Facilities Council (STFC)
 /// @author Florent Lopez
+
+// SyLVER
+#include "StarPU/kernels.hxx"
+
+// STD
+#include <vector>
+// StarPU
 #include <starpu.h>
 
 namespace spldlt { namespace starpu {
@@ -28,26 +35,29 @@ namespace spldlt { namespace starpu {
             starpu_data_handle_t bc_hdl,
             starpu_data_handle_t contrib_hdl,
             starpu_data_handle_t node_hdl, // Symbolic node handle
-            int prio) {
+            int prio,
+            std::vector<sylver::inform_t> *worker_stats) {
 
          int ret;
 
          if (node_hdl) {
             ret = starpu_insert_task(
                   &cl_factorize_contrib_block,
-                  STARPU_VALUE, &k, sizeof(int),
                   STARPU_RW, bc_hdl,
                   STARPU_RW, contrib_hdl,
                   STARPU_R, node_hdl,
+                  STARPU_VALUE, &k, sizeof(int),
+                  STARPU_VALUE, &worker_stats, sizeof(std::vector<sylver::inform_t> *),
                   STARPU_PRIORITY, prio,
                   0);
          }
          else {
             ret = starpu_insert_task(
                   &cl_factorize_contrib_block,
-                  STARPU_VALUE, &k, sizeof(int),
                   STARPU_RW, bc_hdl,
                   STARPU_RW, contrib_hdl,
+                  STARPU_VALUE, &k, sizeof(int),
+                  STARPU_VALUE, &worker_stats, sizeof(std::vector<sylver::inform_t> *),
                   STARPU_PRIORITY, prio,
                   0);
          }
@@ -64,8 +74,9 @@ namespace spldlt { namespace starpu {
       void insert_factor_block(
             starpu_data_handle_t bc_hdl,
             starpu_data_handle_t node_hdl, // Symbolic node handle
-            int prio) {
-                  
+            int prio,
+            std::vector<sylver::inform_t> *worker_stats) {
+
          int ret;
 
          if (node_hdl) {
@@ -73,6 +84,7 @@ namespace spldlt { namespace starpu {
                   &cl_factorize_block,
                   STARPU_RW, bc_hdl,
                   STARPU_R, node_hdl,
+                  STARPU_VALUE, &worker_stats, sizeof(std::vector<sylver::inform_t> *),
                   STARPU_PRIORITY, prio,
                   0);
          }
@@ -80,6 +92,7 @@ namespace spldlt { namespace starpu {
             ret = starpu_insert_task(
                   &cl_factorize_block,
                   STARPU_RW, bc_hdl,
+                  STARPU_VALUE, &worker_stats, sizeof(std::vector<sylver::inform_t> *),
                   STARPU_PRIORITY, prio,
                   0);
          }

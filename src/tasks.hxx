@@ -225,7 +225,8 @@ namespace spldlt {
    void factor_block_task (
          NumericFront<T, PoolAlloc> &node,
          int kk, // Block  column/row index
-         int prio) {
+         int prio,
+         std::vector<sylver::inform_t>& worker_stats) {
 
       SymbolicFront const& snode = node.symb;
       int const blksz = node.blksz;
@@ -256,7 +257,8 @@ namespace spldlt {
                node(kk, kk).get_hdl(),
                node.contrib_blocks[0].hdl,
                snode.hdl,
-               prio);
+               prio,
+               &worker_stats);
       }
       else {
          // Compute factors in the fully-summed 
@@ -264,15 +266,19 @@ namespace spldlt {
                // snode.handles[kk*nr + kk],
                node(kk, kk).get_hdl(),
                snode.hdl,
-               prio);
+               prio,
+               &worker_stats);
       }
 
 #else
 
-      factorize_diag_block(blkm, blkn,
-                           &a[kk*blksz*(lda+1)], lda,
-                           contrib, ldcontrib,
-                           kk==0);
+      sylver::inform_t& stats = worker_stats[0];
+      int flag = factorize_diag_block(blkm, blkn,
+                                      &a[kk*blksz*(lda+1)], lda,
+                                      contrib, ldcontrib,
+                                      kk==0);
+      if (flag > 0) 
+         stats.flag = sylver::Flag::ERROR_NOT_POS_DEF;
 #endif
    }
 

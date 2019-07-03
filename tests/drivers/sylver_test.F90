@@ -25,7 +25,7 @@ program main
   if(we_unit.gt.6) open(unit=we_unit,file=we_file,status="replace")
   if(dl_unit.gt.6) open(unit=dl_unit,file=dl_file,status="replace")
 
-  ncpu = 1
+  ncpu = 4
 #if defined(SPLDLT_USE_GPU)
   ngpu = 1
 #else
@@ -685,11 +685,11 @@ subroutine test_errors
    ! a%val(1) = -a%val(1)
    options%ordering = 1
    posdef = .true.
-   ! if (allocated(order)) deallocate(order)
-   ! allocate(order(a%n))
-   ! do i = 1,a%n
-   !    order(i) = i
-   ! end do
+   if (allocated(order)) deallocate(order)
+   allocate(order(a%n))
+   do i = 1,a%n
+      order(i) = i
+   end do
    call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true.)
    if(info%flag < 0) then
       write(*, "(a,i4)") &
@@ -709,19 +709,29 @@ subroutine test_errors
 
 !!!!!!!!!!!!!!!!!!!!
 
-   ! write(*,"(a)",advance="no") " * Testing factor psdef with indef, large..."
-   ! call gen_bordered_block_diag(.false., (/ 15, 455, 10 /), 20, a%n, a%ptr, &
-   !      a%row, a%val, state)
-   ! call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true.)
-   ! !posdef = .true.
-   ! posdef = .false.
-   ! call spldlt_factorize(akeep, fkeep, posdef, a%val, options, &
-   !      info, ptr=a%ptr, row=a%row)
-   ! call print_result(info%flag, SYLVER_ERROR_NOT_POS_DEF)
-   ! call spldlt_akeep_free(akeep)
-   ! call spldlt_fkeep_free(fkeep)
-   ! info%flag = SYLVER_SUCCESS ! Reset error flag
+   write(*,"(a)",advance="no") " * Testing factor psdef with indef, large..."
+   call gen_bordered_block_diag(.false., (/ 15, 455, 10 /), 20, a%n, a%ptr, &
+        a%row, a%val, state)
+   print *, "n = ", a%n
+   if (allocated(order)) deallocate(order)
+   allocate(order(a%n))
+   do i = 1,a%n
+      order(i) = i
+   end do
+   call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true., ncpu=ncpu)
+   posdef = .true.
+   !posdef = .false.
+   call spldlt_factorize(akeep, fkeep, posdef, a%val, options, &
+        info, ptr=a%ptr, row=a%row)
+   call print_result(info%flag, SYLVER_ERROR_NOT_POS_DEF)
+   call spldlt_akeep_free(akeep)
+   call spldlt_fkeep_free(fkeep)
+   info%flag = SYLVER_SUCCESS ! Reset error flag
 
+!!!!!!!!!!!!!!!!!!!!
+
+   
+   
  end subroutine test_errors
    
 end program main

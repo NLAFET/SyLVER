@@ -17,7 +17,8 @@ namespace spldlt {
    template <typename T, typename PoolAlloc>
    void factor_front_posdef(
          NumericFront<T, PoolAlloc> &node,
-         sylver::options_t const& options
+         sylver::options_t const& options,
+         std::vector<sylver::inform_t>& worker_stats
          ) {
 
       std::string context = "factor_front_posdef";      
@@ -42,7 +43,7 @@ namespace spldlt {
          int blkn = std::min(blksz, n-j*blksz);
          int blkm = std::min(blksz, m-j*blksz);
          // Factor block         
-         factor_block_task(node, j, FACTOR_PRIO);
+         factor_block_task(node, j, FACTOR_PRIO, worker_stats);
 
          // #if defined(SPLDLT_USE_STARPU)
          //             starpu_task_wait_for_all();
