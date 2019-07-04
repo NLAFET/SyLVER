@@ -15,7 +15,8 @@ SyLVER
    introduction
    subroutines
    types
-
+   examples
+   
 Indices and tables
 ==================
 

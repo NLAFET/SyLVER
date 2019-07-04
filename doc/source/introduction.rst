@@ -94,3 +94,9 @@ Solving :math:`AX=B` using SyLVER is a four stage process.
       `splu_fkeep`.
    4. Once all desired solutions have been performed, free memory with
       :f:subr:`splu_free()`.
+         
+.. note::
+
+   The :f:subr:`sylver_init()` routine must be called before any other
+   routines whitin SyLVER. When all the desired operations have been
+   performed, the :f:subr:`sylver_finalize()` routine should be called.

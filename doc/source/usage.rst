@@ -2,7 +2,7 @@
 Usage overview
 **************
 
-Solving :math:`AX=B` using SyLVER is a four stage process.
+For Solving :math:`AX=B` using SyLVER is a four stage process.
 
 - If :math:`A` is *symmetric*:
 

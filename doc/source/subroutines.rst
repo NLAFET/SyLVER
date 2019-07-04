@@ -4,6 +4,28 @@ API
 
 In the below, all reals are double precision unless otherwise indicated.
 
+=======
+General
+=======
+
+.. f:subroutine:: sylver_init(ncpu, ngpu)
+
+   Initialization routine which should be called before any other
+   routine within SyLVER. The number of CPUs and GPUs involved in the
+   computations should be passed to this routine.
+
+   :p integer ncpu [in]: number of CPUs to be used in the
+                         computations.
+   :p integer ngpu [in]: number of GPUs to be used in the
+                         computations. Note that if CUDA is not
+                         enabled during the compilation, this value
+                         will be ignored.
+
+.. f:subroutine:: sylver_finalize()
+
+   SyLVER termination routine which should be called once all the
+   desired operations have been performed.
+                  
 ======
 SpLDLT
 ======
