@@ -5,9 +5,7 @@ program spldlt_test
    ! use spral_matrix_util, only : cscl_verify, SPRAL_MATRIX_REAL_SYM_INDEF
    use spldlt_analyse_mod
    use spldlt_factorize_mod
-   use spldlt_mod
-   ! use spldlt_datatypes_mod, only: spldlt_options 
-   use sylver_datatypes_mod
+   use sylver_mod
    use sylver_inform_mod
    implicit none
 
@@ -119,7 +117,7 @@ program spldlt_test
    ! endif
    
    ! Initialization of SpLDLT
-   call spldlt_init(ncpu, ngpu)
+   call sylver_init(ncpu, ngpu)
 
    ! Setup options for analysis
    ! options%prune_tree = .true. ! Enable tree pruning
@@ -144,9 +142,6 @@ program spldlt_test
    print *, "Factor took ", (stop_t - start_t)/real(rate_t)
    smfact = (stop_t - start_t)/real(rate_t)
 
-   ! Shutdown SpLDLT
-   call spldlt_finalize()
-
    ! Solve
    write (*, "(a)") "Solve..."
    ! Solve SpLDLT
@@ -157,6 +152,9 @@ program spldlt_test
    call system_clock(stop_t)
    write(*, "(a)") "ok"
    print *, "Solve took ", (stop_t - start_t)/real(rate_t)
+   
+   ! Shutdown SpLDLT
+   call sylver_finalize()
 
    print *, "number bad cmp = ", count(abs(soln(1:n,1)-1.0).ge.1e-6)
    print *, "fwd error || ||_inf = ", maxval(abs(soln(1:n,1)-1.0))

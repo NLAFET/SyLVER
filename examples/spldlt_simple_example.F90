@@ -1,5 +1,5 @@
 program spldlt_example
-  use spldlt_mod
+  use sylver_mod
   implicit none
 
   ! Derived types
@@ -42,7 +42,7 @@ program spldlt_example
   ncpu = 8
   ngpu = 0
 
-  call spldlt_init(ncpu, ngpu)
+  call sylver_init(ncpu, ngpu)
 
   ! Perform analyse and factorize
   call spldlt_analyse(akeep, n, ptr, row, options, inform, ncpu=ncpu, ngpu=ngpu)
@@ -55,7 +55,7 @@ program spldlt_example
   if(inform%flag<0) go to 100
   write(*,'(a,/,(3es18.10))') ' The computed solution is:', x(1:n)
   
-  call spldlt_finalize()
+  call sylver_finalize()
 
 100 continue
   call spldlt_akeep_free(akeep)

@@ -33,7 +33,7 @@ program main
 #endif
   
   ! Initilaize SyLVER
-  call spldlt_init(ncpu, ngpu)
+  call sylver_init(ncpu, ngpu)
   
   errors = 0
 
@@ -44,7 +44,7 @@ program main
   write(*, "(a,i4)") "Total number of errors = ", errors
 
   ! Shutdown SpLDLT
-  call spldlt_finalize()
+  call sylver_finalize()
 
   if(we_unit.gt.6) close(we_unit)
   if(dl_unit.gt.6) close(dl_unit)
