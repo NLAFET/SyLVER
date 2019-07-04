@@ -3,14 +3,14 @@ program spldlt_example
   implicit none
 
   ! Derived types
-  type (spldlt_akeep)   :: akeep
-  type (spldlt_fkeep)   :: fkeep
+  type (spldlt_akeep_type)   :: akeep
+  type (spldlt_fkeep_type)   :: fkeep
   type (sylver_options) :: options
   type (sylver_inform)  :: inform
 
   ! Parameters
-  integer, parameter :: long = selected_int_kind(16)
-  integer, parameter :: wp = kind(0.0d0)
+  !integer, parameter :: long = selected_int_kind(16)
+  !integer, parameter :: wp = kind(0.0d0)
 
   ! Matrix data
   logical :: posdef
@@ -39,25 +39,26 @@ program spldlt_example
   nrhs = 1
   x(1:n) = (/ 4.0, 17.0, 19.0, 2.0, 12.0 /)
 
-  ncpu = 1
+  ncpu = 8
   ngpu = 0
 
   call spldlt_init(ncpu, ngpu)
 
   ! Perform analyse and factorize
-  call spldlt_analyse(akeep, n, ptr, row, options, inform)
+  call spldlt_analyse(akeep, n, ptr, row, options, inform, ncpu=ncpu, ngpu=ngpu)
   if(inform%flag<0) go to 100
 
-  call spldlt_factorize(akeep, fkeep, pos_def, val, options, inform)
+  call spldlt_factorize(akeep, fkeep, posdef, val, options, inform)
   if(inform%flag<0) go to 100
 
-  call spldlt_solve(akeep, fkeep, nrhs, x, n, inform)
+  call spldlt_solve(akeep, fkeep, nrhs, x, n, options, inform)
   if(inform%flag<0) go to 100
   write(*,'(a,/,(3es18.10))') ' The computed solution is:', x(1:n)
   
-  call spldlt_finilize()
+  call spldlt_finalize()
 
 100 continue
-  call spldlt_free(akeep, fkeep)
+  call spldlt_akeep_free(akeep)
+  call spldlt_fkeep_free(fkeep)
    
 end program spldlt_example

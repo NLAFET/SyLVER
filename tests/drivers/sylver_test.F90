@@ -742,7 +742,30 @@ subroutine test_errors
 
 !!!!!!!!!!!!!!!!!!!!
 
-   
+   write(*,"(a)",advance="no") " * Testing u oor............................."
+   call simple_mat(a)
+   options%ordering = 0
+   if (allocated(order)) deallocate(order)
+   allocate(order(a%n))
+   do i = 1,a%n
+      order(i) = i
+   end do
+   call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true., ncpu=ncpu)
+   if(info%flag < 0) then
+      write(*, "(a,i4)") &
+           "Unexpected error during analyse. flag = ", info%flag
+      errors = errors + 1
+      return
+   endif
+   posdef = .false.
+   options%u = -0.1
+   call spldlt_factorize(akeep, fkeep, posdef, a%val, options, &
+        info)
+   options%u = 0.01 ! Reset value of u
+   call print_result(info%flag, SYLVER_SUCCESS)
+   call spldlt_akeep_free(akeep)
+   call spldlt_fkeep_free(fkeep)
+   info%flag = SYLVER_SUCCESS ! Reset error flag
    
  end subroutine test_errors
    

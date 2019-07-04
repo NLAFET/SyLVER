@@ -106,15 +106,19 @@ MESSAGE( STATUS "Runtime: " ${RUNTIME} )
 # set_property(CACHE BLAS_LAPACK PROPERTY STRINGS Ref MKL)
 # MESSAGE( STATUS "BLAS/LAPACK:         " ${BLAS_LAPACK} )
 
-# Decide wheter we want to compile the kernel test driver or not
-option(KERNEL_TESTS "Kernel test" OFF)
-MESSAGE( STATUS "Kernel tests: " ${KERNEL_TESTS})
+# Decide wheter we want to compile the examples or not
+option(EXAMPLES "Examples" ON)
+MESSAGE( STATUS "Examples: " ${EXAMPLES})
+
+# Decide wheter we want to compile the kernel tests or not
+option(KERNEL_TESTS "Tests" OFF)
+MESSAGE( STATUS "Tests: " ${KERNEL_TESTS})
 
 # spral
-set(SPRAL_DIR $ENV{SPRALDIR} CACHE PATH "Location of Spral Library")
+set(SPRAL_DIR $ENV{SPRALDIR} CACHE PATH "Location of SPRAL Library")
 include_directories(${SPRAL_DIR})
 
-set(SPRAL_SRC_DIR $ENV{SPRALSRCDIR} CACHE PATH "Location of Spral sources")
+set(SPRAL_SRC_DIR $ENV{SPRALSRCDIR} CACHE PATH "Location of SPRAL sources")
 include_directories(${SPRAL_SRC_DIR})
 include_directories(${SPRAL_SRC_DIR}/src)
 
@@ -417,6 +421,10 @@ target_link_libraries(splu_test ${SPRAL_LIBRARIES})
 if (${HAVE_CUTLASS} MATCHES "ON")
   include_directories( ${CUTLASS_HEADERS} )
 endif()
+
+################################################################################
+# Examples
+add_subdirectory(examples)
 
 ################################################################################
 # Unit tests
