@@ -70,10 +70,14 @@ namespace spldlt {
 
             T *ld = work.get_ptr<T>(m-nelim);
             // auto start = std::chrono::high_resolution_clock::now();
-            node.nelim += ldlt_tpp_factor(
-                  m-nelim, n-nelim, &perm[nelim], &lcol[nelim*(ldl+1)], ldl, 
-                  &d[2*nelim], ld, m-nelim, options.action, options.u, options.small, 
-                  nelim, &lcol[nelim], ldl);
+            try {
+               node.nelim += ldlt_tpp_factor(
+                     m-nelim, n-nelim, &perm[nelim], &lcol[nelim*(ldl+1)], ldl, 
+                     &d[2*nelim], ld, m-nelim, options.action, options.u, options.small, 
+                     nelim, &lcol[nelim], ldl);
+            } catch (spral::ssids::cpu::SingularError const&) {
+               stats.flag = sylver::Flag::ERROR_SINGULAR;
+            }
             // auto end = std::chrono::high_resolution_clock::now();
             // long t_factor = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count();
             // long t_form_contrib = 0;

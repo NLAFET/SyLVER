@@ -85,6 +85,9 @@ namespace spldlt { namespace tests {
       int *perm = new int[m];
       for(int i=0; i<m; i++) perm[i] = i;
       T *d = new T[2*m];
+      // Setup inform
+      int nworker = 1;
+      std::vector<sylver::inform_t> worker_stats(nworker);
       // Setup workspaces
       std::vector<spral::ssids::cpu::Workspace> work;
       const int PAGE_SIZE = 8*1024*1024; // 8 MB
@@ -107,9 +110,8 @@ namespace spldlt { namespace tests {
       //          );
       int q1 = FactorSymIndef
          <T, iblksz, CopyBackup<T>, debug, PoolAllocator>
-         ::ldlt_app (
-               m, n, perm, l, lda, d, backup, options, 
-               // options.pivot_method,
+         ::ldlt_app(
+               m, n, perm, l, lda, d, backup, options, worker_stats, 
                blksz, 0.0, upd, 0, work, pool_alloc);
       
       if(debug) {

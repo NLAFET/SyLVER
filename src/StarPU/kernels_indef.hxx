@@ -70,6 +70,7 @@ namespace spldlt { namespace starpu {
          // Column<T> *col = nullptr;
          Backup *backup = nullptr;
          sylver::options_t *options = nullptr;
+         std::vector<sylver::inform_t> *worker_stats = nullptr;
          std::vector<spral::ssids::cpu::Workspace> *work = nullptr;
          // spral::ssids::cpu::Workspace *work = nullptr;
          Allocator *alloc = nullptr;
@@ -82,8 +83,11 @@ namespace spldlt { namespace starpu {
                &m, &n, &blk,
                &next_elim, &perm, &d,
                &cdata, &backup,
-               &options, &work, &alloc);
+               &options, &worker_stats, &work, &alloc);
 
+         int workerid = starpu_worker_get_id();
+         sylver::inform_t& inform = (*worker_stats)[workerid];
+         
          // printf("[factor_block_app_cpu_func]\n");
          // print_block(m_a_kk, n_a_kk, a_kk, lda);
 
@@ -97,9 +101,13 @@ namespace spldlt { namespace starpu {
          dblk.backup(*backup);
          int thread_num = 0;
          // Perform actual factorization
-         int nelim = dblk.template factor<Allocator>(
-               *next_elim, perm, d, *options, (*work)[id], *alloc
-               );
+         int nelim = 0;
+         try {
+            nelim = dblk.template factor<Allocator>(
+                  *next_elim, perm, d, *options, (*work)[id], *alloc);
+         } catch (spral::ssids::cpu::SingularError const&) {
+            inform.flag = sylver::Flag::ERROR_SINGULAR;
+         }
          if(nelim<0) 
             abort=true;
 
@@ -124,7 +132,7 @@ namespace spldlt { namespace starpu {
             int m, int n, int blk,
             int *next_elim, int *perm, T* d,
             ColumnData<T,IntAlloc> *cdata, Backup *backup,
-            sylver::options_t *options,
+            sylver::options_t *options, std::vector<sylver::inform_t> *worker_stats,
             std::vector<spral::ssids::cpu::Workspace> *work, 
             Allocator *alloc,
             int prio) {
@@ -148,6 +156,7 @@ namespace spldlt { namespace starpu {
                // STARPU_VALUE, &col, sizeof(Column<T>*),
                STARPU_VALUE, &backup, sizeof(Backup*),
                STARPU_VALUE, &options, sizeof(sylver::options_t *),
+               STARPU_VALUE, &worker_stats, sizeof(std::vector<sylver::inform_t>*),
                STARPU_VALUE, &work, sizeof(std::vector<spral::ssids::cpu::Workspace>*),
                STARPU_VALUE, &alloc, sizeof(Allocator*),
                STARPU_PRIORITY, prio,

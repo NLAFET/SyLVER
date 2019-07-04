@@ -17,8 +17,10 @@ using namespace spldlt; // TODO change to sylver::spldlt namespace
 namespace {
    typedef double T;
    const int PAGE_SIZE = 8*1024*1024; // 8MB
+   // Stack allocator
    typedef NumericTree<T, PAGE_SIZE, spldlt::AppendAlloc<T>, true> NumericTreePosdefDbl; // posdef = true
    typedef NumericTree<T, PAGE_SIZE, spldlt::AppendAlloc<T>, false> NumericTreeIndefDbl; // posdef = false
+   // Default allocator 
    // typedef NumericTree<T, PAGE_SIZE, std::allocator<T>, true> NumericTreePosdefDbl; // posdef = true
    // typedef NumericTree<T, PAGE_SIZE, std::allocator<T>, false> NumericTreeIndefDbl; // posdef = false
 }

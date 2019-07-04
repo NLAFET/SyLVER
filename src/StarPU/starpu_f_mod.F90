@@ -34,14 +34,22 @@ module starpu_f_mod
 
   ! workers
 
-  ! return the number of worker
+  ! return the number of CPU worker
   interface starpu_f_cpu_worker_get_count
      function starpu_cpu_worker_get_count() bind(c)
        use iso_c_binding
-       integer(c_int) :: starpu_f_cpu_worker_get_count
+       integer(c_int) :: starpu_cpu_worker_get_count
      end function starpu_cpu_worker_get_count
   end interface starpu_f_cpu_worker_get_count
-  
+
+  ! return the number of CUDA worker
+  interface starpu_f_cuda_worker_get_count
+     function starpu_cuda_worker_get_count() bind(c)
+       use iso_c_binding
+       integer(c_int) :: starpu_cuda_worker_get_count
+     end function starpu_cuda_worker_get_count
+  end interface starpu_f_cuda_worker_get_count
+
   ! return the number of workers
   interface starpu_f_worker_get_count
      function starpu_worker_get_count() bind(c)

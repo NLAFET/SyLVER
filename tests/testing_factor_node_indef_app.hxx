@@ -138,6 +138,9 @@ namespace spldlt { namespace tests {
 #else
       nworkers = omp_get_num_threads();
 #endif
+
+      std::vector<sylver::inform_t> worker_stats(nworkers);
+            
       workspaces.reserve(nworkers);
       for(int i = 0; i < nworkers; ++i)
          workspaces.emplace_back(PAGE_SIZE);
@@ -170,7 +173,7 @@ namespace spldlt { namespace tests {
       FactorSymIndef
          <T, INNER_BLOCK_SIZE, Backup, debug, PoolAllocator>
          ::factor_front_indef_app(
-               front, options, 0.0, upd, 0, workspaces, pool_alloc,
+               front, options, worker_stats, 0.0, upd, 0, workspaces, pool_alloc,
                front.nelim);
 
 #if defined(SPLDLT_USE_STARPU)

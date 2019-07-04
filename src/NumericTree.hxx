@@ -77,9 +77,14 @@ namespace spldlt {
          // nworkers = starpu_cpu_worker_get_count();
          nworkers = starpu_worker_get_count();
 #endif
-         printf("[NumericTree] nworkers = %d\n", nworkers);         
-         printf("[NumericTree] blksz = %d\n", blksz);         
 
+         std::cout << "[NumericTree] print_level = " << options.print_level << std::endl;
+         if (options.print_level > 1) {
+            printf("[NumericTree] nworkers = %d\n", nworkers);         
+            printf("[NumericTree] blksz = %d\n", blksz);
+            std::cout << "[NumericTree] action = " << options.action << std::endl;
+         }
+         
          std::vector<sylver::inform_t> worker_stats(nworkers);
          std::vector<spral::ssids::cpu::Workspace> workspaces;
          // Prepare workspaces
@@ -103,7 +108,7 @@ namespace spldlt {
             <T, INNER_BLOCK_SIZE, Backup, FactorAllocator, PoolAllocator>
             (posdef);
 #endif
-         
+
          // starpu_task_wait_for_all();
          // starpu_fxt_trace_user_event();
          // printf("[NumericTree] nnodes = %d\n", symb_.nnodes_);
@@ -116,14 +121,29 @@ namespace spldlt {
          long ttotal = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count();
          printf("[NumericTree] Task submission: %e\n", 1e-9*ttotal);
 
+
 #if defined(SPLDLT_USE_STARPU)
-         starpu_task_wait_for_all();
+            starpu_task_wait_for_all();
 
-         starpu_data_unregister(spldlt::starpu::workspace_hdl);
+            starpu_data_unregister(spldlt::starpu::workspace_hdl);
+
+            if (!posdef) {
+               // Clear StarPU tags used in indef fatorization
+               for(int ni = 0; ni < symb_.nnodes_; ++ni) {
+                  starpu_tag_t tag_assemble_contrib = (starpu_tag_t) (3*ni+1);
+                  starpu_tag_t tag_factor_failed = (starpu_tag_t) (3*ni+2);
+                  starpu_tag_t tag_nelim = (starpu_tag_t) (3*ni);
+
+                  starpu_tag_remove(tag_assemble_contrib);
+                  starpu_tag_remove(tag_factor_failed);
+                  starpu_tag_remove(tag_nelim);
+               }
+            }
 #endif
-
+                  
+         // Initialize inform
+         inform = sylver::inform_t();
          // Reduce thread_stats
-         inform = sylver::inform_t(); // initialise
          for(auto tinform : worker_stats)
             inform += tinform;
          if(inform.flag < 0) return;

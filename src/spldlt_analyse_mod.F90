@@ -559,6 +559,9 @@ contains
     use spral_matrix_util, only : SPRAL_MATRIX_REAL_SYM_INDEF, &
          SPRAL_MATRIX_REAL_SYM_PSDEF, clean_cscl_oop
     use sylver_datatypes_mod, only: spldlt_options
+#if defined(SPLDLT_USE_STARPU)
+    use starpu_f_mod, only: starpu_f_cpu_worker_get_count, starpu_f_cuda_worker_get_count  
+#endif
     use, intrinsic :: iso_c_binding
     implicit none
     
@@ -779,14 +782,23 @@ contains
     if (present(ncpu)) then
        ncpu_topo = ncpu
     else
+#if defined(SPLDLT_USE_STARPU)
+       !print *, "cpu_worker_get_count = ", starpu_f_cpu_worker_get_count()
+       ncpu_topo = starpu_f_cpu_worker_get_count()
+#else
        ncpu_topo = 1
+#endif
     endif
     
     ! Define the number of GPU workers
     if (present(ngpu)) then
        ngpu_topo = ngpu
     else
+#if defined(SPLDLT_USE_STARPU)
+       ngpu_topo = starpu_f_cuda_worker_get_count()
+#else
        ngpu_topo = 0
+#endif
     endif
 
     ! Create flat topology

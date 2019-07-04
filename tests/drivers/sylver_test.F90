@@ -106,6 +106,7 @@ contains
     call chk_answer(posdef, a, akeep, options, rhs, x, res, &
       SYLVER_WARNING_IDX_OOR)
     call spldlt_akeep_free(akeep)
+    info%flag = SYLVER_SUCCESS ! Reset flag
 
     write(*,"(a)",advance="no") " * Testing out of range below............"
     call simple_mat_lower(a,1)
@@ -125,6 +126,7 @@ contains
     call chk_answer(posdef, a, akeep, options, rhs, x, res, &
          SYLVER_WARNING_IDX_OOR)
     call spldlt_akeep_free(akeep)
+    info%flag = SYLVER_SUCCESS ! Reset flag
 
     write(*,"(a)",advance="no") " * Testing duplicates...................."
     call simple_mat(a,2)
@@ -145,6 +147,7 @@ contains
     call chk_answer(posdef, a, akeep, options, rhs, x, res, &
          SYLVER_WARNING_DUP_IDX)
     call spldlt_akeep_free(akeep)
+    info%flag = SYLVER_SUCCESS ! Reset flag
 
     write(*,"(a)",advance="no") " * Testing out of range and duplicates..."
     call simple_mat_lower(a,2)
@@ -167,6 +170,7 @@ contains
     call chk_answer(posdef, a, akeep, options, rhs, x, res, &
          SYLVER_WARNING_DUP_AND_OOR, fs=.true.)
     call spldlt_akeep_free(akeep)
+    info%flag = SYLVER_SUCCESS ! Reset flag
     
     write(*,"(a)", advance="no") " * Testing missing diagonal entry (indef)....."
     a%ptr = (/ 1, 4, 5, 6, 7 /)
@@ -188,7 +192,8 @@ contains
     call chk_answer(posdef, a, akeep, options, rhs, x, res, &
          SYLVER_WARNING_MISSING_DIAGONAL)
     call spldlt_akeep_free(akeep)
-
+    info%flag = SYLVER_SUCCESS ! Reset flag
+    
     write(*,"(a)", advance="no") " * Testing missing diagonal and out of range.."
     posdef = .false.
     call simple_mat_lower(a)
@@ -210,6 +215,7 @@ contains
     call chk_answer(posdef, a, akeep, options, rhs, x, res, &
          SYLVER_WARNING_MISS_DIAG_OORDUP)
     call spldlt_akeep_free(akeep)
+    info%flag = SYLVER_SUCCESS ! Reset flag
 
     write(*,"(a)",advance="no") " * Testing arrays min size (zero diag)........"
     posdef = .false.
@@ -221,6 +227,7 @@ contains
     call chk_answer(posdef, a, akeep, options, rhs, x, res, &
          SYLVER_WARNING_MISSING_DIAGONAL)
     call spldlt_akeep_free(akeep)
+    info%flag = SYLVER_SUCCESS ! Reset flag
 
     write(*,"(a)", advance="no") " * Testing missing diagonal and duplicate....."
     posdef = .false.
@@ -243,6 +250,7 @@ contains
     call chk_answer(posdef, a, akeep, options, rhs, x, res, &
          SYLVER_WARNING_MISS_DIAG_OORDUP, fs=.true.)
     call spldlt_akeep_free(akeep)
+    info%flag = SYLVER_SUCCESS ! Reset flag
 
     write(*,"(a)", advance="no") " * Testing analyse with structurally singular."
     posdef = .false.
@@ -261,6 +269,8 @@ contains
     call chk_answer(posdef, a, akeep, options, rhs, x, res, &
          SYLVER_WARNING_FACT_SINGULAR, fs=.true.)
     call spldlt_akeep_free(akeep)
+    info%flag = SYLVER_SUCCESS ! Reset flag
+
     write(*,"(a)", advance="no") " * Testing analyse with structurally singular."
     posdef = .false.
     options%action = .true.
@@ -278,6 +288,7 @@ contains
     call chk_answer(posdef, a, akeep, options, rhs, x, res, &
          SYLVER_WARNING_FACT_SINGULAR, fs=.true.)
     call spldlt_akeep_free(akeep)
+    info%flag = SYLVER_SUCCESS ! Reset flag
 !!!!!!!!!
 
     posdef = .false.
@@ -384,10 +395,11 @@ subroutine test_errors
 
    options%unit_error = we_unit
    options%unit_warning = we_unit
+   options%print_level = 2
 
    write(*,"(/a)") "======================"
-   write(*,"(a)") "Testing errors:"
-   write(*,"(a)") "======================"
+   write(*,"(a)")  "Testing errors:"
+   write(*,"(a)")  "======================"
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 

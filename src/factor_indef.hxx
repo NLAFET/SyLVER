@@ -91,7 +91,7 @@ namespace spldlt {
 
          // Factor front
          FactorSymIndefSpec::factor_front_indef_app_notask(
-               front, options, work, pool_alloc, 
+               front, options, stats, work, pool_alloc, 
                front.nelim // Return the number of succesfully
                            // eliminated columns
                );
@@ -169,11 +169,11 @@ namespace spldlt {
 
          // Factor fully-summed columns and form contrib blocks
          FactorSymIndefSpec::factor_front_indef_app(
-               node, options, 0.0, upd, 0, workspaces, pool_alloc,
+               node, options, worker_stats, 0.0, upd, 0, workspaces, pool_alloc,
                node.nelim);
 
-         // Release backup and permute failed columns 
-         FactorSymIndefSpec::release_permute_failed_task (
+         // Release backup and permute failed columns
+         FactorSymIndefSpec::release_permute_failed_task(
                node, pool_alloc);
       }
 
@@ -265,7 +265,7 @@ namespace spldlt {
             BlockSpec& dblk, int& next_elim,
             int* perm, T* d,
             ColumnData<T,IntAlloc>& cdata, Backup& backup,
-            sylver::options_t& options,
+            sylver::options_t& options, std::vector<sylver::inform_t>& worker_stats,
             std::vector<spral::ssids::cpu::Workspace>& work,
             Allocator const& alloc) {
 
@@ -281,14 +281,20 @@ namespace spldlt {
                blk,
                &next_elim, perm, d,
                &cdata, &backup,
-               &options, &work, &alloc,
+               &options, &worker_stats, &work, &alloc,
                FACTOR_APP_PRIO);
          
 #else
 
-         factor_block_app(
-               dblk, next_elim, perm, d, cdata, backup, options, work[0],
-               alloc);
+         sylver::inform_t stats = worker_stats[0];
+         
+         try {
+            factor_block_app(
+                  dblk, next_elim, perm, d, cdata, backup, options, work[0],
+                  alloc);
+         } catch (SingularError const&) {
+            stats.flag = sylver::Flag::ERROR_SINGULAR;
+         }
             
 #endif
       }
@@ -816,7 +822,7 @@ namespace spldlt {
       int factorize_indef_app (
             int const m, int const n, int* perm, T* a,
             int const lda, T* d, ColumnData<T,IntAlloc>& cdata, Backup& backup,
-            sylver::options_t& options, int const block_size,
+            sylver::options_t& options, std::vector<sylver::inform_t>& worker_stats, int const block_size,
             T const beta, T* upd, int const ldupd, std::vector<spral::ssids::cpu::Workspace>& work,
             Allocator const& alloc, int const from_blk=0) {
 
@@ -877,7 +883,7 @@ namespace spldlt {
                   blocks[blk*(mblk+1)] /*dblk*/, next_elim,
                   perm, d,
                   cdata, backup,
-                  options/*, block_size*/, work, alloc);
+                  options/*, block_size*/, worker_stats, work, alloc);
 
 // #if defined(SPLDLT_USE_STARPU)
 //             starpu_task_wait_for_all();
@@ -1272,6 +1278,7 @@ namespace spldlt {
       void factor_front_indef_app_notask(
             NumericFront<T, Allocator> &front,
             sylver::options_t& options,
+            sylver::inform_t& stats,
             spral::ssids::cpu::Workspace& work,
             Allocator const& alloc,
             int& next_elim, int const from_blk=0) {
@@ -1417,6 +1424,7 @@ namespace spldlt {
       void factor_front_indef_app(
             NumericFront<T, Allocator> &node,
             sylver::options_t& options,
+            std::vector<sylver::inform_t>& worker_stats,
             T const beta, T* upd, int const ldupd,
             std::vector<spral::ssids::cpu::Workspace>& workspaces,
             Allocator const& alloc, int& next_elim, int const from_blk=0
@@ -1453,7 +1461,7 @@ namespace spldlt {
             // Factorize block on diagonal
             factor_block_app_task(
                   blocks[blk*(mblk+1)], next_elim, perm, d, cdata, backup,
-                  options, workspaces, alloc);
+                  options, worker_stats, workspaces, alloc);
                         
             // Loop over off-diagonal blocks applying pivot
             for(int jblk=0; jblk<blk; jblk++) {
@@ -1936,7 +1944,7 @@ namespace spldlt {
             int *perm, 
             T *a, int lda, T *d, 
             Backup& backup, 
-            sylver::options_t& options/*, PivotMethod pivot_method*/, 
+            sylver::options_t& options, std::vector<sylver::inform_t>& worker_stats,
             int block_size, T beta, T* upd, int ldupd, 
             std::vector<spral::ssids::cpu::Workspace>& work, 
             Allocator const& alloc=Allocator()) {
@@ -1960,7 +1968,7 @@ namespace spldlt {
          // factorize matrix and leave fail entries in place
          num_elim = factorize_indef_app (
                m, n, perm, a, lda, d, cdata, backup,
-               options, block_size,
+               options, worker_stats, block_size,
                beta, upd, ldupd, work,
                alloc);
 

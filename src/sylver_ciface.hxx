@@ -69,4 +69,15 @@ namespace sylver {
    };
    using inform_t = struct inform_c;
 
+   // ///
+   // /// @brief Exception class for options.action = false and singular matrix.
+   // ///
+   // class SingularError: public std::runtime_error {
+   // public:
+   //    SingularError(int col)
+   //       : std::runtime_error("Matrix is singular"), col(col)
+   //    {}
+   
+   //    int const col;
+   // };
 }
