@@ -15,9 +15,9 @@ General
    computations should be passed to this routine.
 
    :p integer ncpu [in]: number of CPUs to be used in the
-                         computations.
-   :p integer ngpu [in]: number of GPUs to be used in the
-                         computations. Note that if CUDA is not
+                         execution of SyLVER routines.
+   :p integer ngpu [in]: number of GPUs to be used in the execution of
+                         SyLVER routines. Note that if CUDA is not
                          enabled during the compilation, this value
                          will be ignored.
 
@@ -30,7 +30,7 @@ General
 SpLDLT
 ======
 
-.. f:subroutine:: spldlt_analyse(akeep,n,ptr,row,options,inform, ncpu[,order,val])
+.. f:subroutine:: spldlt_analyse(akeep,n,ptr,row,options,inform [,order,val, ncpu, ngpu, check])
 
    Perform the analyse (symbolic) phase of the factorization for a
    matrix supplied in `Compressed Sparse Column (CSC) format
@@ -51,14 +51,26 @@ SpLDLT
       (see :f:type:`sylver_options`).
    :p sylver_inform inform [out]: returns information about the
       execution of the routine (see :f:type:`sylver_inform`).                                    
-   :p integer ncpu [in]: Number of CPU available for the execution.
    :o integer order(n) [inout]: on entry a user-supplied ordering
       (options%ordering=0). On return, the actual ordering used (if present).
    :o real val(ptr(n+1)-1) [in]: non-zero values for :math:`A` (see
       `CSC format
       <http://www.numerical.rl.ac.uk/spral/doc/latest/Fortran/csc_format.html>`_). Only
       used if a matching-based ordering is requested.
-
+   :o integer ncpu [in]: Number of CPU available for the execution. If
+                         absent, the value of ncpu passed to the
+                         :f:subr:`sylver_init()` routine is used
+                         instead.
+   :o integer ncpu [in]: Number of GPU available for the
+                         execution. This value is ignored if CUDA is
+                         not enabled during the compilation and if
+                         absent, the value of ncpu passed to the
+                         :f:subr:`sylver_init()` routine is used
+                         instead.
+   :o logical check [in]: if true, matrix data is
+      checked. Out-of-range entries are dropped and duplicate entries
+      are summed.
+   
    .. note::
 
       If a user-supplied ordering is used, it may be altered by this
@@ -69,7 +81,7 @@ SpLDLT
       order of columns within a supernode may have been adjusted to
       improve cache locality.
 
-.. f:subroutine::  spldlt_factor(akeep,fkeep,posdef,val,options,inform[,scale,ptr,row])
+.. f:subroutine::  spldlt_factorize(akeep,fkeep,posdef,val,options,inform[,scale,ptr,row])
 
    :p spldlt_akeep akeep [in]: symbolic factorization returned by
       preceding call to :f:subr:`spldlt_analyse()`.
@@ -164,7 +176,7 @@ SpLU
       <http://www.numerical.rl.ac.uk/spral/doc/latest/Fortran/csc_format.html>`_). Only
       used if a matching-based ordering is requested.
 
-.. f:subroutine::  splu_factor(akeep,fkeep,posdef,val,options,inform[,scale,ptr,row])
+.. f:subroutine::  splu_factorize(akeep,fkeep,posdef,val,options,inform[,scale,ptr,row])
 
    :p splu_akeep akeep [in]: symbolic factorization returned by
       preceding call to :f:subr:`splu_analyse()`.
