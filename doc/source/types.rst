@@ -188,10 +188,10 @@ Information
    +-------------+-------------------------------------------------------------+
    | -11         | job is out-of-range.                                        |
    +-------------+-------------------------------------------------------------+
-   | -13         | Called :f:subr:`ssids_enquire_posdef()` on indefinite       |
+   | -13         | Called :f:subr:`spldlt_enquire_posdef()` on indefinite      |
    |             | factorization.                                              |
    +-------------+-------------------------------------------------------------+
-   | -14         | Called :f:subr:`ssids_enquire_indef()` on positive-definite |
+   | -14         | Called :f:subr:`spldlt_enquire_indef()` on positive-definite|
    |             | factorization.                                              |
    +-------------+-------------------------------------------------------------+
    | -15         | options%scaling=3 but a matching-based ordering was not     |
