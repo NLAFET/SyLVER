@@ -13,6 +13,7 @@ SyLVER
    :caption: Contents:
 
    introduction
+   installation
    subroutines
    types
    examples
