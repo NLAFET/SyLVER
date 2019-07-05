@@ -47,18 +47,19 @@ where :math:`P` is a permutation matrix, :math:`L` is unit lower triangular,
 and :math:`D` is block diagonal with blocks of size :math:`1 \times 1`
 and :math:`2 \times 2`.
 
-3. :math:`A` is **unsymmetric**, then we compute the sparse :math
-`LU` decomposition:
+..
+   3. :math:`A` is **unsymmetric**, then we compute the sparse :math `LU`
+       decomposition:
 
-.. math::
+   .. math::
 
-   P_sAP_s^T = P_nLUQ_n
+      P_sAP_s^T = P_nLUQ_n
 
-where :math:`P_s` is a permutation matrix corresponding to the
-fill-reducing permutation whereas :math:`P_n` and :math:`Q_n` are
-meant to improve the numerical property of the factorization
-algorithm.  :math:`L` is lower triangular, and :math:`U` is unit upper
-triangular.
+   where :math:`P_s` is a permutation matrix corresponding to the
+   fill-reducing permutation whereas :math:`P_n` and :math:`Q_n` are
+   meant to improve the numerical property of the factorization
+   algorithm.  :math:`L` is lower triangular, and :math:`U` is unit upper
+   triangular.
 
 The code optionally supports hybrid computation using one or more
 NVIDIA GPUs.
@@ -88,7 +89,7 @@ Solving :math:`AX=B` using SyLVER is a four stage process.
    4. Once all desired solutions have been performed, free memory with
       :f:subr:`spldlt_free()`.
 
-- If :math:`A` is *unsymmetric*:
+.. - If :math:`A` is *unsymmetric*:
 
    1. Call :f:subr:`splu_analyse()` to perform a symbolic factorization, stored
       in `splu_akeep`.
