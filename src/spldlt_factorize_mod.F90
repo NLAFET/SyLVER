@@ -878,7 +878,7 @@ contains
        if (.not. allocated(akeep%scaling)) then
           ! No scaling saved from analyse phase
           inform%flag = SYLVER_ERROR_NO_SAVED_SCALING
-          goto 100
+          goto 200
        end if
        do i = 1, n
           fkeep%scaling(i) = akeep%scaling(akeep%invp(i))
