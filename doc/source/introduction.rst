@@ -63,6 +63,12 @@ triangular.
 The code optionally supports hybrid computation using one or more
 NVIDIA GPUs.
 
+SyLVER returns bit-compatible results.
+
+An option exists to scale the matrix. In this case, the factorization
+of the scaled matrix :math:`\overline{A} = S A S` is computed, where
+:math:`S` is a diagonal scaling matrix.
+
 ==============
 Usage overview
 ==============
