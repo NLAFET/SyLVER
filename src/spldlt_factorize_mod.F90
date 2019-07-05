@@ -1196,7 +1196,6 @@ contains
   subroutine spldlt_solve(spldlt_akeep, spldlt_fkeep, nrhs, x, ldx, options, &
        inform, job)
     use spral_ssids_datatypes
-    ! use spral_ssids_inform, only : ssids_inform
     use sylver_datatypes_mod, only: sylver_options
     use spldlt_analyse_mod, only: spldlt_akeep_type
     use sylver_inform_mod, only: sylver_inform
@@ -1229,7 +1228,7 @@ contains
     integer :: n
     character(50) :: context  ! Procedure name (used when printing).
 
-    inform%flag = SSIDS_SUCCESS
+    inform%flag = SYLVER_SUCCESS
 
     ! Perform appropriate printing
     if ((options%print_level .ge. 1) .and. (options%unit_diagnostics .ge. 0)) then
@@ -1260,10 +1259,16 @@ contains
     if (.not. allocated(spldlt_fkeep%fkeep%subtree)) then
        ! factorize phase has not been performed
        inform%flag = SSIDS_ERROR_CALL_SEQUENCE
-       call inform%print_flag(options, context)
-       return
+       goto 200
     end if
 
+    inform%flag = max(SYLVER_SUCCESS, spldlt_fkeep%inform%flag) ! Preserve warnings
+    ! immediate return if already had an error in previous calls
+    if ((spldlt_akeep%inform%flag .lt. 0) .or. (spldlt_fkeep%inform%flag .lt. 0)) then
+       inform%flag = SSIDS_ERROR_CALL_SEQUENCE
+       goto 200
+    end if
+    
     ! Check size of x 
     n = spldlt_akeep%akeep%n
     if (ldx .lt. n) then

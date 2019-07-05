@@ -605,6 +605,7 @@ contains
       ! val is present.
     
     integer :: ncpu_topo, ngpu_topo
+    type(sylver_inform) :: inform_default
     
     st = 0
     ! Prepare analysis phase
@@ -614,11 +615,13 @@ contains
 
     ! Initialize
     context = 'spldlt_analyse'
-    call ssids_free(akeep, free_flag)
-    if (free_flag .ne. 0) then
-       inform%flag = SYLVER_ERROR_CUDA_UNKNOWN
-       goto 200    
-    end if
+    inform = inform_default
+    ! call ssids_free(akeep, free_flag)
+    ! if (free_flag .ne. 0) then
+    !    inform%flag = SYLVER_ERROR_CUDA_UNKNOWN
+    !    goto 200    
+    ! end if
+    call spldlt_akeep%free()
     ! Print status on entry
     call options%print_summary_analyse(context)
     if ((options%print_level .ge. 1) .and. (options%unit_diagnostics .ge. 0)) then

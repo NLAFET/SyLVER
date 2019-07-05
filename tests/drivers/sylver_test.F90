@@ -765,7 +765,6 @@ subroutine test_errors
    call print_result(info%flag, SYLVER_SUCCESS)
    call spldlt_akeep_free(akeep)
    call spldlt_fkeep_free(fkeep)
-   info%flag = SYLVER_SUCCESS ! Reset error flag
 
 !!!!!!!!!!!!!!!!!!!!
 
@@ -793,8 +792,234 @@ subroutine test_errors
    call print_result(info%flag, SYLVER_ERROR_NO_SAVED_SCALING)
    call spldlt_akeep_free(akeep)
    call spldlt_fkeep_free(fkeep)
-   info%flag = SYLVER_SUCCESS ! Reset error flag
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   
+   ! tests on call to spldlt_solve
+
+   write(*,"(/a)") " * Testing bad arguments spldlt_solve"
+
+   write(*,"(a)",advance="no") " * Testing solve after factor error.........."
+   call simple_sing_mat(a)
+   options%ordering = 0
+   if (allocated(order)) deallocate(order)
+   allocate(order(a%n))
+   do i = 1,a%n
+      order(i) = i
+   end do
+
+   call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true., ncpu=ncpu)
+
+   options%action = .false.
+   options%scaling = 0
+   posdef = .false.
+   ! Trigger error in spldlt_factorize
+   call spldlt_factorize(akeep, fkeep, posdef, a%val, options, &
+        info)
+   if(info%flag .ne. SSIDS_ERROR_SINGULAR) then
+      write(*, "(a,i4)") &
+     "Unexpected flag returned by ssids_factor. flag = ", info%flag
+      errors = errors + 1
+      return
+   endif
+
+   if (allocated(x1)) deallocate(x1)
+   allocate(x1(a%n))
+   x1(1:a%n) = one
+   call spldlt_solve(akeep, fkeep, 1, x1, a%n, options, info)
+   call print_result(info%flag, SYLVER_ERROR_CALL_SEQUENCE)
+   call spldlt_akeep_free(akeep)
+   call spldlt_fkeep_free(fkeep)
+
+!!!!!!!!!!!!!!!!!!!!
+   
+   call simple_mat(a)
+   deallocate(x1)
+   allocate(x1(a%n))
+   x1(1:a%n) = one
+   posdef = .false.
+   write(*,"(a)",advance="no") " * Testing solve out of sequence............."
+   if (allocated(order)) deallocate(order)
+   allocate(order(a%n))
+   do i = 1,a%n
+     order(i) = i
+   end do
+   call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true., ncpu=ncpu)
+
+   call spldlt_solve(akeep, fkeep, 1, x1, a%n, options, info)
+   call print_result(info%flag, SYLVER_ERROR_CALL_SEQUENCE)
+   call spldlt_akeep_free(akeep)
+   call spldlt_fkeep_free(fkeep)
+
+!!!!!!!!!!!!!!!!!!!!
+
+   call simple_mat(a)
+   posdef = .false.
+   write(*,"(a)",advance="no") " * Testing job out of range below............"
+   call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true., ncpu=ncpu)
+   call spldlt_factorize(akeep, fkeep, posdef, a%val, options, &
+        info)
+   call spldlt_solve(akeep, fkeep, 1, x1, a%n, options, info, job=-1)
+   call print_result(info%flag, SYLVER_ERROR_JOB_OOR)
+   call spldlt_akeep_free(akeep)
+   call spldlt_fkeep_free(fkeep)
+
+!!!!!!!!!!!!!!!!!!!!
+
+   call simple_mat(a)
+   posdef = .false.
+   write(*,"(a)",advance="no") " * Testing job out of range above............"
+   call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true., ncpu=ncpu)
+   call spldlt_factorize(akeep, fkeep, posdef, a%val, options, &
+        info)
+   call spldlt_solve(akeep, fkeep, 1, x1, a%n, options, info, job=5)
+   call print_result(info%flag, SYLVER_ERROR_JOB_OOR)
+   call spldlt_akeep_free(akeep)
+   call spldlt_fkeep_free(fkeep)
+
+!!!!!!!!!!!!!!!!!!!!
+
+   call simple_mat(a)
+   posdef = .false.
+   write(*,"(a)",advance="no") " * Testing error in x (one rhs).............."
+   call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true., ncpu=ncpu)
+   call spldlt_factorize(akeep, fkeep, posdef, a%val, options, &
+        info)
+   if (allocated(x1)) deallocate(x1)
+   allocate(x1(a%n-1))
+   call spldlt_solve(akeep, fkeep, 1, x1, size(x1,1), options, info)
+   call print_result(info%flag, SYLVER_ERROR_X_SIZE)
+   call spldlt_akeep_free(akeep)
+   call spldlt_fkeep_free(fkeep)
+
+!!!!!!!!!!!!!!!!!!!!
+
+   call simple_mat(a)
+   posdef = .false.
+   write(*,"(a)",advance="no") " * Testing error in nrhs....................."
+   call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true., ncpu=ncpu)
+   call spldlt_factorize(akeep, fkeep, posdef, a%val, options, &
+        info)
+   nrhs = -2
+   if (allocated(x)) deallocate(x)
+   allocate(x(a%n,1))
+   call spldlt_solve(akeep, fkeep, nrhs, x1, a%n, options, info)
+   call print_result(info%flag, SYLVER_ERROR_X_SIZE)
+   call spldlt_akeep_free(akeep)
+   call spldlt_fkeep_free(fkeep)
 
  end subroutine test_errors
+
+ ! subroutine test_special
+ !   type(matrix_type) :: a
+ !   type(sylver_options) :: options
+ !   type(spldlt_akeep_type) :: akeep
+ !   type(spldlt_fkeep_type) :: fkeep
+ !   type(sylver_inform) :: info
+
+ !   integer :: i
+ !   logical :: check
+ !   logical :: posdef
+ !   integer :: st, cuda_error
+ !   integer :: test
+ !   integer, dimension(:), allocatable :: order
+ !   real(wp), dimension(:), allocatable :: scale
+ !   real(wp), dimension(:), allocatable :: x1
+ !   real(wp), dimension(:,:), allocatable :: rhs, x, res
+ !   type(random_state) :: state
+
+ !   integer :: big_test_n = int(1e5 + 5)
+
+ !   options%unit_error = we_unit
+ !   options%unit_warning = we_unit
+ !   options%print_level = 2
+
+ !   write(*,"(a)")
+ !   write(*,"(a)") "====================="
+ !   write(*,"(a)") "Testing special cases"
+ !   write(*,"(a)") "====================="
+
+ !   ! do test = 1,2
+ !   !    if (test == 1) then
+ !   write(*,"(a)",advance="no") &
+ !        " * Testing n = 0 (CSC)..................."
+ !   a%n = 0
+ !   a%ne = 0
+ !   if (allocated(a%ptr)) deallocate(a%ptr, stat=st)
+ !   if (allocated(a%row)) deallocate(a%row,stat=st)
+ !   if (allocated(a%val)) deallocate(a%val,stat=st)
    
+ !   allocate(a%ptr(a%n+1),a%row(a%ne),a%val(a%ne))
+
+ !   if (allocated(order)) deallocate(order)
+ !   allocate(order(a%n))
+ !   call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true., ncpu=ncpu)
+ !   if(info%flag.ne.0) then
+ !      write(*, "(a,i4)") &
+ !           "Unexpected error during analyse. flag = ", info%flag
+ !      errors = errors + 1
+ !      call spldlt_akeep_free(akeep)
+ !      exit
+ !   endif
+ !   ! else
+ !   !    write(*,"(a)",advance="no") &
+ !   !         " * Testing n = 0 (coord)................."
+ !   !    a%n = 0
+ !   !    a%ne = 0
+ !   !    deallocate(a%row,a%val)
+ !   !    allocate(a%col(a%ne),a%row(a%ne),a%val(a%ne))
+
+ !   !    if (allocated(order)) deallocate(order)
+ !   !    allocate(order(a%n))
+ !   !    call ssids_analyse_coord(a%n, a%ne, a%row, a%col, akeep, options, &
+ !   !         info, order=order)
+ !   !    if(info%flag.ne.0) then
+ !   !       write(*, "(a,i4)") &
+ !   !            "Unexpected error during analyse_coord. flag = ", info%flag
+ !   !       errors = errors + 1
+ !   !       call ssids_free(akeep, cuda_error)
+ !   !       exit
+ !   !    endif
+ !   ! endif
+
+ !   deallocate(scale,stat=st)
+ !   allocate(scale(a%n))
+ !   options%scaling = 1 ! MC64
+
+ !   posdef = .true.
+
+ !   call spldlt_factorize(akeep, fkeep, posdef, a%val, options, &
+ !        info, scale=scale)
+ !   if(info%flag.ne.0) then
+ !      write(*, "(a,i4)") &
+ !           "Unexpected error during factor. flag = ", info%flag
+ !      errors = errors + 1
+ !      call spldlt_akeep_free(akeep)
+ !      call spldlt_fkeep_free(fkeep)
+ !      exit
+ !   endif
+
+ !   if (allocated(x1)) deallocate(x1)
+ !   allocate(x1(a%n))
+ !   call spldlt_solve(akeep, fkeep, nrhs, x1, a%n, options, info)
+ !   if(info%flag.ne.0) then
+ !      write(*, "(a,i4)") &
+ !           "Unexpected error during solve. flag = ", info%flag
+ !      errors = errors + 1
+ !      call spldlt_akeep_free(akeep)
+ !      call spldlt_fkeep_free(fkeep)
+ !      exit
+ !   endif
+
+ !   call print_result(info%flag, SYLVER_SUCCESS)
+ !   call ssids_free(akeep, cuda_error)
+ !   call ssids_free(fkeep, cuda_error)
+ !   ! enddo
+ !   deallocate(order, a%ptr, a%row, a%val)
+
+ !   ! allocate(a%ptr(big_test_n+1), a%row(4*big_test_n), a%val(4*big_test_n))
+ !   ! allocate(order(10))
+
+ ! end subroutine test_special
+
 end program main
