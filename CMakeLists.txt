@@ -111,8 +111,8 @@ option(EXAMPLES "Examples" ON)
 MESSAGE( STATUS "Examples: " ${EXAMPLES})
 
 # Decide wheter we want to compile the kernel tests or not
-option(KERNEL_TESTS "Tests" OFF)
-MESSAGE( STATUS "Tests: " ${KERNEL_TESTS})
+option(TESTS "Tests" OFF)
+MESSAGE( STATUS "Tests: " ${TESTS})
 
 # spral
 set(SPRAL_DIR $ENV{SPRALDIR} CACHE PATH "Location of SPRAL Library")
