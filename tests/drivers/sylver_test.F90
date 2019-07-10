@@ -1185,4 +1185,58 @@ subroutine test_errors
 
  end subroutine test_special
 
+ subroutine test_random
+   type(spldlt_akeep_type)   :: akeep
+   type(spldlt_fkeep_type)   :: fkeep
+   type(sylver_options) :: options
+   type(sylver_inform)  :: info
+
+   !logical, parameter :: debug = .true.
+   logical, parameter :: debug = .false.
+
+   integer :: maxn = 1000
+   integer :: maxnemin = 48
+   integer :: maxnz =  1000000
+   integer, parameter :: maxnrhs = 10
+   integer, parameter :: nprob = 100
+   type(random_state) :: state
+
+   type(matrix_type) :: a
+   real(wp), allocatable, dimension(:, :) :: rhs,x
+   real(wp), allocatable, dimension(:) :: rhs1d,x1
+   real(wp), allocatable, dimension(:, :) :: res
+
+   logical :: posdef
+   integer :: prblm, i, j, k, n1, nrhs, mt
+   integer(long) :: ne, nza
+   integer, dimension(:), allocatable :: order, piv_order
+   integer, dimension(:), allocatable :: xindex, bindex
+   logical, dimension(:), allocatable :: lflag
+   real(wp), dimension(:,:), allocatable :: d
+   real(wp), dimension(:), allocatable :: d1
+   integer :: cuda_error
+   logical :: check, coord
+   real(wp) :: num_flops
+
+   write(*, "(a)")
+   write(*, "(a)") "======================="
+   write(*, "(a)") "Testing random matrices"
+   write(*, "(a)") "======================="
+
+   allocate(a%ptr(maxn+1))
+   allocate(a%row(2*maxnz), a%val(2*maxnz), a%col(2*maxnz))
+   allocate(order(maxn))
+   allocate(piv_order(maxn))
+   allocate(rhs(maxn,maxnrhs), res(maxn,maxnrhs), x(maxn,maxnrhs))
+   allocate(x1(maxn), rhs1d(maxn))
+   allocate(d(2,maxn), d1(maxn))
+   allocate(bindex(maxn), xindex(maxn), lflag(maxn))
+
+   options%multiplier = 1.0 ! Ensure we give reallocation a work out
+
+   if(debug) options%print_level = 10000
+   options%min_gpu_work = 0 ! alway allow some gpu working
+
+ end subroutine test_random
+
 end program main
