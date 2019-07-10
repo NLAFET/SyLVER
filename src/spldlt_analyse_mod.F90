@@ -411,7 +411,7 @@ contains
             exec_loc, akeep%contrib_ptr, akeep%contrib_idx, contrib_dest, inform, st)
        if (st .ne. 0) go to 100
 
-       print *, "[analyse_core] nparts = ", akeep%nparts
+       if(options%print_level .gt. 1) print *, "[analyse_core] nparts = ", akeep%nparts
        ! print *, " part = ", akeep%part(1:akeep%nparts+1)
        ! print *, " exec_loc = ", exec_loc(1:akeep%nparts)
        ! print *, " contrib_ptr = ", akeep%contrib_ptr(1:akeep%nparts+1)
@@ -419,7 +419,7 @@ contains
        ! print *, " contrib_dest = ", contrib_dest(1:akeep%nparts)
        
        do i = 1, akeep%nparts
-          print *, "[analyse_core] exec_loc(i) = ", exec_loc(i) 
+          if(options%print_level .gt. 1) print *, "[analyse_core] exec_loc(i) = ", exec_loc(i) 
           if (exec_loc(i) .eq. -1) cycle
           spldlt_akeep%nsubtrees = spldlt_akeep%nsubtrees +1
           exec_loc(spldlt_akeep%nsubtrees) = exec_loc(i) 
@@ -443,11 +443,11 @@ contains
 #endif              
     end if
 
-    print *, "[analyse_core] nsubtrees = ", spldlt_akeep%nsubtrees
+    if(options%print_level .gt. 1) print *, "[analyse_core] nsubtrees = ", spldlt_akeep%nsubtrees
     ! print *, "[analyse_core] contrib_dest = ", contrib_dest(1:spldlt_akeep%nsubtrees)
     ! print *, "[analyse_core] subtrees = ", spldlt_akeep%subtree_en(1:spldlt_akeep%nsubtrees)
 ! #if defined(SPLDLT_USE_STARPU) && defined(SPLDLT_USE_OMP)
-    print *, "[analyse_core] exec_loc = ", exec_loc(1:spldlt_akeep%nsubtrees)
+    ! print *, "[analyse_core] exec_loc = ", exec_loc(1:spldlt_akeep%nsubtrees)
 ! #endif
     ! dump atree in a dot file
     call spldlt_print_atree(akeep%nnodes, akeep%sptr, akeep%sparent, akeep%rptr, small, exec_loc)
@@ -480,7 +480,7 @@ contains
           ! GPU
           ! device = mod(loc, nth)-1 ! device indexes are 0-indexed
           device = loc-nth-1 ! device indexes are 0-indexed
-          print *, "subtree = ", i, ", loc = ", loc, ", device = ", device
+          if(options%print_level .gt. 1) print *, "subtree = ", i, ", loc = ", loc, ", device = ", device
           akeep%subtree(i)%ptr => construct_gpu_symbolic_subtree(device, &
                akeep%n, subtree_sa(i), spldlt_akeep%subtree_en(i)+1, &
                akeep%sptr, akeep%sparent, akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist, &
@@ -972,7 +972,7 @@ contains
     do i = 1, size(topology)
        ngpu = ngpu + size(topology(i)%gpus)
     end do
-    print *, "running on ", nregion, " regions and ", ngpu, " gpus"
+    if(options%print_level .gt. 1) print *, "running on ", nregion, " regions and ", ngpu, " gpus"
 
     ! Keep splitting until we meet balance criterion
     best_load_balance = huge(best_load_balance)
@@ -1433,7 +1433,7 @@ contains
     
     character(50) :: context = 'prune_tree'! Procedure name (used when printing).
 
-    print *, '[prune_tree]', ' nth = ', nth, 'ngpu = ', ngpu 
+    ! print *, '[prune_tree]', ' nth = ', nth, 'ngpu = ', ngpu 
 
     ! nregion = ngpu
     ! if (nth .gt. 0) then
@@ -1618,7 +1618,7 @@ contains
        nlz = nlz-1
     end do godown
 
-    write(*, '("[prune_tree] load balance =", es10.3)') rm
+    ! write(*, '("[prune_tree] load balance =", es10.3)') rm
     ! write(*,*)'nlz: ', nlz
     ! write(*,*)'final lzero: ', lzero(1:nlz)
 
@@ -1744,7 +1744,7 @@ contains
     end do
     tot_weight = real(flops(nnodes))
     
-    print *, "Print atree"
+    ! print *, "Print atree"
 
     open(2, file="atree.dot")
 

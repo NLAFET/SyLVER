@@ -78,7 +78,7 @@ namespace spldlt {
          nworkers = starpu_worker_get_count();
 #endif
 
-         std::cout << "[NumericTree] print_level = " << options.print_level << std::endl;
+         // std::cout << "[NumericTree] print_level = " << options.print_level << std::endl;
          if (options.print_level > 1) {
             printf("[NumericTree] nworkers = %d\n", nworkers);         
             printf("[NumericTree] blksz = %d\n", blksz);
@@ -119,7 +119,7 @@ namespace spldlt {
                                      options, worker_stats);
          auto end = std::chrono::high_resolution_clock::now();
          long ttotal = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count();
-         printf("[NumericTree] Task submission: %e\n", 1e-9*ttotal);
+         if (options.print_level > 1) printf("[NumericTree] Task submission: %e\n", 1e-9*ttotal);
 
 
 #if defined(SPLDLT_USE_STARPU)
@@ -267,7 +267,7 @@ namespace spldlt {
          starpu_uncluster_machine(clusters);
          auto subtree_end = std::chrono::high_resolution_clock::now();                  
          long t_subtree = std::chrono::duration_cast<std::chrono::nanoseconds>(subtree_end-subtree_start).count();
-         printf("[factor_mf_indef] process subtrees: %e\n", 1e-9*t_subtree);
+         if (options.print_level > 1) printf("[factor_mf_indef] process subtrees: %e\n", 1e-9*t_subtree);
 
 #endif
 
@@ -424,7 +424,7 @@ namespace spldlt {
          starpu_uncluster_machine(clusters);
          auto subtree_end = std::chrono::high_resolution_clock::now();                  
          long t_subtree = std::chrono::duration_cast<std::chrono::nanoseconds>(subtree_end-subtree_start).count();
-         printf("[factor_mf_posdef] factor subtrees: %e\n", 1e-9*t_subtree);
+         if (options.print_level > 1) printf("[factor_mf_posdef] factor subtrees: %e\n", 1e-9*t_subtree);
 
 #endif
 

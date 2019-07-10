@@ -1,6 +1,9 @@
 module sylver_test_mod
   use spral_ssids_datatypes
+  use spral_matrix_util, only : SPRAL_MATRIX_REAL_SYM_PSDEF, &
+       SPRAL_MATRIX_REAL_SYM_INDEF, print_matrix
   use spral_random
+  use spral_random_matrix, only : random_matrix_generate
   use sylver_mod
   implicit none
 
@@ -10,6 +13,8 @@ module sylver_test_mod
   !   real(wp), parameter :: err_tol_scale = 2e-10
   real(wp), parameter :: err_tol = 5e-11
   real(wp), parameter :: err_tol_scale = 1e-08
+
+  type(sylver_options) :: default_options
 
   type :: matrix_type
      integer :: n
@@ -498,5 +503,54 @@ contains
     end do
     ptr(n+1) = j
   end subroutine gen_bordered_block_diag
+
+  subroutine gen_random_indef(a, nza, state, zr)
+    type(matrix_type), intent(inout) :: a
+    integer(long), intent(in) :: nza
+    type(random_state), intent(inout) :: state
+    integer, optional, intent(in) :: zr ! if present, all entries in
+    ! row zr are zero
+    integer, dimension(:), allocatable :: ptr32
+    integer :: ptrsz
+    
+    integer :: i, k, l, flag
+
+    ptrsz = size(a%ptr, 1)
+    allocate(ptr32(ptrsz))
+    ! Generate a FIXME: move to 64-bit
+    call random_matrix_generate(state, SPRAL_MATRIX_REAL_SYM_INDEF, a%n, a%n, &
+         int(nza), ptr32, a%row, flag, val=a%val, nonsingular=.true., sort=.true.)
+    if(flag.ne.0) print *, "Bad flag from random_matrix_generate()"
+    a%ptr = ptr32
+    deallocate(ptr32)
+    
+    if (present(zr)) then
+       ! Scan along row
+       do i = a%ptr(1), a%ptr(zr)-1
+          if(a%row(i).eq.zr) a%val(i) = zero
+       end do
+       ! Scan along column
+       do i = a%ptr(zr),a%ptr(zr+1)-1
+          a%val(i) = zero
+       end do
+    elseif(a%n.gt.3) then
+       ! Put some zeros on diagonal, observing first entry in column
+       ! is always the diagonal after sorting
+       ! but don't have all zeros in the col.
+       l = random_integer(state,  a%n/2)
+       do k = 1, a%n, max(1,l)
+          if (a%ptr(k+1) > a%ptr(k) + 1) then
+             i = a%ptr(k)
+             a%val(i) = zero
+          endif
+       end do
+       ! also make sure we have some large off diagonals
+       do k = 1, a%n
+          i = a%ptr(k+1) - 1
+          a%val(i) = a%val(i)*1000
+       end do
+    endif
+
+  end subroutine gen_random_indef
 
 end module sylver_test_mod

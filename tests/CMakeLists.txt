@@ -5,7 +5,7 @@ set(tests_drivers)
 include_directories(${CMAKE_BINARY_DIR}/src)
 
 # Unit tests
-if (${KERNEL_TESTS} MATCHES "ON")
+if (${TESTS} MATCHES "ON")
   
   list(APPEND tests_drivers "drivers/factor_node_test.cxx")
   list(APPEND tests_drivers "drivers/kernel_test.cxx")

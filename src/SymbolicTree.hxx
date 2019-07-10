@@ -78,7 +78,7 @@ namespace spldlt {
          for(int ni=0; ni<nnodes_; ++ni)
             nfactor_ += static_cast<size_t>(fronts_[ni].nrow)*fronts_[ni].ncol;
 
-         printf("[SymbolicTree] num factors: %zu\n", nfactor_);
+         // printf("[SymbolicTree] num factors: %zu\n", nfactor_);
 
          // Setup node partition and execution location information
          // for(int p = 0; p < nparts; ++p) {

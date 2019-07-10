@@ -39,6 +39,7 @@ program main
 
   call test_warnings
   call test_errors
+  call test_special
   
   write(*, "(/a)") "=========================="
   write(*, "(a,i4)") "Total number of errors = ", errors
@@ -910,116 +911,278 @@ subroutine test_errors
 
  end subroutine test_errors
 
- ! subroutine test_special
- !   type(matrix_type) :: a
- !   type(sylver_options) :: options
- !   type(spldlt_akeep_type) :: akeep
- !   type(spldlt_fkeep_type) :: fkeep
- !   type(sylver_inform) :: info
+ subroutine test_special
+   type(matrix_type) :: a
+   type(sylver_options) :: options
+   type(spldlt_akeep_type) :: akeep
+   type(spldlt_fkeep_type) :: fkeep
+   type(sylver_inform) :: info
 
- !   integer :: i
- !   logical :: check
- !   logical :: posdef
- !   integer :: st, cuda_error
- !   integer :: test
- !   integer, dimension(:), allocatable :: order
- !   real(wp), dimension(:), allocatable :: scale
- !   real(wp), dimension(:), allocatable :: x1
- !   real(wp), dimension(:,:), allocatable :: rhs, x, res
- !   type(random_state) :: state
+   integer :: i
+   logical :: check
+   logical :: posdef
+   integer :: st, cuda_error
+   integer :: test
+   integer, dimension(:), allocatable :: order
+   real(wp), dimension(:), allocatable :: scale
+   real(wp), dimension(:), allocatable :: x1
+   real(wp), dimension(:,:), allocatable :: rhs, x, res
+   type(random_state) :: state
 
- !   integer :: big_test_n = int(1e5 + 5)
+   integer :: big_test_n = int(1e5 + 5)
 
- !   options%unit_error = we_unit
- !   options%unit_warning = we_unit
- !   options%print_level = 2
+   options%unit_error = we_unit
+   options%unit_warning = we_unit
+   options%print_level = 2
 
- !   write(*,"(a)")
- !   write(*,"(a)") "====================="
- !   write(*,"(a)") "Testing special cases"
- !   write(*,"(a)") "====================="
+   write(*,"(a)")
+   write(*,"(a)") "====================="
+   write(*,"(a)") "Testing special cases"
+   write(*,"(a)") "====================="
 
- !   ! do test = 1,2
- !   !    if (test == 1) then
- !   write(*,"(a)",advance="no") &
- !        " * Testing n = 0 (CSC)..................."
- !   a%n = 0
- !   a%ne = 0
- !   if (allocated(a%ptr)) deallocate(a%ptr, stat=st)
- !   if (allocated(a%row)) deallocate(a%row,stat=st)
- !   if (allocated(a%val)) deallocate(a%val,stat=st)
+   ! do test = 1,2
+   !    if (test == 1) then
+   write(*,"(a)",advance="no") &
+        " * Testing n = 0 (CSC)..................."
+   a%n = 0
+   a%ne = 0
+   if (allocated(a%ptr)) deallocate(a%ptr, stat=st)
+   if (allocated(a%row)) deallocate(a%row,stat=st)
+   if (allocated(a%val)) deallocate(a%val,stat=st)
    
- !   allocate(a%ptr(a%n+1),a%row(a%ne),a%val(a%ne))
+   allocate(a%ptr(a%n+1),a%row(a%ne),a%val(a%ne))
 
- !   if (allocated(order)) deallocate(order)
- !   allocate(order(a%n))
- !   call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true., ncpu=ncpu)
- !   if(info%flag.ne.0) then
- !      write(*, "(a,i4)") &
- !           "Unexpected error during analyse. flag = ", info%flag
- !      errors = errors + 1
- !      call spldlt_akeep_free(akeep)
- !      exit
- !   endif
- !   ! else
- !   !    write(*,"(a)",advance="no") &
- !   !         " * Testing n = 0 (coord)................."
- !   !    a%n = 0
- !   !    a%ne = 0
- !   !    deallocate(a%row,a%val)
- !   !    allocate(a%col(a%ne),a%row(a%ne),a%val(a%ne))
+   if (allocated(order)) deallocate(order)
+   allocate(order(a%n))
+   call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true., ncpu=ncpu)
+   if(info%flag.ne.0) then
+      write(*, "(a,i4)") &
+           "Unexpected error during analyse. flag = ", info%flag
+      errors = errors + 1
+      call spldlt_akeep_free(akeep)
+      return
+   endif
+   ! else
+   !    write(*,"(a)",advance="no") &
+   !         " * Testing n = 0 (coord)................."
+   !    a%n = 0
+   !    a%ne = 0
+   !    deallocate(a%row,a%val)
+   !    allocate(a%col(a%ne),a%row(a%ne),a%val(a%ne))
 
- !   !    if (allocated(order)) deallocate(order)
- !   !    allocate(order(a%n))
- !   !    call ssids_analyse_coord(a%n, a%ne, a%row, a%col, akeep, options, &
- !   !         info, order=order)
- !   !    if(info%flag.ne.0) then
- !   !       write(*, "(a,i4)") &
- !   !            "Unexpected error during analyse_coord. flag = ", info%flag
- !   !       errors = errors + 1
- !   !       call ssids_free(akeep, cuda_error)
- !   !       exit
- !   !    endif
- !   ! endif
+   !    if (allocated(order)) deallocate(order)
+   !    allocate(order(a%n))
+   !    call ssids_analyse_coord(a%n, a%ne, a%row, a%col, akeep, options, &
+   !         info, order=order)
+   !    if(info%flag.ne.0) then
+   !       write(*, "(a,i4)") &
+   !            "Unexpected error during analyse_coord. flag = ", info%flag
+   !       errors = errors + 1
+   !       call ssids_free(akeep, cuda_error)
+   !       exit
+   !    endif
+   ! endif
 
- !   deallocate(scale,stat=st)
- !   allocate(scale(a%n))
- !   options%scaling = 1 ! MC64
+   deallocate(scale,stat=st)
+   allocate(scale(a%n))
+   options%scaling = 1 ! MC64
 
- !   posdef = .true.
+   posdef = .true.
 
- !   call spldlt_factorize(akeep, fkeep, posdef, a%val, options, &
- !        info, scale=scale)
- !   if(info%flag.ne.0) then
- !      write(*, "(a,i4)") &
- !           "Unexpected error during factor. flag = ", info%flag
- !      errors = errors + 1
- !      call spldlt_akeep_free(akeep)
- !      call spldlt_fkeep_free(fkeep)
- !      exit
- !   endif
+   call spldlt_factorize(akeep, fkeep, posdef, a%val, options, &
+        info, scale=scale)
+   if(info%flag.ne.0) then
+      write(*, "(a,i4)") &
+           "Unexpected error during factor. flag = ", info%flag
+      errors = errors + 1
+      call spldlt_akeep_free(akeep)
+      call spldlt_fkeep_free(fkeep)
+      return
+   endif
 
- !   if (allocated(x1)) deallocate(x1)
- !   allocate(x1(a%n))
- !   call spldlt_solve(akeep, fkeep, nrhs, x1, a%n, options, info)
- !   if(info%flag.ne.0) then
- !      write(*, "(a,i4)") &
- !           "Unexpected error during solve. flag = ", info%flag
- !      errors = errors + 1
- !      call spldlt_akeep_free(akeep)
- !      call spldlt_fkeep_free(fkeep)
- !      exit
- !   endif
+   if (allocated(x1)) deallocate(x1)
+   allocate(x1(a%n))
+   call spldlt_solve(akeep, fkeep, 1, x1, a%n, options, info)
+   if(info%flag.ne.0) then
+      write(*, "(a,i4)") &
+           "Unexpected error during solve. flag = ", info%flag
+      errors = errors + 1
+      call spldlt_akeep_free(akeep)
+      call spldlt_fkeep_free(fkeep)
+      return
+   endif
 
- !   call print_result(info%flag, SYLVER_SUCCESS)
- !   call ssids_free(akeep, cuda_error)
- !   call ssids_free(fkeep, cuda_error)
- !   ! enddo
- !   deallocate(order, a%ptr, a%row, a%val)
+   call print_result(info%flag, SYLVER_SUCCESS)
+   call spldlt_akeep_free(akeep)
+   call spldlt_fkeep_free(fkeep)
+   ! enddo
 
- !   ! allocate(a%ptr(big_test_n+1), a%row(4*big_test_n), a%val(4*big_test_n))
- !   ! allocate(order(10))
+   if (allocated(order)) deallocate(order)
+   if (allocated(a%ptr)) deallocate(a%ptr)
+   if (allocated(a%row)) deallocate(a%row)
+   if (allocated(a%val)) deallocate(a%val)
 
- ! end subroutine test_special
+   ! A matrix with entry in column 1 only, explicit zeroes on diagonal
+   allocate(a%ptr(big_test_n+1), a%row(4*big_test_n), a%val(4*big_test_n))
+   allocate(order(10))
+   write(*,"(a)",advance="no") &
+        " * Testing zero pivot code .............."
+   a%n = 10
+   a%ptr(1) = 1
+   a%ptr(2) = a%n + 1
+   do i = 1, a%n
+      a%row(i) = i
+      a%val(i) = i
+      order(i) = i
+   end do
+   do i = 2, a%n
+      a%ptr(i+1) = a%ptr(i) + 1
+      a%row(a%ptr(i)) = i
+      a%val(a%ptr(i)) = 0.0_wp
+   end do
+   options%ordering = 0
+   call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true., ncpu=ncpu)
+   call print_result(info%flag, SYLVER_SUCCESS)
+   call spldlt_factorize(akeep, fkeep, .false., a%val, options, info)
+   call print_result(info%flag, SYLVER_WARNING_FACT_SINGULAR)
+   call spldlt_akeep_free(akeep)
+   call spldlt_fkeep_free(fkeep)
+
+   ! Trigger block factor-solve code with zeroes
+   ! (   0.0         )
+   ! ( 1e-21 1.0     )
+   ! (       2.0 3.0 )
+   write(*,"(a)",advance="no") &
+        " * Testing zero pivot code (block)......."
+   a%n = 3
+   a%ptr(1:4) = (/ 1, 3, 5, 6 /)
+   a%row(1:5) = (/ 1, 2, 2, 3, 3 /)
+   a%val(1:5) = (/ 0d0, 1d-2*options%small, 1d0, 2d0, 3d0 /)
+   order(1:3) = (/ 1, 2, 3 /)
+   options%ordering = 0
+   options%nemin = 16
+   options%scaling = 0
+   call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true., ncpu=ncpu)
+   call print_result(info%flag,SSIDS_SUCCESS)
+   call spldlt_factorize(akeep, fkeep, .false., a%val, options, info)
+   call print_result(info%flag, SYLVER_WARNING_FACT_SINGULAR)
+   call spldlt_akeep_free(akeep)
+   call spldlt_fkeep_free(fkeep)
+
+   ! Trigger single column factor-solve code with zeroes
+   ! (   0.0         )
+   ! ( 1e-21 1.0     )
+   ! (       2.0 3.0 )
+   write(*,"(a)",advance="no") &
+        " * Testing zero pivot code (column)......"
+   a%n = 3
+   a%ptr(1:4) = (/ 1, 3, 5, 6 /)
+   a%row(1:5) = (/ 1, 2, 2, 3, 3 /)
+   a%val(1:5) = (/ 0d0, 1d-2*options%small, 1d0, 2d0, 3d0 /)
+   order(1:3) = (/ 1, 2, 3 /)
+   options%ordering = 0
+   options%nemin = 1
+   options%scaling = 0
+   call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, check=.true., ncpu=ncpu)
+   call print_result(info%flag,SSIDS_SUCCESS)
+   call spldlt_factorize(akeep, fkeep, .false., a%val, options, info)
+   call print_result(info%flag, SYLVER_WARNING_FACT_SINGULAR)
+   call spldlt_akeep_free(akeep)
+   call spldlt_fkeep_free(fkeep)
+
+   options = default_options
+   write(*,"(a)",advance="no") &
+        " * Testing n>1e5, ne<3.0*n, order=1......"
+   a%n = big_test_n
+   call gen_random_indef(a, 2_long*big_test_n, state)
+   options%ordering = 1
+   call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, check=.true., ncpu=ncpu)
+   call print_result(info%flag,SYLVER_SUCCESS)
+   call spldlt_akeep_free(akeep)
+
+   write(*,"(a)",advance="no") &
+        " * Testing n>1e5, ne>3.0*n, order=1......"
+   a%n = big_test_n
+   call gen_random_indef(a, 4_long*big_test_n, state)
+   options%ordering = 1
+   call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, check=.true., ncpu=ncpu)
+   call print_result(info%flag,SYLVER_SUCCESS)
+   call spldlt_akeep_free(akeep)
+
+   write(*,"(a)",advance="no") &
+        " * Testing n>1e5, ne>3.0*n, order=2......"
+   a%n = big_test_n
+   call gen_random_indef(a, 4_long*big_test_n, state)
+   options%ordering = 2
+   call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, check=.true., ncpu=ncpu, val=a%val)
+   call print_result(info%flag, SYLVER_SUCCESS)
+   call spldlt_akeep_free(akeep)
+
+   ! (     1.0 )
+   ! ( 1.0     )
+   write(*,"(a)",advance="no") &
+        " * Testing n<1e5,oxo,m1<1.8*m2,order=1..."
+   a%n = 2
+   a%ptr(1:3) = (/ 1, 2, 2 /)
+   a%row(1:1) = (/ 2 /)
+   a%val(1:1) = (/ 1.0 /)
+   options%ordering = 1
+   call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, check=.true., ncpu=ncpu)
+   call print_result(info%flag, SYLVER_WARNING_MISSING_DIAGONAL)
+   call gen_rhs(a, rhs, x1, x, res, 1)
+   call chk_answer(.false., a, akeep, options, rhs, x, &
+        res, SYLVER_WARNING_MISSING_DIAGONAL, fs=.true.)
+   ! call spldlt_factorize(akeep, fkeep, .false., a%val, options, info)
+   ! call print_result(info%flag, SYLVER_WARNING_MISSING_DIAGONAL)
+   call spldlt_akeep_free(akeep)
+   call spldlt_fkeep_free(fkeep)
+
+   ! (  x   x  1.0 )
+   ! (  x   x  2.0 )
+   ! ( 1.0 2.0  x  )
+   write(*,"(a)",advance="no") &
+        " * Testing n<1e5,oxo,m1>1.8*m2,order=1..."
+   a%n = 3
+   a%ptr(1:4) = (/ 1, 2, 3, 3 /)
+   a%row(1:2) = (/ 3, 3 /)
+   a%val(1:2) = (/ 1.0, 2.0 /)
+   options%ordering = 1
+   call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, check=.true., ncpu=ncpu)
+   call print_result(info%flag, SYLVER_WARNING_MISSING_DIAGONAL)
+   call gen_rhs(a, rhs, x1, x, res, 1)
+   call chk_answer(.false., a, akeep, options, rhs, x, &
+        res, SYLVER_WARNING_FACT_SINGULAR, fs=.true.)
+   call spldlt_akeep_free(akeep)
+
+   ! (  x   x  1.0 )
+   ! (  x   x  2.0 )
+   ! ( 1.0 2.0  x  )
+   write(*,"(a)",advance="no") &
+        " * Testing n<1e5,oxo,m1>1.8*m2,order=2..."
+   a%n = 3
+   a%ptr(1:4) = (/ 1, 2, 3, 3 /)
+   a%row(1:2) = (/ 3, 3 /)
+   a%val(1:2) = (/ 1.0, 2.0 /)
+   options%ordering = 2
+   call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, check=.true., ncpu=ncpu, val=a%val)
+   call print_result(info%flag, SYLVER_WARNING_ANAL_SINGULAR)
+   call gen_rhs(a, rhs, x1, x, res, 1)
+   call chk_answer(.false., a, akeep, options, rhs, x, &
+        res, SYLVER_WARNING_FACT_SINGULAR, fs=.true.)
+   call spldlt_akeep_free(akeep)
+
+   ! Test posdef with node at least 384 and multiple nodes [for coverage]
+   write(*,"(a)",advance="no") &
+        " * Testing n=500, posdef, BBD............"
+   options = default_options
+   call gen_bordered_block_diag(.true., (/ 15, 455, 10 /), 20, a%n, a%ptr, &
+        a%row, a%val, state)
+   call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, check=.true., ncpu=ncpu, val=a%val)
+   call print_result(info%flag, SYLVER_SUCCESS)
+   call gen_rhs(a, rhs, x1, x, res, 1)
+   call chk_answer(.true., a, akeep, options, rhs, x, res, SYLVER_SUCCESS)
+   call spldlt_akeep_free(akeep)
+
+ end subroutine test_special
 
 end program main
