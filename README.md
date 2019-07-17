@@ -125,5 +125,5 @@ If CMake is unable to locate the requested libraries via the
 `-DLLBAS` and `-DLLAPACK` options. For example:
 
 ```bash
-cmake <path-to-source> -DLBLAS="/path/to/blas -lblas" -DLBLAS="/path/to/lapack -llapack" # configure compilation
+cmake <path-to-source> -DLBLAS="-L/path/to/blas -lblas" -DLLAPACK="-L/path/to/lapack -llapack" # configure compilation
 ```
