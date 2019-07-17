@@ -45,7 +45,7 @@ namespace spldlt {
       delete[] cnode_hdls;
 #else
 
-      fini_cnodes(node);
+      fini_cnodes(node, posdef);
 
 #endif
 

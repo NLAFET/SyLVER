@@ -550,9 +550,19 @@ namespace spldlt {
       }
       
 #else
-      sylver::inform_t& stats = worker_stats[0];
-      spldlt_factor_subtree_c(
-            akeep, fkeep, p, aval, scaling, child_contrib, options, &stats);
+
+      struct spral::ssids::cpu::cpu_factor_options subtree_opts;
+      // Setup options for SSIDS
+      options->copy(subtree_opts);
+      subtree_opts.cpu_block_size = 256; // TODO add new parameter for blksz in subtrees
+      ThreadStats stats;
+      factor_subtree(akeep, fkeep, p, aval, scaling, child_contrib, &subtree_opts, &stats);
+
+      sylver::inform_t& inform = worker_stats[0];
+      inform += stats;
+
+      // spldlt_factor_subtree_c(
+      //       akeep, fkeep, p, aval, scaling, child_contrib, options, &stats);
 #endif
    }
 

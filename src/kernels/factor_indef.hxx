@@ -57,7 +57,7 @@ namespace spldlt {
          int* perm, T* d,
          spldlt::ldlt_app_internal::ColumnData<T,IntAlloc>& cdata,
          Backup& backup,
-         struct cpu_factor_options& options,
+         sylver::options_t& options,
          spral::ssids::cpu::Workspace& work,
          Allocator const& alloc) {
 
@@ -81,7 +81,7 @@ namespace spldlt {
          BlockSpec& dblk, BlockSpec& rblk,
          spldlt::ldlt_app_internal::ColumnData<T,IntAlloc>& cdata,
          Backup& backup,
-         struct cpu_factor_options& options) {
+         sylver::options_t& options) {
 
       int blk = dblk.get_col();
 
@@ -105,7 +105,7 @@ namespace spldlt {
          BlockSpec& dblk, BlockSpec& cblk,
          spldlt::ldlt_app_internal::ColumnData<T,IntAlloc>& cdata,
          Backup& backup,
-         struct cpu_factor_options& options) {
+         sylver::options_t& options) {
 
       int blk = dblk.get_col();
 

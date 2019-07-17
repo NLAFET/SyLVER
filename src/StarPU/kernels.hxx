@@ -932,9 +932,11 @@ namespace starpu {
       T *aval;
       T *scaling;
       void **child_contrib;
-      struct spral::ssids::cpu::cpu_factor_options *options;
-      std::vector<ThreadStats> *worker_stats;
-
+      // struct spral::ssids::cpu::cpu_factor_options *options;
+      sylver::options_t *options;
+      // std::vector<ThreadStats> *worker_stats;
+      std::vector<sylver::inform_t> *worker_stats;
+      
       starpu_codelet_unpack_args(
             cl_arg,
             &akeep, 
@@ -951,13 +953,21 @@ namespace starpu {
 
       int workerid = starpu_worker_get_id();
       // printf("[factor_subtree_cpu_func] workerid: %d\n", workerid);
-      ThreadStats& stats = (*worker_stats)[workerid];
-
+      // ThreadStats& stats = (*worker_stats)[workerid];
+      sylver::inform_t& stats = (*worker_stats)[workerid];
+      
       // options->failed_pivot_method = FailedPivotMethod::tpp;
-         
+
+      struct spral::ssids::cpu::cpu_factor_options subtree_opts;
+      // Setup options for SSIDS
+      options->copy(subtree_opts);
+      subtree_opts.cpu_block_size = 256; // TODO add new parameter for blksz in subtrees
+      ThreadStats subtree_stats;
       // printf("[factor_subtree_cpu_func] akeep = %p, fkeep = %p\n", akeep, fkeep);
       // spldlt_factor_subtree_c(akeep, fkeep, p, aval, child_contrib, options, &stats);
-      factor_subtree(akeep, fkeep, p, aval, scaling, child_contrib, options, &stats);
+      factor_subtree(akeep, fkeep, p, aval, scaling, child_contrib, &subtree_opts, &subtree_stats);
+      stats += subtree_stats;
+
    }
 #endif
    // factor_subtree StarPU codelet
