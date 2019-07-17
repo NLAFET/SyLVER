@@ -62,12 +62,22 @@ on IBM machines. The [MKL link line
 advisor](https://software.intel.com/en-us/articles/intel-mkl-link-line-advisor)
 can be useful to fill the `--with-blas` and `--with-lapack` options.
 
+When compiling SyLVER you need to provide both the path to the SPRAL
+source directory which can be given using the `-DSPRAL_SRC_DIR` CMake
+option or the `SPRAL_SRC_DIR` environemental variable and the path to
+the SPRAL library which can be given using the `-DSPRAL_DIR` CMake
+option or the `SPRAL_DIR` environemental variable.
+
 ### MeTiS ###
 
 The [MeTiS](http://glaros.dtc.umn.edu/gkhome/metis/metis/overview)
 partitioning library is needed by the SPRAL library and therefore,
 needed when linking the SyLVER package for building examples and test
 drivers.
+
+When compiling SyLVER you can provide the path to the MeTiS library
+using either `-DMETIS_DIR` CMake option or the `METIS_DIR`
+environemental variable.
 
 ### Runtime system ###
 
