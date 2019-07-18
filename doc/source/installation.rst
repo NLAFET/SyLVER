@@ -61,9 +61,9 @@ options.
 
 When compiling SyLVER you need to provide both the path to the SPRAL
 source directory which can be given using the ``-DSPRAL_SRC_DIR``
-CMake option or the ``SPRAL_SRC_DIR`` environemental variable and the
+CMake option or the ``SPRAL_SRC_DIR`` environment variable and the
 path to the SPRAL library which can be given using the ``-DSPRAL_DIR``
-CMake option or the ``SPRAL_DIR`` environemental variable.
+CMake option or the ``SPRAL_DIR`` environment variable.
                 
 METIS
 -----
@@ -75,12 +75,21 @@ drivers.
 
 When compiling SyLVER you can provide the path to the MeTiS library
 using either ``-DMETIS_DIR`` CMake option or the ``METIS_DIR``
-environemental variable.
+environment variable.
+
+hwloc
+-----
+
+The `hwloc <https://www.open-mpi.org/projects/hwloc/>`_ library is
+topology discovery library which is necessary for linking the examples
+and test drivers if SPRAL was compiled with it. In this case, the
+library path can be given to CMake using either the ``-DHWLOC_DIR`` or
+the ``HWLOC_DIR`` environment variable.
 
 Runtime system
 --------------
 
-By default, CMake will confirgure the compilation for a serial version
+By default, CMake will configure the compilation for a serial version
 of SyLVER that can be explicitly requested using the option
 ``-DRUNTIME=STF``.
 
@@ -122,7 +131,7 @@ the compilation and when linking test drivers, example and tests.
 
 If CMake is unable to locate the requested libraries via the
 ``-DBLA_VENDOR``, it is still possible to give them explicitly using the
-``-DLLBAS`` and ``-DLLAPACK`` options. For example:
+``-DLBLAS`` and ``-DLLAPACK`` options. For example:
 
 .. code-block:: bash
 

@@ -16,7 +16,7 @@ Sud-Ouest.
 
 The compilation of the code is handled by the
 [CMake](https://cmake.org/) tools. For example, the compilation can be
-acheived as follow:
+achieved as follow:
 
 ```bash
 mkdir build # create build directory
@@ -64,9 +64,9 @@ can be useful to fill the `--with-blas` and `--with-lapack` options.
 
 When compiling SyLVER you need to provide both the path to the SPRAL
 source directory which can be given using the `-DSPRAL_SRC_DIR` CMake
-option or the `SPRAL_SRC_DIR` environemental variable and the path to
-the SPRAL library which can be given using the `-DSPRAL_DIR` CMake
-option or the `SPRAL_DIR` environemental variable.
+option or the `SPRAL_SRC_DIR` environment variable and the path to the
+SPRAL library which can be given using the `-DSPRAL_DIR` CMake option
+or the `SPRAL_DIR` environment variable.
 
 ### MeTiS ###
 
@@ -77,11 +77,19 @@ drivers.
 
 When compiling SyLVER you can provide the path to the MeTiS library
 using either `-DMETIS_DIR` CMake option or the `METIS_DIR`
-environemental variable.
+environment variable.
+
+### hwloc ###
+
+The [hwloc](https://www.open-mpi.org/projects/hwloc/) library is
+topology discovery library which is necessary for linking the examples
+and test drivers if SPRAL was compiled with it. In this case, the
+library path can be given to CMake using either the `-DHWLOC_DIR` or
+the `HWLOC_DIR` environment variable.
 
 ### Runtime system ###
 
-By default, CMake will confirgure the compilation for a serial version
+By default, CMake will configure the compilation for a serial version
 of SyLVER that can be explicitly requested using the option
 `-DRUNTIME=STF`.
 
