@@ -84,8 +84,8 @@ environment variable.
 The [hwloc](https://www.open-mpi.org/projects/hwloc/) library is
 topology discovery library which is necessary for linking the examples
 and test drivers if SPRAL was compiled with it. In this case, the
-library path can be given to CMake using either the `-DHWLOC_DIR` or
-the `HWLOC_DIR` environment variable.
+library path can be given to CMake using either the `-DHWLOC_DIR`
+CMake option or the `HWLOC_DIR` environment variable.
 
 ### Runtime system ###
 
