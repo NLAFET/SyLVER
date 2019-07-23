@@ -19,8 +19,8 @@ namespace sylver {
    };
 
    // _LASWP
-   template <typename T> 
-   void host_laswp(int n, T *a, int lda, int k1, int k2, int *perm, int incx);
+   // template <typename T> 
+   // void host_laswp(int n, T *a, int lda, int k1, int k2, int *perm, int incx);
 
    template <typename T> 
    void host_axpy(int n, const T a, const T *x, const int incx, T *y, const int incy);
@@ -59,10 +59,10 @@ namespace sylver {
    int host_geqrf(int m, int n, T *a, int lda, T *tau, T *work, int lwork);
 
    // ORMQR
-   template <typename T>
-   int host_ormqr(enum sylver::side side, enum sylver::operation trans,
-                  int m, int n, int k, T *a, int lda, T *tau, T *c, int ldc,
-                  T *work, int lwork);
+   // template <typename T>
+   // int host_ormqr(enum sylver::side side, enum sylver::operation trans,
+   //                int m, int n, int k, T *a, int lda, T *tau, T *c, int ldc,
+   //                T *work, int lwork);
 
    // GEMV
    template <typename T>

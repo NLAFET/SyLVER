@@ -27,12 +27,12 @@ extern "C" {
    void dsyrk_(char *uplo, char *trans, int *n, int *k, double *alpha, const double *a, int *lda, double *beta, double *c, int *ldc);
    void ssyrk_(char *uplo, char *trans, int *n, int *k, float *alpha, const float *a, int *lda, float *beta, float *c, int *ldc);
    void dgetrf_(int *m, int *n, double* a, int *lda, int *ipiv, int *info);
-   void dlaswp_(int *n, double* a, int *lda, int *k1, int *k2, int *ipiv, const int *incx);
+   // void dlaswp_(int *n, double* a, int *lda, int *k1, int *k2, int *ipiv, const int *incx);
    // GEQRF
    void sgeqrf_(int *m, int *n, float* a, int* lda, float *tau, float *work, int *lwork, int *info);
    void dgeqrf_(int *m, int *n, double* a, int* lda, double *tau, double *work, int *lwork, int *info);
    // ORMQR
-   void sormqr_(char *side, char* trans, int *m, int *n, int *k, float* a, int* lda, float *tau, float* c, int* ldc, float *work, int *lwork, int *info);
+   // void sormqr_(char *side, char* trans, int *m, int *n, int *k, float* a, int* lda, float *tau, float* c, int* ldc, float *work, int *lwork, int *info);
    // GEMV
    void sgemv_(char* trans, int *m, int *n, float* alpha, float const* a, int* lda, const float *x, int const* incx, float *beta, float *y, int const *incy);
    void dgemv_(char* trans, int *m, int *n, double* alpha, double const* a, int* lda, const double *x, int const* incx, double *beta, double *y, int const *incy);
@@ -85,10 +85,10 @@ namespace sylver {
    }
    
    // _LASWP
-   template<>
-   void host_laswp<double>(int n, double *a, int lda, int k1, int k2, int *perm, int incx) {
-      dlaswp_(&n, a, &lda, &k1, &k2, perm, &incx);
-   }
+   // template<>
+   // void host_laswp<double>(int n, double *a, int lda, int k1, int k2, int *perm, int incx) {
+   //    dlaswp_(&n, a, &lda, &k1, &k2, perm, &incx);
+   // }
 
    // SAXPY
    template<>
@@ -243,15 +243,15 @@ namespace sylver {
    }
 
    // SORMQR
-   template <>
-   int host_ormqr<float>(enum sylver::side side, enum sylver::operation trans,
-                         int m, int n, int k, float *a, int lda, float *tau, float *c, int ldc,
-                         float *work, int lwork) {
-      int info;
-      char fside = (side==sylver::SIDE_LEFT) ? 'L' : 'R';
-      char ftrans = (trans==sylver::OP_N) ? 'N' : 'T';
-      sormqr_(&fside, &ftrans, &m, &n, &k, a, &lda, tau, c, &ldc, work, &lwork, &info);
-      return info;
-   }
+   // template <>
+   // int host_ormqr<float>(enum sylver::side side, enum sylver::operation trans,
+   //                       int m, int n, int k, float *a, int lda, float *tau, float *c, int ldc,
+   //                       float *work, int lwork) {
+   //    int info;
+   //    char fside = (side==sylver::SIDE_LEFT) ? 'L' : 'R';
+   //    char ftrans = (trans==sylver::OP_N) ? 'N' : 'T';
+   //    sormqr_(&fside, &ftrans, &m, &n, &k, a, &lda, tau, c, &ldc, work, &lwork, &info);
+   //    return info;
+   // }
 
 } // end of namespace sylver

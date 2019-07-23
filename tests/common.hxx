@@ -914,21 +914,21 @@ namespace tests {
       // lwork = (int)worksz;
       // work = new T[lwork];
       
-      // A = Q * D
-      sylver::host_ormqr(
-            sylver::SIDE_LEFT, sylver::OP_N,
-            n, n, n,
-            lambda, lda, tau,
-            a, lda,
-            work, lwork);
+      // // A = Q * D
+      // sylver::host_ormqr(
+      //       sylver::SIDE_LEFT, sylver::OP_N,
+      //       n, n, n,
+      //       lambda, lda, tau,
+      //       a, lda,
+      //       work, lwork);
 
-      // A = A * Q^T
-      sylver::host_ormqr(
-            sylver::SIDE_RIGHT, sylver::OP_T,
-            n, n, n,
-            lambda, lda, tau,
-            a, lda,
-            work, lwork);
+      // // A = A * Q^T
+      // sylver::host_ormqr(
+      //       sylver::SIDE_RIGHT, sylver::OP_T,
+      //       n, n, n,
+      //       lambda, lda, tau,
+      //       a, lda,
+      //       work, lwork);
 
       delete[] work;
       delete[] tau;
