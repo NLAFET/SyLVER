@@ -744,6 +744,7 @@ contains
                flag, inform%stat)
           call expand_pattern(n, nz, ptr, row, ptr2, row2)
        end if
+
        if (flag .lt. 0) then
           inform%flag = SYLVER_ERROR_ORDER
           go to 200
