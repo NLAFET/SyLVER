@@ -373,7 +373,7 @@ contains
     ! FIXME Use total number of procs on each NUMA nodes
     nth = akeep%topology(1)%nproc 
     ngpu = size(akeep%topology(1)%gpus)
-    print *, "gpus = ", akeep%topology(1)%gpus
+    ! print *, "gpus = ", akeep%topology(1)%gpus
     ! nth = 1 ! debug
     ! nth = 4 ! debug
 
@@ -466,7 +466,7 @@ contains
        ! if (akeep%subtree(i)%exec_loc .eq. -1) cycle
        loc = exec_loc(i)
        akeep%subtree(i)%exec_loc = loc
-       print *, "loc = ", loc, ", nth = ", nth
+       ! print *, "loc = ", loc, ", nth = ", nth
        if(loc.le.nth) then ! nth is treated as the number of CPU regions
           ! CPU
           akeep%subtree(i)%ptr => construct_cpu_symbolic_subtree(akeep%n,   &
