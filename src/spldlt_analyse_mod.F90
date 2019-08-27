@@ -373,7 +373,7 @@ contains
     ! FIXME Use total number of procs on each NUMA nodes
     nth = akeep%topology(1)%nproc 
     ngpu = size(akeep%topology(1)%gpus)
-
+    print *, "gpus = ", akeep%topology(1)%gpus
     ! nth = 1 ! debug
     ! nth = 4 ! debug
 
@@ -411,15 +411,17 @@ contains
             exec_loc, akeep%contrib_ptr, akeep%contrib_idx, contrib_dest, inform, st)
        if (st .ne. 0) go to 100
 
-       if(options%print_level .gt. 1) print *, "[analyse_core] nparts = ", akeep%nparts
-       ! print *, " part = ", akeep%part(1:akeep%nparts+1)
-       ! print *, " exec_loc = ", exec_loc(1:akeep%nparts)
-       ! print *, " contrib_ptr = ", akeep%contrib_ptr(1:akeep%nparts+1)
-       ! print *, " contrib_idx = ", akeep%contrib_idx(1:akeep%nparts)
-       ! print *, " contrib_dest = ", contrib_dest(1:akeep%nparts)
-       
+       if(options%print_level .gt. 1) then
+          print *, "[analyse_core] nparts = ", akeep%nparts
+          print *, "[analyse_core] part = ", akeep%part(1:akeep%nparts+1)
+          print *, "[analyse_core] exec_loc = ", exec_loc(1:akeep%nparts)
+          ! print *, " contrib_ptr = ", akeep%contrib_ptr(1:akeep%nparts+1)
+          ! print *, " contrib_idx = ", akeep%contrib_idx(1:akeep%nparts)
+          ! print *, " contrib_dest = ", contrib_dest(1:akeep%nparts)
+       end if
+          
        do i = 1, akeep%nparts
-          if(options%print_level .gt. 1) print *, "[analyse_core] exec_loc(i) = ", exec_loc(i) 
+          if(options%print_level .gt. 1) print *, "[analyse_core] exec_loc(", i, ") = ", exec_loc(i) 
           if (exec_loc(i) .eq. -1) cycle
           spldlt_akeep%nsubtrees = spldlt_akeep%nsubtrees +1
           exec_loc(spldlt_akeep%nsubtrees) = exec_loc(i) 
@@ -464,7 +466,7 @@ contains
        ! if (akeep%subtree(i)%exec_loc .eq. -1) cycle
        loc = exec_loc(i)
        akeep%subtree(i)%exec_loc = loc
-       ! print *, "loc = ", loc, ", nth = ", nth
+       print *, "loc = ", loc, ", nth = ", nth
        if(loc.le.nth) then ! nth is treated as the number of CPU regions
           ! CPU
           akeep%subtree(i)%ptr => construct_cpu_symbolic_subtree(akeep%n,   &
@@ -480,7 +482,7 @@ contains
           ! GPU
           ! device = mod(loc, nth)-1 ! device indexes are 0-indexed
           device = loc-nth-1 ! device indexes are 0-indexed
-          if(options%print_level .gt. 1) print *, "subtree = ", i, ", loc = ", loc, ", device = ", device
+          ! if(options%print_level .gt. 1) print *, "subtree = ", i, ", loc = ", loc, ", device = ", device
           akeep%subtree(i)%ptr => construct_gpu_symbolic_subtree(device, &
                akeep%n, subtree_sa(i), spldlt_akeep%subtree_en(i)+1, &
                akeep%sptr, akeep%sparent, akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist, &

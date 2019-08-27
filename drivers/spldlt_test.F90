@@ -67,14 +67,14 @@ program spldlt_test
    options%ordering = 1 ! Use Metis ordering
    options%scaling = 0 ! No scaling
    options%prune_tree = .true. ! Enable tree pruning
-   
+
+   options%print_level = 1 ! enable printing
+   ! options%print_level = 0 ! disable printing
+ 
    call proc_args(options, nrhs, pos_def, ncpu, ngpu, matfile)
 
    ! ssids_opt => options%super ! Point to SSIDS options
-   
-   options%print_level = 1 ! enable printing
-   ! options%print_level = 0 ! disable printing
-   
+      
    if (matfile.eq.'') matfile = "matrix.rb" 
 
    print *, "[spldlt_test]    ncpu: ", ncpu
@@ -278,9 +278,14 @@ program spldlt_test
        case("--no-prune-tree")
           print *, 'Disable tree pruning'
           options%prune_tree = .false.
-        case default
-           print *, "Unrecognised command line argument: ", argval
-           stop
+       case("--print-level")
+          call get_command_argument(argnum, argval)
+          argnum = argnum + 1
+          read( argval, * ) options%print_level
+          print *, 'Print level = ', options%print_level
+       case default
+          print *, "Unrecognised command line argument: ", argval
+          stop
         end select
      end do
 
