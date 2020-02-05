@@ -1,10 +1,7 @@
 # List tests drivers
 set(examples)
 
-if (${EXAMPLES} MATCHES "ON")
-  list(APPEND examples "spldlt_simple_example.F90")
-endif()
-
+list(APPEND examples "spldlt_simple_example.F90")
   
 foreach(example ${examples})
 

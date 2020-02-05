@@ -37,13 +37,13 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 # set(CMAKE_CXX_EXTENSIONS OFF) #...without compiler extensions like gnu++11
 
 # Optimization flags
-# set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native")
-# set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -march=native")
-# set(CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL} -march=native")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -march=native")
+set(CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL} -march=native")
 # IBM machine
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -mcpu=native")
-set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -mcpu=native")
-set(CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL} -mcpu=native")
+# set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -mcpu=native")
+# set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -mcpu=native")
+# set(CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL} -mcpu=native")
 
 # Debug flags
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -ggdb")
@@ -106,73 +106,23 @@ endif()
 ## Set runtime system to be used for the execution
 SET(RUNTIME "STF" CACHE STRING "Runtime system")
 set_property(CACHE RUNTIME PROPERTY STRINGS STF StarPU)
-MESSAGE( STATUS "Runtime: " ${RUNTIME} )
-
 # # Set BLAS and LAPACK libraries to use for linking
 # SET(BLAS_LAPACK "MKL" CACHE STRING "BLAS and LAPACK libraries")
 # set_property(CACHE BLAS_LAPACK PROPERTY STRINGS Ref MKL)
 # MESSAGE( STATUS "BLAS/LAPACK:         " ${BLAS_LAPACK} )
 
-# Decide wheter we want to compile the examples or not
-option(EXAMPLES "Examples" ON)
-MESSAGE( STATUS "Examples: " ${EXAMPLES})
-
-# Decide wheter we want to compile the kernel tests or not
-option(TESTS "Tests" OFF)
-MESSAGE( STATUS "Tests: " ${TESTS})
-
-# SPRAL
-set(SPRAL_DIR "" CACHE PATH "Location of SPRAL Library")
-# Looking for SPRAL library
-if(NOT SPRAL_DIR)
-  if (DEFINED ENV{SPRALDIR})
-    set(SPRAL_DIR $ENV{SPRALDIR})
-  elseif(DEFINED ENV{SPRAL_DIR})
-    set(SPRAL_DIR $ENV{SPRAL_DIR})
-  else()
-    message(STATUS "SPRAL library directory not set and is needed for the compilation of SyLVER. You can provide the path of the SPRAL library directory using either the -DSPRAL_DIR option or the SPRAL_DIR environment variable")
-  endif()
-endif()
-
-if(SPRAL_DIR)
-  message(STATUS "SPRAL library directory set to: ${SPRAL_DIR}")
-  include_directories(${SPRAL_DIR})
-endif()
-
-set(SPRAL_SRC_DIR "" CACHE PATH "Location of SPRAL sources")
-if(NOT SPRAL_SRC_DIR)
-  if (DEFINED ENV{SPRALSRCDIR})
-    set(SPRAL_SRC_DIR $ENV{SPRALSRCDIR})
-  elseif(DEFINED  ENV{SPRAL_SRC_DIR})
-    set(SPRAL_SRC_DIR $ENV{SPRAL_SRC_DIR})    
-  else()
-    message(STATUS "SPRAL source directory not set and is needed for the compilation of SyLVER. You can provide the path of the SPRAL source directory using either the -DSPRAL_SRC_DIR option or the SPRAL_SRC_DIR environment variable")
-  endif()
-endif()
-
-if(SPRAL_SRC_DIR)
-  message(STATUS "SPRAL source directory set to: ${SPRAL_SRC_DIR}")
-  include_directories(${SPRAL_SRC_DIR})
-  include_directories(${SPRAL_SRC_DIR}/src)
-endif()
-# MESSAGE(STATUS "spral source dir: " ${SPRAL_SRC_DIR})
-
-# Get object files 
-# file(
-#   GLOB_RECURSE
-#   obj
-#   ${SPRAL_DIR}/tests/ssids/kernels/*.o)
-
-# MESSAGE(STATUS "object files: " ${obj})
-# add_library(spral_ssids_tests STATIC IMPORTED ${obj})
-
-# Use GPUs
-option(USE_GPU "Use GPU" OFF)
-MESSAGE(STATUS "Use GPU: " ${USE_GPU} )
+# Enable CUDA
+option(SYLVER_ENABLE_CUDA "Enable CUDA" OFF)
+# Enable OpenMP
+option(SYLVER_ENABLE_OMP "Use OpenMP" OFF)
+# Build SyLVER examples
+option(SYLVER_BUILD_EXAMPLES "Build examples" ON)
+# Build SyLVER tests
+option(SYLVER_BUILD_TESTS "Build tests" OFF)
 
 # Use MPI
-option(USE_MPI "Use MPI" OFF)
-MESSAGE(STATUS "Use MPI: " ${USE_MPI} )   
+# option(USE_MPI "Use MPI" OFF)
+# MESSAGE(STATUS "Use MPI: " ${USE_MPI} )   
 
 # Profiling
 option(USE_PROFILING "Activate profiling info" OFF)
@@ -181,9 +131,6 @@ if (${USE_PROFILING} MATCHES "ON")
   add_definitions(-DSPLDLT_USE_PROFILING)
 endif()
 
-# Use OpenMP
-option(USE_OMP "Use OpenMP" OFF)
-MESSAGE(STATUS "Use OpenMP: " ${USE_OMP} )
 
 # Have la-hp scheduler
 option(HAVE_LAHP "LA-heteroprio scheduler available" OFF)
@@ -216,6 +163,12 @@ if (${HAVE_CUTLASS} MATCHES "ON")
   add_definitions(-DHAVE_CUTLASS)
 endif()
 
+# Print options summuary 
+MESSAGE( STATUS "Runtime: " ${RUNTIME} )
+MESSAGE( STATUS "Enable CUDA: " ${SYLVER_ENABLE_CUDA} )
+MESSAGE( STATUS "Enable OpenMP: " ${SYLVER_ENABLE_OMP}
+MESSAGE( STATUS "Build examples: " ${SYLVER_BUILD_EXAMPLES})
+MESSAGE( STATUS "Build tests: " ${SYLVER_BUILD_TESTS})
 
 ################################################################################
 # Low-level options
@@ -234,23 +187,6 @@ endif()
 
 ########################################
 # HWLOC
-# set(HWLOC_DIR "" CACHE PATH "Location of HWLOC Library")
-# if(NOT HWLOC_DIR)
-#   if (DEFINED ENV{HWLOC_DIR})
-#     set(HWLOC_DIR $ENV{HWLOC_DIR})
-#   elseif(DEFINED  ENV{HWLOCDIR})
-#     set(HWLOC_DIR $ENV{HWLOCDIR})    
-#   else()
-#     message(STATUS "HWLOC library not set for the compilation of
-#     SyLVER. You can provide the path of the HWLOC library using either
-#     the -DHWLOC_DIR option or the HWLOC_DIR environment variable")
-#   endif()  
-# endif()
-# MESSAGE( STATUS "hwloc dir: " ${HWLOC_DIR})
-# include_directories(${HWLOC_DIR}/include)
-# find_library(HWLOC_LIBRARIES hwloc PATHS ${HWLOC_DIR}/lib NO_DEFAULT_PATH)
-# set(LIBS ${LIBS} ${HWLOC_LIBRARIES})
-# MESSAGE( STATUS "hwloc libs: " ${HWLOC_LIBRARIES})
 
 find_package(HWLOC)
 if (HWLOC_FOUND)
@@ -264,22 +200,6 @@ endif()
 
 ########################################
 # Metis
-
-# set(METIS_DIR "" CACHE PATH "Location of Metis Library")
-# if(NOT METIS_DIR)
-#   if (DEFINED ENV{METIS_DIR})
-#     set(METIS_DIR $ENV{METIS_DIR})
-#   elseif(DEFINED  ENV{METISDIR})
-#     set(METIS_DIR $ENV{METISDIR})    
-#   else()
-#     message(STATUS "METIS library not set for the compilation of
-#     SyLVER. You can provide the path of the METIS library using either
-#     the -DMETIS_DIR option or the METIS_DIR environment variable")    
-#   endif()
-# endif()
-# find_library(METIS_LIBRARIES metis PATHS ${METIS_DIR} NO_DEFAULT_PATH)
-# set(LIBS ${LIBS} ${METIS_LIBRARIES})
-# MESSAGE( STATUS "METIS libs: " ${METIS_LIBRARIES})
 
 find_package(METIS)
 if (METIS_FOUND)
@@ -353,7 +273,7 @@ endif (LAPACK_FOUND)
 
 ########################################
 # OpenMP
-if (${USE_OMP} MATCHES ON)
+if (SYLVER_ENABLE_OMP)
   find_package(OpenMP)
   if (OPENMP_FOUND)
     message(STATUS "OpenMP CXX Flags: " ${OpenMP_Fortran_FLAGS})
@@ -375,20 +295,14 @@ if (${USE_OMP} MATCHES ON)
 endif()
 
 # GPU
-if (${USE_GPU} MATCHES ON)
+if (SYLVER_ENABLE_CUDA)
 
   enable_language(CUDA)
 
   # Use GPU
   add_definitions(-DSPLDLT_USE_GPU)
 
-  # set(CUDA_NVCC_FLAGS "-g -arch=compute_20 -code=compute_20,sm_20,sm_35" CACHE
-  #   STRING "NVCC flags")
-
   find_package(CUDA REQUIRED)
-
-  # set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS};-g;-arch=compute_20,code=compute_20,sm_20,sm_35")
-  # set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS};-g;-arch=compute_20;-code=compute_20,sm_20,sm_35" CACHE STRING "NVCC flags")
 
   # list(APPEND CUDA_NVCC_FLAGS "-g")
   list(APPEND CUDA_NVCC_FLAGS "-g -O2")
@@ -431,6 +345,45 @@ if (${USE_GPU} MATCHES ON)
   # find_library(MAGMA_LIBRARY magma PATHS ${MAGMA_DIR}/lib)
 
 endif()
+
+########################################
+# SPRAL
+set(SPRAL_DIR "" CACHE PATH "Location of SPRAL Library")
+# Looking for SPRAL library
+if(NOT SPRAL_DIR)
+  if (DEFINED ENV{SPRALDIR})
+    set(SPRAL_DIR $ENV{SPRALDIR})
+  elseif(DEFINED ENV{SPRAL_DIR})
+    set(SPRAL_DIR $ENV{SPRAL_DIR})
+  else()
+    message(STATUS "SPRAL library directory not set and is needed for the compilation of SyLVER. You can provide the path of the SPRAL library directory using either the -DSPRAL_DIR option or the SPRAL_DIR environment variable")
+  endif()
+endif()
+
+if(SPRAL_DIR)
+  message(STATUS "SPRAL library directory set to: ${SPRAL_DIR}")
+  include_directories(${SPRAL_DIR})
+endif()
+
+# SPRAL source directory
+set(SPRAL_SRC_DIR "" CACHE PATH "Location of SPRAL sources")
+if(NOT SPRAL_SRC_DIR)
+  if (DEFINED ENV{SPRALSRCDIR})
+    set(SPRAL_SRC_DIR $ENV{SPRALSRCDIR})
+  elseif(DEFINED  ENV{SPRAL_SRC_DIR})
+    set(SPRAL_SRC_DIR $ENV{SPRAL_SRC_DIR})    
+  else()
+    message(STATUS "SPRAL source directory not set and is needed for the compilation of SyLVER. You can provide the path of the SPRAL source directory using either the -DSPRAL_SRC_DIR option or the SPRAL_SRC_DIR environment variable")
+  endif()
+endif()
+
+if(SPRAL_SRC_DIR)
+  message(STATUS "SPRAL source directory set to: ${SPRAL_SRC_DIR}")
+  include_directories(${SPRAL_SRC_DIR})
+  include_directories(${SPRAL_SRC_DIR}/src)
+endif()
+# MESSAGE(STATUS "spral source dir: " ${SPRAL_SRC_DIR})
+
 
 # Include source directory
 include_directories(${SyLVER_SOURCE_DIR}/src)
@@ -501,11 +454,15 @@ endif()
 
 ################################################################################
 # Examples
-add_subdirectory(examples)
+if(SYLVER_BUILD_EXAMPLES)
+  add_subdirectory(examples)
+endif()
 
 ################################################################################
 # Unit tests
-add_subdirectory(tests)
+if(SYLVER_BUILD_TESTS)
+  add_subdirectory(tests)
+endif()
 
 ########################################
 # Setup list of test drivers
@@ -553,7 +510,7 @@ if(${RUNTIME} MATCHES "StarPU")
   message("StarPU libraries: ${STARPU_LIBRARIES}")
   message(" ")
 endif()
-if(${USE_GPU} MATCHES ON)
+if(SYLVER_ENABLE_CUDA)
   message(
     "CUDA host compiler: ${CUDA_HOST_COMPILER}\n"
     "CUDA libraries: ${CUDA_LIBRARIES}\n"

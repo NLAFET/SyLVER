@@ -1,0 +1,3 @@
+[submodule "spral"]
+	path = spral
+	url = ../../ralna/spral.git
