@@ -12,7 +12,7 @@ foreach(example ${examples})
   add_executable(${example_name} ${example})
   target_link_libraries(${example_name} sylver)
   target_include_directories(${example_name} PUBLIC ${CMAKE_BINARY_DIR}/src)
-  target_link_libraries(${example_name} ${SPRAL_LIBRARIES})
+  # target_link_libraries(${example_name} ${SPRAL_LIBRARIES})
   target_link_libraries(${example_name} ${LIBS})
   
 endforeach()

@@ -46,7 +46,7 @@ if(${SYLVER_RUNTIME} MATCHES "StarPU")
 
 endif()
 
-if(${USE_GPU} MATCHES ON)
+if(SYLVER_ENABLE_CUDA)
 
   file(
     GLOB
@@ -77,8 +77,8 @@ if(${USE_GPU} MATCHES ON)
   # MESSAGE( STATUS "CUDA source files: " ${cuda_sources} )
 endif()
 
-if(${USE_GPU} MATCHES ON)
-  cuda_add_library(spldlt_cuda ${cuda_sources})
+if(SYLVER_ENABLE_CUDA)
+  cuda_add_library(sylver_cuda ${cuda_sources})
 endif()
 
 # message(STATUS "Sources: ${sources}")

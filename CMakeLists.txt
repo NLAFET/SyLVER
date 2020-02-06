@@ -29,12 +29,12 @@ set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
 ########################################
 # CXX flags
 # STD C++11
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 # list(APPEND CMAKE_CXX_FLAGS " -std=c++11")
 # Note: Not supported feature for Intel compilers in CMake version < 3.6
-# set(CMAKE_CXX_STANDARD 11) # C++11...
-# set(CMAKE_CXX_STANDARD_REQUIRED ON) #...is required...
-# set(CMAKE_CXX_EXTENSIONS OFF) #...without compiler extensions like gnu++11
+set(CMAKE_CXX_STANDARD 11) # C++11...
+set(CMAKE_CXX_STANDARD_REQUIRED ON) #...is required...
+set(CMAKE_CXX_EXTENSIONS OFF) #...without compiler extensions like gnu++11
 
 # Optimization flags
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native")
@@ -123,17 +123,10 @@ option(SYLVER_BUILD_EXAMPLES "Build examples" OFF)
 option(SYLVER_BUILD_TESTS "Build tests" OFF)
 # Build SyLVER drivers
 option(SYLVER_BUILD_DRIVERS "Build drivers" OFF)
-
-# Use MPI
-# option(USE_MPI "Use MPI" OFF)
-# MESSAGE(STATUS "Use MPI: " ${USE_MPI} )   
-
-# Profiling
-option(USE_PROFILING "Activate profiling info" OFF)
-MESSAGE(STATUS "Profiling: " ${USE_PROFILING})
-if (${USE_PROFILING} MATCHES "ON")
-  add_definitions(-DSPLDLT_USE_PROFILING)
-endif()
+# Enable profiling
+option(SYLVER_ENABLE_PROFILING "Activate profiling info" OFF)
+# Enable NVIDIA cutlass library 
+option(SYLVER_ENABLE_CUTLASS "CUTLASS library available" OFF)
 
 # Have la-hp scheduler
 option(HAVE_LAHP "LA-heteroprio scheduler available" OFF)
@@ -142,9 +135,43 @@ if (${HAVE_LAHP} MATCHES "ON")
 endif()
 MESSAGE(STATUS "LAHP: " ${HAVE_LAHP})
 
-# Have CUTALSS library
-option(HAVE_CUTLASS "CUTLASS library available" OFF)
-if (${HAVE_CUTLASS} MATCHES "ON")
+# Print options summuary 
+message(STATUS "Runtime: " ${SYLVER_RUNTIME})
+message(STATUS "Enable CUDA: " ${SYLVER_ENABLE_CUDA})
+message(STATUS "Enable OpenMP: " ${SYLVER_ENABLE_OMP})
+message(STATUS "Use internal SPRAL: " ${SYLVER_SPRAL_USE_INTERNAL})
+message(STATUS "Build examples: " ${SYLVER_BUILD_EXAMPLES})
+message(STATUS "Build tests: " ${SYLVER_BUILD_TESTS})
+message(STATUS "Build drivers: " ${SYLVER_BUILD_DRIVERS})
+message(STATUS "Profiling: " ${SYLVER_ENABLE_PROFILING})
+message(STATUS "Cutlass: " ${SYLVER_ENABLE_CUTLASS})
+
+if (SYLVER_ENABLE_PROFILING)
+  add_definitions(-DSPLDLT_USE_PROFILING)
+  add_definitions(-DSYLVER_ENABLE_PROFILING)
+endif()
+
+
+################################################################################
+# Low-level options
+
+SET(MEMLAYOUT "1D" CACHE STRING "Memory layout")
+set_property(CACHE MEMLAYOUT PROPERTY STRINGS 2D 1D)
+MESSAGE( STATUS "Memory layout: " ${MEMLAYOUT})
+if (${MEMLAYOUT} MATCHES "1D")
+  add_definitions(-DMEMLAYOUT_1D)
+elseif (${MEMLAYOUT} MATCHES "2D")
+  add_definitions(-DMEMLAYOUT_2D)
+endif()
+
+################################################################################
+# Third-party libraries
+
+
+########################################
+# cutlass
+
+if (SYLVER_ENABLE_CUTLASS)
 
   set(CUTLASS_DIR "" CACHE STRING "CUTLASS library")
 
@@ -166,29 +193,6 @@ if (${HAVE_CUTLASS} MATCHES "ON")
   add_definitions(-DHAVE_CUTLASS)
 endif()
 
-# Print options summuary 
-message(STATUS "Runtime: " ${SYLVER_RUNTIME})
-message(STATUS "Enable CUDA: " ${SYLVER_ENABLE_CUDA})
-message(STATUS "Enable OpenMP: " ${SYLVER_ENABLE_OMP})
-message(STATUS "Use internal SPRAL: " ${SYLVER_SPRAL_USE_INTERNAL})
-message(STATUS "Build examples: " ${SYLVER_BUILD_EXAMPLES})
-message(STATUS "Build tests: " ${SYLVER_BUILD_TESTS})
-message(STATUS "Build drivers: " ${SYLVER_BUILD_DRIVERS})
-
-################################################################################
-# Low-level options
-
-SET(MEMLAYOUT "1D" CACHE STRING "Memory layout")
-set_property(CACHE MEMLAYOUT PROPERTY STRINGS 2D 1D)
-MESSAGE( STATUS "Memory layout: " ${MEMLAYOUT})
-if (${MEMLAYOUT} MATCHES "1D")
-  add_definitions(-DMEMLAYOUT_1D)
-elseif (${MEMLAYOUT} MATCHES "2D")
-  add_definitions(-DMEMLAYOUT_2D)
-endif()
-
-################################################################################
-# Third-party libraries
 
 ########################################
 # HWLOC
@@ -303,37 +307,44 @@ endif()
 # CUDA
 if(SYLVER_ENABLE_CUDA)
 
-  enable_language(CUDA)
-
-  # Use GPU
+  # Add definitions
   add_definitions(-DSPLDLT_USE_GPU)
+  add_definitions(-DSYLVER_HAVE_CUDA)
 
-  find_package(CUDA REQUIRED)
-
-  # string(APPEND CUDA_NVCC_FLAGS "-g")
-  string(APPEND CUDA_NVCC_FLAGS " -g -O2")
-  # string(APPEND CUDA_NVCC_FLAGS "-g -O2 -arch=compute_60")
-  # string(APPEND CUDA_NVCC_FLAGS "-g -O2 -arch=compute_70")
-
-  set(SyLVER_NVCC_ARCHS "60;61;70;75" CACHE STRING "The SM architectures to build code for.")
-  # set(SyLVER_NVCC_ARCHS "50;60;61;70;75" CACHE STRING "The SM architectures to build code for.")
-
-  # Set NVCC arguments
-  foreach(ARCH ${SyLVER_NVCC_ARCHS})
-    string(APPEND CUDA_NVCC_FLAGS " -gencode arch=compute_${ARCH},code=sm_${ARCH}")
-    # string(APPEND CMAKE_CUDA_FLAGS " -gencode arch=compute_${ARCH},code=sm_${ARCH}")
-  endforeach()
+  # Use CUDA as a native language within CMake
+  set(SYLVER_NATIVE_CUDA OFF CACHE BOOL "Utilize the CMake native CUDA flow")
   
-  MESSAGE( STATUS "CUDA found:         " ${CUDA_FOUND} )
-  MESSAGE( STATUS "CUDA host compiler: " ${CUDA_HOST_COMPILER} )
-  MESSAGE( STATUS "CUDA nvcc compiler: " ${CUDA_NVCC_EXECUTABLE})
-  MESSAGE( STATUS "NVCC FLAGS:         " ${CUDA_NVCC_FLAGS} )
+  if(SYLVER_NATIVE_CUDA)
+    enable_language(CUDA)
+  else()
+    find_package(CUDA REQUIRED)
 
-  set(LIBS ${LIBS} ${CUDA_LIBRARIES})
-  set(LIBS ${LIBS} ${CUDA_CUBLAS_LIBRARIES})
-  set(LIBS ${LIBS} ${CUDA_cusolver_LIBRARY})
+    string(APPEND CUDA_NVCC_FLAGS " -g -O2")
 
-  set(LIBS ${LIBS} spldlt_cuda)
+    # string(APPEND CUDA_NVCC_FLAGS "-g")
+    # string(APPEND CUDA_NVCC_FLAGS "-g -O2 -arch=compute_60")
+    # string(APPEND CUDA_NVCC_FLAGS "-g -O2 -arch=compute_70")
+
+    set(SyLVER_NVCC_ARCHS "60;61;70;75" CACHE STRING "The SM architectures to build code for.")
+    # set(SyLVER_NVCC_ARCHS "50;60;61;70;75" CACHE STRING "The SM architectures to build code for.")
+
+    # Set NVCC arguments
+    foreach(ARCH ${SyLVER_NVCC_ARCHS})
+      string(APPEND CUDA_NVCC_FLAGS " -gencode arch=compute_${ARCH},code=sm_${ARCH}")
+      # string(APPEND CMAKE_CUDA_FLAGS " -gencode arch=compute_${ARCH},code=sm_${ARCH}")
+    endforeach()
+    
+    MESSAGE( STATUS "CUDA found:         " ${CUDA_FOUND} )
+    MESSAGE( STATUS "CUDA host compiler: " ${CUDA_HOST_COMPILER} )
+    MESSAGE( STATUS "CUDA nvcc compiler: " ${CUDA_NVCC_EXECUTABLE})
+    MESSAGE( STATUS "NVCC FLAGS:         " ${CUDA_NVCC_FLAGS} )
+
+    set(LIBS ${LIBS} ${CUDA_LIBRARIES})
+    set(LIBS ${LIBS} ${CUDA_CUBLAS_LIBRARIES})
+    set(LIBS ${LIBS} ${CUDA_cusolver_LIBRARY})
+
+    set(LIBS ${LIBS} sylver_cuda)
+  endif()
 
   # find_library(NVIDIA_"/usr/lib64/nvidia")
 
@@ -355,8 +366,11 @@ endif()
 ########################################
 # SPRAL
 
-if(SYLVER_SPRAL_USE_INTERNAL)
+# Determine SPRAL source dir and build dir
 
+if(SYLVER_SPRAL_USE_INTERNAL)
+  # Checkout SPRAL git submodule and build SPRAL
+  
   find_package(Git QUIET)
   if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
     message(STATUS "Submodule update")
@@ -392,7 +406,14 @@ if(SYLVER_SPRAL_USE_INTERNAL)
     string(APPEND SPRAL_CONFIGURE_OPTIONS " --disable-openmp")
   endif()
   # CUDA
-  if (NOT SYLVER_ENABLE_CUDA)
+  if (SYLVER_ENABLE_CUDA)
+    # nvcc compiler flags
+    if(SYLVER_NATIVE_CUDA)
+      string(APPEND SPRAL_CONFIGURE_OPTIONS " NVCCFLAGS=\"${CMAKE_CUDA_FLAGS}\"")
+    else()
+      string(APPEND SPRAL_CONFIGURE_OPTIONS " NVCCFLAGS=\"${CUDA_NVCC_FLAGS}\"")
+    endif()
+  else()
     string(APPEND SPRAL_CONFIGURE_OPTIONS " --disable-gpu")
   endif()
 
@@ -403,13 +424,14 @@ if(SYLVER_SPRAL_USE_INTERNAL)
   set(SPRAL_CONFIGURE_OPTIONS ${SPRAL_CONFIGURE_OPTIONS} " --with-blas=\"${BLAS_LIBRARIES_STR}\"")
   set(SPRAL_CONFIGURE_OPTIONS ${SPRAL_CONFIGURE_OPTIONS} " --with-lapack=\"${BLAS_LIBRARIES_STR}\"")
 
+  # Create SPRAL config shell script
   file(
     WRITE
     ${CMAKE_BINARY_DIR}/spral/spral-config.sh
     ${SPRAL_SRC_DIR}/configure ${SPRAL_CONFIGURE_OPTIONS}
     )
 
-  # Give execution permission to config sccript
+  # Give execution permission to SPRAL config script
   file(
     COPY ${CMAKE_BINARY_DIR}/spral/spral-config.sh
     DESTINATION ${CMAKE_BINARY_DIR}
@@ -428,11 +450,10 @@ if(SYLVER_SPRAL_USE_INTERNAL)
     BUILD_COMMAND make
     INSTALL_COMMAND ""
     BINARY_DIR ${SPRAL_DIR}
-    )
-  
-  
+    )  
   
 else()
+  # Use external SPRAL library
   
   set(SPRAL_DIR "" CACHE PATH "Location of SPRAL Library")
   # Looking for SPRAL library
@@ -457,9 +478,7 @@ else()
       message(STATUS "SPRAL source directory not set and is needed for the compilation of SyLVER. You can provide the path of the SPRAL source directory using either the -DSPRAL_SRC_DIR option or the SPRAL_SRC_DIR environment variable")
     endif()
   endif()
-
-  # MESSAGE(STATUS "spral source dir: " ${SPRAL_SRC_DIR})
-
+  
 endif()
 
 # Make sure we have access to SPRAL source directory 
@@ -476,7 +495,22 @@ if(SPRAL_DIR)
   message(STATUS "SPRAL library directory set to: ${SPRAL_DIR}")
   include_directories(${SPRAL_DIR})
 else()
-  message(FATAL_ERROR "SPRAL library directory not found")
+  message(STATUS "SPRAL library directory not found")
+endif()
+
+# Locate spral library file
+if(SYLVER_SPRAL_USE_INTERNAL)
+  set(SPRAL_LIBRARIES ${SPRAL_DIR}/libspral.a)
+  set(LIBS ${LIBS} ${SPRAL_LIBRARIES})
+else()
+  find_library(SPRAL_LIBRARIES spral PATHS ${SPRAL_DIR} ${SPRAL_DIR})
+  if(SPRAL_LIBRARIES)
+    set(LIBS ${LIBS} ${SPRAL_LIBRARIES})
+  elseif((SYLVER_BUILD_EXAMPLES) OR (SYLVER_BUILD_TESTS) OR (SYLVER_BUILD_DRIVERS))
+    message(FATAL_ERROR "SPRAL library not found")
+  else()
+    message(WARNING "SPRAL library not found")
+  endif()
 endif()
 
 # Include source directory
@@ -514,16 +548,6 @@ elseif(${SYLVER_RUNTIME} MATCHES "StarPU")
 endif()
 
 add_subdirectory(src)
-
-# add_executable(spldlt_test drivers/spldlt_test.F90)
-# add_executable(splu_test drivers/splu_test.F90)
-
-## spldlt_test
-# target_include_directories(spldlt_test PUBLIC ${CMAKE_BINARY_DIR}/src)
-# target_link_libraries(spldlt_test sylver)
-## splu_test
-# target_include_directories(splu_test PUBLIC ${CMAKE_BINARY_DIR}/src)
-# target_link_libraries(splu_test sylver)
 
 ########################################
 ## spral
