@@ -530,7 +530,7 @@ namespace spldlt {
 
 #else
 
-         restore_failed_block_app(elim_col, jblk, blk, cdata, backup);
+         restore_failed_block_app(elim_col, jblk, blk, cdata, backup, workspaces[0]);
          
 #endif
       } 
@@ -1493,7 +1493,10 @@ namespace spldlt {
             // Restore failed columns in current block-column
             for(int iblk=blk; iblk<mblk; iblk++) {
                restore_failed_block_app_task(
-                     blk, blocks[blk*(mblk+1)], blocks[blk*mblk+iblk], cdata, backup,
+                     blk,
+                     blocks[blk*(mblk+1)],
+                     blocks[blk*mblk+iblk],
+                     cdata, backup,
                      workspaces);
             }
 

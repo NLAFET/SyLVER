@@ -30,7 +30,7 @@ list(REMOVE_ITEM kernel_sources ${to_remove})
 # message(STATUS "Kernel sources: ${kernel_sources}")
 set(sources ${sources} ${kernel_sources})
 
-if(${RUNTIME} MATCHES "StarPU")
+if(${SYLVER_RUNTIME} MATCHES "StarPU")
 
   file(
     GLOB 

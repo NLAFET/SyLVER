@@ -104,8 +104,8 @@ endif()
 # Options
 
 ## Set runtime system to be used for the execution
-SET(RUNTIME "STF" CACHE STRING "Runtime system")
-set_property(CACHE RUNTIME PROPERTY STRINGS STF StarPU)
+set(SYLVER_RUNTIME "STF" CACHE STRING "Runtime system")
+set_property(CACHE SYLVER_RUNTIME PROPERTY STRINGS STF StarPU)
 # # Set BLAS and LAPACK libraries to use for linking
 # SET(BLAS_LAPACK "MKL" CACHE STRING "BLAS and LAPACK libraries")
 # set_property(CACHE BLAS_LAPACK PROPERTY STRINGS Ref MKL)
@@ -167,7 +167,7 @@ if (${HAVE_CUTLASS} MATCHES "ON")
 endif()
 
 # Print options summuary 
-message(STATUS "Runtime: " ${RUNTIME})
+message(STATUS "Runtime: " ${SYLVER_RUNTIME})
 message(STATUS "Enable CUDA: " ${SYLVER_ENABLE_CUDA})
 message(STATUS "Enable OpenMP: " ${SYLVER_ENABLE_OMP})
 message(STATUS "Use internal SPRAL: " ${SYLVER_SPRAL_USE_INTERNAL})
@@ -374,6 +374,9 @@ if(SYLVER_SPRAL_USE_INTERNAL)
 
   # SPRAL source directory
   set(SPRAL_SRC_DIR "${PROJECT_SOURCE_DIR}/spral")
+  # SPRAL build directory
+  set(SPRAL_DIR "${CMAKE_BINARY_DIR}/spral/build")
+
   # SPRAL configuration options
   set(SPRAL_CONFIGURE_OPTIONS "")
   # Compilers
@@ -393,12 +396,12 @@ if(SYLVER_SPRAL_USE_INTERNAL)
     string(APPEND SPRAL_CONFIGURE_OPTIONS " --disable-gpu")
   endif()
 
+  # Transfor lists into space sperated strings
   string(REPLACE ";" " " BLAS_LIBRARIES_STR "${BLAS_LIBRARIES}")
   string(REPLACE ";" " " LAPACK_LIBRARIES_STR "${LAPACK_LIBRARIES}")
   
   set(SPRAL_CONFIGURE_OPTIONS ${SPRAL_CONFIGURE_OPTIONS} " --with-blas=\"${BLAS_LIBRARIES_STR}\"")
   set(SPRAL_CONFIGURE_OPTIONS ${SPRAL_CONFIGURE_OPTIONS} " --with-lapack=\"${BLAS_LIBRARIES_STR}\"")
-  set(SPRAL_CONFIGURE_OPTIONS ${SPRAL_CONFIGURE_OPTIONS} --TET)
 
   file(
     WRITE
@@ -406,30 +409,29 @@ if(SYLVER_SPRAL_USE_INTERNAL)
     ${SPRAL_SRC_DIR}/configure ${SPRAL_CONFIGURE_OPTIONS}
     )
 
+  # Give execution permission to config sccript
   file(
     COPY ${CMAKE_BINARY_DIR}/spral/spral-config.sh
     DESTINATION ${CMAKE_BINARY_DIR}
     FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
     )
 
-  # set(LAPACK_LIBRARIES_STR "${LAPACK_LIBRARIES}")
-  
+  # TODO: remove config script copy
+    
   include(ExternalProject)
   ExternalProject_Add(spral
     SOURCE_DIR ${SPRAL_SRC_DIR}
     PREFIX ${CMAKE_BINARY_DIR}/spral
     PATCH_COMMAND ${SPRAL_SRC_DIR}/autogen.sh
+    # Call config script via sh or bash?
     CONFIGURE_COMMAND ${CMAKE_BINARY_DIR}/spral-config.sh
-    # CONFIGURE_COMMAND ${SPRAL_SRC_DIR}/configure ${SPRAL_CONFIGURE_OPTIONS}
-    # CONFIGURE_COMMAND ${CMAKE_COMMAND} -E env ${SPRAL_SRC_DIR}/configure ${SPRAL_CONFIGURE_OPTIONS}
     BUILD_COMMAND make
     INSTALL_COMMAND ""
+    BINARY_DIR ${SPRAL_DIR}
     )
-
-  # CONFIGURE_COMMAND ${SPRAL_SRC_DIR}/configure CXX=${CMAKE_CXX_COMPILER} FC=${CMAKE_Fortran_COMPILER} CC=${CMAKE_C_COMPILER} CFLAGS=${CMAKE_C_FLAGS_ALL} CXXFLAGS=${CMAKE_CXX_FLAGS_ALL} FCFLAGS=${CMAKE_Fortran_FLAGS_ALL} --with-metis=${METIS_LIBRARIES} ${SPRAL_OPTION_OMP} ${SPRAL_OPTION_CUDA} --with-blas=${BLAS_LIBRARIES} --with-lapack=${LAPACK_LIBRARIES}
-
-# CONFIGURE_COMMAND ./autogen.sh COMMAND ./configure
-
+  
+  
+  
 else()
   
   set(SPRAL_DIR "" CACHE PATH "Location of SPRAL Library")
@@ -442,11 +444,6 @@ else()
     else()
       message(STATUS "SPRAL library directory not set and is needed for the compilation of SyLVER. You can provide the path of the SPRAL library directory using either the -DSPRAL_DIR option or the SPRAL_DIR environment variable")
     endif()
-  endif()
-
-  if(SPRAL_DIR)
-    message(STATUS "SPRAL library directory set to: ${SPRAL_DIR}")
-    include_directories(${SPRAL_DIR})
   endif()
 
   # SPRAL source directory
@@ -465,6 +462,7 @@ else()
 
 endif()
 
+# Make sure we have access to SPRAL source directory 
 if(SPRAL_SRC_DIR)
   message(STATUS "SPRAL source directory set to: ${SPRAL_SRC_DIR}")
   include_directories(${SPRAL_SRC_DIR})
@@ -472,7 +470,14 @@ if(SPRAL_SRC_DIR)
 else()
   message(FATAL_ERROR "SPRAL source directory not found")
 endif()
-
+# Make sure we have access to SPRAL build directory with .mod files
+# and libspral.a
+if(SPRAL_DIR)
+  message(STATUS "SPRAL library directory set to: ${SPRAL_DIR}")
+  include_directories(${SPRAL_DIR})
+else()
+  message(FATAL_ERROR "SPRAL library directory not found")
+endif()
 
 # Include source directory
 include_directories(${SyLVER_SOURCE_DIR}/src)
@@ -480,15 +485,16 @@ include_directories(${SyLVER_SOURCE_DIR}/src)
 ########################################
 # Runtime system
 
-if (${RUNTIME} MATCHES "STF")
+if (${SYLVER_RUNTIME} MATCHES "STF")
 
   add_definitions(-DSPLDLT_USE_STF)
 
-elseif(${RUNTIME} MATCHES "StarPU")
+elseif(${SYLVER_RUNTIME} MATCHES "StarPU")
 
   ########################################
   # StarPU
   add_definitions(-DSPLDLT_USE_STARPU)
+  add_definitions(-DSYLVER_HAVE_STARPU)
 
   find_package(STARPU)
   if (STARPU_FOUND)
@@ -579,7 +585,7 @@ message(" ")
 message("BLAS libraries: ${BLAS_LIBRARIES}")
 message("LAPACK libraries: ${LAPACK_LIBRARIES}")
 message(" ")
-if(${RUNTIME} MATCHES "StarPU")
+if(${SYLVER_RUNTIME} MATCHES "StarPU")
   message("Runtime system: StarPU")
   message("StarPU libraries: ${STARPU_LIBRARIES}")
   message(" ")

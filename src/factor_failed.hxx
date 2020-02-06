@@ -94,8 +94,9 @@ namespace spldlt {
                // auto start = std::chrono::high_resolution_clock::now();
                form_contrib_notask(node, work, nelim, node.nelim-1);
                // form_contrib_task(node, workspaces, nelim, node.nelim-1);
+#if defined(SYLVER_HAVE_STARPU)
                starpu_fxt_trace_user_event(node.symb.idx); // DEBUG
-
+#endif
                // auto end = std::chrono::high_resolution_clock::now();
                // t_form_contrib = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count();
 
