@@ -10,7 +10,7 @@ list(APPEND tests_drivers "drivers/kernel_test.cxx")
 list(APPEND tests_drivers "drivers/sylver_test.F90")
 
 # GPU
-if(${USE_GPU} MATCHES ON)
+if(SYLVER_ENABLE_CUDA)
   list(APPEND tests_drivers "drivers/update_block_gpu_test.cxx")
   list(APPEND tests_drivers "drivers/factor_gpu_test.cxx")
 endif()
@@ -29,7 +29,7 @@ file(
   *.hxx
   *.F90)
 
-if(${USE_GPU} MATCHES ON)
+if(SYLVER_ENABLE_CUDA)
 
   # Sources
   file(
@@ -64,7 +64,7 @@ foreach(tests_driver ${tests_drivers})
   target_include_directories(${tests_driver_name} PUBLIC ${CMAKE_BINARY_DIR}/tests)
   target_include_directories(${tests_driver_name} PUBLIC ${SPRAL_DIR})
   target_link_libraries(${tests_driver_name} sylver_tests)
-  if(${USE_GPU} MATCHES ON)
+  if(SYLVER_ENABLE_CUDA)
     target_link_libraries(${tests_driver_name} sylver_tests_cuda)
   endif()
   target_link_libraries(${tests_driver_name} sylver)

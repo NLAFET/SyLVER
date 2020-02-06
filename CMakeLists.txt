@@ -10,11 +10,10 @@ enable_language(CXX)
 message(STATUS "CMake version: ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}")
 
 # Include our own cmake modules
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/" )
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
 ################################################################################
 # Linker options
-
 set(LINKER_LANGUAGE "Fortran")
 set(CMAKE_Fortran_LINKER_PREFERENCE 50)
 
@@ -31,6 +30,7 @@ set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
 # CXX flags
 # STD C++11
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+# list(APPEND CMAKE_CXX_FLAGS " -std=c++11")
 # Note: Not supported feature for Intel compilers in CMake version < 3.6
 # set(CMAKE_CXX_STANDARD 11) # C++11...
 # set(CMAKE_CXX_STANDARD_REQUIRED ON) #...is required...
@@ -56,9 +56,9 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fbounds-check")
 ########################################
 # Fortran flags
 
-# set(CMAKE_Fortran_FLAGS_RELWITHDEBINFO "${CMAKE_Fortran_FLAGS_RELWITHDEBINFO} -march=native")
+set(CMAKE_Fortran_FLAGS_RELWITHDEBINFO "${CMAKE_Fortran_FLAGS_RELWITHDEBINFO} -march=native")
 # IBM machine
-set(CMAKE_Fortran_FLAGS_RELWITHDEBINFO "${CMAKE_Fortran_FLAGS_RELWITHDEBINFO} -mcpu=native")
+# set(CMAKE_Fortran_FLAGS_RELWITHDEBINFO "${CMAKE_Fortran_FLAGS_RELWITHDEBINFO} -mcpu=native")
 # Debug flags
 set(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -Wall -Wextra -Warray-temporaries -Wconversion -fbacktrace -ffree-line-length-0")
 set(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -ffpe-trap=zero,overflow,underflow")
@@ -83,21 +83,21 @@ set(CMAKE_C_FLAGS_ALL ${CMAKE_C_FLAGS})
 set(CMAKE_CXX_FLAGS_ALL ${CMAKE_CXX_FLAGS})
 
 if(CMAKE_BUILD_TYPE MATCHES "Debug")
-  list(APPEND CMAKE_Fortran_FLAGS_ALL ${CMAKE_Fortran_FLAGS_DEBUG})
-  list(APPEND CMAKE_C_FLAGS_ALL ${CMAKE_C_FLAGS_DEBUG})
-  list(APPEND CMAKE_CXX_FLAGS_ALL ${CMAKE_CXX_FLAGS_DEBUG})
+  string(APPEND CMAKE_Fortran_FLAGS_ALL " ${CMAKE_Fortran_FLAGS_DEBUG}")
+  string(APPEND CMAKE_C_FLAGS_ALL " ${CMAKE_C_FLAGS_DEBUG}")
+  string(APPEND CMAKE_CXX_FLAGS_ALL " ${CMAKE_CXX_FLAGS_DEBUG}")
 elseif(CMAKE_BUILD_TYPE MATCHES "Release")
-  list(APPEND CMAKE_Fortran_FLAGS_ALL ${CMAKE_Fortran_FLAGS_RELEASE})
-  list(APPEND CMAKE_C_FLAGS_ALL ${CMAKE_C_FLAGS_RELEASE})
-  list(APPEND CMAKE_CXX_FLAGS_ALL ${CMAKE_CXX_FLAGS_RELEASE})
+  string(APPEND CMAKE_Fortran_FLAGS_ALL " ${CMAKE_Fortran_FLAGS_RELEASE}")
+  string(APPEND CMAKE_C_FLAGS_ALL " ${CMAKE_C_FLAGS_RELEASE}")
+  string(APPEND CMAKE_CXX_FLAGS_ALL " ${CMAKE_CXX_FLAGS_RELEASE}")
 elseif(CMAKE_BUILD_TYPE MATCHES "MinSizeRel")
-  list(APPEND CMAKE_Fortran_FLAGS_ALL ${CMAKE_Fortran_FLAGS_MINSIZEREL})
-  list(APPEND CMAKE_C_FLAGS_ALL ${CMAKE_C_FLAGS_MINSIZEREL})
-  list(APPEND CMAKE_CXX_FLAGS_ALL ${CMAKE_CXX_FLAGS_MINSIZEREL})
+  string(APPEND CMAKE_Fortran_FLAGS_ALL " ${CMAKE_Fortran_FLAGS_MINSIZEREL}")
+  string(APPEND CMAKE_C_FLAGS_ALL " ${CMAKE_C_FLAGS_MINSIZEREL}")
+  string(APPEND CMAKE_CXX_FLAGS_ALL " ${CMAKE_CXX_FLAGS_MINSIZEREL}")
 elseif(CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")
-  list(APPEND CMAKE_Fortran_FLAGS_ALL ${CMAKE_Fortran_FLAGS_RELWITHDEBINFO})
-  list(APPEND CMAKE_C_FLAGS_ALL ${CMAKE_C_FLAGS_RELWITHDEBINFO})
-  list(APPEND CMAKE_CXX_FLAGS_ALL ${CMAKE_CXX_FLAGS_RELWITHDEBINFO})
+  string(APPEND CMAKE_Fortran_FLAGS_ALL " ${CMAKE_Fortran_FLAGS_RELWITHDEBINFO}")
+  string(APPEND CMAKE_C_FLAGS_ALL " ${CMAKE_C_FLAGS_RELWITHDEBINFO}")
+  string(APPEND CMAKE_CXX_FLAGS_ALL " ${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
 endif()
 
 ################################################################################
@@ -115,10 +115,14 @@ set_property(CACHE RUNTIME PROPERTY STRINGS STF StarPU)
 option(SYLVER_ENABLE_CUDA "Enable CUDA" OFF)
 # Enable OpenMP
 option(SYLVER_ENABLE_OMP "Use OpenMP" OFF)
+# Use internal SPRAL
+option(SYLVER_SPRAL_USE_INTERNAL "Use OpenMP" ON)
 # Build SyLVER examples
-option(SYLVER_BUILD_EXAMPLES "Build examples" ON)
+option(SYLVER_BUILD_EXAMPLES "Build examples" OFF)
 # Build SyLVER tests
 option(SYLVER_BUILD_TESTS "Build tests" OFF)
+# Build SyLVER drivers
+option(SYLVER_BUILD_DRIVERS "Build drivers" OFF)
 
 # Use MPI
 # option(USE_MPI "Use MPI" OFF)
@@ -130,7 +134,6 @@ MESSAGE(STATUS "Profiling: " ${USE_PROFILING})
 if (${USE_PROFILING} MATCHES "ON")
   add_definitions(-DSPLDLT_USE_PROFILING)
 endif()
-
 
 # Have la-hp scheduler
 option(HAVE_LAHP "LA-heteroprio scheduler available" OFF)
@@ -164,11 +167,13 @@ if (${HAVE_CUTLASS} MATCHES "ON")
 endif()
 
 # Print options summuary 
-MESSAGE( STATUS "Runtime: " ${RUNTIME} )
-MESSAGE( STATUS "Enable CUDA: " ${SYLVER_ENABLE_CUDA} )
-MESSAGE( STATUS "Enable OpenMP: " ${SYLVER_ENABLE_OMP}
-MESSAGE( STATUS "Build examples: " ${SYLVER_BUILD_EXAMPLES})
-MESSAGE( STATUS "Build tests: " ${SYLVER_BUILD_TESTS})
+message(STATUS "Runtime: " ${RUNTIME})
+message(STATUS "Enable CUDA: " ${SYLVER_ENABLE_CUDA})
+message(STATUS "Enable OpenMP: " ${SYLVER_ENABLE_OMP})
+message(STATUS "Use internal SPRAL: " ${SYLVER_SPRAL_USE_INTERNAL})
+message(STATUS "Build examples: " ${SYLVER_BUILD_EXAMPLES})
+message(STATUS "Build tests: " ${SYLVER_BUILD_TESTS})
+message(STATUS "Build drivers: " ${SYLVER_BUILD_DRIVERS})
 
 ################################################################################
 # Low-level options
@@ -227,7 +232,7 @@ elseif(DEFINED ENV{BLAS_LIB})
 endif()
 
 if(DEFINED BLAS_LIBRARIES)
-  #message(STATUS "BLAS_LIBRARIES: " ${BLAS_LIBRARIES})
+  # message(STATUS "BLAS_LIBRARIES: " ${BLAS_LIBRARIES})
   set(CMAKE_REQUIRED_LIBRARIES ${BLAS_LIBRARIES})
   CHECK_FORTRAN_FUNCTION_EXISTS("dgemm" BLAS_FOUND)
   unset(CMAKE_REQUIRED_LIBRARIES)
@@ -265,15 +270,15 @@ else()
   find_package(LAPACK)
 endif()
 
-if (LAPACK_FOUND)
+if(LAPACK_FOUND)
   set(LIBS ${LIBS} ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES})
 else()
   message(FATAL_ERROR "LAPACK library NOT found")
-endif (LAPACK_FOUND)
+endif(LAPACK_FOUND)
 
 ########################################
 # OpenMP
-if (SYLVER_ENABLE_OMP)
+if(SYLVER_ENABLE_OMP)
   find_package(OpenMP)
   if (OPENMP_FOUND)
     message(STATUS "OpenMP CXX Flags: " ${OpenMP_Fortran_FLAGS})
@@ -282,8 +287,8 @@ if (SYLVER_ENABLE_OMP)
     # set(LIBS ${LIBS} ${OpenMP_CXX_LIBRARIES})
 
     # Compiler flags
-    list(APPEND CMAKE_Fortran_FLAGS_ALL ${OpenMP_Fortran_FLAGS})
-    list(APPEND CMAKE_CXX_FLAGS_ALL ${OpenMP_Fortran_FLAGS})
+    string(APPEND CMAKE_Fortran_FLAGS_ALL " ${OpenMP_Fortran_FLAGS}")
+    string(APPEND CMAKE_CXX_FLAGS_ALL " ${OpenMP_Fortran_FLAGS}")
     
     set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${OpenMP_Fortran_FLAGS}")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_Fortran_FLAGS}")
@@ -294,8 +299,9 @@ if (SYLVER_ENABLE_OMP)
   endif()
 endif()
 
-# GPU
-if (SYLVER_ENABLE_CUDA)
+########################################
+# CUDA
+if(SYLVER_ENABLE_CUDA)
 
   enable_language(CUDA)
 
@@ -304,10 +310,10 @@ if (SYLVER_ENABLE_CUDA)
 
   find_package(CUDA REQUIRED)
 
-  # list(APPEND CUDA_NVCC_FLAGS "-g")
-  list(APPEND CUDA_NVCC_FLAGS "-g -O2")
-  # list(APPEND CUDA_NVCC_FLAGS "-g -O2 -arch=compute_60")
-  # list(APPEND CUDA_NVCC_FLAGS "-g -O2 -arch=compute_70")
+  # string(APPEND CUDA_NVCC_FLAGS "-g")
+  string(APPEND CUDA_NVCC_FLAGS " -g -O2")
+  # string(APPEND CUDA_NVCC_FLAGS "-g -O2 -arch=compute_60")
+  # string(APPEND CUDA_NVCC_FLAGS "-g -O2 -arch=compute_70")
 
   set(SyLVER_NVCC_ARCHS "60;61;70;75" CACHE STRING "The SM architectures to build code for.")
   # set(SyLVER_NVCC_ARCHS "50;60;61;70;75" CACHE STRING "The SM architectures to build code for.")
@@ -348,41 +354,124 @@ endif()
 
 ########################################
 # SPRAL
-set(SPRAL_DIR "" CACHE PATH "Location of SPRAL Library")
-# Looking for SPRAL library
-if(NOT SPRAL_DIR)
-  if (DEFINED ENV{SPRALDIR})
-    set(SPRAL_DIR $ENV{SPRALDIR})
-  elseif(DEFINED ENV{SPRAL_DIR})
-    set(SPRAL_DIR $ENV{SPRAL_DIR})
-  else()
-    message(STATUS "SPRAL library directory not set and is needed for the compilation of SyLVER. You can provide the path of the SPRAL library directory using either the -DSPRAL_DIR option or the SPRAL_DIR environment variable")
-  endif()
-endif()
 
-if(SPRAL_DIR)
-  message(STATUS "SPRAL library directory set to: ${SPRAL_DIR}")
-  include_directories(${SPRAL_DIR})
-endif()
+if(SYLVER_SPRAL_USE_INTERNAL)
 
-# SPRAL source directory
-set(SPRAL_SRC_DIR "" CACHE PATH "Location of SPRAL sources")
-if(NOT SPRAL_SRC_DIR)
-  if (DEFINED ENV{SPRALSRCDIR})
-    set(SPRAL_SRC_DIR $ENV{SPRALSRCDIR})
-  elseif(DEFINED  ENV{SPRAL_SRC_DIR})
-    set(SPRAL_SRC_DIR $ENV{SPRAL_SRC_DIR})    
-  else()
-    message(STATUS "SPRAL source directory not set and is needed for the compilation of SyLVER. You can provide the path of the SPRAL source directory using either the -DSPRAL_SRC_DIR option or the SPRAL_SRC_DIR environment variable")
+  find_package(Git QUIET)
+  if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
+    message(STATUS "Submodule update")
+    execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --force --init --recursive --remote
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+      RESULT_VARIABLE GIT_SUBMOD_RESULT)
+    if(NOT GIT_SUBMOD_RESULT EQUAL "0")
+      message(FATAL_ERROR "git submodule update --init failed with ${GIT_SUBMOD_RESULT}, please checkout submodules")
+    endif()
   endif()
+
+  if(NOT EXISTS "${PROJECT_SOURCE_DIR}/spral/autogen.sh")
+    message(FATAL_ERROR "The submodules were not downloaded! GIT_SUBMODULE was turned off or failed. Please update submodules and try again.")
+  endif()
+
+  # SPRAL source directory
+  set(SPRAL_SRC_DIR "${PROJECT_SOURCE_DIR}/spral")
+  # SPRAL configuration options
+  set(SPRAL_CONFIGURE_OPTIONS "")
+  # Compilers
+  set(SPRAL_CONFIGURE_OPTIONS "${SPRAL_CONFIGURE_OPTIONS} CXX=${CMAKE_CXX_COMPILER} FC=${CMAKE_Fortran_COMPILER} CC=${CMAKE_C_COMPILER}")
+  # string(APPEND SPRAL_CONFIGURE_OPTIONS " CXX=${CMAKE_CXX_COMPILER} FC=${CMAKE_Fortran_COMPILER} CC=${CMAKE_C_COMPILER}")
+  # Compiler flags
+  set(SPRAL_CONFIGURE_OPTIONS "${SPRAL_CONFIGURE_OPTIONS} CFLAGS=\"${CMAKE_C_FLAGS_ALL}\" CXXFLAGS=\"${CMAKE_CXX_FLAGS_ALL}\" FCFLAGS=\"${CMAKE_Fortran_FLAGS_ALL}\"")
+  # string(APPEND SPRAL_CONFIGURE_OPTIONS " CFLAGS=${CMAKE_C_FLAGS_ALL} CXXFLAGS=${CMAKE_CXX_FLAGS_ALL} FCFLAGS=${CMAKE_Fortran_FLAGS_ALL}")
+  # Metis
+  string(APPEND SPRAL_CONFIGURE_OPTIONS " --with-metis=\"${METIS_LIBRARIES}\"")
+  # OpenMP
+  if (NOT SYLVER_ENABLE_OMP)
+    string(APPEND SPRAL_CONFIGURE_OPTIONS " --disable-openmp")
+  endif()
+  # CUDA
+  if (NOT SYLVER_ENABLE_CUDA)
+    string(APPEND SPRAL_CONFIGURE_OPTIONS " --disable-gpu")
+  endif()
+
+  string(REPLACE ";" " " BLAS_LIBRARIES_STR "${BLAS_LIBRARIES}")
+  string(REPLACE ";" " " LAPACK_LIBRARIES_STR "${LAPACK_LIBRARIES}")
+  
+  set(SPRAL_CONFIGURE_OPTIONS ${SPRAL_CONFIGURE_OPTIONS} " --with-blas=\"${BLAS_LIBRARIES_STR}\"")
+  set(SPRAL_CONFIGURE_OPTIONS ${SPRAL_CONFIGURE_OPTIONS} " --with-lapack=\"${BLAS_LIBRARIES_STR}\"")
+  set(SPRAL_CONFIGURE_OPTIONS ${SPRAL_CONFIGURE_OPTIONS} --TET)
+
+  file(
+    WRITE
+    ${CMAKE_BINARY_DIR}/spral/spral-config.sh
+    ${SPRAL_SRC_DIR}/configure ${SPRAL_CONFIGURE_OPTIONS}
+    )
+
+  file(
+    COPY ${CMAKE_BINARY_DIR}/spral/spral-config.sh
+    DESTINATION ${CMAKE_BINARY_DIR}
+    FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
+    )
+
+  # set(LAPACK_LIBRARIES_STR "${LAPACK_LIBRARIES}")
+  
+  include(ExternalProject)
+  ExternalProject_Add(spral
+    SOURCE_DIR ${SPRAL_SRC_DIR}
+    PREFIX ${CMAKE_BINARY_DIR}/spral
+    PATCH_COMMAND ${SPRAL_SRC_DIR}/autogen.sh
+    CONFIGURE_COMMAND ${CMAKE_BINARY_DIR}/spral-config.sh
+    # CONFIGURE_COMMAND ${SPRAL_SRC_DIR}/configure ${SPRAL_CONFIGURE_OPTIONS}
+    # CONFIGURE_COMMAND ${CMAKE_COMMAND} -E env ${SPRAL_SRC_DIR}/configure ${SPRAL_CONFIGURE_OPTIONS}
+    BUILD_COMMAND make
+    INSTALL_COMMAND ""
+    )
+
+  # CONFIGURE_COMMAND ${SPRAL_SRC_DIR}/configure CXX=${CMAKE_CXX_COMPILER} FC=${CMAKE_Fortran_COMPILER} CC=${CMAKE_C_COMPILER} CFLAGS=${CMAKE_C_FLAGS_ALL} CXXFLAGS=${CMAKE_CXX_FLAGS_ALL} FCFLAGS=${CMAKE_Fortran_FLAGS_ALL} --with-metis=${METIS_LIBRARIES} ${SPRAL_OPTION_OMP} ${SPRAL_OPTION_CUDA} --with-blas=${BLAS_LIBRARIES} --with-lapack=${LAPACK_LIBRARIES}
+
+# CONFIGURE_COMMAND ./autogen.sh COMMAND ./configure
+
+else()
+  
+  set(SPRAL_DIR "" CACHE PATH "Location of SPRAL Library")
+  # Looking for SPRAL library
+  if(NOT SPRAL_DIR)
+    if (DEFINED ENV{SPRALDIR})
+      set(SPRAL_DIR $ENV{SPRALDIR})
+    elseif(DEFINED ENV{SPRAL_DIR})
+      set(SPRAL_DIR $ENV{SPRAL_DIR})
+    else()
+      message(STATUS "SPRAL library directory not set and is needed for the compilation of SyLVER. You can provide the path of the SPRAL library directory using either the -DSPRAL_DIR option or the SPRAL_DIR environment variable")
+    endif()
+  endif()
+
+  if(SPRAL_DIR)
+    message(STATUS "SPRAL library directory set to: ${SPRAL_DIR}")
+    include_directories(${SPRAL_DIR})
+  endif()
+
+  # SPRAL source directory
+  set(SPRAL_SRC_DIR "" CACHE PATH "Location of SPRAL sources")
+  if(NOT SPRAL_SRC_DIR)
+    if (DEFINED ENV{SPRALSRCDIR})
+      set(SPRAL_SRC_DIR $ENV{SPRALSRCDIR})
+    elseif(DEFINED  ENV{SPRAL_SRC_DIR})
+      set(SPRAL_SRC_DIR $ENV{SPRAL_SRC_DIR})    
+    else()
+      message(STATUS "SPRAL source directory not set and is needed for the compilation of SyLVER. You can provide the path of the SPRAL source directory using either the -DSPRAL_SRC_DIR option or the SPRAL_SRC_DIR environment variable")
+    endif()
+  endif()
+
+  # MESSAGE(STATUS "spral source dir: " ${SPRAL_SRC_DIR})
+
 endif()
 
 if(SPRAL_SRC_DIR)
   message(STATUS "SPRAL source directory set to: ${SPRAL_SRC_DIR}")
   include_directories(${SPRAL_SRC_DIR})
   include_directories(${SPRAL_SRC_DIR}/src)
+else()
+  message(FATAL_ERROR "SPRAL source directory not found")
 endif()
-# MESSAGE(STATUS "spral source dir: " ${SPRAL_SRC_DIR})
 
 
 # Include source directory
@@ -399,7 +488,6 @@ elseif(${RUNTIME} MATCHES "StarPU")
 
   ########################################
   # StarPU
-
   add_definitions(-DSPLDLT_USE_STARPU)
 
   find_package(STARPU)
@@ -421,28 +509,28 @@ endif()
 
 add_subdirectory(src)
 
-add_executable(spldlt_test drivers/spldlt_test.F90)
-add_executable(splu_test drivers/splu_test.F90)
+# add_executable(spldlt_test drivers/spldlt_test.F90)
+# add_executable(splu_test drivers/splu_test.F90)
 
 ## spldlt_test
-target_include_directories(spldlt_test PUBLIC ${CMAKE_BINARY_DIR}/src)
-target_link_libraries(spldlt_test sylver)
+# target_include_directories(spldlt_test PUBLIC ${CMAKE_BINARY_DIR}/src)
+# target_link_libraries(spldlt_test sylver)
 ## splu_test
-target_include_directories(splu_test PUBLIC ${CMAKE_BINARY_DIR}/src)
-target_link_libraries(splu_test sylver)
+# target_include_directories(splu_test PUBLIC ${CMAKE_BINARY_DIR}/src)
+# target_link_libraries(splu_test sylver)
 
 ########################################
 ## spral
-target_include_directories(spldlt_test PUBLIC ${SPRAL_DIR})
-target_include_directories(splu_test PUBLIC ${SPRAL_DIR})
+# target_include_directories(spldlt_test PUBLIC ${SPRAL_DIR})
+# target_include_directories(splu_test PUBLIC ${SPRAL_DIR})
 # target_include_directories(spldlt_test_debug PUBLIC ${SPRAL_DIR})
 find_library(SPRAL_LIBRARIES spral PATHS ${SPRAL_DIR} ${SPRAL_DIR})
 # set(LIBS ${LIBS} ${SPRAL_LIBRARIES})
 message(STATUS "SPRAL_LIBRARIES: ${SPRAL_LIBRARIES}")
 
-target_link_libraries(spldlt_test ${SPRAL_LIBRARIES})
+# target_link_libraries(spldlt_test ${SPRAL_LIBRARIES})
 # target_link_libraries(spldlt_test_debug ${SPRAL_LIBRARIES})
-target_link_libraries(splu_test ${SPRAL_LIBRARIES})
+# target_link_libraries(splu_test ${SPRAL_LIBRARIES})
 
 # set_property(TARGET spldlt_test PROPERTY LINKER_LANGUAGE Fortran)
 
@@ -464,25 +552,11 @@ if(SYLVER_BUILD_TESTS)
   add_subdirectory(tests)
 endif()
 
-########################################
-# Setup list of test drivers
-MESSAGE( STATUS "Libs: " ${LIBS} )
-set(test_drivers)
-
-list(APPEND test_drivers "drivers/spldlt_test.F90")
-list(APPEND test_drivers "drivers/splu_test.F90")
-
-foreach(test_driver ${test_drivers})
-    
-  get_filename_component(test_driver_name ${test_driver} NAME_WE)
-
-  set_property(TARGET ${test_driver_name} PROPERTY LINKER_LANGUAGE Fortran)
-
-  ########################################
-  # Link test drivers with external libraries
-  target_link_libraries(${test_driver_name} ${LIBS})
-
-endforeach()
+################################################################################
+# Test drivers
+if(SYLVER_BUILD_DRIVERS)
+  add_subdirectory(drivers)
+endif()
 
 ################################################################################
 # Print summary
