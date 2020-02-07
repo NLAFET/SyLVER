@@ -12,6 +12,9 @@ message(STATUS "CMake version: ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}")
 # Include our own cmake modules
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
+# Load CMake helpers
+include(cmake/build_helpers.cmake)
+
 ################################################################################
 # Linker options
 set(LINKER_LANGUAGE "Fortran")
@@ -37,6 +40,17 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON) #...is required...
 set(CMAKE_CXX_EXTENSIONS OFF) #...without compiler extensions like gnu++11
 
 # Optimization flags
+# enable_cxx_compiler_flag_if_supported(CMAKE_CXX_FLAGS_RELEASE "-tet")
+# message("CXX_COMPILER_FLAG_SUPPORTED: ${CXX_COMPILER_FLAG_SUPPORTED}")
+# message("CMAKE_CXX_FLAGS_RELEASE: ${CMAKE_CXX_FLAGS_RELEASE}")
+# enable_cxx_compiler_flag_if_supported(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-tet")
+# message("CMAKE_CXX_FLAGS_RELWITHDEBINFO: ${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
+# enable_cxx_compiler_flag_if_supported(CMAKE_CXX_FLAGS_MINSIZEREL "-tet")
+# message("CMAKE_CXX_FLAGS_MINSIZEREL: ${CMAKE_CXX_FLAGS_MINSIZEREL}")
+
+# message("CMAKE_CXX_FLAGS_RELWITHDEBINFO: ${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
+# message("CMAKE_CXX_FLAGS_MINSIZEREL: ${CMAKE_CXX_FLAGS_MINSIZEREL}")
+
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -march=native")
 set(CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL} -march=native")
@@ -144,7 +158,7 @@ message(STATUS "Build examples: " ${SYLVER_BUILD_EXAMPLES})
 message(STATUS "Build tests: " ${SYLVER_BUILD_TESTS})
 message(STATUS "Build drivers: " ${SYLVER_BUILD_DRIVERS})
 message(STATUS "Profiling: " ${SYLVER_ENABLE_PROFILING})
-message(STATUS "Cutlass: " ${SYLVER_ENABLE_CUTLASS})
+message(STATUS "CUTLASS: " ${SYLVER_ENABLE_CUTLASS})
 
 if (SYLVER_ENABLE_PROFILING)
   add_definitions(-DSPLDLT_USE_PROFILING)
@@ -172,7 +186,6 @@ endif()
 # cutlass
 
 if (SYLVER_ENABLE_CUTLASS)
-
   set(CUTLASS_DIR "" CACHE STRING "CUTLASS library")
 
   if(CUTLASS_DIR)
@@ -184,8 +197,8 @@ if (SYLVER_ENABLE_CUTLASS)
   endif()
 
   if(EXISTS ${CUTLASS_HEADERS})
-    MESSAGE(STATUS "CUTLASS: " ${HAVE_CUTLASS})
-    MESSAGE(STATUS "CUTLASS Directory: " ${CUTLASS_HEADERS})
+    message(STATUS "CUTLASS: " ${HAVE_CUTLASS})
+    message(STATUS "CUTLASS Directory: " ${CUTLASS_HEADERS})
   else()
     message(FATAL_ERROR "CUTLASS NOT found")
   endif()
@@ -581,9 +594,6 @@ elseif(${SYLVER_RUNTIME} MATCHES "StarPU")
   endif(STARPU_FOUND)
 
 endif()
-
-# Load CMake helpers
-include(cmake/build_helpers.cmake)
 
 add_subdirectory(src)
 
