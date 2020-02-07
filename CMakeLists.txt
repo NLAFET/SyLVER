@@ -313,9 +313,45 @@ if(SYLVER_ENABLE_CUDA)
 
   # Use CUDA as a native language within CMake
   set(SYLVER_NATIVE_CUDA OFF CACHE BOOL "Utilize the CMake native CUDA flow")
-  
+  mark_as_advanced(SYLVER_NATIVE_CUDA)
+
+  set(SyLVER_NVCC_ARCHS "60;61;70;75" CACHE STRING "The SM architectures to build code for.")
+
   if(SYLVER_NATIVE_CUDA)
+
     enable_language(CUDA)
+
+    # Find cudart library
+    find_library(CUDA_RUNTIME_LIBS_DYNAMIC cudart
+      HINT ${CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES})
+    # find_library(CUDA_RUNTIME_LIBS_STATIC cudart_static
+    #   HINT ${CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES})
+    set(CUDA_RUNTIME_LIBS "${CUDA_RUNTIME_LIBS_DYNAMIC}" CACHE STRING "Path to a library" FORCE)
+    # set(CUDA_RUNTIME_LIBS "${CUDA_RUNTIME_LIBS_STATIC}" CACHE STRING "Path to a library" FORCE)
+    message(STATUS "CUDA runtime library: ${CUDA_RUNTIME_LIBS}")
+
+    set(CMAKE_CUDA_STANDARD 11)
+    set(CMAKE_CUDA_EXTENSIONS OFF)
+
+    # string(APPEND CMAKE_CUDA_FLAGS " -g -O2")
+    foreach(ARCH ${SyLVER_NVCC_ARCHS})
+      string(APPEND CMAKE_CUDA_FLAGS " -gencode arch=compute_${ARCH},code=sm_${ARCH}")
+    endforeach()
+
+    ########################################
+    # Find cuBLAS library
+    find_library(CUBLAS cublas)
+    message(STATUS "cuBLAS: ${CUBLAS}")
+
+    ########################################
+    # Find cuSOLVER library
+    find_library(CUSOLVER cusolver)
+    message(STATUS "cuSOLVER: ${CUSOLVER}")
+
+    set(LIBS ${LIBS} ${CUDA_RUNTIME_LIBS})
+    set(LIBS ${LIBS} ${CUBLAS})
+    set(LIBS ${LIBS} ${CUSOLVER})
+
   else()
     find_package(CUDA REQUIRED)
 
@@ -325,7 +361,6 @@ if(SYLVER_ENABLE_CUDA)
     # string(APPEND CUDA_NVCC_FLAGS "-g -O2 -arch=compute_60")
     # string(APPEND CUDA_NVCC_FLAGS "-g -O2 -arch=compute_70")
 
-    set(SyLVER_NVCC_ARCHS "60;61;70;75" CACHE STRING "The SM architectures to build code for.")
     # set(SyLVER_NVCC_ARCHS "50;60;61;70;75" CACHE STRING "The SM architectures to build code for.")
 
     # Set NVCC arguments
@@ -501,11 +536,11 @@ endif()
 # Locate spral library file
 if(SYLVER_SPRAL_USE_INTERNAL)
   set(SPRAL_LIBRARIES ${SPRAL_DIR}/libspral.a)
-  set(LIBS ${LIBS} ${SPRAL_LIBRARIES})
+  set(LIBS ${SPRAL_LIBRARIES} ${LIBS})
 else()
   find_library(SPRAL_LIBRARIES spral PATHS ${SPRAL_DIR} ${SPRAL_DIR})
   if(SPRAL_LIBRARIES)
-    set(LIBS ${LIBS} ${SPRAL_LIBRARIES})
+    set(LIBS ${SPRAL_LIBRARIES} ${LIBS})
   elseif((SYLVER_BUILD_EXAMPLES) OR (SYLVER_BUILD_TESTS) OR (SYLVER_BUILD_DRIVERS))
     message(FATAL_ERROR "SPRAL library not found")
   else()
@@ -551,21 +586,6 @@ endif()
 include(cmake/build_helpers.cmake)
 
 add_subdirectory(src)
-
-########################################
-## spral
-# target_include_directories(spldlt_test PUBLIC ${SPRAL_DIR})
-# target_include_directories(splu_test PUBLIC ${SPRAL_DIR})
-# target_include_directories(spldlt_test_debug PUBLIC ${SPRAL_DIR})
-find_library(SPRAL_LIBRARIES spral PATHS ${SPRAL_DIR} ${SPRAL_DIR})
-# set(LIBS ${LIBS} ${SPRAL_LIBRARIES})
-message(STATUS "SPRAL_LIBRARIES: ${SPRAL_LIBRARIES}")
-
-# target_link_libraries(spldlt_test ${SPRAL_LIBRARIES})
-# target_link_libraries(spldlt_test_debug ${SPRAL_LIBRARIES})
-# target_link_libraries(splu_test ${SPRAL_LIBRARIES})
-
-# set_property(TARGET spldlt_test PROPERTY LINKER_LANGUAGE Fortran)
 
 ########################################
 # CUTLASS

@@ -10,9 +10,8 @@ foreach(test_driver ${test_drivers})
     
   get_filename_component(test_driver_name ${test_driver} NAME_WE)
 
-  set_property(TARGET ${test_driver_name} PROPERTY LINKER_LANGUAGE Fortran)
-
   add_executable(${test_driver_name} ${test_driver})
+  set_property(TARGET ${test_driver_name} PROPERTY LINKER_LANGUAGE Fortran)
   target_include_directories(${test_driver_name} PUBLIC ${CMAKE_BINARY_DIR}/src)
   target_link_libraries(${test_driver_name} sylver)
   target_include_directories(${test_driver_name} PUBLIC ${SPRAL_DIR})

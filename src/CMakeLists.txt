@@ -78,9 +78,18 @@ if(SYLVER_ENABLE_CUDA)
 endif()
 
 if(SYLVER_ENABLE_CUDA)
-  cuda_add_library(sylver_cuda ${cuda_sources})
+  if(SYLVER_NATIVE_CUDA)
+    add_library(sylver
+      ${sources}
+      ${cuda_sources}
+      )
+  else()
+    add_library(sylver ${sources})
+    cuda_add_library(sylver_cuda ${cuda_sources})
+  endif()
+else()
+  add_library(sylver ${sources})
 endif()
 
 # message(STATUS "Sources: ${sources}")
 
-add_library(sylver ${sources})
