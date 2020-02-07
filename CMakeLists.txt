@@ -547,6 +547,9 @@ elseif(${SYLVER_RUNTIME} MATCHES "StarPU")
 
 endif()
 
+# Load CMake helpers
+include(cmake/build_helpers.cmake)
+
 add_subdirectory(src)
 
 ########################################
