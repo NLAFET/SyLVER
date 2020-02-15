@@ -90,10 +90,15 @@ namespace spldlt { namespace tests {
       ////////////////////////////////////////////////////////////////////////////////
       // Square matrices
       // No delays
-      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 1024, 1024, 128, 8) )); // Inner and outer blocking
-      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 2048, 2048, 256, 8) )); // Inner and outer blocking
-      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 3000, 3000, 256, 8) )); // Inner and outer blocking
-      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 5179, 5179, 512, 8) )); // Inner and outer blocking
+
+      // Inner and outer blocking
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 1024, 1024, 128, 8) ));
+      // Inner and outer blocking
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 2048, 2048, 256, 8) ));
+      // Inner and outer blocking
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 3000, 3000, 256, 8) ));
+       // Inner and outer blocking
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 5179, 5179, 512, 8) ));
       TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 4085, 4085, 315, 8) )); // Inner and outer blocking
 
       // Cause delays

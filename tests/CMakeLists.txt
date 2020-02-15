@@ -52,5 +52,6 @@ if(SYLVER_ENABLE_CUDA)
   sylver_tests_add_driver("drivers/factor_gpu_test.cxx")
 endif()
 
-sylver_create_test("drivers/kernel_test.cxx")
+# sylver_create_test("drivers/kernel_test.cxx")
+sylver_create_test("drivers/factor_node_indef_tests.cxx")
 sylver_create_test("drivers/sylver_test.F90")
