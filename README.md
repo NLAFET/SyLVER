@@ -3,10 +3,13 @@
 [![Documentation Status](https://readthedocs.org/projects/sylver/badge/?version=latest)](https://sylver.readthedocs.io/en/latest/?badge=latest)
 
 SyLVER is a sparse direct solver for symmetric systems which may be
-either positive-definite or indefinite. It implements DAG-based
-algorithms that enable an efficient exploitation of multicore
-architectures and heterogeneous GPU-accelerated systems. The code has
-been developed in the context of the EU H2020
+either positive-definite or indefinite. 
+
+The implementation uses a DAG-based algorithms that enable an
+efficient exploitation of multicore CPU architectures and
+GPU-accelerated systems. 
+
+The code has been developed in the context of the EU H2020
 [NLAFET](http://www.nlafet.eu/) project. The parallel implementation
 relies on the [StarPU](http://starpu.gforge.inria.fr/) runtime system
 developed and maintained by the STORM team at Inria Bordeaux
