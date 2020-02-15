@@ -611,6 +611,11 @@ elseif(${SYLVER_RUNTIME} MATCHES "StarPU")
 
 endif()
 
+if(SYLVER_BUILD_TESTS)
+  enable_testing()
+  include(CTest)
+endif()
+
 add_subdirectory(src)
 
 ########################################

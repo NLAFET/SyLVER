@@ -59,12 +59,12 @@ MACRO(enable_cxx_compiler_flag_if_supported _variable _flag)
       # CXX_COMPILER_FLAG_SUPPORTED
       )
 
-    message("SYLVER_HAVE_FLAG_${_flag_name}")
-    if (SYLVER_HAVE_FLAG_${_flag_name})
-      message("Flag ${_flag_name} is supported")
-    else()
-      message("Flag ${_flag_name} is NOT supported")
-    endif()
+    # message("SYLVER_HAVE_FLAG_${_flag_name}")
+    # if (SYLVER_HAVE_FLAG_${_flag_name})
+    #   message("Flag ${_flag_name} is supported")
+    # else()
+    #   message("Flag ${_flag_name} is NOT supported")
+    # endif()
 
     # message("CXX_COMPILER_FLAG_SUPPORTED: ${CXX_COMPILER_FLAG_SUPPORTED}")    
     # set(SYLVER_HAVE_FLAG_${_flag_name} ${CXX_COMPILER_FLAG_SUPPORTED})

@@ -37,13 +37,25 @@ if(SYLVER_ENABLE_CUDA)
     tests_cuda_src
     *.cu
     *.cuh)
-
-  cuda_add_library(sylver_tests_cuda ${tests_cuda_src})
-
 endif()
 
-
-add_library(sylver_tests ${tests_src})
+if(SYLVER_ENABLE_CUDA)
+  if(SYLVER_NATIVE_CUDA)
+    add_library(
+      sylver_tests
+      ${tests_src}
+      ${tests_cuda_src})
+  else()
+    add_library(
+      sylver_tests
+      ${tests_src})
+    cuda_add_library(sylver_tests_cuda ${tests_cuda_src})
+  endif()
+else()
+  add_library(
+    sylver_tests
+    ${tests_src})
+endif()
 
 # if (${KERNEL_TESTS} MATCHES "ON")
 #   set_target_properties(sylver_tests PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
@@ -65,7 +77,9 @@ foreach(tests_driver ${tests_drivers})
   target_include_directories(${tests_driver_name} PUBLIC ${SPRAL_DIR})
   target_link_libraries(${tests_driver_name} sylver_tests)
   if(SYLVER_ENABLE_CUDA)
-    target_link_libraries(${tests_driver_name} sylver_tests_cuda)
+    if(NOT SYLVER_NATIVE_CUDA)
+      target_link_libraries(${tests_driver_name} sylver_tests_cuda)
+    endif()
   endif()
   target_link_libraries(${tests_driver_name} sylver)
   target_link_libraries(${tests_driver_name} ${obj})
