@@ -141,11 +141,16 @@ namespace spldlt { namespace tests {
 #if defined(SPLDLT_USE_GPU)
       conf->ncuda = ngpu;
 
-      // conf->sched_policy_name = "eager";
-
-      conf->sched_policy_name = "heteroprio";
-      conf->sched_policy_init = &init_heteroprio;
-
+      // Select scheduling strategy in StarPU
+      if (ngpu > 0) {
+         conf->sched_policy_name = "heteroprio";
+         conf->sched_policy_init = &init_heteroprio;
+      }
+      else{
+         // If no GPU is enabled, use Eager scheduler
+         conf->sched_policy_name = "eager"; // FIXME: use lws scheduler?
+      }
+         
 #else
       conf->sched_policy_name = "lws";
 #endif
@@ -198,16 +203,18 @@ namespace spldlt { namespace tests {
       spldlt::starpu::codelet_init_factor_indef<T, PoolAllocator>();
       spldlt::starpu::codelet_init_factor_failed<T, PoolAllocator>();
 
-      // extern struct starpu_codelet cl_update_contrib_block_app;
+      if (ngpu > 0) {
+         // extern struct starpu_codelet cl_update_contrib_block_app;
 
-      // Force update_contrib taks on the CPU/GPU
-      // cl_update_contrib_block_app.where = STARPU_CPU;
-      cl_update_contrib_block_app.where = STARPU_CUDA;
+         // Force update_contrib taks on the CPU/GPU
+         // cl_update_contrib_block_app.where = STARPU_CPU;
+         cl_update_contrib_block_app.where = STARPU_CUDA;
       
-      // Force UpdateN taks on the CPU/GPU
-      // cl_updateN_block_app.where = STARPU_CPU; 
-      // cl_updateN_block_app.where = STARPU_CUDA;
-      cl_updateN_block_app.where = STARPU_CUDA | STARPU_CPU;
+         // Force UpdateN taks on the CPU/GPU
+         // cl_updateN_block_app.where = STARPU_CPU; 
+         // cl_updateN_block_app.where = STARPU_CUDA;
+         cl_updateN_block_app.where = STARPU_CUDA | STARPU_CPU;
+      }
 #endif
 
 #if defined(SPLDLT_USE_STARPU)
@@ -251,7 +258,19 @@ namespace spldlt { namespace tests {
 
       starpu_data_unregister(spldlt::starpu::workspace_hdl);
 #endif
-      
+
+#if defined(SPLDLT_USE_STARPU)
+#if defined(SPLDLT_USE_GPU)
+      // auto start_mem_pin = std::chrono::high_resolution_clock::now();
+      starpu_memory_unpin(front.lcol, lda*n*sizeof(T));
+      // auto end_mem_pin = std::chrono::high_resolution_clock::now();
+      // long t_mem_pin = 
+      //    std::chrono::duration_cast<std::chrono::nanoseconds>
+      //    (end_mem_pin-start_mem_pin).count();
+      // printf("[factor_node_posdef_test] memory pin (s) = %e\n", 1e-9*t_mem_pin);
+#endif
+#endif
+
       // Deinitialize solver (including shutdown tasking system)
 #if defined(SPLDLT_USE_STARPU)
 #if defined(SPLDLT_USE_GPU)
@@ -337,7 +356,7 @@ namespace spldlt { namespace tests {
       // Check residual
       T bwderr = sylver::tests::backward_error(m, a, lda, b, 1, soln, m);
       /*if(debug)*/ printf("bwderr = %le\n", bwderr);
-      EXPECT_LE(bwderr, 5e-14) << "(test " << test << " seed " << seed << ")" << std::endl;
+      EXPECT_LE(u*bwderr, 5e-14) << "(test " << test << " seed " << seed << ")" << std::endl;
 
       ////////////////////////////////////////
       // Print results

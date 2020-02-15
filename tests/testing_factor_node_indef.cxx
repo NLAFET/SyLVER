@@ -12,24 +12,40 @@ namespace spldlt { namespace tests {
 
       ////////////////////////////////////////////////////////////////////////////////
       // Square matrices
+
       // No delays
-      
-      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 32, 32, 32, 1) )); // No blocking
-      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 128, 128, 32, 1) )); // Outer blocking
-      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 128, 128, 128, 1) )); // Inner blocking
-      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 1024, 1024, 128, 1) )); // Inner and outer blocking
-      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 2048, 2048, 256, 1) )); // Inner and outer blocking
-      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 3000, 3000, 256, 1) )); // Inner and outer blocking
-      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 5179, 5179, 512, 1) )); // Inner and outer blocking
-      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 4085, 4085, 315, 1) )); // Inner and outer blocking
+
+      // No blocking
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 32, 32, 32, 1) ));
+      // Outer blocking
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 128, 128, 32, 1) ));
+      // Inner blocking
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 128, 128, 128, 1) ));
+      // Inner and outer blocking
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 1024, 1024, 128, 1) ));
+      // Inner and outer blocking
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 2048, 2048, 256, 1) ));
+      // Inner and outer blocking
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 3000, 3000, 256, 1) ));
+      // Inner and outer blocking
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 5179, 5179, 512, 1) ));
+      // Inner and outer blocking
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 4085, 4085, 315, 1) ));
 
       // Cause delays
-      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, true, false, 32, 32, 32, 1) )); // No blocking
-      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, true, false, 64, 64, 32, 1) )); // Outer blocking
-      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, true, false, 64, 64, 64, 1) )); // Inner blocking
-      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, true, false, 1024, 1024, 128, 1) )); // Inner and outer blocking
-      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, true, false, 2048, 2048, 256, 1) )); // Inner and outer blocking
-      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, true, false, 3000, 3000, 256, 1) )); // Inner and outer blocking
+
+      // No blocking
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, true, false, 32, 32, 32, 1) ));
+      // Outer blocking
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, true, false, 64, 64, 32, 1) ));
+      // Inner blocking
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, true, false, 64, 64, 64, 1) ));
+      // Inner and outer blocking
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, true, false, 1024, 1024, 128, 1) ));
+      // Inner and outer blocking
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, true, false, 2048, 2048, 256, 1) ));
+      // Inner and outer blocking
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, true, false, 3000, 3000, 256, 1) ));
 
       ////////////////////////////////////////////////////////////////////////////////
       // Rectangular matrices
