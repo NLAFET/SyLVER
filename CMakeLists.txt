@@ -51,13 +51,28 @@ set(CMAKE_CXX_EXTENSIONS OFF) #...without compiler extensions like gnu++11
 # message("CMAKE_CXX_FLAGS_RELWITHDEBINFO: ${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
 # message("CMAKE_CXX_FLAGS_MINSIZEREL: ${CMAKE_CXX_FLAGS_MINSIZEREL}")
 
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native")
-set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -march=native")
-set(CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL} -march=native")
-# IBM machine
-# set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -mcpu=native")
-# set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -mcpu=native")
-# set(CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL} -mcpu=native")
+# set(DUMMY "-smth")
+# enable_cxx_compiler_flag_if_supported(DUMMY "-march=native")
+# enable_cxx_compiler_flag_if_supported(DUMMY "-march=tet")
+# enable_cxx_compiler_flag_if_supported(DUMMY "-tet")
+# enable_cxx_compiler_flag_if_supported(DUMMY "-g")
+# message("DUMMY: ${DUMMY}")
+
+enable_cxx_compiler_flag_if_supported(CMAKE_CXX_FLAGS_RELEASE "-march=native")
+enable_cxx_compiler_flag_if_supported(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-march=native")
+enable_cxx_compiler_flag_if_supported(CMAKE_CXX_FLAGS_MINSIZEREL "-march=native")
+
+if(NOT SYLVER_HAVE_FLAG_march=native)
+  # This is useful on IBM machines where march=native is not
+  # necessarily suported
+  enable_cxx_compiler_flag_if_supported(CMAKE_CXX_FLAGS_RELEASE "-mcpu=native")
+  enable_cxx_compiler_flag_if_supported(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-mcpu=native")
+  enable_cxx_compiler_flag_if_supported(CMAKE_CXX_FLAGS_MINSIZEREL "-march=native")
+endif()
+
+# message("CMAKE_CXX_FLAGS_RELEASE: ${CMAKE_CXX_FLAGS_RELEASE}")
+# message("CMAKE_CXX_FLAGS_RELWITHDEBINFO: ${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
+# message("CMAKE_CXX_FLAGS_MINSIZEREL: ${CMAKE_CXX_FLAGS_MINSIZEREL}")
 
 # Debug flags
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -ggdb")
@@ -143,11 +158,11 @@ option(SYLVER_ENABLE_PROFILING "Activate profiling info" OFF)
 option(SYLVER_ENABLE_CUTLASS "CUTLASS library available" OFF)
 
 # Have la-hp scheduler
-option(HAVE_LAHP "LA-heteroprio scheduler available" OFF)
-if (${HAVE_LAHP} MATCHES "ON")
-  add_definitions(-DHAVE_LAHP)
-endif()
-MESSAGE(STATUS "LAHP: " ${HAVE_LAHP})
+# option(HAVE_LAHP "LA-heteroprio scheduler available" OFF)
+# if (${HAVE_LAHP} MATCHES "ON")
+#   add_definitions(-DHAVE_LAHP)
+# endif()
+# MESSAGE(STATUS "LAHP: " ${HAVE_LAHP})
 
 # Print options summuary 
 message(STATUS "Runtime: " ${SYLVER_RUNTIME})
