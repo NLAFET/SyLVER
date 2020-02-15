@@ -14,6 +14,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
 # Load CMake helpers
 include(cmake/build_helpers.cmake)
+include(cmake/install_helpers.cmake)
 
 ################################################################################
 # Linker options
@@ -636,6 +637,8 @@ if(SYLVER_BUILD_DRIVERS)
   add_subdirectory(drivers)
 endif()
 
+sylver_install()
+
 ################################################################################
 # Print summary
 
@@ -663,13 +666,23 @@ if(${SYLVER_RUNTIME} MATCHES "StarPU")
   message(" ")
 endif()
 if(SYLVER_ENABLE_CUDA)
-  message(
-    "CUDA host compiler: ${CUDA_HOST_COMPILER}\n"
-    "CUDA libraries: ${CUDA_LIBRARIES}\n"
-    "CUBLAS libraries: ${CUDA_CUBLAS_LIBRARIES}\n"
-    "NVVC comiler: ${CUDA_NVCC_EXECUTABLE}\n"
-    "NVCC FLAGS: ${CUDA_NVCC_FLAGS}\n"
-    )
+  if(SYLVER_NATIVE_CUDA)
+    message(
+      "CUDA host compiler: ${CMAKE_CUDA_HOST_COMPILER}\n"
+      "CUDA libraries: ${CUDA_RUNTIME_LIBS}\n"
+      "CUBLAS libraries: ${CUBLAS}\n"
+      "NVVC compiler: ${CMAKE_CUDA_COMPILER}\n"
+      "NVCC FLAGS: ${CMAKE_CUDA_FLAGS}\n"
+      )
+  else()
+    message(
+      "CUDA host compiler: ${CUDA_HOST_COMPILER}\n"
+      "CUDA libraries: ${CUDA_LIBRARIES}\n"
+      "CUBLAS libraries: ${CUDA_CUBLAS_LIBRARIES}\n"
+      "NVVC compiler: ${CUDA_NVCC_EXECUTABLE}\n"
+      "NVCC FLAGS: ${CUDA_NVCC_FLAGS}\n"
+      )
+  endif()
   message(" ")
 endif()
 # if (${USE_OMP} MATCHES ON)

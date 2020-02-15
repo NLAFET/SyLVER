@@ -86,10 +86,13 @@ if(SYLVER_ENABLE_CUDA)
   else()
     add_library(sylver ${sources})
     cuda_add_library(sylver_cuda ${cuda_sources})
+    sylver_install_library(sylver_cuda)
   endif()
 else()
   add_library(sylver ${sources})
 endif()
+
+sylver_install_library(sylver)
 
 # message(STATUS "Sources: ${sources}")
 
