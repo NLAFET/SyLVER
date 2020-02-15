@@ -1,6 +1,6 @@
 // SyLVER
 #include "testing.hxx"
-#include "testing_factor_node_indef.hxx"
+#include "testing_form_contrib.hxx"
 // STD
 #include <cstdio>
 
@@ -9,11 +9,11 @@ using namespace spldlt::tests;
 
 int main(int argc, char** argv) {
 
-   std::cout << "[Tests][factor_node_indef] Starting tests.." << std::endl;
+   std::cout << "[Tests][form_contrib] Starting tests.." << std::endl;
 
    int nerr = 0;
 
-   nerr += run_factor_node_indef_tests();
+   nerr += run_form_contrib_tests();
 
    if(nerr==0) {
       printf(ANSI_COLOR_BLUE "\n====================================\n"

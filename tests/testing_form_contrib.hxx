@@ -47,12 +47,12 @@ namespace spldlt { namespace tests {
       int lda = spral::ssids::cpu::align_lda<T>(m);
       T* a = new T[m*lda];
 
-      if (posdef) gen_posdef(m, a, lda);
-      else gen_sym_indef(m, a, lda);
+      if (posdef) sylver::tests::gen_posdef(m, a, lda);
+      else sylver::tests::gen_sym_indef(m, a, lda);
 
       // Generate a RHS based on x=1, b=Ax
       T *b = new T[m];
-      gen_rhs(m, a, lda, b);
+      sylver::tests::gen_rhs(m, a, lda, b);
 
       T* l = new double[m*lda];
       memcpy(l, a, lda*m*sizeof(T)); // Copy a to l
@@ -147,7 +147,7 @@ namespace spldlt { namespace tests {
       solve(m, nelim, perm, l, lda, d, b, soln);
 
       // Check residual
-      T bwderr = backward_error(m, a, lda, b, 1, soln, m);
+      T bwderr = sylver::tests::backward_error(m, a, lda, b, 1, soln, m);
       /*if(debug)*/ printf("bwderr = %le\n", bwderr);
       EXPECT_LE(bwderr, 5e-14) << "(test " << test << " seed " << seed << ")" << std::endl;
             
