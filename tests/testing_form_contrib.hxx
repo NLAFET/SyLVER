@@ -64,7 +64,7 @@ namespace spldlt { namespace tests {
       typedef BuddyAllocator<T, std::allocator<T>> PoolAllocator;
       PoolAllocator pool_alloc(lda*n);
       // Symbolic front
-      SymbolicFront sfront;
+      sylver::SymbolicFront sfront;
       sfront.nrow = m;
       sfront.ncol = n;
 

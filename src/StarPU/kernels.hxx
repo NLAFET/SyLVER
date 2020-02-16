@@ -38,7 +38,7 @@ namespace starpu {
       // printf("[unregister_node_submit]\n");
          
       // Get node info
-      SymbolicFront &snode = node.symb;
+      sylver::SymbolicFront &snode = node.symb;
       int blksz = node.blksz;
       int m = node.get_nrow();
       int n = node.get_ncol();
@@ -1118,7 +1118,7 @@ namespace starpu {
    void subtree_assemble_cpu_func(void *buffers[], void *cl_arg) {
 
       NumericFront<T, PoolAlloc> *node = nullptr;
-      SymbolicFront *csnode;
+      sylver::SymbolicFront *csnode;
       void **child_contrib;
       int contrib_idx;
 
@@ -1138,7 +1138,7 @@ namespace starpu {
    template <typename T, typename PoolAlloc>
    void insert_subtree_assemble(
          spldlt::NumericFront<T, PoolAlloc> *node,
-         SymbolicFront *csnode,
+         sylver::SymbolicFront *csnode,
          starpu_data_handle_t node_hdl,
          starpu_data_handle_t root_hdl,
          starpu_data_handle_t *dest_hdls, int ndest,
@@ -1166,7 +1166,7 @@ namespace starpu {
       ret = starpu_task_insert(&cl_subtree_assemble,
                                STARPU_DATA_MODE_ARRAY, descrs, nh,
                                STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
-                               STARPU_VALUE, &csnode, sizeof(SymbolicFront*),
+                               STARPU_VALUE, &csnode, sizeof(sylver::SymbolicFront*),
                                STARPU_VALUE, &child_contrib, sizeof(void**),
                                STARPU_VALUE, &contrib_idx, sizeof(int),
                                0);
@@ -1182,7 +1182,7 @@ namespace starpu {
    void subtree_assemble_contrib_cpu_func(void *buffers[], void *cl_arg) {
 
       NumericFront<T, PoolAlloc> *node = nullptr;
-      SymbolicFront *csnode = nullptr;
+      sylver::SymbolicFront *csnode = nullptr;
       void **child_contrib;
       int contrib_idx;
 
@@ -1201,7 +1201,7 @@ namespace starpu {
    template <typename T, typename PoolAlloc>
    void insert_subtree_assemble_contrib(
          NumericFront<T, PoolAlloc> *node,
-         SymbolicFront *csnode,
+         sylver::SymbolicFront *csnode,
          starpu_data_handle_t node_hdl,
          starpu_data_handle_t contrib_hdl,
          starpu_data_handle_t root_hdl,
@@ -1234,7 +1234,7 @@ namespace starpu {
       ret = starpu_task_insert(&cl_subtree_assemble_contrib,
                                STARPU_DATA_MODE_ARRAY, descrs, nh,
                                STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
-                               STARPU_VALUE, &csnode, sizeof(SymbolicFront*),
+                               STARPU_VALUE, &csnode, sizeof(sylver::SymbolicFront*),
                                STARPU_VALUE, &child_contrib, sizeof(void**),
                                STARPU_VALUE, &contrib_idx, sizeof(int),
                                STARPU_PRIORITY, prio,
@@ -1443,7 +1443,7 @@ namespace starpu {
    void activate_node_cpu_func(void *buffers[], void *cl_arg) {
          
       bool posdef;
-      SymbolicFront *snode;
+      sylver::SymbolicFront *snode;
       NumericFront<T, PoolAlloc> *node;
       void** child_contrib;
       int blksz;
@@ -1467,7 +1467,7 @@ namespace starpu {
          starpu_data_handle_t node_hdl, // Node's symbolic handle
          starpu_data_handle_t *cnode_hdls, int nhdl, // Children node's symbolic handles
          bool posdef,
-         SymbolicFront *snode,
+         sylver::SymbolicFront *snode,
          NumericFront<T, PoolAlloc> *node,
          void** child_contrib,
          int blksz,
@@ -1490,7 +1490,7 @@ namespace starpu {
       ret = starpu_task_insert(&cl_activate_node,
                                STARPU_DATA_MODE_ARRAY, descrs, nh,
                                STARPU_VALUE, &posdef, sizeof(bool),
-                               STARPU_VALUE, &snode, sizeof(SymbolicFront*),
+                               STARPU_VALUE, &snode, sizeof(sylver::SymbolicFront*),
                                STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
                                STARPU_VALUE, &child_contrib, sizeof(void**),
                                STARPU_VALUE, &blksz, sizeof(int),

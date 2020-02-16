@@ -88,7 +88,7 @@ namespace spldlt { namespace tests {
       typedef spral::ssids::cpu::BuddyAllocator<T, std::allocator<T>> PoolAllocator;
       PoolAllocator pool_alloc(lda*n);
 
-      SymbolicFront sfront;
+      sylver::SymbolicFront sfront;
       sfront.nrow = m;
       sfront.ncol = n;
       NumericFront<T, PoolAllocator> front(sfront, pool_alloc, blksz);

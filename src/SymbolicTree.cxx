@@ -2,7 +2,7 @@
 
 // #include "ssids/cpu/SymbolicSubtree.hxx"
 
-using namespace spldlt;
+using namespace sylver;
 // using namespace spral::ssids::cpu;
 
 extern "C"

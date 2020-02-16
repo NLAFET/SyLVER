@@ -71,7 +71,7 @@ namespace spldlt {
    template <typename T, typename FactorAlloc, typename PoolAlloc>
    void activate_front_task(
          bool posdef,
-         SymbolicFront& snode,
+         sylver::SymbolicFront& snode,
          NumericFront<T, PoolAlloc>& node,
          void** child_contrib,
          int blksz,
@@ -228,7 +228,7 @@ namespace spldlt {
          int prio,
          std::vector<sylver::inform_t>& worker_stats) {
 
-      SymbolicFront const& snode = node.symb;
+      sylver::SymbolicFront const& snode = node.symb;
       int const blksz = node.blksz;
 
       int m = node.get_nrow();
@@ -294,7 +294,7 @@ namespace spldlt {
          T *a_ik, int lda_ik,         
          int prio) {
 
-      SymbolicFront const& snode = node.symb;
+      sylver::SymbolicFront const& snode = node.symb;
       int blksz = node.blksz;
       
       int m = node.get_nrow();
@@ -345,7 +345,7 @@ namespace spldlt {
    
    template <typename T, typename PoolAlloc>
    void update_block_task(
-         SymbolicFront const& snode,
+         sylver::SymbolicFront const& snode,
          NumericFront<T, PoolAlloc> &node,
          int k, /* block column index of A_ik and A_jk blocks */
          int i, /* block row index of A_ik and A_ij blocks  */
@@ -453,7 +453,7 @@ namespace spldlt {
 
    template <typename T, typename PoolAlloc>
    void update_contrib_task(
-         SymbolicFront const& snode,
+         sylver::SymbolicFront const& snode,
          NumericFront<T, PoolAlloc> &node,
          int k, int i, int j,
          int blksz, int prio) {
@@ -516,7 +516,7 @@ namespace spldlt {
    inline void factor_subtree_task(
          void *akeep,
          void *fkeep,
-         SymbolicFront& root,
+         sylver::SymbolicFront& root,
          T *aval, T *scaling,
          int p, void **child_contrib,
          sylver::options_t *options,
@@ -589,7 +589,7 @@ namespace spldlt {
    template <typename T, typename PoolAlloc>   
    void assemble_subtree_task(
          NumericFront<T,PoolAlloc>& front, // Destination node 
-         SymbolicFront &csfront, // Root of the subtree
+         sylver::SymbolicFront &csfront, // Root of the subtree
          void** child_contrib, 
          int contrib_idx, // Index of subtree to assemble
          int *cmap, // row/column mapping array 
@@ -654,7 +654,7 @@ namespace spldlt {
    template <typename T, typename PoolAlloc>   
    void assemble_contrib_subtree_task(
          NumericFront<T,PoolAlloc>& node, // Destination node
-         SymbolicFront& csnode, // Root of the subtree
+         sylver::SymbolicFront& csnode, // Root of the subtree
          void** child_contrib, 
          int contrib_idx, // Index of subtree to assemble
          int *cmap, // row/column mapping array 
@@ -664,7 +664,7 @@ namespace spldlt {
 
 #if defined(SPLDLT_USE_STARPU)
 // #if 0
-      SymbolicFront const& snode = node.symb;
+      sylver::SymbolicFront const& snode = node.symb;
 
       int ncol = node.get_ncol();
       int nr = node.get_nr();
@@ -737,7 +737,7 @@ namespace spldlt {
 #if defined(SPLDLT_USE_STARPU)
 
       // Node info
-      SymbolicFront const& snode = node.symb;
+      sylver::SymbolicFront const& snode = node.symb;
       int const blksz = node.blksz;      
       int const nrow = node.get_nrow();
       int const ncol = node.get_ncol();
@@ -749,7 +749,7 @@ namespace spldlt {
       int nh = 0;
 
       // Children node info
-      // SymbolicFront const& csnode = cnode.symb;
+      // sylver::SymbolicFront const& csnode = cnode.symb;
       int cnrow = cnode.get_nrow();
       int cncol = cnode.get_ncol();
       int cm = cnrow-cncol;
@@ -852,7 +852,7 @@ namespace spldlt {
 #if defined(SPLDLT_USE_STARPU)
 
       // Node info
-      SymbolicFront const& snode = node.symb;   
+      sylver::SymbolicFront const& snode = node.symb;   
       int nrow = node.get_nrow();
       int ncol = node.get_ncol();
       int nr = node.get_nr(); // Number of block-rows in destination node
@@ -865,7 +865,7 @@ namespace spldlt {
       int nh = 0;
 
       // Children node info
-      // SymbolicFront const& csnode = cnode.symb;
+      // sylver::SymbolicFront const& csnode = cnode.symb;
       int cnrow = cnode.get_nrow();
       int cncol = cnode.get_ncol();
 

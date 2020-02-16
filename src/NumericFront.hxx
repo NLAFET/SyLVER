@@ -6,6 +6,7 @@
 
 // SpLDLT
 #include "Block.hxx"
+#include "NumericFrontBase.hxx"
 #include "SymbolicFront.hxx"
 #include "kernels/ldlt_app.hxx"
 
@@ -131,7 +132,7 @@ namespace spldlt {
        * \param pool_alloc Pool Allocator to use for contrib allocation.
        */
       NumericFront(
-            SymbolicFront& symb,
+            sylver::SymbolicFront& symb,
             PoolAllocator const& pool_alloc, int blksz)
          : symb(symb), contrib(nullptr), pool_alloc_(pool_alloc), blksz(blksz),
            backup(nullptr), cdata(nullptr), ndelay_in(0), ndelay_out(0),
@@ -690,7 +691,7 @@ namespace spldlt {
       
    public:
       /* Symbolic node associate with this one */
-      SymbolicFront& symb;
+      sylver::SymbolicFront& symb;
 
       /* Fixed data from analyse */
       NumericFront<T, PoolAllocator>* first_child; // Pointer to our first child

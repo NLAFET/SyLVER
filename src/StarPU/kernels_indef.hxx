@@ -1359,7 +1359,7 @@ namespace spldlt { namespace starpu {
       void assemble_delays_subtree_cpu_func(void *buffers[], void *cl_arg) {
 
          NumericFront<T, PoolAlloc> *node = nullptr;
-         SymbolicFront *csnode = nullptr;
+         sylver::SymbolicFront *csnode = nullptr;
          void **child_contrib;
          int contrib_idx;
          int delay_col;
@@ -1381,7 +1381,7 @@ namespace spldlt { namespace starpu {
             starpu_data_handle_t *hdls, int nhdl,
             starpu_data_handle_t root_hdl,
             NumericFront<T, PoolAlloc> *node,
-            SymbolicFront *csnode,
+            sylver::SymbolicFront *csnode,
             void **child_contrib, int contrib_idx,
             int delay_col) {
 
@@ -1408,7 +1408,7 @@ namespace spldlt { namespace starpu {
                &cl_assemble_delays_subtree,
                STARPU_DATA_MODE_ARRAY, descrs, nh,
                STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
-               STARPU_VALUE, &csnode, sizeof(SymbolicFront*),
+               STARPU_VALUE, &csnode, sizeof(sylver::SymbolicFront*),
                STARPU_VALUE, &child_contrib, sizeof(void**),
                STARPU_VALUE, &contrib_idx, sizeof(int),
                STARPU_VALUE, &delay_col, sizeof(int),

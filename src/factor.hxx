@@ -22,7 +22,7 @@ namespace spldlt {
          ) {
 
       std::string context = "factor_front_posdef";      
-      SymbolicFront& snode = node.symb; // Symbolic front data 
+      sylver::SymbolicFront& snode = node.symb; // Symbolic front data 
 
       // Extract useful information about node
       int const m = node.get_nrow(); // Number of rows in frontal matrix

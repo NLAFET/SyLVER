@@ -25,7 +25,7 @@ void* splu_create_numeric_tree_dbl(
       ) {
 
    // Retreive SymbolicTree object from pointer
-   auto& symbolic_tree = *static_cast<SymbolicTree*>(symbolic_tree_ptr);
+   auto& symbolic_tree = *static_cast<sylver::SymbolicTree*>(symbolic_tree_ptr);
 
    auto* tree = new NumericTreeUnsymDiagdomDbl(symbolic_tree, val, scaling, *options);
    return (void *) tree;

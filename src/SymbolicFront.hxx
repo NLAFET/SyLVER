@@ -8,7 +8,7 @@
 
 // using namespace spral::ssids::cpu;
 
-namespace spldlt {
+namespace sylver {
 
    struct SymbolicFront : spral::ssids::cpu::SymbolicNode {
       // int sa; // index of first column in node (pivotal order)

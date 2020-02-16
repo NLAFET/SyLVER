@@ -71,7 +71,7 @@ namespace tests {
       PoolAllocator pool_alloc(lda*n);
          
       // Setup frontal matrix
-      SymbolicFront sfront;
+      sylver::SymbolicFront sfront;
       sfront.nrow = m;
       sfront.ncol = n;
       NumericFront<T, PoolAllocator> front(sfront, pool_alloc, blksz);

@@ -76,7 +76,7 @@ namespace spldlt {
    template <typename T, typename PoolAlloc>
    void assemble_delays_subtree_task(
          NumericFront<T,PoolAlloc>& node, // Destination node 
-         SymbolicFront &csnode, // Root of the subtree
+         sylver::SymbolicFront &csnode, // Root of the subtree
          void** child_contrib, 
          int contrib_idx, // Index of subtree to assemble
          int delay_col) {
@@ -164,7 +164,7 @@ namespace spldlt {
 
 #if defined(SPLDLT_USE_STARPU)
       // Node info
-      SymbolicFront &snode = node.symb; // Child symbolic node
+      sylver::SymbolicFront &snode = node.symb; // Child symbolic node
       int blksz = node.blksz;
       int ncol = node.get_ncol();
       int nr = node.get_nr(); // Number of block-rows in destination node
@@ -175,7 +175,7 @@ namespace spldlt {
       int nh = 0; // Number of handles/blocks in node
       
       // Child node info
-      SymbolicFront &csnode = cnode.symb; // Child symbolic node
+      sylver::SymbolicFront &csnode = cnode.symb; // Child symbolic node
       int cncol = cnode.get_ncol();
       int cnrow = cnode.get_nrow();
       int cnr = cnode.get_nr(); // Number of block-rows in child node

@@ -12,6 +12,7 @@
 
 #include <memory>
 
+using namespace sylver;
 using namespace spldlt; // TODO change to sylver::spldlt namespace
 
 namespace {
@@ -40,7 +41,7 @@ void *spldlt_create_numeric_tree_dbl(
       ) {
 
    // Retreive SymbolicTree object from pointer
-   auto &symbolic_tree = *static_cast<SymbolicTree*>(symbolic_tree_ptr);
+   auto &symbolic_tree = *static_cast<sylver::SymbolicTree*>(symbolic_tree_ptr);
 
    if (posdef) {
       auto* tree = new NumericTreePosdefDbl
