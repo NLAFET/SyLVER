@@ -367,47 +367,8 @@ namespace starpu {
          starpu_data_handle_t node_hdl,
          int prio);
       
-   ////////////////////////////////////////////////////////////////////////////////
+   ////////////////////////////////////////////////////////////
    // update_block StarPU task
-
-// #if defined(SPLDLT_USE_GPU)
-
-//    // GPU task
-//    template<typename T>
-//    void update_block_gpu_func(void *buffers[], void *cl_arg) {
-
-//       // Get pointer on L_ij block
-//       T *lij = (T*)STARPU_MATRIX_GET_PTR(buffers[0]);
-//       unsigned m = STARPU_MATRIX_GET_NX(buffers[0]);
-//       unsigned n = STARPU_MATRIX_GET_NY(buffers[0]);
-//       unsigned ld_lij = STARPU_MATRIX_GET_LD(buffers[0]);
-                  
-//       // Get pointer on L_ik block
-//       T *lik = (T*)STARPU_MATRIX_GET_PTR(buffers[1]);
-//       unsigned k = STARPU_MATRIX_GET_NY(buffers[1]);
-//       unsigned ld_lik = STARPU_MATRIX_GET_LD(buffers[1]); 
-
-//       // Get pointer on L_jk block
-//       T *ljk = (T*)STARPU_MATRIX_GET_PTR(buffers[2]);
-//       unsigned ld_ljk = STARPU_MATRIX_GET_LD(buffers[2]); 
-        
-//       T ralpha = -1.0;
-//       T rbeta = 1.0;
-
-//       cublasHandle_t handle = starpu_cublas_get_local_handle();
-         
-//       sylver::gpu::dev_gemm(
-//             handle,
-//             CUBLAS_OP_N, CUBLAS_OP_T,
-//             m, n, k,
-//             &ralpha, 
-//             lik, ld_lik, ljk, ld_ljk,
-//             &rbeta,
-//             lij, ld_lij);
-         
-//    }
-
-// #endif
 
    // CPU kernel
    template<typename T>
@@ -443,73 +404,9 @@ namespace starpu {
          starpu_data_handle_t node_hdl,
          int prio);
 
-   ////////////////////////////////////////////////////////////////////////////////
+   ////////////////////////////////////////////////////////////
    // update_contrib_block StarPU task
-
-#if defined(SPLDLT_USE_GPU)
-
-   // GPU task
-   template<typename T>
-   void update_contrib_block_gpu_func(void *buffers[], void *cl_arg) {
-
-      // Get pointer on L_ij block
-      T *lij = (T *)STARPU_MATRIX_GET_PTR(buffers[0]);
-      unsigned m = STARPU_MATRIX_GET_NX(buffers[0]);
-      unsigned n = STARPU_MATRIX_GET_NY(buffers[0]);
-      unsigned ld_lij = STARPU_MATRIX_GET_LD(buffers[0]);
-                  
-      // Get pointer on L_ik block
-      T *lik = (T *)STARPU_MATRIX_GET_PTR(buffers[1]);
-      unsigned k = STARPU_MATRIX_GET_NY(buffers[1]);
-      unsigned ld_lik = STARPU_MATRIX_GET_LD(buffers[1]); 
-
-      // Get pointer on L_jk block
-      T *ljk = (T *)STARPU_MATRIX_GET_PTR(buffers[2]);
-      unsigned ld_ljk = STARPU_MATRIX_GET_LD(buffers[2]); 
-
-      T *upd = (T *)STARPU_MATRIX_GET_PTR(buffers[3]);
-      unsigned updm = STARPU_MATRIX_GET_NX(buffers[3]);
-      unsigned updn = STARPU_MATRIX_GET_NY(buffers[3]);
-      unsigned ldupd = STARPU_MATRIX_GET_LD(buffers[3]);
-
-      int kk, blksz;
-
-      starpu_codelet_unpack_args(
-            cl_arg, &kk, &blksz);
-        
-      T ralpha = -1.0;
-      T rbeta = 1.0;
-
-      cublasHandle_t handle = starpu_cublas_get_local_handle();
-         
-      sylver::gpu::dev_gemm(
-            handle,
-            CUBLAS_OP_N, CUBLAS_OP_T,
-            m, n, k,
-            &ralpha, 
-            lik, ld_lik, ljk, ld_ljk,
-            &rbeta,
-            lij, ld_lij);
-         
-
-      if(n<blksz) {
-
-         rbeta = (kk==0) ? 0.0 : 1.0;
-
-         sylver::gpu::dev_gemm(
-               handle,
-               CUBLAS_OP_N, CUBLAS_OP_T,
-               updm, updn, k,
-               &ralpha, 
-               &lik[m-updm], ld_lik, &ljk[n], ld_ljk,
-               &rbeta,
-               upd, ldupd);
-
-      }
-   }
-
-#endif
-
+   
    // CPU kernel
    template<typename T>
    void update_contrib_block_cpu_func(void *buffers[], void *cl_arg) {
@@ -607,49 +504,6 @@ namespace starpu {
 
    ////////////////////////////////////////////////////////////////////////////////
    // update_contrib StarPU task
-
-#if defined(SPLDLT_USE_GPU)
-
-   // GPU task
-   template<typename T>
-   void update_contrib_gpu_func(void *buffers[], void *cl_arg) {
-
-      // Get pointer on L_ij block
-      T *lij = (T *)STARPU_MATRIX_GET_PTR(buffers[0]);
-      unsigned m = STARPU_MATRIX_GET_NX(buffers[0]);
-      unsigned n = STARPU_MATRIX_GET_NY(buffers[0]);
-      unsigned ld_lij = STARPU_MATRIX_GET_LD(buffers[0]);
-                  
-      // Get pointer on L_ik block
-      T *lik = (T *)STARPU_MATRIX_GET_PTR(buffers[1]);
-      unsigned k = STARPU_MATRIX_GET_NY(buffers[1]);
-      unsigned ld_lik = STARPU_MATRIX_GET_LD(buffers[1]); 
-
-      // Get pointer on L_jk block
-      T *ljk = (T *)STARPU_MATRIX_GET_PTR(buffers[2]);
-      unsigned ld_ljk = STARPU_MATRIX_GET_LD(buffers[2]); 
-        
-      int kk;
-
-      starpu_codelet_unpack_args(cl_arg, &kk);
-
-      T ralpha = -1.0;
-      T rbeta = (kk==0) ? 0.0 : 1.0;
-
-      cublasHandle_t handle = starpu_cublas_get_local_handle();
-         
-      sylver::gpu::dev_gemm(
-            handle,
-            CUBLAS_OP_N, CUBLAS_OP_T,
-            m, n, k,
-            &ralpha, 
-            lik, ld_lik, ljk, ld_ljk,
-            &rbeta,
-            lij, ld_lij);
-         
-   }
-
-#endif
 
    // CPU task
    template<typename T>
@@ -1648,7 +1502,8 @@ namespace starpu {
       cl_update_block.nbuffers = STARPU_VARIABLE_NBUFFERS;
       cl_update_block.name = "UpdateBlock";
 #if defined(SPLDLT_USE_GPU)
-      cl_update_block.cuda_funcs[0] = sylver::spldlt::starpu::update_block_gpu_func<T>;
+      cl_update_block.cuda_funcs[0] =
+         sylver::spldlt::starpu::update_block_cuda_func<T>;
       cl_update_block.cuda_flags[0] = STARPU_CUDA_ASYNC;
 #endif
       cl_update_block.cpu_funcs[0] = update_block_cpu_func<T>;
@@ -1663,7 +1518,8 @@ namespace starpu {
       cl_update_contrib_block.nbuffers = STARPU_VARIABLE_NBUFFERS;
       cl_update_contrib_block.name = "UpdateContribBlock";
 #if defined(SPLDLT_USE_GPU)
-      cl_update_contrib_block.cuda_funcs[0] = update_contrib_block_gpu_func<T>;
+      cl_update_contrib_block.cuda_funcs[0] =
+         sylver::spldlt::starpu::update_contrib_block_cuda_func<T>;
       cl_update_contrib_block.cuda_flags[0] = STARPU_CUDA_ASYNC;
 #endif
       cl_update_contrib_block.cpu_funcs[0] = update_contrib_block_cpu_func<T>;
@@ -1686,7 +1542,8 @@ namespace starpu {
       cl_update_contrib.nbuffers = STARPU_VARIABLE_NBUFFERS;
       cl_update_contrib.name = "UpdateContrib";
 #if defined(SPLDLT_USE_GPU)
-      cl_update_contrib.cuda_funcs[0] = update_contrib_gpu_func<T>;
+      cl_update_contrib.cuda_funcs[0] =
+         sylver::spldlt::starpu::update_contrib_cuda_func<T>;
       cl_update_contrib.cuda_flags[0] = STARPU_CUDA_ASYNC;
 #endif
       cl_update_contrib.cpu_funcs[0] = update_contrib_cpu_func<T>;
