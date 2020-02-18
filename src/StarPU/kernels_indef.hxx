@@ -809,8 +809,8 @@ namespace starpu {
 
    }
 
-   ////////////////////////////////////////
-   // permute failed
+   ////////////////////////////////////////////////////////////
+   // permute_failed StarPU task
 
    // CPU kernel
    template <typename T, typename IntAlloc, typename PoolAlloc>

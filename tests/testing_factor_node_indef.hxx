@@ -204,18 +204,18 @@ namespace spldlt { namespace tests {
       spldlt::starpu::codelet_init_factor_indef<T, PoolAllocator>();
       spldlt::starpu::codelet_init_factor_failed<T, PoolAllocator>();
 
-      if (ngpu > 0) {
-         // extern struct starpu_codelet cl_update_contrib_block_app;
+      // if (ngpu > 0) {
+      //    // extern struct starpu_codelet cl_update_contrib_block_app;
 
-         // Force update_contrib taks on the CPU/GPU
-         // cl_update_contrib_block_app.where = STARPU_CPU;
-         cl_update_contrib_block_app.where = STARPU_CUDA;
+      //    // Force update_contrib taks on the CPU/GPU
+      //    // cl_update_contrib_block_app.where = STARPU_CPU;
+      //    cl_update_contrib_block_app.where = STARPU_CUDA;
       
-         // Force UpdateN taks on the CPU/GPU
-         // cl_updateN_block_app.where = STARPU_CPU; 
-         // cl_updateN_block_app.where = STARPU_CUDA;
-         cl_updateN_block_app.where = STARPU_CUDA | STARPU_CPU;
-      }
+      //    // Force UpdateN taks on the CPU/GPU
+      //    // cl_updateN_block_app.where = STARPU_CPU; 
+      //    // cl_updateN_block_app.where = STARPU_CUDA;
+      //    cl_updateN_block_app.where = STARPU_CUDA | STARPU_CPU;
+      // }
 #endif
 
 #if defined(SPLDLT_USE_STARPU)

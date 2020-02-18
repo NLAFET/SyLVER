@@ -1,6 +1,7 @@
 #include "testing_factor_node_indef.hxx"
 
-namespace spldlt { namespace tests {
+namespace spldlt {
+namespace tests {
 
    /// @brief Performs tests for factor_node_indef kernel in
    /// sequential
@@ -10,7 +11,7 @@ namespace spldlt { namespace tests {
          
       // Sequential (1 worker)
 
-      ////////////////////////////////////////////////////////////////////////////////
+      ////////////////////////////////////////////////////////////
       // Square matrices
 
       // No delays
@@ -89,25 +90,28 @@ namespace spldlt { namespace tests {
 
       ////////////////////////////////////////////////////////////////////////////////
       // Square matrices
+      
       // No delays
-
       // Inner and outer blocking
       TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 1024, 1024, 128, 8) ));
       // Inner and outer blocking
       TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 2048, 2048, 256, 8) ));
       // Inner and outer blocking
       TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 3000, 3000, 256, 8) ));
-       // Inner and outer blocking
+      // Inner and outer blocking
       TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 5179, 5179, 512, 8) ));
-      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 4085, 4085, 315, 8) )); // Inner and outer blocking
+      // Inner and outer blocking
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 4085, 4085, 315, 8) ));
 
       // Cause delays
-      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, true, false, 1024, 1024, 128, 8) )); // Inner and outer blocking
+      // Inner and outer blocking
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, true, false, 1024, 1024, 128, 8) )); 
       TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, true, false, 2048, 2048, 256, 8) )); // Inner and outer blocking
       TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, true, false, 3000, 3000, 256, 8) )); // Inner and outer blocking
 
       ////////////////////////////////////////////////////////////////////////////////
       // Rectangular matrices
+
       // No delays
       TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 2, 1, 1, 8) ));
       TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 8, 4, 4, 8) ));
@@ -137,7 +141,54 @@ namespace spldlt { namespace tests {
       return nerr;
 
    }
-      
+
+#if defined(SPLDLT_USE_GPU)
+   int run_factor_node_indef_tests_par_cuda() {
+
+      int nerr = 0;
+
+      // Parallel (8 worker + 1 CUDA device)
+
+      ////////////////////////////////////////////////////////////
+      // Square matrices
+
+      // No delays
+      // Inner and outer blocking
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 500, 500, 32, 8, 1) ));
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 500, 500, 64, 8, 1) ));
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 1000, 1000, 128, 8, 1) ));
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 1000, 1000, 256, 8, 1) ));
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 2000, 2000, 32, 8, 1) ));
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 2000, 2000, 64, 8, 1) ));
+
+      // Cause delays
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, true, false, 500, 500, 32, 8, 1) ));
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, true, false, 500, 500, 64, 8, 1) ));
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, true, false, 1000, 1000, 128, 8, 1) ));
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, true, false, 1000, 1000, 256, 8, 1) ));
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, true, false, 2000, 2000, 32, 8, 1) ));
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, true, false, 2000, 2000, 64, 8, 1) ));
+
+      ////////////////////////////////////////////////////////////
+      // Trapezoidal matrices
+
+      // No delays
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 2000, 100, 32, 8, 1) ));
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 2000, 100, 64, 8, 1) ));
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 1578, 195, 64, 8, 1) ));
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 1963, 582, 128, 8, 1) ));
+
+      // Cause delays
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, true, false, 2000, 100, 32, 8, 1) ));
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, true, false, 2000, 100, 64, 8, 1) ));
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 1578, 195, 64, 8, 1) ));
+      TEST(( factor_node_indef_test<double, 32, false>(0.01, 1e-20, false, false, false, 1963, 582, 128, 8, 1) ));
+
+      return nerr;
+
+   }
+#endif
+   
    /// @brief Performs all the tests for factor_node_indef kernel
    int run_factor_node_indef_tests() {
 
@@ -147,7 +198,11 @@ namespace spldlt { namespace tests {
 
       nerr += run_factor_node_indef_tests_seq(); // Sequential tests
       nerr += run_factor_node_indef_tests_par(); // Parallel tests
+#if defined(SPLDLT_USE_GPU)
+      nerr += run_factor_node_indef_tests_par_cuda(); // Parallel tests with CUDA enabled
+#endif
       
       return nerr;
    }
+
 }} // namespace spldlt::tests

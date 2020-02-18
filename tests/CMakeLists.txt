@@ -54,5 +54,6 @@ endif()
 
 # sylver_create_test("drivers/kernel_test.cxx")
 sylver_create_test("drivers/form_contrib_tests.cxx")
+# sylver_create_test("drivers/factor_node_posdef_tests.cxx")
 sylver_create_test("drivers/factor_node_indef_tests.cxx")
 sylver_create_test("drivers/sylver_test.F90")
