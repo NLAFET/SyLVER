@@ -11,7 +11,7 @@ using namespace spldlt; // TODO remove or change to sylver namespace if necessar
 
 namespace {
    typedef double T; // Working precision
-   typedef spldlt::AppendAlloc<T> FactorAlloc; // Factor allocator
+   typedef sylver::AppendAlloc<T> FactorAlloc; // Factor allocator
    const int PAGE_SIZE = 8*1024*1024; // 8MB
    typedef sylver::splu::NumericTreeUnsym<T, FactorAlloc, true, PAGE_SIZE> NumericTreeUnsymDiagdomDbl; 
 }

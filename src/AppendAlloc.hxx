@@ -16,7 +16,7 @@
 #include <mutex>
 #endif
 
-namespace spldlt {
+namespace sylver {
 
 namespace append_alloc_internal {
 

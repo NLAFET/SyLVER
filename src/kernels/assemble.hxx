@@ -30,8 +30,8 @@ namespace spldlt {
       void register_node(
             NumericFront<T, PoolAlloc> &front) {
          
-         sylver::SymbolicFront& sfront = front.symb;
-         int blksz = front.blksz;
+         sylver::SymbolicFront& sfront = front.symb();
+         int blksz = front.blksz();
 
          int const m = front.get_nrow();
          int const n = front.get_ncol();
@@ -90,8 +90,8 @@ namespace spldlt {
          
          typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
 
-         sylver::SymbolicFront& sfront = front.symb;
-         int blksz = front.blksz;
+         sylver::SymbolicFront& sfront = front.symb();
+         int blksz = front.blksz();
          int m = front.get_nrow();
          int n = front.get_ncol();
          T *a = front.lcol;
@@ -195,8 +195,8 @@ namespace spldlt {
          typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
 
          // Get node info
-         sylver::SymbolicFront &snode = node.symb;
-         int const blksz = node.blksz;
+         sylver::SymbolicFront &snode = node.symb();
+         int const blksz = node.blksz();
          int const m = node.get_nrow();
          int const n = node.get_ncol();
          int const nr = node.get_nr(); // number of block rows
@@ -252,8 +252,8 @@ namespace spldlt {
             ) {
 
          // Get node info
-         sylver::SymbolicFront &snode = node.symb;
-         int const blksz = node.blksz;
+         sylver::SymbolicFront &snode = node.symb();
+         int const blksz = node.blksz();
          int const m = node.get_nrow();
          int const n = node.get_ncol();
          int const nr = node.get_nr(); // number of block rows
@@ -354,7 +354,7 @@ namespace spldlt {
       typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> PoolAllocInt;
       // printf("[alloc_front] posdef = %d\n", posdef);
 
-      sylver::SymbolicFront const& sfront = front.symb;
+      sylver::SymbolicFront const& sfront = front.symb();
 
       front.ndelay_in = 0;
 
@@ -405,14 +405,14 @@ namespace spldlt {
       typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> PoolAllocInt;
       // printf("[alloc_front] posdef = %d\n", posdef);
 
-      sylver::SymbolicFront const& sfront = front.symb;
+      sylver::SymbolicFront const& sfront = front.symb();
 
       front.ndelay_out = 0;
       front.ndelay_in = 0;
       // Count incoming delays and determine size of node
       for(auto* child=front.first_child; child!=NULL; child=child->next_child) {
          // Make sure we're not in a subtree
-         if (child->symb.exec_loc == -1) { 
+         if (child->symb().exec_loc == -1) { 
             front.ndelay_in += child->ndelay_out;
          } 
          else {
@@ -421,7 +421,7 @@ namespace spldlt {
             int const *crlist, *delay_perm;
             // spral_ssids_contrib_get_data(
             contrib_get_data(
-                  child_contrib[child->symb.contrib_idx], &cn, &cval, &ldcontrib, &crlist,
+                  child_contrib[child->symb().contrib_idx], &cn, &cval, &ldcontrib, &crlist,
                   &ndelay, &delay_perm, &delay_val, &lddelay
                   );
             front.ndelay_in += ndelay;
@@ -473,7 +473,7 @@ namespace spldlt {
    template <typename T, typename NumericNode>
    void init_a_block(int from, int to, NumericNode& node, T const* aval,
                     T const* scaling) {
-      SymbolicNode const& snode = node.symb;
+      SymbolicNode const& snode = node.symb();
       size_t ldl = node.get_ldl();
       if(scaling) {
          /* Scaling to apply */
@@ -514,7 +514,7 @@ namespace spldlt {
          NumericFront<T,PoolAlloc>& front,
          T const* aval, T const* scaling) {
 
-      sylver::SymbolicFront const& sfront = front.symb;
+      sylver::SymbolicFront const& sfront = front.symb();
 
       // printf("[init_node] node idx = %d, num_a = %d\n", sfront.idx+1, sfront.num_a);
       /* Add A */
@@ -543,8 +543,8 @@ namespace spldlt {
                        NumericFront<T,PoolAlloc> const& cnode, 
                        int ii, int jj, int const* cmap) {
       
-      sylver::SymbolicFront const& csnode = cnode.symb;
-      int blksz = cnode.blksz;
+      sylver::SymbolicFront const& csnode = cnode.symb();
+      int blksz = cnode.blksz();
       
       // Source node
       int cnrow = cnode.get_nrow(); // Number of rows (including delays) 
@@ -579,7 +579,7 @@ namespace spldlt {
 
          T *src = &(blk.a[j*blk_lda]); // Source column
          
-         int ncol = node.symb.ncol; // no delays!
+         int ncol = node.symb().ncol; // no delays!
          // printf("[assemble_block] ncol: %d\n", ncol);
          
          // Enusre the destination column is in the fully-summed elements
@@ -698,9 +698,9 @@ namespace spldlt {
 
       // printf("[assemble_contrib_block]\n");
 
-      int blksz = node.blksz;
+      int blksz = node.blksz();
 
-      sylver::SymbolicFront const& csnode = cnode.symb;
+      sylver::SymbolicFront const& csnode = cnode.symb();
       
       int cm = csnode.nrow - csnode.ncol;
       int ncol = node.get_ncol();
@@ -788,7 +788,7 @@ namespace spldlt {
       
       // printf("[assemble_contrib_block_1d]\n");
 
-      int blksz = node.blksz;
+      int blksz = node.blksz();
       
       // Destination node
       int ncol = node.get_ncol();
@@ -974,8 +974,8 @@ namespace spldlt {
          int contrib_idx// Index of subtree to assemble
          ) {
 
-      sylver::SymbolicFront const& snode = node.symb;
-      int blksz = node.blksz;
+      sylver::SymbolicFront const& snode = node.symb();
+      int blksz = node.blksz();
 
       /* Initialise variables */
       int ncol = node.get_ncol();
@@ -1087,7 +1087,7 @@ namespace spldlt {
          int contrib_idx// Index of subtree to assemble
          ) {
 
-      sylver::SymbolicFront snode = node.symb; // Symbolic node
+      sylver::SymbolicFront snode = node.symb(); // Symbolic node
       int ncol = node.get_ncol();
       size_t ldl = node.get_ldl(); // Leading dimension
 
@@ -1156,7 +1156,7 @@ namespace spldlt {
 
       // printf("[assemble_delays]\n");
 
-      sylver::SymbolicFront &csnode = cnode.symb; // Child symbolic node
+      sylver::SymbolicFront &csnode = cnode.symb(); // Child symbolic node
 
       int ncol = node.get_ncol();
       size_t ldl = node.get_ldl();
@@ -1197,8 +1197,8 @@ namespace spldlt {
 
       typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> PoolAllocInt;
 
-      int blksz = node.blksz;
-      sylver::SymbolicFront snode = node.symb;
+      int blksz = node.blksz();
+      sylver::SymbolicFront snode = node.symb();
 
       int nrow = node.get_nrow();
       int ncol = node.get_ncol();
@@ -1226,7 +1226,7 @@ namespace spldlt {
       // Assemble front: fully-summed columns 
       for (auto* child=node.first_child; child!=NULL; child=child->next_child) {
 
-         sylver::SymbolicFront &csnode = child->symb; // Children symbolic node
+         sylver::SymbolicFront &csnode = child->symb(); // Children symbolic node
 
          int cm = csnode.nrow - csnode.ncol;
          csnode.map = new int[cm];
@@ -1358,7 +1358,7 @@ namespace spldlt {
       // Assemble front: non fully-summed columns i.e. contribution block 
       for (auto* child=node.first_child; child!=NULL; child=child->next_child) {
 
-         sylver::SymbolicFront const& child_sfront = child->symb;
+         sylver::SymbolicFront const& child_sfront = child->symb();
          // SymbolicFront &child_sfront = symb_[child->symb.idx];
 
          int ldcontrib = child_sfront.nrow - child_sfront.ncol;

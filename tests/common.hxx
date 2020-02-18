@@ -390,7 +390,7 @@ namespace spldlt {
          int m = node.get_nrow();
          int n = node.get_ncol();
          size_t contrib_dimn = m-n; // Dimension of contribution block
-         int blksz =  node.blksz;
+         int blksz =  node.blksz();
 
          if (contrib_dimn <= 0) return;
          if(debug) printf("[copy_front_cb] contrib dimn = %zu\n", contrib_dimn);
@@ -434,7 +434,7 @@ namespace spldlt {
          int m = node.get_nrow();
          int n = node.get_ncol();
          size_t contrib_dimn = m-n; // Dimension of contribution block
-         int blksz =  node.blksz;
+         int blksz =  node.blksz();
          if (contrib_dimn <= 0) return;
 
          int nr = node.get_nr();
@@ -475,7 +475,7 @@ namespace spldlt {
          int m = node.get_nrow();
          int n = node.get_ncol();
          size_t contrib_dimn = m-n; // Dimension of contribution block
-         int blksz =  node.blksz;
+         int blksz =  node.blksz();
          if (contrib_dimn <= 0) return;
 
          int nr = node.get_nr();
@@ -513,7 +513,7 @@ namespace spldlt {
          int m = node.get_nrow();
          int n = node.get_ncol();
          size_t contrib_dimn = m-n; // Dimension of contribution block
-         int blksz =  node.blksz;
+         int blksz =  node.blksz();
          if (contrib_dimn <= 0) return;
 
          int nr = node.get_nr();

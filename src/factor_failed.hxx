@@ -95,7 +95,7 @@ namespace spldlt {
                form_contrib_notask(node, work, nelim, node.nelim-1);
                // form_contrib_task(node, workspaces, nelim, node.nelim-1);
 #if defined(SYLVER_HAVE_STARPU)
-               starpu_fxt_trace_user_event(node.symb.idx); // DEBUG
+               starpu_fxt_trace_user_event(node.symb().idx); // DEBUG
 #endif
                // auto end = std::chrono::high_resolution_clock::now();
                // t_form_contrib = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count();
@@ -139,7 +139,7 @@ namespace spldlt {
 #if defined(SPLDLT_USE_STARPU)
 // #if defined(SPLDLT_USE_GPU)
       // if(!formcb) {
-      int nodeidx = node.symb.idx;
+      int nodeidx = node.symb().idx;
       // printf("[factor_front_indef_failed] nodeidx = %d\n", nodeidx);
       starpu_tag_t tag_factor_failed = (starpu_tag_t) (3*nodeidx+2);
       starpu_tag_notify_from_apps(tag_factor_failed);

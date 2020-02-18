@@ -66,7 +66,7 @@ namespace spldlt { namespace gpu {
             T *d_d, // Diagonal for block-column k
             T *d_ld, int ldld) {
 
-         int blksz = node.blksz;
+         int blksz = node.blksz();
          
          int nrow = node.get_nrow();
          int ncol = node.get_ncol();

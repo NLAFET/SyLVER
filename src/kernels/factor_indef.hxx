@@ -204,7 +204,7 @@ namespace spldlt {
          spral::ssids::cpu::Workspace& work
          ) {
 
-      int blksz = node.blksz;
+      int blksz = node.blksz();
 
       int nrow = node.get_nrow();
       int ncol = node.get_ncol();
@@ -263,7 +263,7 @@ namespace spldlt {
       size_t ldl = node.get_ldl();
       T *lcol = node.lcol;
       T *d = &lcol[n*ldl];
-      int blksz = node.blksz;
+      int blksz = node.blksz();
 
       int fc = nelim_from/blksz; // First block-column
       int lc = nelim_to/blksz; // Last block-column

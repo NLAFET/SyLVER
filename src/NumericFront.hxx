@@ -119,7 +119,7 @@ namespace spldlt {
    // class spral::ssids::cpu::SymbolicNode;
 
    template <typename T, typename PoolAllocator>
-   class NumericFront {
+   class NumericFront : public sylver::NumericFrontBase<T, PoolAllocator> {
    public:
       typedef typename std::allocator_traits<PoolAllocator>::template rebind_alloc<int> IntAlloc;
    private:
@@ -134,9 +134,12 @@ namespace spldlt {
       NumericFront(
             sylver::SymbolicFront& symb,
             PoolAllocator const& pool_alloc, int blksz)
-         : symb(symb), contrib(nullptr), pool_alloc_(pool_alloc), blksz(blksz),
-           backup(nullptr), cdata(nullptr), ndelay_in(0), ndelay_out(0),
-           lcol(nullptr), ucol(nullptr), nelim1(0), nelim(0), blocks_unsym_(nullptr)
+         :
+         sylver::NumericFrontBase<T, PoolAllocator>(symb, pool_alloc, blksz),
+         //symb(symb), pool_alloc_(pool_alloc), blksz(blksz),
+         contrib(nullptr),
+         backup(nullptr), cdata(nullptr), ndelay_in(0), ndelay_out(0),
+         lcol(nullptr), ucol(nullptr), nelim1(0), nelim(0), blocks_unsym_(nullptr)
       {}
       
       /**
@@ -160,21 +163,21 @@ namespace spldlt {
          size_t contrib_dimn = m-n; // Dimension of contribution block
          if (contrib_dimn>0) {
             int nr = get_nr();; // number of block rows in front amtrix
-            int rsa = n / blksz; // index of first block in contribution blocks  
+            int rsa = n / this->blksz(); // index of first block in contribution blocks  
             int ncontrib = nr-rsa;
 
             contrib_blocks.reserve(ncontrib*ncontrib);
             for(int j = rsa; j < nr; j++) {
                // First col in contrib block
-               int first_col = std::max(j*blksz, n);
+               int first_col = std::max(j*this->blksz(), n);
                // Tile width
-               int blkn = std::min((j+1)*blksz, m) - first_col;
+               int blkn = std::min((j+1)*this->blksz(), m) - first_col;
                for(int i = rsa; i < nr; i++) {
                   // First col in contrib block
-                  int first_row = std::max(i*blksz, n);
+                  int first_row = std::max(i*this->blksz(), n);
                   // Tile height
-                  int blkm = std::min((i+1)*blksz, m) - first_row;
-                  contrib_blocks.emplace_back(i-rsa, j-rsa, blkm, blkn, blkm, pool_alloc_);
+                  int blkm = std::min((i+1)*this->blksz(), m) - first_row;
+                  contrib_blocks.emplace_back(i-rsa, j-rsa, blkm, blkn, blkm, this->pool_alloc());
                }
             }
 
@@ -187,19 +190,19 @@ namespace spldlt {
 
             for(int j = rsa; j < nr; j++) {
                // First col in contrib block
-               int first_col = std::max(j*blksz, n);
+               int first_col = std::max(j*this->blksz(), n);
                // Tile width
-               int blk_n = std::min((j+1)*blksz, m) - first_col;
+               int blk_n = std::min((j+1)*this->blksz(), m) - first_col;
                // Column height
                int col_m = m - first_col;
                int col_ld = col_m;
                size_t col_dimn = col_ld*blk_n;
                T *col = (col_dimn>0) ? 
-                  PATraits::allocate(pool_alloc_, col_dimn) : nullptr;  
+                  PATraits::allocate(this->pool_alloc(), col_dimn) : nullptr;  
 
                for(int i = j; i < nr; i++) {
 
-                  int row = std::max(i*blksz, n) - first_col; 
+                  int row = std::max(i*this->blksz(), n) - first_col; 
                   
                   contrib_blocks[(j-rsa)*ncontrib+(i-rsa)].a = &col[row];
                   contrib_blocks[(j-rsa)*ncontrib+(i-rsa)].lda = col_ld; 
@@ -233,33 +236,33 @@ namespace spldlt {
 
             int nr = get_nr();
 
-            int rsa = n / blksz; // index of first block in contribution blocks  
+            int rsa = n / this->blksz(); // index of first block in contribution blocks  
             int ncontrib = nr-rsa;
 
             contrib_blocks.reserve(ncontrib*ncontrib);
 
             // Setup data structures for contribution block
             for(int j = rsa; j < nr; j++) {
-               int first_col = std::max(j*blksz, n); // First col in contrib block
-               int blkn = std::min((j+1)*blksz, m) - first_col; // Tile width
+               int first_col = std::max(j*this->blksz(), n); // First col in contrib block
+               int blkn = std::min((j+1)*this->blksz(), m) - first_col; // Tile width
                for(int i = rsa; i < nr; i++) {
-                  int first_row = std::max(i*blksz, n); // First col in contrib block
-                  int blkm = std::min((i+1)*blksz, m) - first_row; // Tile height
-                  contrib_blocks.emplace_back(i-rsa, j-rsa, blkm, blkn, blkm, pool_alloc_);
+                  int first_row = std::max(i*this->blksz(), n); // First col in contrib block
+                  int blkm = std::min((i+1)*this->blksz(), m) - first_row; // Tile height
+                  contrib_blocks.emplace_back(i-rsa, j-rsa, blkm, blkn, blkm, this->pool_alloc());
                }
             }
             
             // Allocate memory using 1D memory layout
             for(int j = rsa; j < nr; j++) {
                // First col in contrib block
-               int first_col = std::max(j*blksz, n);
-               int blk_n = std::min((j+1)*blksz, m) - first_col; // Tile width
+               int first_col = std::max(j*this->blksz(), n);
+               int blk_n = std::min((j+1)*this->blksz(), m) - first_col; // Tile width
                assert(blk_n > 0);
                int col_m = m-n; // Column height
                int col_ld = col_m;
                size_t col_dimn = col_ld*blk_n;
                T *col = (col_dimn>0) ? 
-                  PATraits::allocate(pool_alloc_, col_dimn) : nullptr;
+                  PATraits::allocate(this->pool_alloc(), col_dimn) : nullptr;
 #if defined(SPLDLT_USE_STARPU)
 #if defined(SPLDLT_USE_GPU)
       starpu_memory_pin(col, col_dimn*sizeof(T));
@@ -267,7 +270,7 @@ namespace spldlt {
 #endif
                for(int i = rsa; i < nr; i++) {
 
-                  int row = std::max(i*blksz, n) - n; // First row in block
+                  int row = std::max(i*this->blksz(), n) - n; // First row in block
                   
                   contrib_blocks[(j-rsa)*ncontrib+(i-rsa)].a = &col[row];
                   contrib_blocks[(j-rsa)*ncontrib+(i-rsa)].lda = col_ld; 
@@ -281,13 +284,13 @@ namespace spldlt {
       void free_contrib_blocks() {
          int m = get_nrow();
          int n = get_ncol();           
-         int rsa = n / blksz; // index of first block in contribution blocks  
+         int rsa = n / this->blksz(); // index of first block in contribution blocks  
          size_t contrib_dimn = m-n; // Dimension of contribution block
          
          if (contrib_dimn>0 && contrib_blocks.size()>0) {
          
             int nr = get_nr(); // number of block rows in front amtrix
-            int rsa = n / blksz; // index of first block in contribution blocks  
+            int rsa = n / this->blksz(); // index of first block in contribution blocks  
             int ncontrib = nr-rsa;
             for(int j = 0; j < ncontrib; j++) {
 
@@ -297,22 +300,22 @@ namespace spldlt {
                // each row tile.
 
                int jj = j + rsa; // Column index in the global matrix
-               int first_col = std::max(jj*blksz, n);
+               int first_col = std::max(jj*this->blksz(), n);
                // Column height
                int col_m = m - first_col;
                int col_ld = col_m;
                // Column width
-               int blk_n = std::min((jj+1)*blksz, m) - first_col; // TODO check & test blk_n 
+               int blk_n = std::min((jj+1)*this->blksz(), m) - first_col; // TODO check & test blk_n 
                size_t col_dimn = col_ld*blk_n;
 
                // Diagonal block holding the data for the block-column
                T *col = contrib_blocks[j*(ncontrib+1)].a;
                assert(col != nullptr);
-               PATraits::deallocate(pool_alloc_, col, col_dimn);
+               PATraits::deallocate(this->pool_alloc(), col, col_dimn);
 
                for(int i = j; i < ncontrib; i++) {
 
-                  int row = i*blksz - first_col; 
+                  int row = i*this->blksz() - first_col; 
                   // Nullify pointer on block 
                   contrib_blocks[j*ncontrib+i].a = nullptr;
                }
@@ -338,24 +341,24 @@ namespace spldlt {
 
          int m = get_nrow();
          int n = get_ncol();           
-         int rsa = n / blksz; // index of first block in contribution blocks  
+         int rsa = n / this->blksz(); // index of first block in contribution blocks  
          size_t contrib_dimn = m-n; // Dimension of contribution block
 
          if (contrib_dimn>0 && contrib_blocks.size()>0) {
 
             int nr = get_nr(); // number of block rows in front amtrix
-            int rsa = n / blksz; // index of first block in contribution blocks  
+            int rsa = n / this->blksz(); // index of first block in contribution blocks  
             int ncontrib = nr-rsa;
             int col_m = m-n; // Column height
             int col_ld = col_m;
             for(int j = 0; j < ncontrib; j++) {
                int jj = j + rsa; // Column index in the global matrix
-               int first_col = std::max(jj*blksz, n); // Index of first column in block-column
-               int blk_n = std::min((jj+1)*blksz, m) - first_col;
+               int first_col = std::max(jj*this->blksz(), n); // Index of first column in block-column
+               int blk_n = std::min((jj+1)*this->blksz(), m) - first_col;
                size_t col_dimn = col_ld*blk_n;
                T *col = contrib_blocks[j*ncontrib].a;
                assert(col != nullptr);
-               PATraits::deallocate(pool_alloc_, col, col_dimn); // Release memory for this block-column
+               PATraits::deallocate(this->pool_alloc(), col, col_dimn); // Release memory for this block-column
 
                for(int i = 0; i < ncontrib; i++) {
                   // Nullify pointer on block
@@ -379,7 +382,7 @@ namespace spldlt {
          size_t contrib_dimn = m-n; // Dimension of contribution block
          if (contrib_dimn>0 && contrib_blocks.size()>0) {
             int nr = get_nr(); // number of block rows in front amtrix
-            int rsa = n / blksz; // index of first block in contribution blocks  
+            int rsa = n / this->blksz(); // index of first block in contribution blocks  
             int ncontrib = nr-rsa;
             for(int j = 0; j < ncontrib; j++) {
                for(int i = j; i < ncontrib; i++) {
@@ -396,18 +399,18 @@ namespace spldlt {
        * transitory.
        */
       void alloc_contrib() {
-         size_t contrib_dimn = symb.nrow - symb.ncol;
+         size_t contrib_dimn = this->symb().nrow - this->symb().ncol;
          contrib_dimn = contrib_dimn*contrib_dimn;
-         contrib = (contrib_dimn>0) ? PATraits::allocate(pool_alloc_, contrib_dimn)
+         contrib = (contrib_dimn>0) ? PATraits::allocate(this->pool_alloc(), contrib_dimn)
             : nullptr;
       }
 
       /** \brief Free space for contribution block (if allocated) */
       void free_contrib() {
          if(!contrib) return;
-         size_t contrib_dimn = symb.nrow - symb.ncol;
+         size_t contrib_dimn = this->symb().nrow - this->symb().ncol;
          contrib_dimn = contrib_dimn*contrib_dimn;
-         PATraits::deallocate(pool_alloc_, contrib, contrib_dimn);
+         PATraits::deallocate(this->pool_alloc(), contrib, contrib_dimn);
          contrib = nullptr;
       }
 
@@ -416,7 +419,7 @@ namespace spldlt {
       void alloc_backup() {
          backup = 
             new spldlt::ldlt_app_internal::CopyBackup<T, PoolAllocator>(
-                  get_nrow(), get_ncol(), blksz, pool_alloc_);
+                  get_nrow(), get_ncol(), this->blksz(), this->pool_alloc());
       }
       
       /// @brief Release backup
@@ -429,7 +432,7 @@ namespace spldlt {
       void alloc_cdata() {
          cdata = 
             new spldlt::ldlt_app_internal::ColumnData<T, IntAlloc> (
-                  get_ncol(), blksz, IntAlloc(pool_alloc_));
+                  get_ncol(), this->blksz(), IntAlloc(this->pool_alloc()));
       }
       
       void free_cdata() {
@@ -463,7 +466,7 @@ namespace spldlt {
          for(int jblk=0; jblk<nblk; jblk++) {
             for(int iblk=0; iblk<mblk; iblk++) {
                // Create and insert block at the end (column-wise storage)
-               blocks.emplace_back(iblk, jblk, m, n, *cdata, &lcol[jblk*blksz*ldl+iblk*blksz], ldl, blksz);
+               blocks.emplace_back(iblk, jblk, m, n, *cdata, &lcol[jblk*this->blksz()*ldl+iblk*this->blksz()], ldl, this->blksz());
                // alternativel store pointer
                // blocks[jblk*mblk + iblk] = new BlockSpec(iblk, jblk, m, n, cdata, &a[jblk*block_size*lda+iblk*block_size], lda, block_size);
 // #if defined(SPLDLT_USE_STARPU)
@@ -479,7 +482,7 @@ namespace spldlt {
       void alloc_blocks_unsym() {
          
          typedef typename std::allocator_traits<PoolAllocator>::template rebind_traits<sylver::splu::BlockUnsym<T>> BlkAllocTraits;
-         typename BlkAllocTraits::allocator_type blkAlloc(pool_alloc_);
+         typename BlkAllocTraits::allocator_type blkAlloc(this->pool_alloc());
          
          int const m = get_nrow(); // Number of fully summed rows and columns
          int const n = get_ncol(); // Number of fully summed rows and columns
@@ -491,18 +494,18 @@ namespace spldlt {
          int const ldl = get_ldl();
          int const ldu = get_ldu();
 
-         printf("[alloc_blocks_unsym] blksz = %d\n", blksz);
+         printf("[alloc_blocks_unsym] blksz = %d\n", this->blksz());
 
          for(int jblk=0; jblk<mblk; jblk++) {
 
-            int first_col = jblk*blksz; // Global index of first column in block
-            int last_col = std::min((jblk+1)*blksz, m)-1;
+            int first_col = jblk*this->blksz(); // Global index of first column in block
+            int last_col = std::min((jblk+1)*this->blksz(), m)-1;
             int blk_n = last_col-first_col+1; 
             assert(blk_n > 0);
             for(int iblk=0; iblk<mblk; iblk++) {
 
-               int first_row = iblk*blksz; // First col in current block
-               int last_row = std::min((iblk+1)*blksz, m)-1; // First col in current block
+               int first_row = iblk*this->blksz(); // First col in current block
+               int last_row = std::min((iblk+1)*this->blksz(), m)-1; // First col in current block
                int blk_m = last_row-first_row+1;
                assert(blk_m > 0);
                
@@ -527,7 +530,7 @@ namespace spldlt {
                else {
                   // Block is split between lcol and ucol
                   // first_col < n and last_col >= n
-                  int mb = std::min((iblk+1)*blksz, n) - first_row;
+                  int mb = std::min((iblk+1)*this->blksz(), n) - first_row;
                   int nb = last_col-n+1;
                   BlkAllocTraits::construct(
                         blkAlloc, &blocks_unsym_[iblk+jblk*mblk],
@@ -547,7 +550,7 @@ namespace spldlt {
          if (!blocks_unsym_) return;
          
          typedef typename std::allocator_traits<PoolAllocator>::template rebind_traits<sylver::splu::BlockUnsym<T>> BlkAllocTraits;
-         typename BlkAllocTraits::allocator_type blkAlloc(pool_alloc_);
+         typename BlkAllocTraits::allocator_type blkAlloc(this->pool_alloc());
 
          int const mblk = get_nr();
          int const num_blocks = mblk*mblk;
@@ -564,14 +567,14 @@ namespace spldlt {
          int const nr = get_nr(); 
          int const nc = get_nc();
 
-         int en = (n-1)/blksz; // Last block-row/column in factors
+         int en = (n-1)/this->blksz(); // Last block-row/column in factors
 
          for (int j = 0; j < nc; ++j) {
             for (int i =  0; i < nr; ++i) {
                // Loop if we are in the cb
                if ((i > en) && (j > en)) continue;
                sylver::splu::BlockUnsym<T>& blk = get_block_unsym(i, j);
-               blk.alloc_backup(pool_alloc_);
+               blk.alloc_backup(this->pool_alloc());
             }
          }
       }
@@ -582,14 +585,14 @@ namespace spldlt {
          int const nr = get_nr(); 
          int const nc = get_nc();
 
-         int en = (n-1)/blksz; // Last block-row/column in factors
+         int en = (n-1)/this->blksz(); // Last block-row/column in factors
 
          for (int j = 0; j < nc; ++j) {
             for (int i =  0; i < nr; ++i) {
                // Loop if we are in the cb
                if ((i > en) && (j > en)) continue;
                sylver::splu::BlockUnsym<T>& blk = get_block_unsym(i, j);
-               blk.release_backup(pool_alloc_);
+               blk.release_backup(this->pool_alloc());
             }
          }
          
@@ -597,32 +600,32 @@ namespace spldlt {
       
       /// @brief Return the number of rows in the node
       inline int get_nrow() const {
-         return symb.nrow + ndelay_in;
+         return this->symb().nrow + ndelay_in;
       }
 
       /// @brief Return the number of columns in the node
       inline int get_ncol() const {
-         return symb.ncol + ndelay_in;
+         return this->symb().ncol + ndelay_in;
       }
 
       /// @brief Return the number of block rows in the node
       inline int get_nr() const {
-         return (get_nrow()-1) / blksz + 1;
+         return (get_nrow()-1) / this->blksz() + 1;
       }
 
       /// @brief Return the number of block rows in the node
       inline int get_nc() const {
-         return (get_ncol()-1) / blksz + 1;
+         return (get_ncol()-1) / this->blksz() + 1;
       }
 
       /** \brief Return leading dimension of node's lcol member. */
       inline size_t get_ldl() const {
-         return spral::ssids::cpu::align_lda<T>(symb.nrow + ndelay_in);
+         return spral::ssids::cpu::align_lda<T>(this->symb().nrow + ndelay_in);
       }
 
       /** \brief Return leading dimension of node's ucol member. */
       inline size_t get_ldu() const {
-         return spral::ssids::cpu::align_lda<T>(symb.ncol + ndelay_in);
+         return spral::ssids::cpu::align_lda<T>(this->symb().ncol + ndelay_in);
       }
 
       /// @Brief Return block (i,j) in the contribution block
@@ -632,10 +635,10 @@ namespace spldlt {
 
          // No bound checks when accessing the element in the
          // contrib_blocks vector
-         assert(symb.nrow > symb.ncol);
+         assert(this->symb().nrow > this->symb().ncol);
          
          int n = get_ncol();
-         int sa = n/blksz;
+         int sa = n / this->blksz();
          int nr = get_nr();
          int ncontrib = nr-sa;
 
@@ -677,27 +680,27 @@ namespace spldlt {
          
       }
       
-#if defined(SPLDLT_USE_STARPU)
-      /// @brief Return StarPU symbolic handle
-      starpu_data_handle_t get_hdl() const {
-         return symb.hdl;
-      }
+// #if defined(SPLDLT_USE_STARPU)
+//       /// @brief Return StarPU symbolic handle
+//       starpu_data_handle_t get_hdl() const {
+//          return this->symb().hdl;
+//       }
 
-      /// @brief Return StarPU symbolic handle on contribution blocks 
-      starpu_data_handle_t get_contrib_hdl() const {
-         return contrib_hdl; 
-      }
-#endif
+//       /// @brief Return StarPU symbolic handle on contribution blocks 
+//       starpu_data_handle_t get_contrib_hdl() const {
+//          return contrib_hdl; 
+//       }
+// #endif
       
    public:
       /* Symbolic node associate with this one */
-      sylver::SymbolicFront& symb;
+      // sylver::SymbolicFront& symb;
 
       /* Fixed data from analyse */
       NumericFront<T, PoolAllocator>* first_child; // Pointer to our first child
       NumericFront<T, PoolAllocator>* next_child; // Pointer to parent's next child
 
-      int blksz; // Tileing size
+      // int blksz; // Tileing size
 
       /* Data that changes during factorize */
       int ndelay_in; // Number of delays arising from children
@@ -716,12 +719,12 @@ namespace spldlt {
       // Structures for indef factor
       spldlt::ldlt_app_internal::ColumnData<T, IntAlloc> *cdata;
       std::vector<BlockSpec> blocks;
-#if defined(SPLDLT_USE_STARPU)
-      starpu_data_handle_t contrib_hdl; // Symbolic handle for contribution blocks
-#endif
+// #if defined(SPLDLT_USE_STARPU)
+//       starpu_data_handle_t contrib_hdl; // Symbolic handle for contribution blocks
+// #endif
    private:
       sylver::splu::BlockUnsym<T> *blocks_unsym_; // Block array (unsym case) 
-      PoolAllocator pool_alloc_; // Our own version of pool allocator for freeing
+      // PoolAllocator pool_alloc_; // Our own version of pool allocator for freeing
       // contrib
    };
 

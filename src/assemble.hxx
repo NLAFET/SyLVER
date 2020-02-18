@@ -21,7 +21,7 @@ namespace spldlt {
       // Deactivate children fronts
       for (auto* child=node.first_child; child!=NULL; child=child->next_child) {
 
-         sylver::SymbolicFront const& csnode = child->symb;
+         sylver::SymbolicFront const& csnode = child->symb();
 
          if (csnode.exec_loc == -1) {
             // fini_node(*child);
@@ -52,12 +52,12 @@ namespace spldlt {
 
       // printf("[assemble_contrib]\n");
 
-      int blksz = node.blksz;
+      int blksz = node.blksz();
 
       // Assemble front: non fully-summed columns i.e. contribution block 
       for (auto* child=node.first_child; child!=NULL; child=child->next_child) {
 
-         sylver::SymbolicFront& child_sfront = child->symb;
+         sylver::SymbolicFront& child_sfront = child->symb();
          // SymbolicFront &child_sfront = symb_[child->symb.idx];
 
          int ldcontrib = child_sfront.nrow - child_sfront.ncol;
@@ -133,8 +133,8 @@ namespace spldlt {
 
       typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> PoolAllocInt;
 
-      int blksz = node.blksz;
-      sylver::SymbolicFront snode = node.symb;
+      int blksz = node.blksz();
+      sylver::SymbolicFront snode = node.symb();
 
       int nrow = node.get_nrow();
       int ncol = node.get_ncol();
@@ -162,7 +162,7 @@ namespace spldlt {
       // Assemble front: fully-summed columns 
       for (auto* child=node.first_child; child!=NULL; child=child->next_child) {
 
-         sylver::SymbolicFront &csnode = child->symb; // Children symbolic node
+         sylver::SymbolicFront &csnode = child->symb(); // Children symbolic node
 
          int cm = csnode.nrow - csnode.ncol;
          csnode.map = new int[cm];

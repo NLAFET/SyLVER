@@ -117,7 +117,7 @@ namespace spldlt {
       
       spldlt::starpu::insert_init_node(
             &front,
-            front.get_hdl(),
+            front.hdl(),
             aval,
             scaling,
             prio);
@@ -156,7 +156,7 @@ namespace spldlt {
       }
       
       spldlt::starpu::insert_fini_node(
-            node.get_hdl(), hdls, nh, &node, posdef, INIT_PRIO);
+            node.hdl(), hdls, nh, &node, posdef, INIT_PRIO);
 
       delete[] hdls;
 #else
@@ -188,14 +188,14 @@ namespace spldlt {
       
       int nc = 0;
       for (auto* child=node.first_child; child!=NULL; child=child->next_child) {
-         cnode_hdls[nc] = child->get_hdl();
+         cnode_hdls[nc] = child->hdl();
          ++nc;
       }
 
       assert(nchild==nc);
       
       spldlt::starpu::insert_activate_init_node(
-            node.get_hdl(),
+            node.hdl(),
             cnode_hdls, nc,
             posdef,
             &node,
@@ -228,8 +228,8 @@ namespace spldlt {
          int prio,
          std::vector<sylver::inform_t>& worker_stats) {
 
-      sylver::SymbolicFront const& snode = node.symb;
-      int const blksz = node.blksz;
+      sylver::SymbolicFront const& snode = node.symb();
+      int const blksz = node.blksz();
 
       int m = node.get_nrow();
       int n = node.get_ncol();
@@ -294,8 +294,8 @@ namespace spldlt {
          T *a_ik, int lda_ik,         
          int prio) {
 
-      sylver::SymbolicFront const& snode = node.symb;
-      int blksz = node.blksz;
+      sylver::SymbolicFront const& snode = node.symb();
+      int blksz = node.blksz();
       
       int m = node.get_nrow();
       int n = node.get_ncol();
@@ -597,7 +597,7 @@ namespace spldlt {
 
 #if defined(SPLDLT_USE_STARPU)
 
-      int blksz = front.blksz;
+      int blksz = front.blksz();
 
       int nrow = front.get_nrow();
       int ncol = front.get_ncol();
@@ -636,7 +636,7 @@ namespace spldlt {
       // Insert assembly tasks if there are any contributions
       if (nh>0) {
          spldlt::starpu::insert_subtree_assemble(
-               &front, &csfront, front.get_hdl(), csfront.hdl, hdls, nh, 
+               &front, &csfront, front.hdl(), csfront.hdl, hdls, nh, 
                child_contrib, contrib_idx);
       }
 
@@ -660,11 +660,11 @@ namespace spldlt {
          int *cmap, // row/column mapping array 
          int prio) {
 
-      int blksz = node.blksz;
+      int blksz = node.blksz();
 
 #if defined(SPLDLT_USE_STARPU)
 // #if 0
-      sylver::SymbolicFront const& snode = node.symb;
+      sylver::SymbolicFront const& snode = node.symb();
 
       int ncol = node.get_ncol();
       int nr = node.get_nr();
@@ -709,7 +709,7 @@ namespace spldlt {
          // printf("[assemble_contrib_subtree_task] nh = %d\n", nh);
 
          spldlt::starpu::insert_subtree_assemble_contrib(
-               &node, &csnode, snode.hdl, node.contrib_hdl, csnode.hdl, hdls, nh, 
+               &node, &csnode, snode.hdl, node.contrib_hdl(), csnode.hdl, hdls, nh, 
                child_contrib, contrib_idx, prio);
       }
       
@@ -737,8 +737,8 @@ namespace spldlt {
 #if defined(SPLDLT_USE_STARPU)
 
       // Node info
-      sylver::SymbolicFront const& snode = node.symb;
-      int const blksz = node.blksz;      
+      sylver::SymbolicFront const& snode = node.symb();
+      int const blksz = node.blksz();
       int const nrow = node.get_nrow();
       int const ncol = node.get_ncol();
       int const nr = node.get_nr(); // Number of block-rows in destination node
@@ -819,7 +819,7 @@ namespace spldlt {
                &node, &cnode, ii, jj, cmap,
                cb.hdl,
                hdls, nh,
-               node.get_hdl(), cnode.get_hdl(),
+               node.hdl(), cnode.hdl(),
                prio);
       }
 
@@ -847,12 +847,12 @@ namespace spldlt {
          std::vector<spral::ssids::cpu::Workspace>& workspaces,
          int prio) {
 
-      int blksz = node.blksz;
+      int blksz = node.blksz();
 
 #if defined(SPLDLT_USE_STARPU)
 
       // Node info
-      sylver::SymbolicFront const& snode = node.symb;   
+      sylver::SymbolicFront const& snode = node.symb();   
       int nrow = node.get_nrow();
       int ncol = node.get_ncol();
       int nr = node.get_nr(); // Number of block-rows in destination node
@@ -924,8 +924,8 @@ namespace spldlt {
                &node, &cnode, ii, jj, cmap, 
                cb.hdl,
                hdls, nh,
-               node.get_hdl(), node.contrib_hdl,
-               cnode.get_hdl(),
+               node.hdl(), node.contrib_hdl(),
+               cnode.hdl(),
                &workspaces,
                prio);
 

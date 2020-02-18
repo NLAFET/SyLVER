@@ -66,7 +66,7 @@ namespace sylver {
             spldlt::NumericFront<T, PoolAlloc> &front) {
          
          int const mblk = front.get_nr();
-         int const blksz = front.blksz;
+         int const blksz = front.blksz();
          int const n = front.get_ncol();
 
          for(int jblk=0; jblk<mblk; jblk++) {

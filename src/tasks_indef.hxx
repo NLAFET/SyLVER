@@ -50,7 +50,7 @@ namespace spldlt {
             // snode.handles[blk*nr+iblk], snode.handles[blk*nr+jblk],
             cdata[blk].get_d_hdl(),
             cdata[nblk-1].get_hdl(), // make sure col has been processed
-            node.contrib_hdl, // For synchronization purpose
+            node.contrib_hdl(), // For synchronization purpose
             &node, blk, iblk, jblk, 
             &workspaces, prio);
 
@@ -84,7 +84,7 @@ namespace spldlt {
 #if defined(SPLDLT_USE_STARPU)
 
       // Node info
-      int blksz = node.blksz;
+      int blksz = node.blksz();
       int ncol = node.get_ncol(); // Number of block-rows in destination node
       int nr = node.get_nr(); // Number of block-rows in destination node
       int nc = node.get_nc(); // Number of block-columns in destination node
@@ -164,8 +164,8 @@ namespace spldlt {
 
 #if defined(SPLDLT_USE_STARPU)
       // Node info
-      sylver::SymbolicFront &snode = node.symb; // Child symbolic node
-      int blksz = node.blksz;
+      sylver::SymbolicFront &snode = node.symb(); // Child symbolic node
+      int blksz = node.blksz();
       int ncol = node.get_ncol();
       int nr = node.get_nr(); // Number of block-rows in destination node
       int nc = node.get_nc(); // Number of block-columns in destination node
@@ -175,7 +175,7 @@ namespace spldlt {
       int nh = 0; // Number of handles/blocks in node
       
       // Child node info
-      sylver::SymbolicFront &csnode = cnode.symb; // Child symbolic node
+      sylver::SymbolicFront &csnode = cnode.symb(); // Child symbolic node
       int cncol = cnode.get_ncol();
       int cnrow = cnode.get_nrow();
       int cnr = cnode.get_nr(); // Number of block-rows in child node

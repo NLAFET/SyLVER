@@ -25,7 +25,7 @@ namespace spldlt {
 #if defined(SPLDLT_USE_STARPU)
 
       typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
-      int blksz = node.blksz;
+      int blksz = node.blksz();
       spldlt::ldlt_app_internal::ColumnData<T, IntAlloc> &cdata = *node.cdata;
       int const nblk = node.get_nc(); // Number of block-columns
       starpu_data_handle_t *hdls = nullptr;
@@ -50,7 +50,7 @@ namespace spldlt {
       }
       
       spldlt::starpu::insert_factor_front_indef_failed(
-            cdata[nblk-1].get_hdl(), node.get_contrib_hdl(),
+            cdata[nblk-1].get_hdl(), node.contrib_hdl(),
             hdls, nh,
             &node, &workspaces, &options, &worker_stats
             );

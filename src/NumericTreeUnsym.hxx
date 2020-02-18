@@ -92,7 +92,7 @@ namespace splu {
          // Register symbolic handles prior to the factorization
          for(int ni = 0; ni < symb_.nnodes()+1; ++ni) {
             starpu_void_data_register(&(symb_[ni].hdl)); // Register node symbolic handle
-            starpu_void_data_register(&(fronts_[ni].contrib_hdl)); // Register contribution block symbolic handle
+            starpu_void_data_register(&(fronts_[ni].contrib_hdl())); // Register contribution block symbolic handle
          }
 #endif
             

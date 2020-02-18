@@ -202,7 +202,7 @@ namespace spldlt {
          // auto start = std::chrono::high_resolution_clock::now();
          for(int ni = 0; ni < symb_.nnodes()+1; ++ni) {
             starpu_void_data_register(&(symb_[ni].hdl)); // Node's symbolic handle
-            starpu_void_data_register(&(fronts_[ni].contrib_hdl)); // Symbolic handle for contribution blocks
+            starpu_void_data_register(&(fronts_[ni].contrib_hdl())); // Symbolic handle for contribution blocks
          }
          // auto end = std::chrono::high_resolution_clock::now();
          // long t_reg = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count();
@@ -338,7 +338,7 @@ namespace spldlt {
 #if defined(SPLDLT_USE_STARPU)
             spldlt::starpu::
                insert_nelim_sync(
-                     fronts_[ni].get_hdl(), sfront.idx);
+                     fronts_[ni].hdl(), sfront.idx);
 #endif
 
             // #if defined(SPLDLT_USE_STARPU)
@@ -387,7 +387,7 @@ namespace spldlt {
             // Register symbolic handles on node
             starpu_void_data_register(&(symb_[ni].hdl));
             // Register symbolic handle for contribution block
-            starpu_void_data_register(&(fronts_[ni].contrib_hdl));
+            starpu_void_data_register(&(fronts_[ni].contrib_hdl()));
          }
 #endif
 
@@ -459,7 +459,7 @@ namespace spldlt {
             // Assemble front: fully-summed columns 
             for (auto* child=fronts_[ni].first_child; child!=NULL; child=child->next_child) {
            
-               sylver::SymbolicFront& child_sfront = symb_[child->symb.idx]; // Children symbolic node
+               sylver::SymbolicFront& child_sfront = symb_[child->symb().idx]; // Children symbolic node
 
                int ldcontrib = child_sfront.nrow - child_sfront.ncol;
                // Handle expected contributions (only if something there)
@@ -511,7 +511,7 @@ namespace spldlt {
             for (auto* child=fronts_[ni].first_child; child!=NULL; child=child->next_child) {
                
                // SymbolicNode const& csnode = child->symb;
-               sylver::SymbolicFront& child_sfront = symb_[child->symb.idx];
+               sylver::SymbolicFront& child_sfront = symb_[child->symb().idx];
                
                int ldcontrib = child_sfront.nrow - child_sfront.ncol;
                // Handle expected contributions (only if something there)
@@ -561,7 +561,7 @@ namespace spldlt {
 #if defined(SPLDLT_USE_STARPU)
                // Unregister symbolic handle on child node
                starpu_data_unregister_submit(child_sfront.hdl);
-               starpu_data_unregister_submit(child->contrib_hdl);
+               starpu_data_unregister_submit(child->contrib_hdl());
 #endif
 
 
@@ -572,7 +572,7 @@ namespace spldlt {
          // Finish root node
          NumericFront<T, PoolAllocator>& front = fronts_[symb_.nnodes()];
          for (auto* child=front.first_child; child!=NULL; child=child->next_child) {
-            sylver::SymbolicFront const& child_sfront = symb_[child->symb.idx];
+            sylver::SymbolicFront const& child_sfront = symb_[child->symb().idx];
             if (!child_sfront.is_in_subtree()) {
                // fini_node(*child);
                fini_node_task(*child, true);
@@ -580,7 +580,7 @@ namespace spldlt {
 #if defined(SPLDLT_USE_STARPU)
                // Unregister symbolic handle on child node
                starpu_data_unregister_submit(child_sfront.hdl);
-               starpu_data_unregister_submit(child->contrib_hdl);
+               starpu_data_unregister_submit(child->contrib_hdl());
 #endif
          }
 

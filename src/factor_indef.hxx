@@ -114,7 +114,7 @@ namespace spldlt {
             // Permute failed entries at the back of the front
             FactorSymIndefSpec::permute_failed(
                   nrow, ncol, front.perm, front.lcol, ldl,
-                  front.nelim, cdata, front.blksz,
+                  front.nelim, cdata, front.blksz(),
                   pool_alloc);
          }
          
@@ -154,7 +154,7 @@ namespace spldlt {
 
       // printf("[factor_front_indef] m = %d, n = %d\n", node.get_nrow(), node.get_ncol());
 
-      int blksz = node.blksz;
+      int blksz = node.blksz();
       // node.nelim = nelim;      
       bool const debug = false;
       T *upd = nullptr;
@@ -1234,7 +1234,7 @@ namespace spldlt {
 
          ColumnData<T, IntAlloc> &cdata = *node.cdata;
          int n = node.get_ncol();
-         int const nblk = calc_nblk(n, node.blksz);
+         int const nblk = calc_nblk(n, node.blksz());
 
          starpu_data_handle_t *col_hdls = new starpu_data_handle_t[nblk];
          for (int c = 0; c < nblk; c++)
@@ -1252,7 +1252,7 @@ namespace spldlt {
          T *lcol = node.lcol;
          int *perm = node.perm;
          int num_elim = node.nelim;
-         int blksz = node.blksz;
+         int blksz = node.blksz();
 
          CopyBackup<T, Allocator> &backup = *node.backup; 
          ColumnData<T, IntAlloc> &cdata = *node.cdata;
@@ -1287,7 +1287,7 @@ namespace spldlt {
          int const nblk = front.get_nc();
          int const mblk = front.get_nr();
          
-         int const block_size = front.blksz;
+         int const block_size = front.blksz();
          int const m = front.get_nrow();
          int const n = front.get_ncol();
          T *lcol = front.lcol;
@@ -1432,7 +1432,7 @@ namespace spldlt {
          
          typedef spldlt::ldlt_app_internal::Block<T, iblksz, IntAlloc> BlockSpec;
          
-         int const block_size = node.blksz;
+         int const block_size = node.blksz();
          int const m = node.get_nrow();
          int const n = node.get_ncol();
          T *lcol = node.lcol;

@@ -220,7 +220,7 @@ namespace spldlt { namespace tests {
 #if defined(SPLDLT_USE_STARPU)
       // Register symbolic handles
       starpu_void_data_register(&(sfront.hdl)); // Symbolic handle on node
-      starpu_void_data_register(&(front.contrib_hdl)); // Symbolic handle on contrib blocks 
+      starpu_void_data_register(&(front.contrib_hdl())); // Symbolic handle on contrib blocks 
       // Register StarPU data handles
       spldlt::starpu::register_node_indef(front);
 #endif
@@ -254,7 +254,7 @@ namespace spldlt { namespace tests {
       spldlt::starpu::unregister_node_indef<T, PoolAllocator, false>(front); // Synchronous unregister
       // starpu_task_wait_for_all(); // Wait for unregistration of handles      
       starpu_data_unregister(sfront.hdl); // Node's symbolic handle
-      starpu_data_unregister(front.contrib_hdl);
+      starpu_data_unregister(front.contrib_hdl());
 
       starpu_data_unregister(spldlt::starpu::workspace_hdl);
 #endif

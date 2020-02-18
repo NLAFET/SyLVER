@@ -26,7 +26,7 @@ namespace spldlt {
 #if defined(SPLDLT_USE_STARPU)
 
       spldlt::starpu::insert_factor_front_indef(
-            node.get_hdl(), &node, &workspaces, &pool_alloc, &options, 
+            node.hdl(), &node, &workspaces, &pool_alloc, &options, 
             &worker_stats);
 
 #else
@@ -51,7 +51,7 @@ namespace spldlt {
 #if defined(SPLDLT_USE_STARPU)
 
       insert_factor_front_indef_nocontrib(
-            node.get_hdl(), &node, &workspaces, &pool_alloc, &options);
+            node.hdl(), &node, &workspaces, &pool_alloc, &options);
       
 #else
 
@@ -73,7 +73,7 @@ namespace spldlt {
 #if defined(SPLDLT_USE_STARPU)
 
       insert_form_contrib_front(
-            node.get_hdl(), &node, blksz);
+            node.hdl(), &node, blksz);
       
 #else
 

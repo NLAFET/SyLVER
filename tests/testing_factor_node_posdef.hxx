@@ -176,7 +176,7 @@ namespace tests {
          
       // Register symbolic handles
       starpu_void_data_register(&(sfront.hdl)); // Symbolic handle on node
-      starpu_void_data_register(&(front.contrib_hdl)); // Symbolic handle on contrib blocks 
+      starpu_void_data_register(&(front.contrib_hdl())); // Symbolic handle on contrib blocks 
          
       spldlt::starpu::register_node(front);
 #endif
@@ -202,7 +202,7 @@ namespace tests {
       spldlt::starpu::unregister_node_submit(front);
       starpu_task_wait_for_all(); // Wait for unregistration of handles      
       starpu_data_unregister(sfront.hdl); // Node's symbolic handle
-      starpu_data_unregister(front.contrib_hdl);
+      starpu_data_unregister(front.contrib_hdl());
       
       // Deinitialize solver (including shutdown tasking system)
 #if defined(SPLDLT_USE_STARPU)

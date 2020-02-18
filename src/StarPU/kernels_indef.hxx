@@ -1039,7 +1039,7 @@ namespace spldlt { namespace starpu {
             int ldl = node->get_ldl();
             ColumnData<T, IntAlloc> &cdata = *node->cdata;
             bool const debug = false;
-            int blksz = node->blksz;
+            int blksz = node->blksz();
             
             FactorSymIndef
                <T, INNER_BLOCK_SIZE, CopyBackup<T, PoolAlloc>, debug, PoolAlloc>
