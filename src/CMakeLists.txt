@@ -49,6 +49,7 @@ if(${SYLVER_RUNTIME} MATCHES "StarPU")
     set(
       starpu_cuda_sources
       StarPU/cuda/kernels.hxx
+      StarPU/cuda/kernels_indef.hxx
       )
 
   endif()
