@@ -22,6 +22,7 @@
 
 #if defined(SPLDLT_USE_STARPU)
 #include <starpu.h>
+#include "StarPU/codelets.hxx"
 #include "StarPU/kernels.hxx"
 #include "StarPU/kernels_indef.hxx"
 #endif

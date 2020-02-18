@@ -26,10 +26,11 @@
 #include <starpu_cublas.h>
 #include <starpu_cublas_v2.h>
 #endif
-#include "StarPU/scheduler.h"
+#include "StarPU/codelets.hxx"
+#include "StarPU/factor_failed.hxx"
 #include "StarPU/kernels.hxx"
 #include "StarPU/kernels_indef.hxx"
-#include "StarPU/factor_failed.hxx"
+#include "StarPU/scheduler.h"
 #endif
 
 namespace spldlt { namespace tests {

@@ -123,7 +123,6 @@ namespace starpu {
 
       starpu_codelet_unpack_args(
             cl_arg, &node, &k, &i, &j, &workspaces);
-
          
       cudaStream_t stream = starpu_cuda_get_local_stream();
       cublasHandle_t handle = starpu_cublas_get_local_handle();

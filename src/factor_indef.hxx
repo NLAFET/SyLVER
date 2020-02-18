@@ -11,6 +11,7 @@
 #include "tasks_indef.hxx"
 #include "tasks/factor_failed.hxx"
 #if defined(SPLDLT_USE_STARPU)
+#include "StarPU/codelets.hxx"
 #include "StarPU/kernels_indef.hxx"
 using namespace spldlt::starpu;
 #endif
