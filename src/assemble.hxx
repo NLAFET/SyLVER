@@ -85,12 +85,12 @@ namespace spldlt {
             }
             else {                     
 
-               int cncol = child->get_ncol();
-               int cnrow = child->get_nrow();
+               int cncol = child->ncol();
+               int cnrow = child->nrow();
 
                int csa = cncol / blksz;
                // Number of block rows in child node
-               int cnr = child->get_nr();
+               int cnr = child->nr();
                // Lopp over blocks in contribution blocks
                for (int jj = csa; jj < cnr; ++jj) {                     
                   for (int ii = jj; ii < cnr; ++ii) {
@@ -136,8 +136,8 @@ namespace spldlt {
       int blksz = node.blksz();
       sylver::SymbolicFront snode = node.symb();
 
-      int nrow = node.get_nrow();
-      int ncol = node.get_ncol();
+      int nrow = node.nrow();
+      int ncol = node.ncol();
       size_t ldl = align_lda<double>(nrow);
 
       /*
@@ -215,10 +215,10 @@ namespace spldlt {
                // spral::ssids::cpu::assemble_expected(0, cm, node, *child, map, cache);
                // delete cache;
 
-               int cncol = child->get_ncol();
+               int cncol = child->ncol();
 
                int csa = cncol / blksz;
-               int cnr = child->get_nr(); // number of block rows
+               int cnr = child->nr(); // number of block rows
                // Loop over blocks in contribution blocks
                for (int jj = csa; jj < cnr; ++jj) {
                   for (int ii = jj; ii < cnr; ++ii) {

@@ -42,10 +42,10 @@ namespace starpu {
       // Get node info
       sylver::SymbolicFront &snode = node.symb();
       int blksz = node.blksz();
-      int m = node.get_nrow();
-      int n = node.get_ncol();
-      int nr = node.get_nr(); // Number of block rows
-      int nc = node.get_nc(); // Number of block columns
+      int m = node.nrow();
+      int n = node.ncol();
+      int nr = node.nr(); // Number of block rows
+      int nc = node.nc(); // Number of block columns
 
       // Unregister block handles in the factors
       for(int j = 0; j < nc; ++j) {
@@ -114,8 +114,8 @@ namespace starpu {
                   
       int ret;
 
-      int nr = front->get_nr();
-      int nc = front->get_nc();
+      int nr = front->nr();
+      int nc = front->nc();
 
       int nhdls = nr*nc;
       struct starpu_data_descr *descrs = new starpu_data_descr[nhdls+1];

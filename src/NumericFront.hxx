@@ -37,9 +37,7 @@ namespace spldlt {
             PoolAllocator const& pool_alloc, int blksz)
          :
          sylver::NumericFrontBase<T, PoolAllocator>(symb, pool_alloc, blksz),
-         //symb(symb), pool_alloc_(pool_alloc), blksz(blksz),
-         contrib(nullptr),
-         backup(nullptr), cdata(nullptr),
+         contrib(nullptr), backup(nullptr), cdata(nullptr),
          lcol(nullptr), ucol(nullptr), nelim1(0), nelim(0), blocks_unsym_(nullptr)
       {}
       
@@ -59,11 +57,11 @@ namespace spldlt {
       /// contrib (below diagonal)
       void alloc_contrib_blocks() {
 
-         int m = get_nrow();
-         int n = get_ncol();
+         int m = this->nrow();
+         int n = this->ncol();
          size_t contrib_dimn = m-n; // Dimension of contribution block
          if (contrib_dimn>0) {
-            int nr = get_nr();; // number of block rows in front amtrix
+            int nr = this->nr();; // number of block rows in front amtrix
             int rsa = n / this->blksz(); // index of first block in contribution blocks  
             int ncontrib = nr-rsa;
 
@@ -129,13 +127,13 @@ namespace spldlt {
       // Use 1D memory layout by default
       void alloc_contrib_blocks_unsym() {
 
-         int m = get_nrow();
-         int n = get_ncol();
+         int m = this->nrow();
+         int n = this->ncol();
 
          size_t contrib_dimn = m-n; // Dimension of contribution block
          if (contrib_dimn>0) {
 
-            int nr = get_nr();
+            int nr = this->nr();
 
             int rsa = n / this->blksz(); // index of first block in contribution blocks  
             int ncontrib = nr-rsa;
@@ -183,14 +181,14 @@ namespace spldlt {
 
       /// @brief Cleanup memory associated with contribution blocks
       void free_contrib_blocks() {
-         int m = get_nrow();
-         int n = get_ncol();           
+         int m = this->nrow();
+         int n = this->ncol();           
          int rsa = n / this->blksz(); // index of first block in contribution blocks  
          size_t contrib_dimn = m-n; // Dimension of contribution block
          
          if (contrib_dimn>0 && contrib_blocks.size()>0) {
          
-            int nr = get_nr(); // number of block rows in front amtrix
+            int nr = this->nr(); // number of block rows in front amtrix
             int rsa = n / this->blksz(); // index of first block in contribution blocks  
             int ncontrib = nr-rsa;
             for(int j = 0; j < ncontrib; j++) {
@@ -240,14 +238,14 @@ namespace spldlt {
 
          printf("[free_contrib_blocks_unsym]\n");
 
-         int m = get_nrow();
-         int n = get_ncol();           
+         int m = this->nrow();
+         int n = this->ncol();           
          int rsa = n / this->blksz(); // index of first block in contribution blocks  
          size_t contrib_dimn = m-n; // Dimension of contribution block
 
          if (contrib_dimn>0 && contrib_blocks.size()>0) {
 
-            int nr = get_nr(); // number of block rows in front amtrix
+            int nr = this->nr(); // number of block rows in front amtrix
             int rsa = n / this->blksz(); // index of first block in contribution blocks  
             int ncontrib = nr-rsa;
             int col_m = m-n; // Column height
@@ -278,11 +276,11 @@ namespace spldlt {
       /// zeroing
       void zero_contrib_blocks() {
 
-         int m = get_nrow();
-         int n = get_ncol();            
+         int m = this->nrow();
+         int n = this->ncol();            
          size_t contrib_dimn = m-n; // Dimension of contribution block
          if (contrib_dimn>0 && contrib_blocks.size()>0) {
-            int nr = get_nr(); // number of block rows in front amtrix
+            int nr = this->nr(); // number of block rows in front amtrix
             int rsa = n / this->blksz(); // index of first block in contribution blocks  
             int ncontrib = nr-rsa;
             for(int j = 0; j < ncontrib; j++) {
@@ -320,7 +318,8 @@ namespace spldlt {
       void alloc_backup() {
          backup = 
             new spldlt::ldlt_app_internal::CopyBackup<T, PoolAllocator>(
-                  get_nrow(), get_ncol(), this->blksz(), this->pool_alloc());
+                  this->nrow(), this->ncol(), this->blksz(),
+                  this->pool_alloc());
       }
       
       /// @brief Release backup
@@ -333,7 +332,7 @@ namespace spldlt {
       void alloc_cdata() {
          cdata = 
             new spldlt::ldlt_app_internal::ColumnData<T, IntAlloc> (
-                  get_ncol(), this->blksz(), IntAlloc(this->pool_alloc()));
+                  this->ncol(), this->blksz(), IntAlloc(this->pool_alloc()));
       }
       
       void free_cdata() {
@@ -356,11 +355,11 @@ namespace spldlt {
          // Check if cdata has been allocated
          if (!cdata) return sylver::Flag::ERROR_UNKNOWN;
          
-         int const m = get_nrow();
-         int const n = get_ncol();
+         int const m = this->nrow();
+         int const n = this->ncol();
          int const ldl = get_ldl();
-         int const mblk = get_nr();
-         int const nblk = get_nc();
+         int const mblk = this->nr();
+         int const nblk = this->nc();
          int const num_blocks = nblk*mblk;
          blocks.reserve(num_blocks);
 
@@ -385,9 +384,9 @@ namespace spldlt {
          typedef typename std::allocator_traits<PoolAllocator>::template rebind_traits<sylver::splu::BlockUnsym<T>> BlkAllocTraits;
          typename BlkAllocTraits::allocator_type blkAlloc(this->pool_alloc());
          
-         int const m = get_nrow(); // Number of fully summed rows and columns
-         int const n = get_ncol(); // Number of fully summed rows and columns
-         int const mblk = get_nr();
+         int const m = this->nrow(); // Number of fully summed rows and columns
+         int const n = this->ncol(); // Number of fully summed rows and columns
+         int const mblk = this->nr();
          // FIXME: overestimation but it might be better to use the
          // same array for fully-summed and contrib blocks
          int const num_blocks = mblk*mblk;
@@ -453,7 +452,7 @@ namespace spldlt {
          typedef typename std::allocator_traits<PoolAllocator>::template rebind_traits<sylver::splu::BlockUnsym<T>> BlkAllocTraits;
          typename BlkAllocTraits::allocator_type blkAlloc(this->pool_alloc());
 
-         int const mblk = get_nr();
+         int const mblk = this->nr();
          int const num_blocks = mblk*mblk;
          BlkAllocTraits::deallocate(blkAlloc, blocks_unsym_, num_blocks);
          blocks_unsym_ = nullptr;
@@ -464,9 +463,9 @@ namespace spldlt {
       /// case
       void alloc_backup_blocks_unsym() {
 
-         int const n = get_ncol();
-         int const nr = get_nr(); 
-         int const nc = get_nc();
+         int const n = this->ncol();
+         int const nr = this->nr(); 
+         int const nc = this->nc();
 
          int en = (n-1)/this->blksz(); // Last block-row/column in factors
 
@@ -482,9 +481,9 @@ namespace spldlt {
 
       void release_backup_blocks_unsym() {
 
-         int const n = get_ncol();
-         int const nr = get_nr(); 
-         int const nc = get_nc();
+         int const n = this->ncol();
+         int const nr = this->nr(); 
+         int const nc = this->nc();
 
          int en = (n-1)/this->blksz(); // Last block-row/column in factors
 
@@ -497,26 +496,6 @@ namespace spldlt {
             }
          }
          
-      }
-      
-      /// @brief Return the number of rows in the node
-      inline int get_nrow() const {
-         return this->symb().nrow + this->ndelay_in_;
-      }
-
-      /// @brief Return the number of columns in the node
-      inline int get_ncol() const {
-         return this->symb().ncol + this->ndelay_in_;
-      }
-
-      /// @brief Return the number of block rows in the node
-      inline int get_nr() const {
-         return (get_nrow()-1) / this->blksz() + 1;
-      }
-
-      /// @brief Return the number of block rows in the node
-      inline int get_nc() const {
-         return (get_ncol()-1) / this->blksz() + 1;
       }
 
       /** \brief Return leading dimension of node's lcol member. */
@@ -538,9 +517,9 @@ namespace spldlt {
          // contrib_blocks vector
          assert(this->symb().nrow > this->symb().ncol);
          
-         int n = get_ncol();
+         int n = this->ncol();
          int sa = n / this->blksz();
-         int nr = get_nr();
+         int nr = this->nr();
          int ncontrib = nr-sa;
 
          return contrib_blocks[(i-sa)+(j-sa)*ncontrib];
@@ -552,10 +531,10 @@ namespace spldlt {
       /// @param j Block column index in the front
       inline BlockSpec& get_block(int i, int j) {
 
-         int nr = get_nr();
+         int nr = this->nr();
 
          assert(i < nr);
-         assert(j < get_nc());
+         assert(j < this->nc());
 
          return blocks[i+j*nr];
       }
@@ -572,36 +551,20 @@ namespace spldlt {
       // TODO Use generic type for sym and unsym blocks
       inline sylver::splu::BlockUnsym<T>& get_block_unsym(int i, int j) {
 
-         int nr = get_nr();
+         int nr = this->nr();
          
          assert(i < nr);
-         assert(j < get_nc());
+         assert(j < this->nc());
 
          return blocks_unsym_[i+nr*j];
          
       }
-      
-// #if defined(SPLDLT_USE_STARPU)
-//       /// @brief Return StarPU symbolic handle
-//       starpu_data_handle_t get_hdl() const {
-//          return this->symb().hdl;
-//       }
-
-//       /// @brief Return StarPU symbolic handle on contribution blocks 
-//       starpu_data_handle_t get_contrib_hdl() const {
-//          return contrib_hdl; 
-//       }
-// #endif
-      
+            
    public:
-      /* Symbolic node associate with this one */
-      // sylver::SymbolicFront& symb;
 
       /* Fixed data from analyse */
       NumericFront<T, PoolAllocator>* first_child; // Pointer to our first child
       NumericFront<T, PoolAllocator>* next_child; // Pointer to parent's next child
-
-      // int blksz; // Tileing size
 
       /* Data that changes during factorize */
       int nelim1; // Number of columns succesfully eliminated during first pass

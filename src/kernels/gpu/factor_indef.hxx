@@ -68,8 +68,8 @@ namespace spldlt { namespace gpu {
 
          int blksz = node.blksz();
          
-         int nrow = node.get_nrow();
-         int ncol = node.get_ncol();
+         int nrow = node.nrow();
+         int ncol = node.ncol();
 
          int ljk_first_row = std::max(0, ncol-j*blksz);
          int lik_first_row = std::max(0, ncol-i*blksz);

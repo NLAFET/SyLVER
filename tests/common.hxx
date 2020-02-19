@@ -388,15 +388,15 @@ namespace spldlt {
                bool debug=false>
       void copy_a_to_cb(T* a, int lda, NumericFront<T, PoolAllocator>& node) {
 
-         int m = node.get_nrow();
-         int n = node.get_ncol();
+         int m = node.nrow();
+         int n = node.ncol();
          size_t contrib_dimn = m-n; // Dimension of contribution block
          int blksz =  node.blksz();
 
          if (contrib_dimn <= 0) return;
          if(debug) printf("[copy_front_cb] contrib dimn = %zu\n", contrib_dimn);
 
-         int nr = node.get_nr();
+         int nr = node.nr();
          int rsa = n/blksz;
          int ncontrib = nr-rsa;
 
@@ -432,13 +432,13 @@ namespace spldlt {
                bool debug=false>
       void copy_cb_to_a(NumericFront<T, PoolAllocator>& node, T* a, int lda) {
 
-         int m = node.get_nrow();
-         int n = node.get_ncol();
+         int m = node.nrow();
+         int n = node.ncol();
          size_t contrib_dimn = m-n; // Dimension of contribution block
          int blksz =  node.blksz();
          if (contrib_dimn <= 0) return;
 
-         int nr = node.get_nr();
+         int nr = node.nr();
          int rsa = n/blksz;
          int ncontrib = nr-rsa;
 
@@ -473,13 +473,13 @@ namespace spldlt {
                bool debug=false>
       void add_cb_to_a(NumericFront<T, PoolAllocator>& node, T* a, int lda) {
 
-         int m = node.get_nrow();
-         int n = node.get_ncol();
+         int m = node.nrow();
+         int n = node.ncol();
          size_t contrib_dimn = m-n; // Dimension of contribution block
          int blksz =  node.blksz();
          if (contrib_dimn <= 0) return;
 
-         int nr = node.get_nr();
+         int nr = node.nr();
          int rsa = n/blksz;
          int ncontrib = nr-rsa;
 
@@ -511,13 +511,13 @@ namespace spldlt {
       template<typename T, typename PoolAllocator>
       void print_cb(char const* format, NumericFront<T, PoolAllocator>& node) {
 
-         int m = node.get_nrow();
-         int n = node.get_ncol();
+         int m = node.nrow();
+         int n = node.ncol();
          size_t contrib_dimn = m-n; // Dimension of contribution block
          int blksz =  node.blksz();
          if (contrib_dimn <= 0) return;
 
-         int nr = node.get_nr();
+         int nr = node.nr();
          int rsa = n/blksz;
          int ncontrib = nr-rsa;
       

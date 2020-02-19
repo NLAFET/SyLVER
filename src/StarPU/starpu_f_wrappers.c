@@ -19,24 +19,33 @@ int starpu_f_init_c(
   if(ncpu >= 0)
     conf.ncpus = ncpu;
   
-  printf("[starpu_f_init_c] conf.ncpus = %d\n", conf.ncpus);
+  printf("[starpu_f_init_c] Number of CPU workers = %d\n", conf.ncpus);
 
 #if defined(SPLDLT_USE_GPU)
   if(ngpu >= 0)
      conf.ncuda = ngpu;
-  printf("[starpu_f_init_c] conf.ncuda = %d\n", conf.ncuda);
+  printf("[starpu_f_init_c] Number of CUDA workers = %d\n", conf.ncuda);
 #else
-     conf.ncuda = 0;
+  conf.ncuda = 0;
 #endif
 
 #if defined(SPLDLT_USE_GPU)
   /* conf->sched_policy_name = "dmdas"; */
   /* conf.sched_policy_name = "eager"; */
   /* conf->sched_policy_name = "lws"; */
-
-  conf.sched_policy_name = "heteroprio";
-  conf.sched_policy_init = &init_heteroprio;
-
+  if (ngpu > 0) {
+     // Use Heteroprio scheduler only if at least one GPU worker is
+     // used in the execution
+     conf.sched_policy_name = "heteroprio";
+     conf.sched_policy_init = &init_heteroprio;
+     printf("[starpu_f_init_c] Use Heteroprio scheduler\n");      
+  }
+  else {
+     // Use LWS scheduler if only CPU workers are enabled
+     conf.sched_policy_name = "lws";
+     printf("[starpu_f_init_c] Use LWS scheduler\n");      
+  }
+  
 #if defined(HAVE_LAHP)
   if(getenv("USE_LAHETEROPRIO") != NULL
           && (strcmp(getenv("USE_LAHETEROPRIO"),"TRUE")==0||strcmp(getenv("USE_LAHETEROPRIO"),"true")==0)){

@@ -317,8 +317,8 @@ contains
     posdef = .false.
     write(*,"(a)") " * Testing factor with match ord no scale...."
     call simple_mat(a)
-    options%ordering = 2
-    a%ne = a%ptr(a%n+1) - 1
+    if (allocated(order)) deallocate(order)
+    allocate (order(1:a%n))
     call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, order, val=a%val, check=.true.)
     if(info%flag < 0) then
        write(*, "(a,i4)") &

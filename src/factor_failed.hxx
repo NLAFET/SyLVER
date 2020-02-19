@@ -33,8 +33,8 @@ namespace spldlt {
          sylver::options_t& options,
          sylver::inform_t& stats) {
 
-      int m = node.get_nrow();
-      int n = node.get_ncol();
+      int m = node.nrow();
+      int n = node.ncol();
       size_t ldl = node.get_ldl();
       T *lcol = node.lcol;
       T *d = &lcol[n*ldl];

@@ -99,8 +99,8 @@ namespace spldlt {
                            // eliminated columns
                );
 
-         int nrow = front.get_nrow();
-         int ncol = front.get_ncol();
+         int nrow = front.nrow();
+         int ncol = front.ncol();
          int ldl = front.get_ldl();
          
          if (front.nelim < ncol) { 
@@ -144,8 +144,8 @@ namespace spldlt {
       typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
       
       /* Extract useful information about node */
-      int m = node.get_nrow();
-      int n = node.get_ncol();
+      int m = node.nrow();
+      int n = node.ncol();
       size_t ldl = align_lda<T>(m);
       T *lcol = node.lcol;
       T *d = &node.lcol[n*ldl];
@@ -1236,7 +1236,7 @@ namespace spldlt {
 #if defined(SPLDLT_USE_STARPU)
 
          ColumnData<T, IntAlloc> &cdata = *node.cdata;
-         int n = node.get_ncol();
+         int n = node.ncol();
          int const nblk = calc_nblk(n, node.blksz());
 
          starpu_data_handle_t *col_hdls = new starpu_data_handle_t[nblk];
@@ -1249,8 +1249,8 @@ namespace spldlt {
 
          delete[] col_hdls;
 #else
-         int m = node.get_nrow();
-         int n = node.get_ncol();
+         int m = node.nrow();
+         int n = node.ncol();
          size_t ldl = align_lda<T>(m);
          T *lcol = node.lcol;
          int *perm = node.perm;
@@ -1287,12 +1287,12 @@ namespace spldlt {
             int& next_elim, int const from_blk=0) {
 
          // Front info
-         int const nblk = front.get_nc();
-         int const mblk = front.get_nr();
+         int const nblk = front.nc();
+         int const mblk = front.nr();
          
          int const block_size = front.blksz();
-         int const m = front.get_nrow();
-         int const n = front.get_ncol();
+         int const m = front.nrow();
+         int const n = front.ncol();
          T *lcol = front.lcol;
          int ldl = front.get_ldl();
          T *d = &front.lcol[n*ldl];
@@ -1436,8 +1436,8 @@ namespace spldlt {
          typedef spldlt::ldlt_app_internal::Block<T, iblksz, IntAlloc> BlockSpec;
          
          int const block_size = node.blksz();
-         int const m = node.get_nrow();
-         int const n = node.get_ncol();
+         int const m = node.nrow();
+         int const n = node.ncol();
          T *lcol = node.lcol;
          int ldl = align_lda<T>(m);
          T *d = &node.lcol[n*ldl];

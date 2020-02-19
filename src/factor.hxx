@@ -25,14 +25,14 @@ namespace spldlt {
       sylver::SymbolicFront& snode = node.symb(); // Symbolic front data 
 
       // Extract useful information about node
-      int const m = node.get_nrow(); // Number of rows in frontal matrix
-      int const n = node.get_ncol(); // Number of columns in frontal matrix
+      int const m = node.nrow(); // Number of rows in frontal matrix
+      int const n = node.ncol(); // Number of columns in frontal matrix
       int const lda = node.get_ldl(); // Leading dimensions
       T *lcol = node.lcol; // Pointer to L factor 
       int const ldcontrib = m-n; // Dimension of contrib block
       int const blksz = options.nb; // Block size
-      int const nr = node.get_nr(); // Number of block rows
-      int const nc = node.get_nc(); // Number of block columns
+      int const nr = node.nr(); // Number of block rows
+      int const nc = node.nc(); // Number of block columns
    
       // std::cout << "[" << context << "]" << std::endl;
 

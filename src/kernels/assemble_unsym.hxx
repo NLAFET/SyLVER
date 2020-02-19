@@ -31,8 +31,8 @@ namespace sylver {
 
          front.ndelay_in(0); // Init incoming delays 
 
-         int const nrow = front.get_nrow();
-         int const numfs = front.get_ncol(); // Number of fully-summed rows/columns
+         int const nrow = front.nrow();
+         int const numfs = front.ncol(); // Number of fully-summed rows/columns
          size_t const ldl = front.get_ldl(); // L factor 
          size_t const ldu = front.get_ldu(); // U factor
          
@@ -65,9 +65,9 @@ namespace sylver {
       void register_front_unsym(
             spldlt::NumericFront<T, PoolAlloc> &front) {
          
-         int const mblk = front.get_nr();
+         int const mblk = front.nr();
          int const blksz = front.blksz();
-         int const n = front.get_ncol();
+         int const n = front.ncol();
 
          for(int jblk=0; jblk<mblk; jblk++) {
             

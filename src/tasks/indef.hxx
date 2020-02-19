@@ -41,7 +41,7 @@ namespace spldlt {
       // int ncontrib = nr-rsa;
 
       spldlt::ldlt_app_internal::ColumnData<T, IntAlloc> &cdata = *node.cdata;
-      int const nblk = node.get_nc(); // number of block columns in factors      
+      int const nblk = node.nc(); // number of block columns in factors      
       
       spldlt::starpu::insert_update_contrib_block_app(
             upd.hdl, isrc.get_hdl(), jsrc.get_hdl(),
@@ -84,9 +84,9 @@ namespace spldlt {
 
       // Node info
       int blksz = node.blksz();
-      int ncol = node.get_ncol(); // Number of block-rows in destination node
-      int nr = node.get_nr(); // Number of block-rows in destination node
-      int nc = node.get_nc(); // Number of block-columns in destination node
+      int ncol = node.ncol(); // Number of block-rows in destination node
+      int nr = node.nr(); // Number of block-rows in destination node
+      int nc = node.nc(); // Number of block-columns in destination node
       starpu_data_handle_t *hdls = new starpu_data_handle_t[nr*nc];
       int nh = 0; // Number of handles/blocks in node
 
@@ -175,9 +175,9 @@ namespace spldlt {
       // Node info
       sylver::SymbolicFront &snode = node.symb(); // Child symbolic node
       int blksz = node.blksz();
-      int ncol = node.get_ncol();
-      int nr = node.get_nr(); // Number of block-rows in destination node
-      int nc = node.get_nc(); // Number of block-columns in destination node
+      int ncol = node.ncol();
+      int nr = node.nr(); // Number of block-rows in destination node
+      int nc = node.nc(); // Number of block-columns in destination node
       // starpu_data_handle_t *hdls = new starpu_data_handle_t[nr*nc];
       // FIXME: check upper bound on number of StarPU handles for this array
       starpu_data_handle_t *hdls = new starpu_data_handle_t[nr*nr];
@@ -185,10 +185,10 @@ namespace spldlt {
       
       // Child node info
       sylver::SymbolicFront &csnode = cnode.symb(); // Child symbolic node
-      int cncol = cnode.get_ncol();
-      int cnrow = cnode.get_nrow();
-      int cnr = cnode.get_nr(); // Number of block-rows in child node
-      int cnc = cnode.get_nc(); // Number of block-columns in child node
+      int cncol = cnode.ncol();
+      int cnrow = cnode.nrow();
+      int cnr = cnode.nr(); // Number of block-rows in child node
+      int cnc = cnode.nc(); // Number of block-columns in child node
       starpu_data_handle_t *chdls = new starpu_data_handle_t[cnr*cnc];
       int nch = 0; // Number of handles/blocks in the child node
 

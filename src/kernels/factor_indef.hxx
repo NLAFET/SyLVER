@@ -207,8 +207,8 @@ namespace spldlt {
 
       int blksz = node.blksz();
 
-      int nrow = node.get_nrow();
-      int ncol = node.get_ncol();
+      int nrow = node.nrow();
+      int ncol = node.ncol();
       int ldl = align_lda<T>(nrow);
 
       T *lcol = node.lcol;
@@ -256,8 +256,8 @@ namespace spldlt {
       assert(nelim_from >= 0);
       // node.zero_contrib_blocks();
 
-      int m = node.get_nrow();
-      int n = node.get_ncol();
+      int m = node.nrow();
+      int n = node.ncol();
       
       assert(nelim_to < n);
       
@@ -268,7 +268,7 @@ namespace spldlt {
 
       int fc = nelim_from/blksz; // First block-column
       int lc = nelim_to/blksz; // Last block-column
-      int nr = node.get_nr();
+      int nr = node.nr();
       int rsa = n/blksz;
       // int ncontrib = nr-rsa;
 

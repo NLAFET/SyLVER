@@ -48,7 +48,27 @@ namespace sylver {
 
       // Set the number of delays to push into parent to `ndelay`
       void ndelay_out(int ndelay) { ndelay_out_ = ndelay; }
-      
+
+      /// @brief Return the number of columns in the node
+      inline int ncol() const {
+         return this->symb().ncol + this->ndelay_in_;
+      }
+
+      /// @brief Return the number of rows in the node
+      inline int nrow() const {
+         return this->symb().nrow + this->ndelay_in_;
+      }
+
+      /// @brief Return the number of block rows in the node
+      inline int nc() const {
+         return (this->ncol()-1) / this->blksz() + 1;
+      }
+
+      /// @brief Return the number of block rows in the node
+      inline int nr() const {
+         return (this->nrow()-1) / this->blksz() + 1;
+      }
+
       // Return reference to pool allocator
       PoolAllocator& pool_alloc() { return pool_alloc_; }
 

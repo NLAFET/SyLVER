@@ -822,7 +822,7 @@ namespace starpu {
       starpu_codelet_unpack_args(
             cl_arg, &node, &alloc);
 
-      int n = node->get_ncol();
+      int n = node->ncol();
 
       if (node->nelim < n) {
 
@@ -830,7 +830,7 @@ namespace starpu {
 
          backup.release_all_memory(); 
          
-         int m = node->get_nrow();
+         int m = node->nrow();
          int ldl = node->get_ldl();
          ColumnData<T, IntAlloc> &cdata = *node->cdata;
          bool const debug = false;

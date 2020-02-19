@@ -28,17 +28,17 @@ namespace spldlt {
       typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
       int blksz = node.blksz();
       spldlt::ldlt_app_internal::ColumnData<T, IntAlloc> &cdata = *node.cdata;
-      int const nblk = node.get_nc(); // Number of block-columns
+      int const nblk = node.nc(); // Number of block-columns
       starpu_data_handle_t *hdls = nullptr;
       int nh = 0;
-      int n = node.get_ncol();
-      int m = node.get_nrow();
+      int n = node.ncol();
+      int m = node.nrow();
 
       if ((m-n) > 0) {         
          // In case there is a contribution block (non-root nodes)
          
          int rsa = n / blksz; // Index of first block in contribution blocks
-         int nr = node.get_nr(); // Number of block rows
+         int nr = node.nr(); // Number of block rows
          int ncb = nr-rsa;
          hdls = new starpu_data_handle_t[ncb*ncb];
       
