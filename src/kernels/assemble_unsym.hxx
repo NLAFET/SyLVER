@@ -29,7 +29,7 @@ namespace sylver {
          typedef typename std::allocator_traits<FactorAlloc>::template rebind_traits<int> FAIntTraits;
          typename FAIntTraits::allocator_type factor_alloc_int(factor_alloc);
 
-         front.ndelay_in = 0; // Init incoming delays 
+         front.ndelay_in(0); // Init incoming delays 
 
          int const nrow = front.get_nrow();
          int const numfs = front.get_ncol(); // Number of fully-summed rows/columns

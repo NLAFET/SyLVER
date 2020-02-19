@@ -15,38 +15,67 @@ namespace sylver {
             SymbolicFront& symb,
             PoolAllocator const& pool_alloc,
             int blksz)
-         : symb_(symb), pool_alloc_(pool_alloc), blksz_(blksz)
+         : symb_(symb), pool_alloc_(pool_alloc), blksz_(blksz),
+           contrib_hdl_(nullptr), ndelay_in_(0)
       {};
 
       // Return block size
       int blksz() const {return blksz_;}
 
 #if defined(SPLDLT_USE_STARPU)
-      /// @brief Return StarPU symbolic handle on front
-      starpu_data_handle_t& hdl() {
-         return this->symb().hdl;
-      }
-
       /// @brief Return StarPU symbolic handle on front's contribution
       /// blocks
-      starpu_data_handle_t& contrib_hdl() {
+      starpu_data_handle_t contrib_hdl() const {
          return contrib_hdl_; 
+      }
+      /// @brief Return StarPU symbolic handle on front
+      starpu_data_handle_t hdl() const {
+         return this->symb().hdl;
+      }
+#endif
+
+      // Return the number of incoming delays
+      int ndelay_in() const { return ndelay_in_; }
+
+      // Set the number of incoming delays to `ndelay`
+      void ndelay_in(int ndelay) { ndelay_in_ = ndelay; }
+
+      // Add `ndelay` to the number of incoming delays
+      void ndelay_in_add(int ndelay) { ndelay_in_ += ndelay; }
+
+      // Return reference to pool allocator
+      PoolAllocator& pool_alloc() { return pool_alloc_; }
+
+#if defined(SPLDLT_USE_STARPU)
+      // Register symbolic handle in StarPU
+      void register_symb() {
+         starpu_void_data_register(&symb_.hdl);
+      }
+
+      // Register symbolic contrib block handle in StarPU
+      void register_symb_contrib() {
+         
+         assert(contrib_hdl_ == nullptr);
+
+         starpu_void_data_register(&contrib_hdl_);
       }
 #endif
 
       // Return associated symbolic node
       SymbolicFront& symb() const { return symb_;};
-
-      // Return reference to pool allocator
-      PoolAllocator& pool_alloc() { return pool_alloc_; }
       
    protected:
       int blksz_; // Tileing size
 #if defined(SPLDLT_USE_STARPU)
-      starpu_data_handle_t contrib_hdl_; // Symbolic handle for contribution blocks
+      // Symbolic handle for contribution blocks
+      starpu_data_handle_t contrib_hdl_;
 #endif
-      SymbolicFront& symb_; // Symbolic fronal matrix
-      PoolAllocator pool_alloc_; // Pool allocator (for contrib)
+      // Number of delays arising from children
+      int ndelay_in_;
+      // Memory allocator used to manage contribution blocks
+      PoolAllocator pool_alloc_;
+      // Symbolic frontal matrix
+      SymbolicFront& symb_;
 
    };
 }

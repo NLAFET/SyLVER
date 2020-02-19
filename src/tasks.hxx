@@ -356,8 +356,8 @@ namespace spldlt {
          T *a_jk, int lda_jk,
          int blksz, int prio) {
 
-      int m = snode.nrow + node.ndelay_in;
-      int n = snode.ncol + node.ndelay_in;
+      int m = snode.nrow + node.ndelay_in();
+      int n = snode.ncol + node.ndelay_in();
       int ldcontrib = m-n;
 
       int blkm = std::min(blksz, m - i*blksz);

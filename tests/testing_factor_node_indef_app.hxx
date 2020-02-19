@@ -80,7 +80,7 @@ namespace spldlt { namespace tests {
       sfront.nrow = m;
       sfront.ncol = n;
       NumericFront<T, PoolAllocator> front(sfront, pool_alloc, blksz);
-      front.ndelay_in = 0; // No incoming delayed columns      
+      front.ndelay_in(0); // No incoming delayed columns      
       front.ndelay_out = 0;
       // Init node
       // Setup allocator for factors

@@ -157,7 +157,7 @@ namespace spldlt {
       for(int i=0; i<snode.ncol; i++)
          map[ snode.rlist[i] ] = i;
       for(int i=snode.ncol; i<snode.nrow; i++)
-         map[ snode.rlist[i] ] = i + node.ndelay_in;
+         map[ snode.rlist[i] ] = i + node.ndelay_in();
       
       // Assemble front: fully-summed columns 
       for (auto* child=node.first_child; child!=NULL; child=child->next_child) {

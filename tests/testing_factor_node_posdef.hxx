@@ -76,7 +76,7 @@ namespace tests {
       sfront.nrow = m;
       sfront.ncol = n;
       NumericFront<T, PoolAllocator> front(sfront, pool_alloc, blksz);
-      front.ndelay_in = 0; // No incoming delayed columns      
+      front.ndelay_in(0); // No incoming delayed columns      
       front.ndelay_out = 0;
 
       // Setup allocator for factors
@@ -180,11 +180,11 @@ namespace tests {
 #if defined(SPLDLT_USE_GPU)
       spldlt::starpu::cl_update_block.where = STARPU_CPU|STARPU_CUDA;
 #endif
-         
-      // Register symbolic handles
-      starpu_void_data_register(&(sfront.hdl)); // Symbolic handle on node
-      starpu_void_data_register(&(front.contrib_hdl())); // Symbolic handle on contrib blocks 
-         
+      // Register symbolic handles on node
+      front.register_symb();
+      // Register symbolic handle for contribution block
+      front.register_symb_contrib();
+      // Register data handles in StarPU         
       spldlt::starpu::register_node(front);
 #endif
          

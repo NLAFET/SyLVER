@@ -283,6 +283,11 @@ program spldlt_test
           argnum = argnum + 1
           read( argval, * ) options%print_level
           print *, 'Print level = ', options%print_level
+       case("--u")
+          call get_command_argument(argnum, argval)
+          argnum = argnum + 1
+          read (argval, *) options%u
+          print *, 'Pivoting threshold u = ', options%u
        case default
           print *, "Unrecognised command line argument: ", argval
           stop

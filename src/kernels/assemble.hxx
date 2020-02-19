@@ -356,7 +356,7 @@ namespace spldlt {
 
       sylver::SymbolicFront const& sfront = front.symb();
 
-      front.ndelay_in = 0;
+      front.ndelay_in(0);
 
       int const nrow = front.get_nrow();
       int const ncol = front.get_ncol();
@@ -408,12 +408,13 @@ namespace spldlt {
       sylver::SymbolicFront const& sfront = front.symb();
 
       front.ndelay_out = 0;
-      front.ndelay_in = 0;
+      front.ndelay_in(0);
       // Count incoming delays and determine size of node
       for(auto* child=front.first_child; child!=NULL; child=child->next_child) {
          // Make sure we're not in a subtree
          if (child->symb().exec_loc == -1) { 
-            front.ndelay_in += child->ndelay_out;
+            // front.ndelay_in += child->ndelay_out;
+            front.ndelay_in_add(child->ndelay_out);
          } 
          else {
             int cn, ldcontrib, ndelay, lddelay;
@@ -421,10 +422,11 @@ namespace spldlt {
             int const *crlist, *delay_perm;
             // spral_ssids_contrib_get_data(
             contrib_get_data(
-                  child_contrib[child->symb().contrib_idx], &cn, &cval, &ldcontrib, &crlist,
-                  &ndelay, &delay_perm, &delay_val, &lddelay
-                  );
-            front.ndelay_in += ndelay;
+                  child_contrib[child->symb().contrib_idx], &cn, &cval,
+                  &ldcontrib, &crlist, &ndelay, &delay_perm, &delay_val,
+                  &lddelay);
+            // front.ndelay_in += ndelay;
+            front.ndelay_in_add(ndelay);
          }
       }
 
@@ -483,7 +485,7 @@ namespace spldlt {
             int c = dest / snode.nrow;
             int r = dest % snode.nrow;
             long k = c*ldl + r;
-            if(r >= snode.ncol) k += node.ndelay_in;
+            if(r >= snode.ncol) k += node.ndelay_in();
             T rscale = scaling[ snode.rlist[r]-1 ];
             T cscale = scaling[ snode.rlist[c]-1 ];
             node.lcol[k] = rscale * aval[src] * cscale;
@@ -499,7 +501,7 @@ namespace spldlt {
             assert(r < node.get_nrow());
             long k = c*ldl + r;
 
-            if(r >= snode.ncol) k += node.ndelay_in;
+            if(r >= snode.ncol) k += node.ndelay_in();
 
             node.lcol[k] = aval[src];
          }
@@ -1164,7 +1166,7 @@ namespace spldlt {
       for(int i=0; i<cnode.ndelay_out; i++) {
          // Add delayed rows (from delayed cols)
          T *dest = &node.lcol[delay_col*(ldl+1)];
-         int lds = align_lda<T>(csnode.nrow + cnode.ndelay_in);
+         int lds = align_lda<T>(csnode.nrow + cnode.ndelay_in());
          T *src = &cnode.lcol[(cnode.nelim+i)*(lds+1)];
          node.perm[delay_col] = cnode.perm[cnode.nelim+i];
          for(int j=0; j<cnode.ndelay_out-i; j++) {
@@ -1172,7 +1174,7 @@ namespace spldlt {
          }
          // Add child's non-fully summed rows (from delayed cols)
          dest = node.lcol;
-         src = &cnode.lcol[cnode.nelim*lds + cnode.ndelay_in +i*lds];
+         src = &cnode.lcol[cnode.nelim*lds + cnode.ndelay_in() +i*lds];
          for(int j=csnode.ncol; j<csnode.nrow; j++) {
             // int r = map[ csnode.rlist[j] ];
             int r = csnode.map[j-csnode.ncol];
@@ -1221,7 +1223,7 @@ namespace spldlt {
       for(int i=0; i<snode.ncol; i++)
          map[ snode.rlist[i] ] = i;
       for(int i=snode.ncol; i<snode.nrow; i++)
-         map[ snode.rlist[i] ] = i + node.ndelay_in;
+         map[ snode.rlist[i] ] = i + node.ndelay_in();
       
       // Assemble front: fully-summed columns 
       for (auto* child=node.first_child; child!=NULL; child=child->next_child) {

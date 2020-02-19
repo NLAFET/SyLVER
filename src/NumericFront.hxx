@@ -138,7 +138,7 @@ namespace spldlt {
          sylver::NumericFrontBase<T, PoolAllocator>(symb, pool_alloc, blksz),
          //symb(symb), pool_alloc_(pool_alloc), blksz(blksz),
          contrib(nullptr),
-         backup(nullptr), cdata(nullptr), ndelay_in(0), ndelay_out(0),
+         backup(nullptr), cdata(nullptr), /*ndelay_in(0),*/ ndelay_out(0),
          lcol(nullptr), ucol(nullptr), nelim1(0), nelim(0), blocks_unsym_(nullptr)
       {}
       
@@ -600,12 +600,12 @@ namespace spldlt {
       
       /// @brief Return the number of rows in the node
       inline int get_nrow() const {
-         return this->symb().nrow + ndelay_in;
+         return this->symb().nrow + this->ndelay_in_;
       }
 
       /// @brief Return the number of columns in the node
       inline int get_ncol() const {
-         return this->symb().ncol + ndelay_in;
+         return this->symb().ncol + this->ndelay_in_;
       }
 
       /// @brief Return the number of block rows in the node
@@ -620,12 +620,12 @@ namespace spldlt {
 
       /** \brief Return leading dimension of node's lcol member. */
       inline size_t get_ldl() const {
-         return spral::ssids::cpu::align_lda<T>(this->symb().nrow + ndelay_in);
+         return spral::ssids::cpu::align_lda<T>(this->symb().nrow + this->ndelay_in_);
       }
 
       /** \brief Return leading dimension of node's ucol member. */
       inline size_t get_ldu() const {
-         return spral::ssids::cpu::align_lda<T>(this->symb().ncol + ndelay_in);
+         return spral::ssids::cpu::align_lda<T>(this->symb().ncol + this->ndelay_in_);
       }
 
       /// @Brief Return block (i,j) in the contribution block
@@ -703,7 +703,7 @@ namespace spldlt {
       // int blksz; // Tileing size
 
       /* Data that changes during factorize */
-      int ndelay_in; // Number of delays arising from children
+      // int ndelay_in; // Number of delays arising from children
       int ndelay_out; // Number of delays arising to push into parent
       int nelim1; // Number of columns succesfully eliminated during first pass
       int nelim; // Number of columns succesfully eliminated

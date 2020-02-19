@@ -91,8 +91,13 @@ namespace splu {
 
          // Register symbolic handles prior to the factorization
          for(int ni = 0; ni < symb_.nnodes()+1; ++ni) {
-            starpu_void_data_register(&(symb_[ni].hdl)); // Register node symbolic handle
-            starpu_void_data_register(&(fronts_[ni].contrib_hdl())); // Register contribution block symbolic handle
+            // Register node symbolic handle in StarPU (fully summed
+            // part)
+            fronts_[ni].register_symb();
+            // Register contribution block symbolic handle in StarPU
+            fronts_[ni].register_symb_contrib();
+            // starpu_void_data_register(&(symb_[ni].hdl)); // Register node symbolic handle
+            // starpu_void_data_register(&(fronts_[ni].contrib_hdl())); // Register contribution block symbolic handle
          }
 #endif
             
@@ -194,7 +199,7 @@ namespace splu {
          if(stats.flag < 0) return;
             
          for(int ni=0; ni<symb_.nnodes(); ni++) {
-            int m = symb_[ni].nrow + fronts_[ni].ndelay_in;
+            int m = symb_[ni].nrow + fronts_[ni].ndelay_in();
             stats.maxfront = std::max(stats.maxfront, m);
             // int n = symb_[ni].ncol + fronts_[ni].ndelay_in;
             // int ldl = align_lda<T>(m);

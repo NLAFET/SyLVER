@@ -152,9 +152,9 @@ namespace spldlt {
             // all inform remain zero
          } else { // indefinite
             for(int ni=0; ni<symb_.nnodes(); ni++) {
-               int m = symb_[ni].nrow + fronts_[ni].ndelay_in;
+               int m = symb_[ni].nrow + fronts_[ni].ndelay_in();
                inform.maxfront = std::max(inform.maxfront, m);
-               int n = symb_[ni].ncol + fronts_[ni].ndelay_in;
+               int n = symb_[ni].ncol + fronts_[ni].ndelay_in();
                int ldl = align_lda<T>(m);
                T *d = fronts_[ni].lcol + n*ldl;
                for(int i=0; i<fronts_[ni].nelim; ) {
@@ -201,8 +201,13 @@ namespace spldlt {
          // Register symbolic handles.
          // auto start = std::chrono::high_resolution_clock::now();
          for(int ni = 0; ni < symb_.nnodes()+1; ++ni) {
-            starpu_void_data_register(&(symb_[ni].hdl)); // Node's symbolic handle
-            starpu_void_data_register(&(fronts_[ni].contrib_hdl())); // Symbolic handle for contribution blocks
+            // Register node symbolic handle in StarPU (fully summed
+            // part)
+            // starpu_void_data_register(&(symb_[ni].hdl));
+            fronts_[ni].register_symb();
+            // Register contribution block symbolic handle in StarPU
+            // starpu_void_data_register(&(fronts_[ni].contrib_hdl()));
+            fronts_[ni].register_symb_contrib();
          }
          // auto end = std::chrono::high_resolution_clock::now();
          // long t_reg = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count();
@@ -385,9 +390,11 @@ namespace spldlt {
          // TODO move hdl registration to activate task
          for(int ni = 0; ni < symb_.nnodes(); ++ni) {
             // Register symbolic handles on node
-            starpu_void_data_register(&(symb_[ni].hdl));
+            // starpu_void_data_register(&(symb_[ni].hdl));
+            fronts_[ni].register_symb();
             // Register symbolic handle for contribution block
-            starpu_void_data_register(&(fronts_[ni].contrib_hdl()));
+            // starpu_void_data_register(&(fronts_[ni].contrib_hdl()));
+            fronts_[ni].register_symb_contrib();
          }
 #endif
 
@@ -454,7 +461,7 @@ namespace spldlt {
             for(int i=0; i<sfront.ncol; i++)
                map[ sfront.rlist[i] ] = i;
             for(int i=sfront.ncol; i<sfront.nrow; i++)
-               map[ sfront.rlist[i] ] = i + fronts_[ni].ndelay_in;
+               map[ sfront.rlist[i] ] = i + fronts_[ni].ndelay_in();
 
             // Assemble front: fully-summed columns 
             for (auto* child=fronts_[ni].first_child; child!=NULL; child=child->next_child) {
@@ -607,7 +614,7 @@ namespace spldlt {
             int nelim = (posdef) ? n
                : fronts_[ni].nelim;
             int ndin = (posdef) ? 0
-               : fronts_[ni].ndelay_in;
+               : fronts_[ni].ndelay_in();
             int ldl = align_lda<T>(m+ndin);
             // printf("[NumericTree] solve fwd, node: %d, nelim: %d, ldl: %d\n", ni, nelim, ldl);
             /* Build map (indef only) */
@@ -678,7 +685,7 @@ namespace spldlt {
             int nelim = (posdef) ? n
                : fronts_[ni].nelim;
             int ndin = (posdef) ? 0
-               : fronts_[ni].ndelay_in;
+               : fronts_[ni].ndelay_in();
 
             /* Build map (indef only) */
             int const *map;
