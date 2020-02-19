@@ -4,10 +4,11 @@
 #pragma once
 
 // SyVLER
-#include "Block.hxx"
+#include "BlockUnsym.hxx"
 #include "kernels/factor_unsym.hxx"
 #include "kernels/assemble_unsym.hxx"
 #include "kernels/ldlt_app.hxx"
+#include "Tile.hxx"
 
 // SSIDS
 #include "ssids/cpu/Workspace.hxx"
@@ -114,7 +115,7 @@ namespace splu {
 
    template <typename T, typename PoolAlloc, typename IntAlloc>
    void update_cb_block_unsym_app_task(
-         BlockUnsym<T>& lblk, BlockUnsym<T>& ublk, spldlt::Tile<T, PoolAlloc>& blk, 
+         BlockUnsym<T>& lblk, BlockUnsym<T>& ublk, sylver::Tile<T, PoolAlloc>& blk, 
          spldlt::ldlt_app_internal::ColumnData<T, IntAlloc>& cdata) {
 
       int m = blk.m;
@@ -282,7 +283,7 @@ namespace splu {
 
    template <typename T, typename PoolAlloc>
    void update_cb_block_lu_task(
-         BlockUnsym<T>& lblk, BlockUnsym<T>& ublk, spldlt::Tile<T, PoolAlloc>& blk) {
+         BlockUnsym<T>& lblk, BlockUnsym<T>& ublk, sylver::Tile<T, PoolAlloc>& blk) {
 
       int m = blk.m;
       int n = blk.m;

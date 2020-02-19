@@ -15,6 +15,7 @@
 #include "StarPU/kernels_indef.hxx"
 using namespace spldlt::starpu;
 #endif
+#include "Tile.hxx"
 
 // SSIDS
 #include "ssids/cpu/kernels/ldlt_nopiv.hxx"
@@ -1296,7 +1297,7 @@ namespace spldlt {
          T *d = &front.lcol[n*ldl];
          int* perm = front.perm;
          std::vector<Block<T, iblksz, IntAlloc>>& blocks = front.blocks;
-         std::vector<spldlt::Tile<T, Allocator>>& contrib_blocks = front.contrib_blocks;
+         std::vector<sylver::Tile<T, Allocator>>& contrib_blocks = front.contrib_blocks;
          ColumnData<T, IntAlloc> &cdata = *front.cdata;
          CopyBackup<T, Allocator> &backup = *front.backup;
 
@@ -1393,7 +1394,7 @@ namespace spldlt {
                for (int jblk = rsa; jblk < mblk; ++jblk) {
                   for (int iblk = jblk;  iblk < mblk; ++iblk) {
 
-                     Tile<T, Allocator>& upd = front.get_contrib_block(iblk, jblk);
+                     sylver::Tile<T, Allocator>& upd = front.get_contrib_block(iblk, jblk);
                      
                      update_contrib_block_app
                         <T, IntAlloc, Allocator>
@@ -1441,7 +1442,7 @@ namespace spldlt {
          T *d = &node.lcol[n*ldl];
          int *perm = node.perm;
          std::vector<Block<T, iblksz, IntAlloc>>& blocks = node.blocks;
-         std::vector<spldlt::Tile<T, Allocator>>& contrib_blocks = node.contrib_blocks;
+         std::vector<sylver::Tile<T, Allocator>>& contrib_blocks = node.contrib_blocks;
          ColumnData<T, IntAlloc> &cdata = *node.cdata;
          CopyBackup<T, Allocator> &backup = *node.backup;
          

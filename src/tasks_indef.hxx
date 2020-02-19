@@ -7,6 +7,7 @@
 #include "factor_failed.hxx"
 #include "kernels/ldlt_app.hxx"
 #include "kernels/factor_indef.hxx"
+#include "Tile.hxx"
 // STD
 #include <assert.h>
 // StarPU
@@ -25,7 +26,7 @@ namespace spldlt {
    template <typename T, typename PoolAlloc, typename BlockSpec>
    void update_contrib_block_app_task(
          BlockSpec& isrc, BlockSpec& jsrc,
-         Tile<T, PoolAlloc>& upd,
+         sylver::Tile<T, PoolAlloc>& upd,
          NumericFront<T, PoolAlloc>& node,
          int blk, int iblk, int jblk,
          std::vector<spral::ssids::cpu::Workspace>& workspaces,
@@ -160,7 +161,7 @@ namespace spldlt {
 
       // printf("[assemble_delays_task] idx = %d, cidx = %d, cnode.ndelay_out = %d\n", 
       //        node.symb.idx+1 , cnode.symb.idx+1 ,cnode.ndelay_out);
-      if (cnode.ndelay_out <= 0) return; // No task to submit if no delays
+      if (cnode.ndelay_out() <= 0) return; // No task to submit if no delays
 
 #if defined(SPLDLT_USE_STARPU)
       // Node info
@@ -200,7 +201,7 @@ namespace spldlt {
       // Add blocks in node
       int rr = -1;
       int cc = -1;
-      for(int j = 0; j < cnode.ndelay_out; j++) {
+      for(int j = 0; j < cnode.ndelay_out(); j++) {
 
          int c = delay_col+j; // Destination column
          if (cc == (c/blksz)) continue;

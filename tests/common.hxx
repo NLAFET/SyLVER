@@ -6,6 +6,7 @@
 #include "kernels/gpu/common.hxx"
 #include "kernels/gpu/wrappers.hxx"
 #endif
+#include "Tile.hxx"
 
 #include <cstdio>
 #include <cmath>
@@ -406,7 +407,7 @@ namespace spldlt {
             // int blkn = std::min((j+1)*blksz, m) - first_col;
             for(int i = j; i < nr; i++) {
 
-               spldlt::Tile<T, PoolAllocator>& cb = node.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib];
+               sylver::Tile<T, PoolAllocator>& cb = node.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib];
             
                // First col in contrib block
                int first_row = std::max(i*blksz, n);
@@ -452,7 +453,7 @@ namespace spldlt {
                // Tile height
                // int blkm = std::min((i+1)*blksz, m) - first_row;
            
-               spldlt::Tile<T, PoolAllocator>& cb = node.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib];
+               sylver::Tile<T, PoolAllocator>& cb = node.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib];
 
                // FIXME: use copy routine from BLAS
                for (int c = 0; c < cb.n; ++c) {
@@ -493,7 +494,7 @@ namespace spldlt {
                // Tile height
                // int blkm = std::min((i+1)*blksz, m) - first_row;
            
-               spldlt::Tile<T, PoolAllocator>& cb = node.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib];
+               sylver::Tile<T, PoolAllocator>& cb = node.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib];
 
                // FIXME: use copy routine from BLAS
                for (int c = 0; c < cb.n; ++c) {

@@ -9,7 +9,7 @@
 #include "SymbolicTree.hxx"
 #include "SymbolicFront.hxx"
 #include "NumericFront.hxx"
-#include "tasks/tasks_unsym.hxx"
+#include "tasks/unsym.hxx"
 
 // STD 
 #include <stdexcept>

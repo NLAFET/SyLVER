@@ -32,7 +32,7 @@ namespace spldlt {
          }
 #if defined(SPLDLT_USE_STARPU)
          // Unregister symbolic handle on child node
-         starpu_data_unregister_submit(csnode.hdl);
+         child->unregister_submit_symb();
 #endif
       } // Loop over child nodes
 
@@ -207,7 +207,7 @@ namespace spldlt {
 // #if defined(SPLDLT_USE_STARPU)
 //             starpu_task_wait_for_all();
 // #endif      
-            delay_col += child->ndelay_out;
+            delay_col += child->ndelay_out();
 
             // Handle expected contributions (only if something there)
             if (ldcontrib>0) {

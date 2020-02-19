@@ -12,6 +12,7 @@
 #include "StarPU/kernels.hxx"
 #include "StarPU/kernels_indef.hxx"
 #endif
+#include "Tile.hxx"
 
 #include <assert.h>
 
@@ -813,7 +814,7 @@ namespace spldlt {
          // int cncontrib = cnr-crsa;
          
          // Contrib block to be assembled into current node
-         Tile<T, PoolAlloc>& cb = cnode.get_contrib_block(ii, jj);
+         sylver::Tile<T, PoolAlloc>& cb = cnode.get_contrib_block(ii, jj);
 
          spldlt::starpu::insert_assemble_block(
                &node, &cnode, ii, jj, cmap,
@@ -918,7 +919,7 @@ namespace spldlt {
       if (nh>0) {
          
          // Contrib block to assembled into node
-         Tile<T, PoolAlloc>& cb = cnode.get_contrib_block(ii, jj);
+         sylver::Tile<T, PoolAlloc>& cb = cnode.get_contrib_block(ii, jj);
 
          spldlt::starpu::insert_assemble_contrib_block(
                &node, &cnode, ii, jj, cmap, 

@@ -122,9 +122,9 @@ namespace spldlt {
 
       }
       // Update number of delayed columns
-      node.ndelay_out = n - node.nelim;         
-      stats.num_delay += node.ndelay_out;
-      if (node.ndelay_out > 0)
+      node.ndelay_out(n - node.nelim);
+      stats.num_delay += node.ndelay_out();
+      // if (node.ndelay_out() > 0)
          // printf("[factor_front_indef_failed] nodeidx = %d, ndelay_out = %d\n",
                 // node.symb.idx, node.ndelay_out);
          

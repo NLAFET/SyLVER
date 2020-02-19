@@ -16,7 +16,7 @@ namespace sylver {
             PoolAllocator const& pool_alloc,
             int blksz)
          : symb_(symb), pool_alloc_(pool_alloc), blksz_(blksz),
-           contrib_hdl_(nullptr), ndelay_in_(0)
+           contrib_hdl_(nullptr), ndelay_in_(0), ndelay_out_(0)
       {};
 
       // Return block size
@@ -43,6 +43,12 @@ namespace sylver {
       // Add `ndelay` to the number of incoming delays
       void ndelay_in_add(int ndelay) { ndelay_in_ += ndelay; }
 
+      // Return the number of delays arising to push into parent
+      int ndelay_out() const { return ndelay_out_; }
+
+      // Set the number of delays to push into parent to `ndelay`
+      void ndelay_out(int ndelay) { ndelay_out_ = ndelay; }
+      
       // Return reference to pool allocator
       PoolAllocator& pool_alloc() { return pool_alloc_; }
 
@@ -52,12 +58,25 @@ namespace sylver {
          starpu_void_data_register(&symb_.hdl);
       }
 
+      // Unregister symbolic handle in StarPU when handle is no longer
+      // needed
+      void unregister_submit_symb() {
+         starpu_data_unregister_submit(symb_.hdl);
+      }
+
       // Register symbolic contrib block handle in StarPU
       void register_symb_contrib() {
          
          assert(contrib_hdl_ == nullptr);
 
          starpu_void_data_register(&contrib_hdl_);
+      }
+
+      void unregister_submit_symb_contrib() {
+
+         assert(contrib_hdl_ != nullptr);
+
+         starpu_data_unregister_submit(contrib_hdl_);
       }
 #endif
 
@@ -72,6 +91,8 @@ namespace sylver {
 #endif
       // Number of delays arising from children
       int ndelay_in_;
+      // Number of delays arising to push into parent
+      int ndelay_out_;
       // Memory allocator used to manage contribution blocks
       PoolAllocator pool_alloc_;
       // Symbolic frontal matrix

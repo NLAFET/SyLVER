@@ -5,10 +5,10 @@
 #pragma once
 
 // SyLVER
-
 #include "kernels/common.hxx"
 #include "kernels/ldlt_app.hxx"
 #include "NumericFront.hxx"
+#include "Tile.hxx"
 // STD
 #include <assert.h>
 #include <string>
@@ -407,14 +407,13 @@ namespace spldlt {
 
       sylver::SymbolicFront const& sfront = front.symb();
 
-      front.ndelay_out = 0;
+      front.ndelay_out(0);
       front.ndelay_in(0);
       // Count incoming delays and determine size of node
       for(auto* child=front.first_child; child!=NULL; child=child->next_child) {
          // Make sure we're not in a subtree
-         if (child->symb().exec_loc == -1) { 
-            // front.ndelay_in += child->ndelay_out;
-            front.ndelay_in_add(child->ndelay_out);
+         if (child->symb().exec_loc == -1) {
+            front.ndelay_in_add(child->ndelay_out());
          } 
          else {
             int cn, ldcontrib, ndelay, lddelay;
@@ -557,7 +556,7 @@ namespace spldlt {
       int cnr = cnode.get_nr(); // number of block rows in child node
       int cncontrib = cnr-csa;
       // Source block
-      Tile<T, PoolAlloc> const& blk = cnode.contrib_blocks[(ii-csa)+(jj-csa)*cncontrib];
+      sylver::Tile<T, PoolAlloc> const& blk = cnode.contrib_blocks[(ii-csa)+(jj-csa)*cncontrib];
       int blk_lda = blk.lda;
       int blk_m = blk.m;
       int blk_n = blk.n;
@@ -715,7 +714,7 @@ namespace spldlt {
       int csa = cncol / blksz; // Index of first block in contrib
       int cnr = cnode.get_nr(); // Number of block rows in child node
       int cncontrib = cnr-csa;
-      Tile<T, PoolAlloc> const& src_blk = cnode.contrib_blocks[(ii-csa)+(jj-csa)*cncontrib];
+      sylver::Tile<T, PoolAlloc> const& src_blk = cnode.contrib_blocks[(ii-csa)+(jj-csa)*cncontrib];
       int src_blk_lda = src_blk.lda;
       int src_blk_m = src_blk.m;
       int src_blk_n = src_blk.n;
@@ -767,7 +766,7 @@ namespace spldlt {
                int rr = r / blksz;
                // First row index in CB of destination block
                int dest_row_sa = (ncol > rr*blksz) ? 0 : (rr*blksz-ncol);
-               Tile<T, PoolAlloc> &dest_blk = node.contrib_blocks[(rr-sa)+(cc-sa)*ncontrib];
+               sylver::Tile<T, PoolAlloc> &dest_blk = node.contrib_blocks[(rr-sa)+(cc-sa)*ncontrib];
                int dest_blk_lda = dest_blk.lda;
                T *dest = &dest_blk.a[ (c - ncol - dest_col_sa)*dest_blk_lda ];
 
@@ -799,7 +798,7 @@ namespace spldlt {
       int cncol = cnode.get_ncol();
       int cnrow = cnode.get_nrow();
 
-      Tile<T, PoolAlloc>& src_blk = cnode.get_contrib_block(ii, jj);
+      sylver::Tile<T, PoolAlloc>& src_blk = cnode.get_contrib_block(ii, jj);
       // Get source block info
       int src_blk_lda = src_blk.lda;
       int src_blk_m = src_blk.m;
@@ -830,7 +829,7 @@ namespace spldlt {
 
             // Get diag block
             int diag_row_sa =  std::max(0, cc*blksz-ncol);
-            Tile<T, PoolAlloc>& diag_blk = node.get_contrib_block(cc, cc);
+            sylver::Tile<T, PoolAlloc>& diag_blk = node.get_contrib_block(cc, cc);
             int diag_blk_lda = diag_blk.lda;
 
             assert(c - ncol - dest_col_sa >= 0);
@@ -1014,7 +1013,7 @@ namespace spldlt {
                int rr = r / blksz; // Destination block row
                // First row index in CB of destination block
                int dest_row_sa = (ncol > rr*blksz) ? 0 : (rr*blksz-ncol);
-               Tile<T, PoolAlloc> &dest_blk = node.contrib_blocks[(rr-sa)+(cc-sa)*ncontrib];
+               sylver::Tile<T, PoolAlloc> &dest_blk = node.contrib_blocks[(rr-sa)+(cc-sa)*ncontrib];
                int dest_blk_lda = dest_blk.lda;
                T *dest = &dest_blk.a[ (c - ncol - dest_col_sa)*dest_blk_lda ];
                // Assemble destination block
@@ -1163,13 +1162,13 @@ namespace spldlt {
       int ncol = node.get_ncol();
       size_t ldl = node.get_ldl();
 
-      for(int i=0; i<cnode.ndelay_out; i++) {
+      for(int i=0; i<cnode.ndelay_out(); i++) {
          // Add delayed rows (from delayed cols)
          T *dest = &node.lcol[delay_col*(ldl+1)];
          int lds = align_lda<T>(csnode.nrow + cnode.ndelay_in());
          T *src = &cnode.lcol[(cnode.nelim+i)*(lds+1)];
          node.perm[delay_col] = cnode.perm[cnode.nelim+i];
-         for(int j=0; j<cnode.ndelay_out-i; j++) {
+         for(int j=0; j<cnode.ndelay_out()-i; j++) {
             dest[j] = src[j];
          }
          // Add child's non-fully summed rows (from delayed cols)
@@ -1238,41 +1237,12 @@ namespace spldlt {
          int ldcontrib = csnode.nrow - csnode.ncol;
          if (csnode.exec_loc == -1) {
             // Assemble contributions from child front
-
-            // printf("[assemble] child->ndelay_out = %d\n", child->ndelay_out);
-
-            /* Handle delays - go to back of node
-             * (i.e. become the last rows as in lower triangular format) */
-            // for(int i=0; i<child->ndelay_out; i++) {
-            //    // Add delayed rows (from delayed cols)
-            //    T *dest = &node.lcol[delay_col*(ldl+1)];
-            //    int lds = align_lda<T>(csnode.nrow + child->ndelay_in);
-            //    T *src = &child->lcol[(child->nelim+i)*(lds+1)];
-            //    node.perm[delay_col] = child->perm[child->nelim+i];
-            //    for(int j=0; j<child->ndelay_out-i; j++) {
-            //       dest[j] = src[j];
-            //    }
-            //    // Add child's non-fully summed rows (from delayed cols)
-            //    dest = node.lcol;
-            //    src = &child->lcol[child->nelim*lds + child->ndelay_in +i*lds];
-            //    for(int j=csnode.ncol; j<csnode.nrow; j++) {
-            //       int r = map[ csnode.rlist[j] ];
-            //       // int r = csnode.map[j];
-            //       if(r < ncol) dest[r*ldl+delay_col] = src[j];
-            //       else         dest[delay_col*ldl+r] = src[j];
-            //    }
-            //    delay_col++;
-            // }
-
             assemble_delays(*child, delay_col, node);
             
-            delay_col += child->ndelay_out;
+            delay_col += child->ndelay_out();
 
             // Handle expected contributions (only if something there)
             if (ldcontrib>0) {
-               // int *cache = new int[cm];
-               // spral::ssids::cpu::assemble_expected(0, cm, node, *child, map, cache);
-               // delete cache;
                   
                int cnrow = child->get_nrow();
                int cncol = child->get_ncol();

@@ -141,7 +141,7 @@ namespace spldlt {
       node.nelim = n;
 
       // Record information
-      node.ndelay_out = 0; // no delays
+      node.ndelay_out(0); // no delays
    }
 
 }

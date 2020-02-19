@@ -5,10 +5,11 @@
 #pragma once
 
 // SpLDLT
-#include "Block.hxx"
+#include "BlockUnsym.hxx"
 #include "NumericFrontBase.hxx"
 #include "SymbolicFront.hxx"
 #include "kernels/ldlt_app.hxx"
+#include "Tile.hxx"
 
 // STD
 #include <cassert>
@@ -17,106 +18,6 @@
 #include "ssids/cpu/cpu_iface.hxx"
 
 namespace spldlt {
-
-   // static const int INNER_BLOCK_SIZE = 32;
-
-   // FIXME: Allocator is not used as both factors and contribution
-   // blocks are allocated beforehand
-   template<typename T, typename PoolAllocator> 
-   class Tile {
-      typedef std::allocator_traits<PoolAllocator> PATraits;
-   public:
-
-      /// \brief Constuctor.
-      // Tile()
-      //    : m_(0), n_(0), lda_(0), a_(nullptr)
-      // {}
-
-      /// \brief Constuctor.
-      /// \param i Tile's row index.
-      /// \param j Tile's column index.
-      /// \param m Number of rows in matrix.
-      /// \param n Number of columns in matrix.
-      /// \param a Pointer to matrix data.
-      /// \param lda leading dimension associated with data.
-      // Tile(int i, int j, int m, int n, T* a, int lda)
-      //    : i_(i), j_(j), m_(m), n_(n), lda_(lda), a_(a)
-      // {}
-
-      /// \brief Constuctor.
-      /// \param i Tile's row index.
-      /// \param j Tile's column index.
-      /// \param m Number of rows in matrix.
-      /// \param n Number of columns in matrix.
-      Tile(int i, int j, int m, int n, int lda, 
-            PoolAllocator const& pool_alloc)
-         : i(i), j(j), m(m), n(n), lda(lda), a(nullptr),
-           pool_alloc_(pool_alloc)
-      {}
-      
-      /// \brief Descructor.
-      ~Tile() {
-         free();
-      }
-
-      void alloc() {
-         size_t block_sz = lda*n;
-         a = (block_sz>0) ? PATraits::allocate(pool_alloc_, block_sz)
-            : nullptr;
-      }
-
-      void free() {
-         if(!a) return;
-         size_t block_sz = lda*n;
-         PATraits::deallocate(pool_alloc_, a, block_sz);
-         a = nullptr;
-      }
-
-      /// @brief Zero block
-      void zero() {
-         if(!a) return;
-         for (int j = 0; j < n; j++) {
-            for (int i = 0; i < m; i++) {
-               a[j*lda+i] = 0.0;
-            }
-         }
-      }
-
-#if defined(SPLDLT_USE_STARPU)
-      // Register handle on block
-      void register_handle() {
-         // Make sure pointer in allocated
-         if (!a) return;
-         // Register block in StarPU
-         starpu_matrix_data_register(
-               &hdl, STARPU_MAIN_RAM, reinterpret_cast<uintptr_t>(a),
-               lda, m, n, sizeof(T));
-      }
-
-      // Unregister handle on block asynchronously
-      template<bool async=true>
-      void unregister_handle() {
-         if(async) starpu_data_unregister_submit(hdl);
-         else      starpu_data_unregister(hdl);
-         // starpu_data_unregister_submit(hdl);
-      
-      }
-#endif
-
-      int i; ///< block's row
-      int j; ///< block's column
-      int m; ///< number of rows in matrix
-      int n; ///< number of columns in matrix
-      int lda; ///< leading dimension of underlying storage
-      T* a; ///< pointer to underlying matrix storage  
-#if defined(SPLDLT_USE_STARPU)
-      starpu_data_handle_t hdl;
-#endif
-   private:
-      PoolAllocator pool_alloc_; // Our own version of pool allocator for freeing
-   };
-
-   // class spral::ssids::cpu::SymbolicNode;
 
    template <typename T, typename PoolAllocator>
    class NumericFront : public sylver::NumericFrontBase<T, PoolAllocator> {
@@ -138,7 +39,7 @@ namespace spldlt {
          sylver::NumericFrontBase<T, PoolAllocator>(symb, pool_alloc, blksz),
          //symb(symb), pool_alloc_(pool_alloc), blksz(blksz),
          contrib(nullptr),
-         backup(nullptr), cdata(nullptr), /*ndelay_in(0),*/ ndelay_out(0),
+         backup(nullptr), cdata(nullptr),
          lcol(nullptr), ucol(nullptr), nelim1(0), nelim(0), blocks_unsym_(nullptr)
       {}
       
@@ -631,7 +532,7 @@ namespace spldlt {
       /// @Brief Return block (i,j) in the contribution block
       /// @param i row index of block in the frontal matrix
       /// @param j column index of block in the frontal matrix
-      inline Tile<T, PoolAllocator>& get_contrib_block(int i, int j) {
+      inline sylver::Tile<T, PoolAllocator>& get_contrib_block(int i, int j) {
 
          // No bound checks when accessing the element in the
          // contrib_blocks vector
@@ -703,8 +604,6 @@ namespace spldlt {
       // int blksz; // Tileing size
 
       /* Data that changes during factorize */
-      // int ndelay_in; // Number of delays arising from children
-      int ndelay_out; // Number of delays arising to push into parent
       int nelim1; // Number of columns succesfully eliminated during first pass
       int nelim; // Number of columns succesfully eliminated
       // Factors
@@ -714,7 +613,7 @@ namespace spldlt {
       int *perm; // Pointer to permutation
       int *cperm; // Pointer to permutation (column)
       T *contrib; // Pointer to contribution block
-      std::vector<spldlt::Tile<T, PoolAllocator>> contrib_blocks; // Tile structures containing contrib
+      std::vector<sylver::Tile<T, PoolAllocator>> contrib_blocks; // Tile structures containing contrib
       spldlt::ldlt_app_internal::CopyBackup<T, PoolAllocator> *backup; // Stores backups of matrix blocks
       // Structures for indef factor
       spldlt::ldlt_app_internal::ColumnData<T, IntAlloc> *cdata;

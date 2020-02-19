@@ -567,8 +567,8 @@ namespace spldlt {
                }
 #if defined(SPLDLT_USE_STARPU)
                // Unregister symbolic handle on child node
-               starpu_data_unregister_submit(child_sfront.hdl);
-               starpu_data_unregister_submit(child->contrib_hdl());
+               child->unregister_submit_symb();
+               child->unregister_submit_symb_contrib();
 #endif
 
 
@@ -585,9 +585,9 @@ namespace spldlt {
                fini_node_task(*child, true);
             }
 #if defined(SPLDLT_USE_STARPU)
-               // Unregister symbolic handle on child node
-               starpu_data_unregister_submit(child_sfront.hdl);
-               starpu_data_unregister_submit(child->contrib_hdl());
+            // Unregister symbolic handle on child node
+            child->unregister_submit_symb();
+            child->unregister_submit_symb_contrib();
 #endif
          }
 
