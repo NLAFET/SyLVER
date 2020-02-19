@@ -412,7 +412,7 @@ namespace starpu {
          codelet_init_indef<T, iblksz, Backup, PoolAlloc>();            
          codelet_init_factor_indef<T, PoolAlloc>();
          codelet_init_assemble<T, PoolAlloc>();
-         codelet_init_factor_failed<T, PoolAlloc>();
+         sylver::spldlt::starpu::codelet_init_factor_failed<T, PoolAlloc>();
       }
 
    }

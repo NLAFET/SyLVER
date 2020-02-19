@@ -14,7 +14,7 @@
 #include "factor_indef.hxx"
 #include "assemble.hxx"
 #include "tasks_factor_indef.hxx"
-#include "tasks_assemble.hxx"
+#include "tasks/assemble.hxx"
 #if defined(SPLDLT_USE_STARPU)
 #include "StarPU/codelets.hxx"
 #endif

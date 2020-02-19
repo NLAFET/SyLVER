@@ -201,7 +201,7 @@ namespace spldlt { namespace tests {
       spldlt::starpu::codelet_init<T, FactorAllocator, PoolAllocator>();
       spldlt::starpu::codelet_init_indef<T, iblksz, Backup, PoolAllocator>();
       spldlt::starpu::codelet_init_factor_indef<T, PoolAllocator>();
-      spldlt::starpu::codelet_init_factor_failed<T, PoolAllocator>();
+      sylver::spldlt::starpu::codelet_init_factor_failed<T, PoolAllocator>();
 
       // if (ngpu > 0) {
       //    // extern struct starpu_codelet cl_update_contrib_block_app;

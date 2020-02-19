@@ -8,7 +8,8 @@
 #include "kernels/ldlt_app.hxx"
 #include "kernels/factor_indef.hxx"
 #include "kernels/assemble.hxx"
-#include "tasks_indef.hxx"
+#include "factor_failed.hxx"
+#include "tasks/indef.hxx"
 #include "tasks/factor_failed.hxx"
 #if defined(SPLDLT_USE_STARPU)
 #include "StarPU/codelets.hxx"

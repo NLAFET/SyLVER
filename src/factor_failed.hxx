@@ -4,8 +4,9 @@
 #pragma once
 
 // SyLVER
-#include "sylver_ciface.hxx"
+#include "NumericFront.hxx"
 #include "kernels/factor_indef.hxx"
+#include "sylver_ciface.hxx"
 #include "tasks/form_contrib.hxx"
 
 #if defined(SPLDLT_USE_STARPU)
@@ -16,15 +17,17 @@
 
 // SSIDS
 #include "ssids/cpu/cpu_iface.hxx"
-#include "ssids/cpu/Workspace.hxx"
+#include "ssids/cpu/kernels/ldlt_tpp.hxx"
 #include "ssids/cpu/ThreadStats.hxx"
+#include "ssids/cpu/Workspace.hxx"
 
+namespace sylver {
 namespace spldlt {
 
    /// @brief Factor the failed pivots in a frontal matrix
    template <typename T, typename PoolAlloc>
    void factor_front_indef_failed(
-         NumericFront<T, PoolAlloc>& node,
+         ::spldlt::NumericFront<T, PoolAlloc>& node,
          std::vector<spral::ssids::cpu::Workspace>& workspaces, 
          // spral::ssids::cpu::Workspace& work,
          sylver::options_t& options,
@@ -71,7 +74,7 @@ namespace spldlt {
             T *ld = work.get_ptr<T>(m-nelim);
             // auto start = std::chrono::high_resolution_clock::now();
             try {
-               node.nelim += ldlt_tpp_factor(
+               node.nelim += spral::ssids::cpu::ldlt_tpp_factor(
                      m-nelim, n-nelim, &perm[nelim], &lcol[nelim*(ldl+1)], ldl, 
                      &d[2*nelim], ld, m-nelim, options.action, options.u, options.small, 
                      nelim, &lcol[nelim], ldl);
@@ -150,4 +153,4 @@ namespace spldlt {
   
    }
 
-} // end of namespace spldlt
+}} // end of namespace sylver::spldlt

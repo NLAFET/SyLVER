@@ -4,7 +4,6 @@
 #pragma once
 
 // SyLVER
-#include "factor_failed.hxx"
 #include "kernels/ldlt_app.hxx"
 #include "kernels/factor_indef.hxx"
 #include "Tile.hxx"
@@ -14,7 +13,6 @@
 #if defined(SPLDLT_USE_STARPU)
 #include "StarPU/kernels_indef.hxx"
 #include "StarPU/factor_indef.hxx"
-#include "StarPU/factor_failed.hxx"
 #endif
 // SSIDS 
 #include "ssids/cpu/cpu_iface.hxx"

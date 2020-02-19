@@ -5,6 +5,7 @@
 
 // SyLVER
 #include "sylver_ciface.hxx"
+#include "StarPU/factor_failed.hxx"
 
 // STD
 #include <assert.h>
@@ -49,7 +50,7 @@ namespace spldlt {
          }
       }
       
-      spldlt::starpu::insert_factor_front_indef_failed(
+      sylver::spldlt::starpu::insert_factor_front_indef_failed(
             cdata[nblk-1].get_hdl(), node.contrib_hdl(),
             hdls, nh,
             &node, &workspaces, &options, &worker_stats
