@@ -96,12 +96,12 @@ namespace spldlt {
       int const *crlist, *delay_perm;
       spral_ssids_contrib_get_data(
             child_contrib[csnode.contrib_idx], &cn, &cval, &ldcontrib, &crlist,
-            &ndelay, &delay_perm, &delay_val, &lddelay
-            );
+            &ndelay, &delay_perm, &delay_val, &lddelay);
       
       if (ndelay <= 0) return;
          
-      // Add blocks in node
+      // Figure out blocks involved in the assembly so that data
+      // accesses to StarPU. 
       int rr = -1;
       int cc = -1;
       for(int j = 0; j < ndelay; j++) {
@@ -113,19 +113,29 @@ namespace spldlt {
 
          int r;
 
-         for(int i=0; i<ndelay-j; i++) {
+         // loop over fully-summed rows
+         // for(int i=0; i<ndelay-j; i++) {
+         for(int i=j; i<ndelay; i++) {
             r = delay_col+i;
             if (rr == (r/blksz)) continue;
             rr = r/blksz; // Destination block-row
+            assert(r >= c); // Make sure the coefficient is below
+                              // the diagonal
+            assert(rr >= cc); // Make sure the tile is below the
+                              // diagonal
             hdls[nh] = node.blocks[cc*nr+rr].get_hdl();
+            assert(hdls[nh] != nullptr); // Make sure the handle has
+                                         // been registered
             nh++;
          }
+         // loop over non fully-summed rows
          for(int i=0; i<cn; i++) {
             int r = csnode.map[i];
             if (rr == (r/blksz)) continue;
             rr = r/blksz; // Destination block-row
             if (r < ncol) hdls[nh] = node.blocks[rr*nr+cc].get_hdl();
             else          hdls[nh] = node.blocks[cc*nr+rr].get_hdl();
+            assert(hdls[nh] != nullptr);
          }
       }
       
@@ -143,7 +153,7 @@ namespace spldlt {
             node, csnode, child_contrib, contrib_idx, delay_col);
 
 #endif
-      
+
    }
    
    ////////////////////////////////////////////////////////////

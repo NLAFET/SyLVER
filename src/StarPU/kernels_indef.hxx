@@ -863,6 +863,7 @@ namespace starpu {
 
       int nh = 0;
       for (int i=0; i<nhdl; i++) {
+         assert(col_hdls[i] != nullptr);
          descrs[nh].handle = col_hdls[i]; descrs[nh].mode = STARPU_RW;
          nh++;
       }
@@ -916,6 +917,7 @@ namespace starpu {
          
       int nh = 0;
       for (int i=0; i<nhdl; i++) {
+         assert(hdls[i] != nullptr);
          descrs[nh].handle = hdls[i]; descrs[nh].mode = STARPU_RW;
          nh++;
       }
@@ -964,6 +966,7 @@ namespace starpu {
          
       int nh = 0;
       for (int i=0; i<nhdl; i++) {
+         assert(hdls[i] != nullptr);
          descrs[nh].handle = hdls[i]; descrs[nh].mode = STARPU_RW;
          nh++;
       }
@@ -1088,6 +1091,8 @@ namespace starpu {
 
       assert(delay_col > 0);
       assert(nhdl > 0);
+      assert(hdls != nullptr);
+      assert(root_hdl != nullptr);
 
       int ret;
       int nh = 0;
@@ -1095,6 +1100,7 @@ namespace starpu {
       struct starpu_data_descr *descrs = new starpu_data_descr[nhdl+1];
          
       for (int i=0; i<nhdl; i++) {
+         assert(hdls[i] != nullptr);
          descrs[nh].handle = hdls[i]; descrs[nh].mode = STARPU_RW;
          nh++;
       }
@@ -1157,12 +1163,14 @@ namespace starpu {
       int nh = 0;
       // Add handles from cnode in R mode
       for (int i=0; i<nchdl; i++) {
+         assert(chdls[i] != nullptr);
          descrs[nh].handle = chdls[i]; descrs[nh].mode = STARPU_R;
          nh++;
       }
 
       // Add handles from node in RW mode
       for (int i=0; i<nhdl; i++) {
+         assert(hdls[i] != nullptr);
          descrs[nh].handle = hdls[i]; descrs[nh].mode = STARPU_RW;
          nh++;
       }

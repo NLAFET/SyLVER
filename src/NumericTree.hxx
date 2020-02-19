@@ -193,11 +193,7 @@ namespace spldlt {
             sylver::options_t& options,
             std::vector<sylver::inform_t>& worker_stats) {
 
-         // printf("[factor_mf_indef] posdef = %d\n", posdef);
-         // printf("[factor_mf_indef] nparts = %d\n", symb_.nparts_);
-
 #if defined(SPLDLT_USE_STARPU)
-         // TODO move hdl registration to activate task
          // Register symbolic handles.
          // auto start = std::chrono::high_resolution_clock::now();
          for(int ni = 0; ni < symb_.nnodes()+1; ++ni) {
