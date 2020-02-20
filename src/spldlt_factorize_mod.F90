@@ -1042,13 +1042,6 @@ contains
        end do
     end if
 
-    
-    ! TODO
-    ! Just copy
-    ! do r = 1, nrhs
-    !    x2(1:n, r) = x(akeep%invp(1:n), r)
-    ! end do
-
     fkeep => spldlt_fkeep%fkeep
 
     ! Subtree solves
