@@ -100,44 +100,78 @@ namespace spldlt {
       
       if (ndelay <= 0) return;
          
-      // Figure out blocks involved in the assembly so that data
-      // accesses to StarPU. 
+      // Figure out blocks involved in the assembly so that we can
+      // give this information data to StarPU.
       int rr = -1;
       int cc = -1;
-      for(int j = 0; j < ndelay; j++) {
 
-         int c = delay_col+j; // Destination column
-         if (cc == (c/blksz)) continue;
-         cc = c/blksz; // Destination block-column
-         rr = -1; // Reset block-row index 
-
-         int r;
-
-         // loop over fully-summed rows
-         // for(int i=0; i<ndelay-j; i++) {
-         for(int i=j; i<ndelay; i++) {
-            r = delay_col+i;
-            if (rr == (r/blksz)) continue;
-            rr = r/blksz; // Destination block-row
-            assert(r >= c); // Make sure the coefficient is below
-                              // the diagonal
-            assert(rr >= cc); // Make sure the tile is below the
-                              // diagonal
-            hdls[nh] = node.blocks[cc*nr+rr].get_hdl();
-            assert(hdls[nh] != nullptr); // Make sure the handle has
-                                         // been registered
-            nh++;
+      // Here we gather the handles for all blocks for rows and
+      // columns comprised between delay_col and
+      // delay_col+cnode.ndelay_out()-1. As a result, we might select
+      // more blocks than necessary.
+      
+      // Row and Column index of first destination block for this
+      // assembly
+      int sa = delay_col / node.blksz();
+      // Row and Column index of last destination block for this
+      // assembly      
+      int en = (delay_col+ndelay-1) / node.blksz();  
+         
+      for (int cc = 0; cc <= en; ++cc) {
+         int br_sa = std::max(sa, cc);
+         int br_en = -1;
+         if (((cc+1)*blksz) < delay_col) {
+            // We are in the fully-summed part of the node
+            br_en = en;
          }
-         // loop over non fully-summed rows
-         for(int i=0; i<cn; i++) {
-            int r = csnode.map[i];
-            if (rr == (r/blksz)) continue;
-            rr = r/blksz; // Destination block-row index
-            if (r < ncol) hdls[nh] = node.blocks[rr*nr+cc].get_hdl();
-            else          hdls[nh] = node.blocks[cc*nr+rr].get_hdl();
-            assert(hdls[nh] != nullptr);
+         else {
+            // We are in both the fully-summed and non fully-summed
+            // part of the node
+            br_en = node.nr()-1; // Block row index
+         }
+
+         for (int rr = br_sa; rr <= br_en; ++rr) {
+            assert(nh <= nr*nc);
+            // hdls[nh] = node.blocks[cc*nr+rr].get_hdl();
+            hdls[nh] = node.block_hdl(rr,cc);
+            nh++;            
          }
       }
+
+      // for(int j = 0; j < ndelay; j++) {
+
+      //    int c = delay_col+j; // Destination column
+      //    if (cc == (c/blksz)) continue;
+      //    cc = c/blksz; // Destination block-column
+      //    rr = -1; // Reset block-row index 
+
+      //    int r;
+
+      //    // loop over fully-summed rows
+      //    // for(int i=0; i<ndelay-j; i++) {
+      //    for(int i=j; i<ndelay; i++) {
+      //       r = delay_col+i;
+      //       if (rr == (r/blksz)) continue;
+      //       rr = r/blksz; // Destination block-row
+      //       assert(r >= c); // Make sure the coefficient is below
+      //                         // the diagonal
+      //       assert(rr >= cc); // Make sure the tile is below the
+      //                         // diagonal
+      //       hdls[nh] = node.blocks[cc*nr+rr].get_hdl();
+      //       assert(hdls[nh] != nullptr); // Make sure the handle has
+      //                                    // been registered
+      //       nh++;
+      //    }
+      //    // loop over non fully-summed rows
+      //    for(int i=0; i<cn; i++) {
+      //       int r = csnode.map[i];
+      //       if (rr == (r/blksz)) continue;
+      //       rr = r/blksz; // Destination block-row index
+      //       if (r < ncol) hdls[nh] = node.blocks[rr*nr+cc].get_hdl();
+      //       else          hdls[nh] = node.blocks[cc*nr+rr].get_hdl();
+      //       assert(hdls[nh] != nullptr);
+      //    }
+      // }
       
       assert(nh > 0);
 
