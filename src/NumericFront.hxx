@@ -38,7 +38,8 @@ namespace spldlt {
          :
          sylver::NumericFrontBase<T, PoolAllocator>(symb, pool_alloc, blksz),
          contrib(nullptr), backup(nullptr), cdata(nullptr),
-         lcol(nullptr), ucol(nullptr), nelim1(0), nelim(0), blocks_unsym_(nullptr)
+         lcol(nullptr), ucol(nullptr), // nelim1(0), nelim(0),
+         blocks_unsym_(nullptr)
       {}
       
       /**
@@ -572,8 +573,8 @@ namespace spldlt {
       NumericFront<T, PoolAllocator>* next_child; // Pointer to parent's next child
 
       /* Data that changes during factorize */
-      int nelim1; // Number of columns succesfully eliminated during first pass
-      int nelim; // Number of columns succesfully eliminated
+      // int nelim1; // Number of columns succesfully eliminated during first pass
+      // int nelim; // Number of columns succesfully eliminated
       // Factors
       T *lcol; // Pointer to start of factor data
       T *ucol; // Factor U

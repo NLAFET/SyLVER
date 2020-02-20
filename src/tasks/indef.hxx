@@ -223,7 +223,7 @@ namespace spldlt {
       starpu_data_handle_t *chdls = new starpu_data_handle_t[cnr*cnc];
       int nch = 0; // Number of handles/blocks in the child node
 
-      int csa = cnode.nelim / blksz; // Row and Column index for the
+      int csa = cnode.nelim() / blksz; // Row and Column index for the
                                      // first block in delayed part of
                                      // children node
 

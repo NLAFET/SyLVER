@@ -157,10 +157,10 @@ namespace spldlt {
                int n = symb_[ni].ncol + fronts_[ni].ndelay_in();
                int ldl = align_lda<T>(m);
                T *d = fronts_[ni].lcol + n*ldl;
-               for(int i=0; i<fronts_[ni].nelim; ) {
+               for(int i=0; i<fronts_[ni].nelim(); ) {
                   T a11 = d[2*i];
                   T a21 = d[2*i+1];
-                  if(i+1==fronts_[ni].nelim || std::isfinite(d[2*i+2])) {
+                  if(i+1==fronts_[ni].nelim() || std::isfinite(d[2*i+2])) {
                      // 1x1 pivot (or zero)
                      if(a11 == 0.0) {
                         // NB: If we reach this stage, options.action must be true.
@@ -607,10 +607,8 @@ namespace spldlt {
 
             int m = symb_[ni].nrow;
             int n = symb_[ni].ncol;
-            int nelim = (posdef) ? n
-               : fronts_[ni].nelim;
-            int ndin = (posdef) ? 0
-               : fronts_[ni].ndelay_in();
+            int nelim = (posdef) ? n : fronts_[ni].nelim();
+            int ndin = (posdef) ? 0 : fronts_[ni].ndelay_in();
             int ldl = align_lda<T>(m+ndin);
             // printf("[NumericTree] solve fwd, node: %d, nelim: %d, ldl: %d\n", ni, nelim, ldl);
             /* Build map (indef only) */
@@ -679,7 +677,7 @@ namespace spldlt {
             int m = symb_[ni].nrow;
             int n = symb_[ni].ncol;
             int nelim = (posdef) ? n
-               : fronts_[ni].nelim;
+               : fronts_[ni].nelim();
             int ndin = (posdef) ? 0
                : fronts_[ni].ndelay_in();
 

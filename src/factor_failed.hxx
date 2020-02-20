@@ -53,12 +53,12 @@ namespace spldlt {
       spral::ssids::cpu::Workspace& work = workspaces[workerid];
       
       // Record the number of columns eliminated during the first pass
-      node.nelim1 = node.nelim; 
-
+      node.nelim_first_pass(node.nelim());
+      
       // Try to eliminate the columns uneliminated at first pass
-      if (node.nelim < n) {
+      if (node.nelim() < n) {
          // printf("[factor_front_indef_failed] nelim = %d\n", node.nelim);
-         nelim = node.nelim;
+         nelim = node.nelim();
          if(options.pivot_method!=sylver::PivotMethod::tpp)
             stats.not_first_pass += n-nelim;
 
@@ -74,10 +74,11 @@ namespace spldlt {
             T *ld = work.get_ptr<T>(m-nelim);
             // auto start = std::chrono::high_resolution_clock::now();
             try {
-               node.nelim += spral::ssids::cpu::ldlt_tpp_factor(
+               int nelim_second_pass = spral::ssids::cpu::ldlt_tpp_factor(
                      m-nelim, n-nelim, &perm[nelim], &lcol[nelim*(ldl+1)], ldl, 
                      &d[2*nelim], ld, m-nelim, options.action, options.u, options.small, 
                      nelim, &lcol[nelim], ldl);
+               node.nelim_add(nelim_second_pass);
             } catch (spral::ssids::cpu::SingularError const&) {
                stats.flag = sylver::Flag::ERROR_SINGULAR;
             }
@@ -86,7 +87,7 @@ namespace spldlt {
             // long t_form_contrib = 0;
             if(
                   (m-n>0) && // We're not at a root node
-                  (node.nelim > nelim) // We've eliminated columns at second pass
+                  (node.nelim() > nelim) // We've eliminated columns at second pass
                   ) {
 
 #if defined(SPLDLT_USE_GPU)
@@ -95,7 +96,7 @@ namespace spldlt {
                // formcb = true;
                // Compute contribution blocks
                // auto start = std::chrono::high_resolution_clock::now();
-               form_contrib_notask(node, work, nelim, node.nelim-1);
+               form_contrib_notask(node, work, nelim, node.nelim()-1);
                // form_contrib_task(node, workspaces, nelim, node.nelim-1);
 #if defined(SYLVER_HAVE_STARPU)
                starpu_fxt_trace_user_event(node.symb().idx); // DEBUG
@@ -109,29 +110,29 @@ namespace spldlt {
                // starpu_tag_remove(tag_factor_failed);
 
 #else
-               form_contrib_notask(node, work, nelim, node.nelim-1);
+               form_contrib_notask(node, work, nelim, node.nelim()-1);
 #endif
             }
 
             // printf("[factor_front_indef_failed] m = %d, n = %d, LDLT TPP = %e, form contrib = %e\n", m-nelim, n-nelim, 1e-9*t_factor, 1e-9*t_form_contrib);
 
             if(options.pivot_method==sylver::PivotMethod::tpp) {
-               stats.not_first_pass += n - node.nelim;
+               stats.not_first_pass += n - node.nelim();
             } else {
                // printf("[factor_front_indef_failed] Not second pass = %d\n", n-node.nelim);
-               stats.not_second_pass += n - node.nelim;
+               stats.not_second_pass += n - node.nelim();
             }
          }
 
       }
       // Update number of delayed columns
-      node.ndelay_out(n - node.nelim);
+      node.ndelay_out(n - node.nelim());
       stats.num_delay += node.ndelay_out();
       // if (node.ndelay_out() > 0)
          // printf("[factor_front_indef_failed] nodeidx = %d, ndelay_out = %d\n",
                 // node.symb.idx, node.ndelay_out);
          
-      if (node.nelim == 0) {
+      if (node.nelim() == 0) {
 // #if defined(SPLDLT_USE_GPU)
          // printf("[factor_front_indef_failed] zero contrib blocks\n");
 // #endif

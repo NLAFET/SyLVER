@@ -824,7 +824,7 @@ namespace starpu {
 
       int n = node->ncol();
 
-      if (node->nelim < n) {
+      if (node->nelim() < n) {
 
          CopyBackup<T, PoolAlloc> &backup = *node->backup; 
 
@@ -837,7 +837,7 @@ namespace starpu {
             <T, INNER_BLOCK_SIZE, CopyBackup<T, PoolAlloc>, debug, PoolAlloc>
             ::permute_failed (
                   node->nrow(), n, node->perm, node->lcol, node->ldl(),
-                  node->nelim,
+                  node->nelim(),
                   cdata, node->blksz(),
                   *alloc);
       }

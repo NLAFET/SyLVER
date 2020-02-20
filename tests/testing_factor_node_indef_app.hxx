@@ -167,14 +167,14 @@ namespace spldlt { namespace tests {
       T *upd = nullptr;
       int q1 = 0; // Number of eliminated colmuns (first pass)
 
-      front.nelim = 0;
+      front.nelim(0);
 
       // Factor front (first and second pass) and from contrib blocks
       FactorSymIndef
          <T, INNER_BLOCK_SIZE, Backup, debug, PoolAllocator>
          ::factor_front_indef_app(
                front, options, worker_stats, 0.0, upd, 0, workspaces, pool_alloc,
-               front.nelim);
+               front.nelim());
 
 #if defined(SPLDLT_USE_STARPU)
       starpu_task_wait_for_all();      

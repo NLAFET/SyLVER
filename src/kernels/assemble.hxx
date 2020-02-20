@@ -1166,14 +1166,14 @@ namespace spldlt {
          // Add delayed rows (from delayed cols)
          T *dest = &node.lcol[delay_col*(ldl+1)];
          int lds = align_lda<T>(csnode.nrow + cnode.ndelay_in());
-         T *src = &cnode.lcol[(cnode.nelim+i)*(lds+1)];
-         node.perm[delay_col] = cnode.perm[cnode.nelim+i];
+         T *src = &cnode.lcol[(cnode.nelim()+i)*(lds+1)];
+         node.perm[delay_col] = cnode.perm[cnode.nelim()+i];
          for(int j=0; j<cnode.ndelay_out()-i; j++) {
             dest[j] = src[j];
          }
          // Add child's non-fully summed rows (from delayed cols)
          dest = node.lcol;
-         src = &cnode.lcol[cnode.nelim*lds + cnode.ndelay_in() +i*lds];
+         src = &cnode.lcol[cnode.nelim()*lds + cnode.ndelay_in() +i*lds];
          for(int j=csnode.ncol; j<csnode.nrow; j++) {
             // int r = map[ csnode.rlist[j] ];
             int r = csnode.map[j-csnode.ncol];

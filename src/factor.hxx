@@ -138,8 +138,7 @@ namespace spldlt {
       }
 
       // We've eliminated all columns 
-      node.nelim = n;
-
+      node.nelim(n);
       // Record information
       node.ndelay_out(0); // no delays
    }

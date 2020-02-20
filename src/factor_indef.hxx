@@ -81,7 +81,7 @@ namespace spldlt {
       typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
 
       // Start from first column
-      front.nelim = 0; // TODO add parameter from;
+      front.nelim(0); // TODO add parameter from;
 
       // LDLT with APTP strategy
       if (options.pivot_method==sylver::PivotMethod::app_block) {
@@ -95,7 +95,7 @@ namespace spldlt {
          // Factor front
          FactorSymIndefSpec::factor_front_indef_app_notask(
                front, options, stats, work, pool_alloc, 
-               front.nelim // Return the number of succesfully
+               front.nelim() // Return the number of succesfully
                            // eliminated columns
                );
 
@@ -103,7 +103,7 @@ namespace spldlt {
          int ncol = front.ncol();
          int ldl = front.get_ldl();
          
-         if (front.nelim < ncol) { 
+         if (front.nelim() < ncol) { 
             // Some columns remain uneliminated after the first pass
             
             spldlt::ldlt_app_internal::
@@ -117,7 +117,7 @@ namespace spldlt {
             // Permute failed entries at the back of the front
             FactorSymIndefSpec::permute_failed(
                   nrow, ncol, front.perm, front.lcol, ldl,
-                  front.nelim, cdata, front.blksz(),
+                  front.nelim(), cdata, front.blksz(),
                   pool_alloc);
          }
          
@@ -163,7 +163,7 @@ namespace spldlt {
       T *upd = nullptr;
 
       // Factorize from first column
-      node.nelim = 0; // TODO add parameter from;
+      node.nelim(0); // TODO add parameter from;
 
       if (options.pivot_method==sylver::PivotMethod::app_block) {
 
@@ -173,7 +173,7 @@ namespace spldlt {
          // Factor fully-summed columns and form contrib blocks
          FactorSymIndefSpec::factor_front_indef_app(
                node, options, worker_stats, 0.0, upd, 0, workspaces, pool_alloc,
-               node.nelim);
+               node.nelim());
 
          // Release backup and permute failed columns
          FactorSymIndefSpec::release_permute_failed_task(
@@ -1253,20 +1253,17 @@ namespace spldlt {
          int n = node.ncol();
          size_t ldl = align_lda<T>(m);
          T *lcol = node.lcol;
-         int *perm = node.perm;
-         int num_elim = node.nelim;
-         int blksz = node.blksz();
 
          CopyBackup<T, Allocator> &backup = *node.backup; 
          ColumnData<T, IntAlloc> &cdata = *node.cdata;
          
          backup.release_all_memory(); 
 
-         if (num_elim < n)
+         if (node.nelim() < n)
             permute_failed (
-                  m, n, perm, lcol, ldl,
-                  num_elim, 
-                  cdata, blksz,
+                  m, n, node.perm, lcol, ldl,
+                  node.nelim(), 
+                  cdata, node.blksz(),
                   alloc);         
 #endif
 

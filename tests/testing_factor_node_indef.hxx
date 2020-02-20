@@ -242,11 +242,11 @@ namespace spldlt { namespace tests {
       long ttotal = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count();
 
       if(debug) printf("[factor_node_indef_test] factorization done\n");
-      if(debug) printf("[factor_node_indef_test] nelim1 = %d\n", front.nelim1);
+      if(debug) printf("[factor_node_indef_test] nelim first pass = %d\n", front.nelim_first_pass());
       
-      int nelim = front.nelim; // Number of eliminated columns
-      int q1 = front.nelim1;
-      int q2 = nelim - front.nelim1;
+      int nelim = front.nelim(); // Number of eliminated columns
+      int q1 = front.nelim_first_pass();
+      int q2 = nelim - front.nelim_first_pass();
             
       std::cout << "FIRST FACTOR CALL ELIMINATED " << q1 << " of " << n << " pivots" << std::endl;
       std::cout << "SECOND FACTOR CALL ELIMINATED " << q2 << " of " << n << " pivots" << std::endl;
@@ -309,7 +309,7 @@ namespace spldlt { namespace tests {
          // Copy A (columns n+1 to m) into L
          memcpy(&l[lda*n], &a[lda*n], lda*(m-n)*sizeof(T));
          // Add entries (columns n+1 to m) form CB into L
-         if (front.nelim > 0) add_cb_to_a(front, l, lda);
+         if (front.nelim() > 0) add_cb_to_a(front, l, lda);
          
          // Debug
          // Ignore CB and do update
