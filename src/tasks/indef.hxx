@@ -132,7 +132,7 @@ namespace spldlt {
          for(int i=0; i<cn; i++) {
             int r = csnode.map[i];
             if (rr == (r/blksz)) continue;
-            rr = r/blksz; // Destination block-row
+            rr = r/blksz; // Destination block-row index
             if (r < ncol) hdls[nh] = node.blocks[rr*nr+cc].get_hdl();
             else          hdls[nh] = node.blocks[cc*nr+rr].get_hdl();
             assert(hdls[nh] != nullptr);
@@ -167,8 +167,6 @@ namespace spldlt {
          int delay_col,
          NumericFront<T,PoolAlloc>& node) {
 
-      // printf("[assemble_delays_task] idx = %d, cidx = %d, cnode.ndelay_out = %d\n", 
-      //        node.symb.idx+1 , cnode.symb.idx+1 ,cnode.ndelay_out);
       if (cnode.ndelay_out() <= 0) return; // No task to submit if no delays
 
 #if defined(SPLDLT_USE_STARPU)
@@ -185,62 +183,115 @@ namespace spldlt {
       
       // Child node info
       sylver::SymbolicFront &csnode = cnode.symb(); // Child symbolic node
-      int cncol = cnode.ncol();
       int cnrow = cnode.nrow();
       int cnr = cnode.nr(); // Number of block-rows in child node
       int cnc = cnode.nc(); // Number of block-columns in child node
       starpu_data_handle_t *chdls = new starpu_data_handle_t[cnr*cnc];
       int nch = 0; // Number of handles/blocks in the child node
 
-      int csa = cnode.nelim / blksz; // First block-column in 
+      int csa = cnode.nelim / blksz; // Row and Column index for the
+                                     // first block in delayed part of
+                                     // children node
 
-      // Add block handles in the child node
+      // Add StarPU handles of sources blocks in the child node for
+      // delayed columns
       //
       // Note: add blocks for both fully summed and non-fully summed
       // rows which must be delayed in the parent
       for (int jj=csa; jj<cnc; jj++) {
          for (int ii=jj; ii<cnr; ii++) {
-            assert(nch < cnr*cnc);
+            assert(nch <= cnr*cnc);
             chdls[nch] = cnode.blocks[jj*cnr+ii].get_hdl();
             nch++;
          }
       }
 
-      // Add blocks in node
+      // Add StarPU handles of destination blocks in node for delayed
+      // columns
       int rr = -1;
       int cc = -1;
-      for(int j = 0; j < cnode.ndelay_out(); j++) {
 
-         int c = delay_col+j; // Destination column
-         if (cc == (c/blksz)) continue;
-         cc = c/blksz; // Destination block-column
-         rr = -1;
+      // Here we gather the handles for all blocks for rows and
+      // columns comprised between delay_col and
+      // delay_col+cnode.ndelay_out()-1. As a result, we might select
+      // more blocks than necessary.
+      
+      // Row and Column index of first destination block for this
+      // assembly
+      int sa = delay_col / node.blksz();
+      // Row and Column index of last destination block for this
+      // assembly      
+      int en = (delay_col+cnode.ndelay_out()-1) / node.blksz();  
+         
+      for (int cc = 0; cc <= en; ++cc) {
+         int br_sa = std::max(sa, cc);
+         int br_en = -1;
+         if (((cc+1)*blksz) < delay_col) {
+            // We are in the fully-summed part of the node
+            br_en = en;
+         }
+         else {
+            // We are in both the fully-summed and non fully-summed
+            // part of the node
+            br_en = node.nr()-1; // Block row index
+         }
 
-         for (int i = cnode.nelim+j; i < cnrow; i++) {
-
-            int r = (i < cncol) ? delay_col+i-cnode.nelim : csnode.map[i-cncol];
-            
-            if (rr == (r/blksz)) continue;
-            rr = r / blksz; // Destination block-row
-            
-            if (r < snode.ncol) {
-            // if (r < ncol) {
-               assert(cc >= rr);
-               assert(cc <= nr && rr <= nc);
-               assert(nh < nr*nc);
-               hdls[nh] = node.blocks[rr*nr+cc].get_hdl();
-            }
-            else {
-               assert(rr >= cc);
-               assert(rr <= nr && cc <= nc);
-               // assert(nh < nr*nc);
-               assert(nh < nr*nr);
-               hdls[nh] = node.blocks[cc*nr+rr].get_hdl();
-            }
-            nh++;
-            
+         for (int rr = br_sa; rr <= br_en; ++rr) {
+            assert(nh <= nr*nc);
+            // hdls[nh] = node.blocks[cc*nr+rr].get_hdl();
+            hdls[nh] = node.block_hdl(rr,cc);
+            nh++;            
          }
       }
+      
+      // // Loop over columns in children node to be delayed to the
+      // // parent node
+      // for(int j = 0; j < cnode.ndelay_out(); j++) {
+
+      //    int c = delay_col+j; // Destination column
+      //    if (cc == (c/blksz)) continue;
+      //    cc = c/blksz; // Column index for destination block
+      //    rr = -1;
+
+      //    // Loop over row coefficients of the j-th delayed column
+      //    for (int i = cnode.nelim+j; i < cnode.nrow(); i++) {
+
+      //       // Determine destination row index of the i-th row
+      //       // coefficient of the j-th delayed column
+      //       int r = -1;
+      //       if (i < cnode.ncol()) {
+      //          // i-th coefficient is in the fully-summed part of the
+      //          // frontal matrix
+      //          r = delay_col+i-cnode.nelim;
+      //       }
+      //       else {
+      //          // i-th row coefficient is in the non fully-summed part
+      //          // of the frontal matrix: use row mapping to determine
+      //          // its index in the parent's node
+      //          r = csnode.map[i-cnode.ncol()];
+      //       }
+      //       // int r = (i < cncol) ? delay_col+i-cnode.nelim : csnode.map[i-cncol];
+            
+      //       if (rr == (r/blksz)) continue;
+      //       rr = r / blksz; // Row index for destination block
+            
+      //       if (r < delay_col) {
+      //       // if (r < snode.ncol) {
+      //       // if (r < node.ncol()) {
+      //          assert(cc >= rr);
+      //          assert(cc <= nr && rr <= nc);
+      //          // assert(nh <= nr*nr);
+      //          hdls[nh] = node.blocks[rr*nr+cc].get_hdl();
+      //       }
+      //       else {
+      //          assert(rr >= cc);
+      //          assert(rr <= nr && cc <= nc);
+      //          // assert(nh <= nr*nr);
+      //          hdls[nh] = node.blocks[cc*nr+rr].get_hdl();
+      //       }
+      //       nh++;            
+      //    }
+      // }
       
       assert(nch > 0); // Make sure the set is not empty
       assert(nh > 0);

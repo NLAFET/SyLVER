@@ -559,7 +559,17 @@ namespace spldlt {
          return blocks_unsym_[i+nr*j];
          
       }
-            
+
+#if defined(SPLDLT_USE_STARPU)
+      // Return StarPU handle associated with block (i,j)
+      starpu_data_handle_t block_hdl(int i, int j) const {
+         assert(i >= j);
+         starpu_data_handle_t bhdl = this->blocks[j*this->nr()+i].get_hdl();
+         assert(bhdl != nullptr);
+         return bhdl;
+      }
+#endif
+      
    public:
 
       /* Fixed data from analyse */
@@ -581,9 +591,6 @@ namespace spldlt {
       // Structures for indef factor
       spldlt::ldlt_app_internal::ColumnData<T, IntAlloc> *cdata;
       std::vector<BlockSpec> blocks;
-// #if defined(SPLDLT_USE_STARPU)
-//       starpu_data_handle_t contrib_hdl; // Symbolic handle for contribution blocks
-// #endif
    private:
       sylver::splu::BlockUnsym<T> *blocks_unsym_; // Block array (unsym case) 
       // PoolAllocator pool_alloc_; // Our own version of pool allocator for freeing
