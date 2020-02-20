@@ -33,7 +33,7 @@ namespace sylver {
 
          int const nrow = front.nrow();
          int const numfs = front.ncol(); // Number of fully-summed rows/columns
-         size_t const ldl = front.get_ldl(); // L factor 
+         size_t const ldl = front.ldl(); // L factor 
          size_t const ldu = front.get_ldu(); // U factor
          
          std::cout << "[alloc_front_unsym_diagdom] ";

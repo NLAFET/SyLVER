@@ -357,7 +357,7 @@ namespace spldlt {
          
          int const m = this->nrow();
          int const n = this->ncol();
-         int const ldl = get_ldl();
+         int const ldl = this->ldl();
          int const mblk = this->nr();
          int const nblk = this->nc();
          int const num_blocks = nblk*mblk;
@@ -391,7 +391,7 @@ namespace spldlt {
          // same array for fully-summed and contrib blocks
          int const num_blocks = mblk*mblk;
          blocks_unsym_ = BlkAllocTraits::allocate(blkAlloc, num_blocks);
-         int const ldl = get_ldl();
+         int const ldl = this->ldl();
          int const ldu = get_ldu();
 
          printf("[alloc_blocks_unsym] blksz = %d\n", this->blksz());
@@ -496,11 +496,6 @@ namespace spldlt {
             }
          }
          
-      }
-
-      /** \brief Return leading dimension of node's lcol member. */
-      inline size_t get_ldl() const {
-         return spral::ssids::cpu::align_lda<T>(this->symb().nrow + this->ndelay_in_);
       }
 
       /** \brief Return leading dimension of node's ucol member. */

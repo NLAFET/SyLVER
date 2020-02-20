@@ -3,7 +3,10 @@
 /// @author    Florent Lopez
 #pragma once
 
+// SyLVER
 #include "SymbolicFront.hxx"
+// SSIDS
+#include "ssids/cpu/cpu_iface.hxx"
 
 namespace sylver {
    
@@ -33,6 +36,11 @@ namespace sylver {
          return this->symb().hdl;
       }
 #endif
+
+      /** \brief Return leading dimension of node's lcol member. */
+      inline size_t ldl() const {
+         return spral::ssids::cpu::align_lda<T>(this->symb().nrow + this->ndelay_in_);
+      }
 
       // Return the number of incoming delays
       int ndelay_in() const { return ndelay_in_; }

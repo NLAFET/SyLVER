@@ -830,18 +830,15 @@ namespace starpu {
 
          backup.release_all_memory(); 
          
-         int m = node->nrow();
-         int ldl = node->get_ldl();
          ColumnData<T, IntAlloc> &cdata = *node->cdata;
          bool const debug = false;
-         int blksz = node->blksz();
             
          FactorSymIndef
             <T, INNER_BLOCK_SIZE, CopyBackup<T, PoolAlloc>, debug, PoolAlloc>
             ::permute_failed (
-                  m, n, node->perm, node->lcol, ldl,
-                  node->nelim, 
-                  cdata, blksz,
+                  node->nrow(), n, node->perm, node->lcol, node->ldl(),
+                  node->nelim,
+                  cdata, node->blksz(),
                   *alloc);
       }
                   
@@ -883,7 +880,7 @@ namespace starpu {
    ////////////////////////////////////////////////////////////
    // form_contrib StarPU task
 
-   // CPU kernel      
+   // CPU kernel
    template <typename T, typename PoolAlloc>
    void form_contrib_cpu_func(void *buffers[], void *cl_arg) {
 

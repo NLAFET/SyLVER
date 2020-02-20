@@ -35,7 +35,7 @@ namespace spldlt {
 
       int m = node.nrow();
       int n = node.ncol();
-      size_t ldl = node.get_ldl();
+      size_t ldl = node.ldl();
       T *lcol = node.lcol;
       T *d = &lcol[n*ldl];
       int *perm = node.perm;

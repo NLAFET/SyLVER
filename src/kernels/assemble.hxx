@@ -36,7 +36,7 @@ namespace spldlt {
          int const m = front.nrow();
          int const n = front.ncol();
          T *a = front.lcol;
-         int const lda = front.get_ldl();
+         int const lda = front.ldl();
          int const nr = front.nr(); // number of block rows
          int const nc = front.nc(); // number of block columns
          // sfront.handles.reserve(nr*nc);
@@ -475,7 +475,7 @@ namespace spldlt {
    void init_a_block(int from, int to, NumericNode& node, T const* aval,
                     T const* scaling) {
       SymbolicNode const& snode = node.symb();
-      size_t ldl = node.get_ldl();
+      size_t ldl = node.ldl();
       if(scaling) {
          /* Scaling to apply */
          for(int i=from; i<to; ++i) {
@@ -588,7 +588,7 @@ namespace spldlt {
             
             // printf("[assemble_block] c: %d\n", c);
 
-            int ldd = node.get_ldl();
+            int ldd = node.ldl();
             T *dest = &node.lcol[c*ldd];
             
             int i_sa = ( ii == jj ) ? j : 0;
@@ -1040,7 +1040,7 @@ namespace spldlt {
          ) {
       
       int ncol = node.ncol();
-      size_t ldl = node.get_ldl(); // Leading dimension
+      size_t ldl = node.ldl(); // Leading dimension
 
       // Retreive contribution block from subtrees
       int cn, ldcontrib, ndelay, lddelay;
@@ -1090,7 +1090,7 @@ namespace spldlt {
 
       sylver::SymbolicFront snode = node.symb(); // Symbolic node
       int ncol = node.ncol();
-      size_t ldl = node.get_ldl(); // Leading dimension
+      size_t ldl = node.ldl(); // Leading dimension
 
       // Retreive contribution block from subtrees
       int cn, ldcontrib, ndelay, lddelay;
@@ -1134,7 +1134,7 @@ namespace spldlt {
          int c = csnode.map[ j ]; // Destination column                  
          T const* src = &cval[j*ldcontrib];
          if (c < snode.ncol) {
-            int ldd = node.get_ldl();
+            int ldd = node.ldl();
             T *dest = &node.lcol[c*ldd];
 
             for (int i = j ; i < cn; ++i) {
@@ -1160,7 +1160,7 @@ namespace spldlt {
       sylver::SymbolicFront &csnode = cnode.symb(); // Child symbolic node
 
       int ncol = node.ncol();
-      size_t ldl = node.get_ldl();
+      size_t ldl = node.ldl();
 
       for(int i=0; i<cnode.ndelay_out(); i++) {
          // Add delayed rows (from delayed cols)
@@ -1203,7 +1203,7 @@ namespace spldlt {
 
       int nrow = node.nrow();
       int ncol = node.ncol();
-      size_t ldl = node.get_ldl();
+      size_t ldl = node.ldl();
 
       /*
        * Add children
@@ -1303,7 +1303,7 @@ namespace spldlt {
                int c = csnode.map[ j ]; // Destination column                  
                T const* src = &cval[j*ldcontrib];
                if (c < snode.ncol) {
-                  int ldd = node.get_ldl();
+                  int ldd = node.ldl();
                   T *dest = &node.lcol[c*ldd];
 
                   for (int i = j ; i < cn; ++i) {

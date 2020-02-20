@@ -261,7 +261,7 @@ namespace spldlt {
       
       assert(nelim_to < n);
       
-      size_t ldl = node.get_ldl();
+      size_t ldl = node.ldl();
       T *lcol = node.lcol;
       T *d = &lcol[n*ldl];
       int blksz = node.blksz();

@@ -27,7 +27,7 @@ namespace spldlt {
       // Extract useful information about node
       int const m = node.nrow(); // Number of rows in frontal matrix
       int const n = node.ncol(); // Number of columns in frontal matrix
-      int const lda = node.get_ldl(); // Leading dimensions
+      int const lda = node.ldl(); // Leading dimensions
       T *lcol = node.lcol; // Pointer to L factor 
       int const ldcontrib = m-n; // Dimension of contrib block
       int const blksz = options.nb; // Block size
