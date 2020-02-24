@@ -44,6 +44,16 @@ if(${SYLVER_RUNTIME} MATCHES "StarPU")
 
   set(sources ${sources} ${starpu_sources})
 
+  if(SYLVER_ENABLE_CUDA)
+
+    set(
+      starpu_cuda_sources
+      StarPU/cuda/kernels.hxx
+      StarPU/cuda/kernels_indef.hxx
+      )
+
+  endif()
+  
 endif()
 
 if(SYLVER_ENABLE_CUDA)
@@ -78,18 +88,33 @@ if(SYLVER_ENABLE_CUDA)
 endif()
 
 if(SYLVER_ENABLE_CUDA)
+
   if(SYLVER_NATIVE_CUDA)
+
     add_library(sylver
       ${sources}
       ${cuda_sources}
-      )
+      ${starpu_cuda_sources})
+    
   else()
+    
     add_library(sylver ${sources})
-    cuda_add_library(sylver_cuda ${cuda_sources})
+
+    cuda_add_library(
+      sylver_cuda
+      ${cuda_sources}
+      ${starpu_cuda_sources})
+
+    sylver_install_library(sylver_cuda)
+
   endif()
+
 else()
+
   add_library(sylver ${sources})
 endif()
+
+sylver_install_library(sylver)
 
 # message(STATUS "Sources: ${sources}")
 

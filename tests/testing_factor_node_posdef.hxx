@@ -9,6 +9,7 @@
 #include "factor.hxx"
 #include "kernels/llt.hxx"
 #if defined(SPLDLT_USE_STARPU)
+#include "StarPU/codelets.hxx"
 #include "StarPU/common.hxx"
 #include "StarPU/scheduler.h"
 #include "StarPU/kernels.hxx"
@@ -71,12 +72,10 @@ namespace tests {
       PoolAllocator pool_alloc(lda*n);
          
       // Setup frontal matrix
-      SymbolicFront sfront;
+      sylver::SymbolicFront sfront;
       sfront.nrow = m;
       sfront.ncol = n;
       NumericFront<T, PoolAllocator> front(sfront, pool_alloc, blksz);
-      front.ndelay_in = 0; // No incoming delayed columns      
-      front.ndelay_out = 0;
 
       // Setup allocator for factors
       typedef spral::test::AlignedAllocator<T> FactorAllocator;
@@ -117,20 +116,26 @@ namespace tests {
       conf.ncpus = ncpu;
 #if defined(SPLDLT_USE_GPU)
       conf.ncuda = ngpu;
-      // Scheduler
-      conf.sched_policy_name = "heteroprio";
-      conf.sched_policy_init = &init_heteroprio;
-      // conf.sched_policy_name = "ws";
+
+      if (ngpu > 0) {
+         
+         // Scheduler
+         conf.sched_policy_name = "heteroprio";
+         conf.sched_policy_init = &init_heteroprio;
 
 #if defined(HAVE_LAHP)
-      if(getenv("USE_LAHETEROPRIO") != NULL
-         && (strcmp(getenv("USE_LAHETEROPRIO"),"TRUE")==0||strcmp(getenv("USE_LAHETEROPRIO"),"true")==0)){
-         printf("[starpu_f_init_c] use laheteroprio\n");
-         conf.sched_policy_name = "laheteroprio";
-         conf.sched_policy_init = &init_laheteroprio;
-      }
+         if(getenv("USE_LAHETEROPRIO") != NULL
+            && (strcmp(getenv("USE_LAHETEROPRIO"),"TRUE")==0||strcmp(getenv("USE_LAHETEROPRIO"),"true")==0)){
+            printf("[starpu_f_init_c] use laheteroprio\n");
+            conf.sched_policy_name = "laheteroprio";
+            conf.sched_policy_init = &init_laheteroprio;
+         }
 #endif
-         
+      }
+      else {
+         conf.sched_policy_name = "eager";
+      }
+
 #else
       conf.sched_policy_name = "lws";
 #endif
@@ -171,13 +176,13 @@ namespace tests {
       spldlt::starpu::codelet_init<T, FactorAllocator, PoolAllocator>();
 
 #if defined(SPLDLT_USE_GPU)
-      cl_update_block.where = STARPU_CPU|STARPU_CUDA;
+      spldlt::starpu::cl_update_block.where = STARPU_CPU|STARPU_CUDA;
 #endif
-         
-      // Register symbolic handles
-      starpu_void_data_register(&(sfront.hdl)); // Symbolic handle on node
-      starpu_void_data_register(&(front.contrib_hdl)); // Symbolic handle on contrib blocks 
-         
+      // Register symbolic handles on node
+      front.register_symb();
+      // Register symbolic handle for contribution block
+      front.register_symb_contrib();
+      // Register data handles in StarPU         
       spldlt::starpu::register_node(front);
 #endif
          
@@ -202,7 +207,7 @@ namespace tests {
       spldlt::starpu::unregister_node_submit(front);
       starpu_task_wait_for_all(); // Wait for unregistration of handles      
       starpu_data_unregister(sfront.hdl); // Node's symbolic handle
-      starpu_data_unregister(front.contrib_hdl);
+      starpu_data_unregister(front.contrib_hdl());
       
       // Deinitialize solver (including shutdown tasking system)
 #if defined(SPLDLT_USE_STARPU)

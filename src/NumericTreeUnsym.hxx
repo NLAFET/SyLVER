@@ -9,7 +9,7 @@
 #include "SymbolicTree.hxx"
 #include "SymbolicFront.hxx"
 #include "NumericFront.hxx"
-#include "tasks/tasks_unsym.hxx"
+#include "tasks/unsym.hxx"
 
 // STD 
 #include <stdexcept>
@@ -42,7 +42,7 @@ namespace splu {
       /// @param val Values of A.
       /// @param scaling Scaling vector (NULL if none) 
       NumericTreeUnsym(
-            spldlt::SymbolicTree& symbolic_tree, 
+            sylver::SymbolicTree& symbolic_tree, 
             T *val,
             T *scaling,
             struct options_c &options
@@ -90,15 +90,20 @@ namespace splu {
          // TODO move hdl registration to activate task
 
          // Register symbolic handles prior to the factorization
-         for(int ni = 0; ni < symb_.get_nnodes()+1; ++ni) {
-            starpu_void_data_register(&(symb_[ni].hdl)); // Register node symbolic handle
-            starpu_void_data_register(&(fronts_[ni].contrib_hdl)); // Register contribution block symbolic handle
+         for(int ni = 0; ni < symb_.nnodes()+1; ++ni) {
+            // Register node symbolic handle in StarPU (fully summed
+            // part)
+            fronts_[ni].register_symb();
+            // Register contribution block symbolic handle in StarPU
+            fronts_[ni].register_symb_contrib();
+            // starpu_void_data_register(&(symb_[ni].hdl)); // Register node symbolic handle
+            // starpu_void_data_register(&(fronts_[ni].contrib_hdl())); // Register contribution block symbolic handle
          }
 #endif
             
-         for(int ni = 0; ni < symb_.get_nnodes()+1; ++ni) {
+         for(int ni = 0; ni < symb_.nnodes()+1; ++ni) {
                
-            spldlt::SymbolicFront& sfront = symb_[ni];
+            sylver::SymbolicFront& sfront = symb_[ni];
             spldlt::NumericFront<T,PoolAllocator>& front = fronts_[ni];
 
             // Skip if current node is within a subtree 
@@ -131,9 +136,9 @@ namespace splu {
          //
 
          // Associate symbolic fronts to numeric ones; copy tree structure
-         fronts_.reserve(symb_.get_nnodes()+1);
+         fronts_.reserve(symb_.nnodes()+1);
 
-         for(int ni=0; ni<symb_.get_nnodes()+1; ++ni) {
+         for(int ni=0; ni<symb_.nnodes()+1; ++ni) {
 
             fronts_.emplace_back(symb_[ni], pool_alloc_, blksz);
 
@@ -193,8 +198,8 @@ namespace splu {
             stats += tstats;
          if(stats.flag < 0) return;
             
-         for(int ni=0; ni<symb_.get_nnodes(); ni++) {
-            int m = symb_[ni].nrow + fronts_[ni].ndelay_in;
+         for(int ni=0; ni<symb_.nnodes(); ni++) {
+            int m = symb_[ni].nrow + fronts_[ni].ndelay_in();
             stats.maxfront = std::max(stats.maxfront, m);
             // int n = symb_[ni].ncol + fronts_[ni].ndelay_in;
             // int ldl = align_lda<T>(m);
@@ -226,7 +231,7 @@ namespace splu {
       }
          
    private:
-      spldlt::SymbolicTree& symb_; ///< Structure holding symbolic factorization data 
+      sylver::SymbolicTree& symb_; ///< Structure holding symbolic factorization data 
       std::vector<spldlt::NumericFront<T,PoolAllocator>> fronts_; // Vector
       // containing frontal matrices
       FactorAllocator factor_alloc_; ///< Allocator specific to

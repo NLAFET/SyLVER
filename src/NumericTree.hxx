@@ -14,7 +14,7 @@
 #include "factor_indef.hxx"
 #include "assemble.hxx"
 #include "tasks_factor_indef.hxx"
-#include "tasks_assemble.hxx"
+#include "tasks/assemble.hxx"
 #if defined(SPLDLT_USE_STARPU)
 #include "StarPU/codelets.hxx"
 #endif
@@ -49,7 +49,7 @@ namespace spldlt {
       
       NumericTree(
             void* fkeep, 
-            SymbolicTree& symbolic_tree, 
+            sylver::SymbolicTree& symbolic_tree, 
             T *aval,
             T* scaling,
             void** child_contrib,
@@ -63,8 +63,8 @@ namespace spldlt {
          int blksz = options.nb;
 
          // Associate symbolic fronts to numeric ones; copy tree structure
-         fronts_.reserve(symbolic_tree.nnodes_+1);
-         for(int ni=0; ni<symb_.nnodes_+1; ++ni) {
+         fronts_.reserve(symbolic_tree.nnodes()+1);
+         for(int ni=0; ni<symb_.nnodes()+1; ++ni) {
             fronts_.emplace_back(symbolic_tree[ni], pool_alloc_, blksz);
             auto* fc = symbolic_tree[ni].first_child;
             fronts_[ni].first_child = fc ? &fronts_[fc->idx] : nullptr;
@@ -129,7 +129,7 @@ namespace spldlt {
 
             if (!posdef) {
                // Clear StarPU tags used in indef fatorization
-               for(int ni = 0; ni < symb_.nnodes_; ++ni) {
+               for(int ni = 0; ni < symb_.nnodes(); ++ni) {
                   starpu_tag_t tag_assemble_contrib = (starpu_tag_t) (3*ni+1);
                   starpu_tag_t tag_factor_failed = (starpu_tag_t) (3*ni+2);
                   starpu_tag_t tag_nelim = (starpu_tag_t) (3*ni);
@@ -151,16 +151,16 @@ namespace spldlt {
          if(posdef) {
             // all inform remain zero
          } else { // indefinite
-            for(int ni=0; ni<symb_.nnodes_; ni++) {
-               int m = symb_[ni].nrow + fronts_[ni].ndelay_in;
+            for(int ni=0; ni<symb_.nnodes(); ni++) {
+               int m = symb_[ni].nrow + fronts_[ni].ndelay_in();
                inform.maxfront = std::max(inform.maxfront, m);
-               int n = symb_[ni].ncol + fronts_[ni].ndelay_in;
+               int n = symb_[ni].ncol + fronts_[ni].ndelay_in();
                int ldl = align_lda<T>(m);
                T *d = fronts_[ni].lcol + n*ldl;
-               for(int i=0; i<fronts_[ni].nelim; ) {
+               for(int i=0; i<fronts_[ni].nelim(); ) {
                   T a11 = d[2*i];
                   T a21 = d[2*i+1];
-                  if(i+1==fronts_[ni].nelim || std::isfinite(d[2*i+2])) {
+                  if(i+1==fronts_[ni].nelim() || std::isfinite(d[2*i+2])) {
                      // 1x1 pivot (or zero)
                      if(a11 == 0.0) {
                         // NB: If we reach this stage, options.action must be true.
@@ -193,16 +193,17 @@ namespace spldlt {
             sylver::options_t& options,
             std::vector<sylver::inform_t>& worker_stats) {
 
-         // printf("[factor_mf_indef] posdef = %d\n", posdef);
-         // printf("[factor_mf_indef] nparts = %d\n", symb_.nparts_);
-
 #if defined(SPLDLT_USE_STARPU)
-         // TODO move hdl registration to activate task
          // Register symbolic handles.
          // auto start = std::chrono::high_resolution_clock::now();
-         for(int ni = 0; ni < symb_.nnodes_+1; ++ni) {
-            starpu_void_data_register(&(symb_[ni].hdl)); // Node's symbolic handle
-            starpu_void_data_register(&(fronts_[ni].contrib_hdl)); // Symbolic handle for contribution blocks
+         for(int ni = 0; ni < symb_.nnodes()+1; ++ni) {
+            // Register node symbolic handle in StarPU (fully summed
+            // part)
+            // starpu_void_data_register(&(symb_[ni].hdl));
+            fronts_[ni].register_symb();
+            // Register contribution block symbolic handle in StarPU
+            // starpu_void_data_register(&(fronts_[ni].contrib_hdl()));
+            fronts_[ni].register_symb_contrib();
          }
          // auto end = std::chrono::high_resolution_clock::now();
          // long t_reg = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count();
@@ -241,11 +242,11 @@ namespace spldlt {
 #endif
 
          // starpu_pause();
-         for(int p = 0; p < symb_.nsubtrees_; ++p) {
-            int root = symb_.subtrees_[p]-1; // subtrees is 1-indexed
+         for(int p = 0; p < symb_.nsubtrees(); ++p) {
+            int root = symb_.subtrees()[p]-1; // subtrees is 1-indexed
             // printf("[factor_mf_indef] root idx = %d\n", root+1);
             factor_subtree_task(
-                  symb_.akeep_, fkeep_, symb_[root], aval, scaling, p, 
+                  symb_.akeep(), fkeep_, symb_[root], aval, scaling, p, 
                   child_contrib, &options, worker_stats);
             // #if defined(SPLDLT_USE_STARPU)
             //             starpu_task_wait_for_all();
@@ -274,9 +275,9 @@ namespace spldlt {
          // Allocate mapping array
          // int *map = new int[symb_.n+1];
 
-         for(int ni = 0; ni < symb_.nnodes_; ++ni) {
+         for(int ni = 0; ni < symb_.nnodes(); ++ni) {
             
-            SymbolicFront& sfront = symb_[ni];
+            sylver::SymbolicFront& sfront = symb_[ni];
             // Skip iteration if node is in a subtree
             if (sfront.is_in_subtree()) continue;
 
@@ -338,7 +339,7 @@ namespace spldlt {
 #if defined(SPLDLT_USE_STARPU)
             spldlt::starpu::
                insert_nelim_sync(
-                     fronts_[ni].get_hdl(), sfront.idx);
+                     fronts_[ni].hdl(), sfront.idx);
 #endif
 
             // #if defined(SPLDLT_USE_STARPU)
@@ -358,7 +359,7 @@ namespace spldlt {
          // #endif
 
          // Finish root node
-         fini_cnodes_task(fronts_[symb_.nnodes_], false);
+         fini_cnodes_task(fronts_[symb_.nnodes()], false);
          // starpu_resume();
 
          // #if defined(SPLDLT_USE_STARPU)
@@ -383,11 +384,13 @@ namespace spldlt {
 
 #if defined(SPLDLT_USE_STARPU)
          // TODO move hdl registration to activate task
-         for(int ni = 0; ni < symb_.nnodes_; ++ni) {
+         for(int ni = 0; ni < symb_.nnodes(); ++ni) {
             // Register symbolic handles on node
-            starpu_void_data_register(&(symb_[ni].hdl));
+            // starpu_void_data_register(&(symb_[ni].hdl));
+            fronts_[ni].register_symb();
             // Register symbolic handle for contribution block
-            starpu_void_data_register(&(fronts_[ni].contrib_hdl));
+            // starpu_void_data_register(&(fronts_[ni].contrib_hdl()));
+            fronts_[ni].register_symb_contrib();
          }
 #endif
 
@@ -409,11 +412,11 @@ namespace spldlt {
 
 #endif
          
-         for(int p = 0; p < symb_.nsubtrees_; ++p) {
-            int root = symb_.subtrees_[p]-1; // subtrees is 1-indexed
+         for(int p = 0; p < symb_.nsubtrees(); ++p) {
+            int root = symb_.subtrees()[p]-1; // subtrees is 1-indexed
             // printf("[factor_mf] nsubtrees = %d, p = %d, root = %d\n", symb_.nsubtrees_, p, root);
             factor_subtree_task(
-                  symb_.akeep_, fkeep_, symb_[root], aval, scaling, p, 
+                  symb_.akeep(), fkeep_, symb_[root], aval, scaling, p, 
                   child_contrib, &options, worker_stats);
          }
 
@@ -432,10 +435,10 @@ namespace spldlt {
          int *map = new int[symb_.n+1];
 
          // Loop over node in the assemnly tree
-         for(int ni = 0; ni < symb_.nnodes_; ++ni) {
+         for(int ni = 0; ni < symb_.nnodes(); ++ni) {
             
             spldlt::NumericFront<T,PoolAllocator>& front = fronts_[ni];
-            SymbolicFront& sfront = symb_[ni];
+            sylver::SymbolicFront& sfront = symb_[ni];
             
             // Skip iteration if node is in a subtree
             if (sfront.is_in_subtree()) continue;
@@ -454,12 +457,12 @@ namespace spldlt {
             for(int i=0; i<sfront.ncol; i++)
                map[ sfront.rlist[i] ] = i;
             for(int i=sfront.ncol; i<sfront.nrow; i++)
-               map[ sfront.rlist[i] ] = i + fronts_[ni].ndelay_in;
+               map[ sfront.rlist[i] ] = i + fronts_[ni].ndelay_in();
 
             // Assemble front: fully-summed columns 
             for (auto* child=fronts_[ni].first_child; child!=NULL; child=child->next_child) {
            
-               SymbolicFront& child_sfront = symb_[child->symb.idx]; // Children symbolic node
+               sylver::SymbolicFront& child_sfront = symb_[child->symb().idx]; // Children symbolic node
 
                int ldcontrib = child_sfront.nrow - child_sfront.ncol;
                // Handle expected contributions (only if something there)
@@ -511,7 +514,7 @@ namespace spldlt {
             for (auto* child=fronts_[ni].first_child; child!=NULL; child=child->next_child) {
                
                // SymbolicNode const& csnode = child->symb;
-               SymbolicFront& child_sfront = symb_[child->symb.idx];
+               sylver::SymbolicFront& child_sfront = symb_[child->symb().idx];
                
                int ldcontrib = child_sfront.nrow - child_sfront.ncol;
                // Handle expected contributions (only if something there)
@@ -560,8 +563,8 @@ namespace spldlt {
                }
 #if defined(SPLDLT_USE_STARPU)
                // Unregister symbolic handle on child node
-               starpu_data_unregister_submit(child_sfront.hdl);
-               starpu_data_unregister_submit(child->contrib_hdl);
+               child->unregister_submit_symb();
+               child->unregister_submit_symb_contrib();
 #endif
 
 
@@ -570,17 +573,17 @@ namespace spldlt {
          } // Loop over nodes in the assemnly tree
 
          // Finish root node
-         NumericFront<T, PoolAllocator>& front = fronts_[symb_.nnodes_];
+         NumericFront<T, PoolAllocator>& front = fronts_[symb_.nnodes()];
          for (auto* child=front.first_child; child!=NULL; child=child->next_child) {
-            SymbolicFront const& child_sfront = symb_[child->symb.idx];
+            sylver::SymbolicFront const& child_sfront = symb_[child->symb().idx];
             if (!child_sfront.is_in_subtree()) {
                // fini_node(*child);
                fini_node_task(*child, true);
             }
 #if defined(SPLDLT_USE_STARPU)
-               // Unregister symbolic handle on child node
-               starpu_data_unregister_submit(child_sfront.hdl);
-               starpu_data_unregister_submit(child->contrib_hdl);
+            // Unregister symbolic handle on child node
+            child->unregister_submit_symb();
+            child->unregister_submit_symb_contrib();
 #endif
          }
 
@@ -597,17 +600,15 @@ namespace spldlt {
          int* map_alloc = (!posdef) ? new int[symb_.n] : nullptr; // only indef
         
          /* Main loop */
-         for(int ni=0; ni<symb_.nnodes_; ++ni) {
+         for(int ni=0; ni<symb_.nnodes(); ++ni) {
 
             // Skip iteration if node is in a subtree
             if (symb_[ni].exec_loc != -1) continue;
 
             int m = symb_[ni].nrow;
             int n = symb_[ni].ncol;
-            int nelim = (posdef) ? n
-               : fronts_[ni].nelim;
-            int ndin = (posdef) ? 0
-               : fronts_[ni].ndelay_in;
+            int nelim = (posdef) ? n : fronts_[ni].nelim();
+            int ndin = (posdef) ? 0 : fronts_[ni].ndelay_in();
             int ldl = align_lda<T>(m+ndin);
             // printf("[NumericTree] solve fwd, node: %d, nelim: %d, ldl: %d\n", ni, nelim, ldl);
             /* Build map (indef only) */
@@ -668,7 +669,7 @@ namespace spldlt {
             : nullptr;
 
          /* Perform solve */
-         for(int ni=symb_.nnodes_-1; ni>=0; --ni) {
+         for(int ni=symb_.nnodes()-1; ni>=0; --ni) {
             
             // Skip iteration if node is in a subtree
             if (symb_[ni].exec_loc != -1) continue;
@@ -676,9 +677,9 @@ namespace spldlt {
             int m = symb_[ni].nrow;
             int n = symb_[ni].ncol;
             int nelim = (posdef) ? n
-               : fronts_[ni].nelim;
+               : fronts_[ni].nelim();
             int ndin = (posdef) ? 0
-               : fronts_[ni].ndelay_in;
+               : fronts_[ni].ndelay_in();
 
             /* Build map (indef only) */
             int const *map;
@@ -748,7 +749,7 @@ namespace spldlt {
 
    private:
       void* fkeep_;
-      SymbolicTree& symb_;
+      sylver::SymbolicTree& symb_;
       std::vector<spldlt::NumericFront<T,PoolAllocator>> fronts_;
       FactorAllocator factor_alloc_; // Allocator specific to
         // permanent memory

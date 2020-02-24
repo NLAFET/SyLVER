@@ -5,10 +5,10 @@
 #pragma once
 
 // SyLVER
-
 #include "kernels/common.hxx"
 #include "kernels/ldlt_app.hxx"
 #include "NumericFront.hxx"
+#include "Tile.hxx"
 // STD
 #include <assert.h>
 #include <string>
@@ -30,15 +30,15 @@ namespace spldlt {
       void register_node(
             NumericFront<T, PoolAlloc> &front) {
          
-         SymbolicFront& sfront = front.symb;
-         int blksz = front.blksz;
+         sylver::SymbolicFront& sfront = front.symb();
+         int blksz = front.blksz();
 
-         int const m = front.get_nrow();
-         int const n = front.get_ncol();
+         int const m = front.nrow();
+         int const n = front.ncol();
          T *a = front.lcol;
-         int const lda = front.get_ldl();
-         int const nr = front.get_nr(); // number of block rows
-         int const nc = front.get_nc(); // number of block columns
+         int const lda = front.ldl();
+         int const nr = front.nr(); // number of block rows
+         int const nc = front.nc(); // number of block columns
          // sfront.handles.reserve(nr*nc);
          sfront.handles.resize(nr*nc); // Allocate handles
 
@@ -90,14 +90,14 @@ namespace spldlt {
          
          typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
 
-         SymbolicFront& sfront = front.symb;
-         int blksz = front.blksz;
-         int m = front.get_nrow();
-         int n = front.get_ncol();
+         sylver::SymbolicFront& sfront = front.symb();
+         int blksz = front.blksz();
+         int m = front.nrow();
+         int n = front.ncol();
          T *a = front.lcol;
          int lda = spral::ssids::cpu::align_lda<T>(m);
-         int nr = front.get_nr(); // number of block rows
-         int nc = front.get_nc(); // number of block columns
+         int nr = front.nr(); // number of block rows
+         int nc = front.nc(); // number of block columns
          spldlt::ldlt_app_internal::ColumnData<T, IntAlloc>& cdata = *front.cdata;
 
          // Block diagonal matrix 
@@ -195,12 +195,12 @@ namespace spldlt {
          typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
 
          // Get node info
-         SymbolicFront &snode = node.symb;
-         int const blksz = node.blksz;
-         int const m = node.get_nrow();
-         int const n = node.get_ncol();
-         int const nr = node.get_nr(); // number of block rows
-         int const nc = node.get_nc(); // number of block columns
+         sylver::SymbolicFront &snode = node.symb();
+         int const blksz = node.blksz();
+         int const m = node.nrow();
+         int const n = node.ncol();
+         int const nr = node.nr(); // number of block rows
+         int const nc = node.nc(); // number of block columns
 
          assert(node.cdata); // Make sure cdata is allocated
 
@@ -252,12 +252,12 @@ namespace spldlt {
             ) {
 
          // Get node info
-         SymbolicFront &snode = node.symb;
-         int const blksz = node.blksz;
-         int const m = node.get_nrow();
-         int const n = node.get_ncol();
-         int const nr = node.get_nr(); // number of block rows
-         int const nc = node.get_nc(); // number of block columns
+         sylver::SymbolicFront &snode = node.symb();
+         int const blksz = node.blksz();
+         int const m = node.nrow();
+         int const n = node.ncol();
+         int const nr = node.nr(); // number of block rows
+         int const nc = node.nc(); // number of block columns
 
          // Unregister block handles in the factors
          for(int j = 0; j < nc; ++j) {
@@ -354,12 +354,12 @@ namespace spldlt {
       typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> PoolAllocInt;
       // printf("[alloc_front] posdef = %d\n", posdef);
 
-      SymbolicFront const& sfront = front.symb;
+      sylver::SymbolicFront const& sfront = front.symb();
 
-      front.ndelay_in = 0;
+      front.ndelay_in(0);
 
-      int const nrow = front.get_nrow();
-      int const ncol = front.get_ncol();
+      int const nrow = front.nrow();
+      int const ncol = front.ncol();
 
       /* Get space for node now we know it size using Fortran allocator + zero it*/
       // NB L is  nrow x ncol and D is 2 x ncol (but no D if posdef)
@@ -405,15 +405,15 @@ namespace spldlt {
       typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> PoolAllocInt;
       // printf("[alloc_front] posdef = %d\n", posdef);
 
-      SymbolicFront const& sfront = front.symb;
+      sylver::SymbolicFront const& sfront = front.symb();
 
-      front.ndelay_out = 0;
-      front.ndelay_in = 0;
+      front.ndelay_out(0);
+      front.ndelay_in(0);
       // Count incoming delays and determine size of node
       for(auto* child=front.first_child; child!=NULL; child=child->next_child) {
          // Make sure we're not in a subtree
-         if (child->symb.exec_loc == -1) { 
-            front.ndelay_in += child->ndelay_out;
+         if (child->symb().exec_loc == -1) {
+            front.ndelay_in_add(child->ndelay_out());
          } 
          else {
             int cn, ldcontrib, ndelay, lddelay;
@@ -421,15 +421,16 @@ namespace spldlt {
             int const *crlist, *delay_perm;
             // spral_ssids_contrib_get_data(
             contrib_get_data(
-                  child_contrib[child->symb.contrib_idx], &cn, &cval, &ldcontrib, &crlist,
-                  &ndelay, &delay_perm, &delay_val, &lddelay
-                  );
-            front.ndelay_in += ndelay;
+                  child_contrib[child->symb().contrib_idx], &cn, &cval,
+                  &ldcontrib, &crlist, &ndelay, &delay_perm, &delay_val,
+                  &lddelay);
+            // front.ndelay_in += ndelay;
+            front.ndelay_in_add(ndelay);
          }
       }
 
-      int nrow = front.get_nrow();
-      int ncol = front.get_ncol();
+      int nrow = front.nrow();
+      int ncol = front.ncol();
 
       // Get space for node now we know it size using factor
       // allocator
@@ -473,8 +474,8 @@ namespace spldlt {
    template <typename T, typename NumericNode>
    void init_a_block(int from, int to, NumericNode& node, T const* aval,
                     T const* scaling) {
-      SymbolicNode const& snode = node.symb;
-      size_t ldl = node.get_ldl();
+      SymbolicNode const& snode = node.symb();
+      size_t ldl = node.ldl();
       if(scaling) {
          /* Scaling to apply */
          for(int i=from; i<to; ++i) {
@@ -483,7 +484,7 @@ namespace spldlt {
             int c = dest / snode.nrow;
             int r = dest % snode.nrow;
             long k = c*ldl + r;
-            if(r >= snode.ncol) k += node.ndelay_in;
+            if(r >= snode.ncol) k += node.ndelay_in();
             T rscale = scaling[ snode.rlist[r]-1 ];
             T cscale = scaling[ snode.rlist[c]-1 ];
             node.lcol[k] = rscale * aval[src] * cscale;
@@ -495,11 +496,11 @@ namespace spldlt {
             long dest = snode.amap[2*i+1] - 1; // amap contains 1-based values
             int c = dest / snode.nrow;
             int r = dest % snode.nrow;
-            assert(c < node.get_ncol());
-            assert(r < node.get_nrow());
+            assert(c < node.ncol());
+            assert(r < node.nrow());
             long k = c*ldl + r;
 
-            if(r >= snode.ncol) k += node.ndelay_in;
+            if(r >= snode.ncol) k += node.ndelay_in();
 
             node.lcol[k] = aval[src];
          }
@@ -514,7 +515,7 @@ namespace spldlt {
          NumericFront<T,PoolAlloc>& front,
          T const* aval, T const* scaling) {
 
-      SymbolicFront const& sfront = front.symb;
+      sylver::SymbolicFront const& sfront = front.symb();
 
       // printf("[init_node] node idx = %d, num_a = %d\n", sfront.idx+1, sfront.num_a);
       /* Add A */
@@ -543,19 +544,19 @@ namespace spldlt {
                        NumericFront<T,PoolAlloc> const& cnode, 
                        int ii, int jj, int const* cmap) {
       
-      SymbolicFront const& csnode = cnode.symb;
-      int blksz = cnode.blksz;
+      sylver::SymbolicFront const& csnode = cnode.symb();
+      int blksz = cnode.blksz();
       
       // Source node
-      int cnrow = cnode.get_nrow(); // Number of rows (including delays) 
-      int cncol = cnode.get_ncol(); // Number of cols (including delays)
+      int cnrow = cnode.nrow(); // Number of rows (including delays) 
+      int cncol = cnode.ncol(); // Number of cols (including delays)
 
       int cm = csnode.nrow - csnode.ncol;
       int csa = cncol / blksz; // Index of first block in contrib
-      int cnr = cnode.get_nr(); // number of block rows in child node
+      int cnr = cnode.nr(); // number of block rows in child node
       int cncontrib = cnr-csa;
       // Source block
-      Tile<T, PoolAlloc> const& blk = cnode.contrib_blocks[(ii-csa)+(jj-csa)*cncontrib];
+      sylver::Tile<T, PoolAlloc> const& blk = cnode.contrib_blocks[(ii-csa)+(jj-csa)*cncontrib];
       int blk_lda = blk.lda;
       int blk_m = blk.m;
       int blk_n = blk.n;
@@ -579,7 +580,7 @@ namespace spldlt {
 
          T *src = &(blk.a[j*blk_lda]); // Source column
          
-         int ncol = node.symb.ncol; // no delays!
+         int ncol = node.symb().ncol; // no delays!
          // printf("[assemble_block] ncol: %d\n", ncol);
          
          // Enusre the destination column is in the fully-summed elements
@@ -587,7 +588,7 @@ namespace spldlt {
             
             // printf("[assemble_block] c: %d\n", c);
 
-            int ldd = node.get_ldl();
+            int ldd = node.ldl();
             T *dest = &node.lcol[c*ldd];
             
             int i_sa = ( ii == jj ) ? j : 0;
@@ -698,29 +699,29 @@ namespace spldlt {
 
       // printf("[assemble_contrib_block]\n");
 
-      int blksz = node.blksz;
+      int blksz = node.blksz();
 
-      SymbolicFront const& csnode = cnode.symb;
+      sylver::SymbolicFront const& csnode = cnode.symb();
       
       int cm = csnode.nrow - csnode.ncol;
-      int ncol = node.get_ncol();
-      int nrow = node.get_nrow();
+      int ncol = node.ncol();
+      int nrow = node.nrow();
 
       // Source block
-      int cncol = cnode.get_ncol();
-      int cnrow = cnode.get_nrow();
+      int cncol = cnode.ncol();
+      int cnrow = cnode.nrow();
 
       int csa = cncol / blksz; // Index of first block in contrib
-      int cnr = cnode.get_nr(); // Number of block rows in child node
+      int cnr = cnode.nr(); // Number of block rows in child node
       int cncontrib = cnr-csa;
-      Tile<T, PoolAlloc> const& src_blk = cnode.contrib_blocks[(ii-csa)+(jj-csa)*cncontrib];
+      sylver::Tile<T, PoolAlloc> const& src_blk = cnode.contrib_blocks[(ii-csa)+(jj-csa)*cncontrib];
       int src_blk_lda = src_blk.lda;
       int src_blk_m = src_blk.m;
       int src_blk_n = src_blk.n;
 
       // Destination block
       int sa = ncol / blksz; // Index of first block in contrib
-      int nr = node.get_nr(); // Number of block rows in node
+      int nr = node.nr(); // Number of block rows in node
       int ncontrib = nr-sa;
       
       // Colum indexes
@@ -765,7 +766,7 @@ namespace spldlt {
                int rr = r / blksz;
                // First row index in CB of destination block
                int dest_row_sa = (ncol > rr*blksz) ? 0 : (rr*blksz-ncol);
-               Tile<T, PoolAlloc> &dest_blk = node.contrib_blocks[(rr-sa)+(cc-sa)*ncontrib];
+               sylver::Tile<T, PoolAlloc> &dest_blk = node.contrib_blocks[(rr-sa)+(cc-sa)*ncontrib];
                int dest_blk_lda = dest_blk.lda;
                T *dest = &dest_blk.a[ (c - ncol - dest_col_sa)*dest_blk_lda ];
 
@@ -788,16 +789,16 @@ namespace spldlt {
       
       // printf("[assemble_contrib_block_1d]\n");
 
-      int blksz = node.blksz;
+      int blksz = node.blksz();
       
       // Destination node
-      int ncol = node.get_ncol();
+      int ncol = node.ncol();
 
       // Source node
-      int cncol = cnode.get_ncol();
-      int cnrow = cnode.get_nrow();
+      int cncol = cnode.ncol();
+      int cnrow = cnode.nrow();
 
-      Tile<T, PoolAlloc>& src_blk = cnode.get_contrib_block(ii, jj);
+      sylver::Tile<T, PoolAlloc>& src_blk = cnode.get_contrib_block(ii, jj);
       // Get source block info
       int src_blk_lda = src_blk.lda;
       int src_blk_m = src_blk.m;
@@ -828,7 +829,7 @@ namespace spldlt {
 
             // Get diag block
             int diag_row_sa =  std::max(0, cc*blksz-ncol);
-            Tile<T, PoolAlloc>& diag_blk = node.get_contrib_block(cc, cc);
+            sylver::Tile<T, PoolAlloc>& diag_blk = node.get_contrib_block(cc, cc);
             int diag_blk_lda = diag_blk.lda;
 
             assert(c - ncol - dest_col_sa >= 0);
@@ -969,17 +970,17 @@ namespace spldlt {
    template <typename T, typename PoolAlloc>
    void assemble_contrib_subtree(
          NumericFront<T,PoolAlloc>& node,
-         SymbolicFront const& csnode,
+         sylver::SymbolicFront const& csnode,
          void** child_contrib, 
          int contrib_idx// Index of subtree to assemble
          ) {
 
-      SymbolicFront const& snode = node.symb;
-      int blksz = node.blksz;
+      sylver::SymbolicFront const& snode = node.symb();
+      int blksz = node.blksz();
 
       /* Initialise variables */
-      int ncol = node.get_ncol();
-      int nrow = node.get_nrow();
+      int ncol = node.ncol();
+      int nrow = node.nrow();
 
       // Retreive contribution block from subtrees
       int cn, ldcontrib, ndelay, lddelay;
@@ -1012,7 +1013,7 @@ namespace spldlt {
                int rr = r / blksz; // Destination block row
                // First row index in CB of destination block
                int dest_row_sa = (ncol > rr*blksz) ? 0 : (rr*blksz-ncol);
-               Tile<T, PoolAlloc> &dest_blk = node.contrib_blocks[(rr-sa)+(cc-sa)*ncontrib];
+               sylver::Tile<T, PoolAlloc> &dest_blk = node.contrib_blocks[(rr-sa)+(cc-sa)*ncontrib];
                int dest_blk_lda = dest_blk.lda;
                T *dest = &dest_blk.a[ (c - ncol - dest_col_sa)*dest_blk_lda ];
                // Assemble destination block
@@ -1032,14 +1033,14 @@ namespace spldlt {
    template <typename T, typename PoolAlloc>
    void assemble_delays_subtree(
          NumericFront<T,PoolAlloc>& node,
-         SymbolicFront const& csnode,
+         sylver::SymbolicFront const& csnode,
          void** child_contrib,
          int contrib_idx, // Index of subtree to assemble
          int delay_col
          ) {
       
-      int ncol = node.get_ncol();
-      size_t ldl = node.get_ldl(); // Leading dimension
+      int ncol = node.ncol();
+      size_t ldl = node.ldl(); // Leading dimension
 
       // Retreive contribution block from subtrees
       int cn, ldcontrib, ndelay, lddelay;
@@ -1082,14 +1083,14 @@ namespace spldlt {
    template <typename T, typename PoolAlloc>
    void assemble_subtree(
          NumericFront<T,PoolAlloc>& node,
-         SymbolicFront const& csnode,
+         sylver::SymbolicFront const& csnode,
          void** child_contrib, 
          int contrib_idx// Index of subtree to assemble
          ) {
 
-      SymbolicFront snode = node.symb; // Symbolic node
-      int ncol = node.get_ncol();
-      size_t ldl = node.get_ldl(); // Leading dimension
+      sylver::SymbolicFront snode = node.symb(); // Symbolic node
+      int ncol = node.ncol();
+      size_t ldl = node.ldl(); // Leading dimension
 
       // Retreive contribution block from subtrees
       int cn, ldcontrib, ndelay, lddelay;
@@ -1133,7 +1134,7 @@ namespace spldlt {
          int c = csnode.map[ j ]; // Destination column                  
          T const* src = &cval[j*ldcontrib];
          if (c < snode.ncol) {
-            int ldd = node.get_ldl();
+            int ldd = node.ldl();
             T *dest = &node.lcol[c*ldd];
 
             for (int i = j ; i < cn; ++i) {
@@ -1156,23 +1157,23 @@ namespace spldlt {
 
       // printf("[assemble_delays]\n");
 
-      SymbolicFront &csnode = cnode.symb; // Child symbolic node
+      sylver::SymbolicFront &csnode = cnode.symb(); // Child symbolic node
 
-      int ncol = node.get_ncol();
-      size_t ldl = node.get_ldl();
+      int ncol = node.ncol();
+      size_t ldl = node.ldl();
 
-      for(int i=0; i<cnode.ndelay_out; i++) {
+      for(int i=0; i<cnode.ndelay_out(); i++) {
          // Add delayed rows (from delayed cols)
          T *dest = &node.lcol[delay_col*(ldl+1)];
-         int lds = align_lda<T>(csnode.nrow + cnode.ndelay_in);
-         T *src = &cnode.lcol[(cnode.nelim+i)*(lds+1)];
-         node.perm[delay_col] = cnode.perm[cnode.nelim+i];
-         for(int j=0; j<cnode.ndelay_out-i; j++) {
+         int lds = align_lda<T>(csnode.nrow + cnode.ndelay_in());
+         T *src = &cnode.lcol[(cnode.nelim()+i)*(lds+1)];
+         node.perm[delay_col] = cnode.perm[cnode.nelim()+i];
+         for(int j=0; j<cnode.ndelay_out()-i; j++) {
             dest[j] = src[j];
          }
          // Add child's non-fully summed rows (from delayed cols)
          dest = node.lcol;
-         src = &cnode.lcol[cnode.nelim*lds + cnode.ndelay_in +i*lds];
+         src = &cnode.lcol[cnode.nelim()*lds + cnode.ndelay_in() +i*lds];
          for(int j=csnode.ncol; j<csnode.nrow; j++) {
             // int r = map[ csnode.rlist[j] ];
             int r = csnode.map[j-csnode.ncol];
@@ -1197,12 +1198,12 @@ namespace spldlt {
 
       typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> PoolAllocInt;
 
-      int blksz = node.blksz;
-      SymbolicFront snode = node.symb;
+      int blksz = node.blksz();
+      sylver::SymbolicFront snode = node.symb();
 
-      int nrow = node.get_nrow();
-      int ncol = node.get_ncol();
-      size_t ldl = node.get_ldl();
+      int nrow = node.nrow();
+      int ncol = node.ncol();
+      size_t ldl = node.ldl();
 
       /*
        * Add children
@@ -1221,12 +1222,12 @@ namespace spldlt {
       for(int i=0; i<snode.ncol; i++)
          map[ snode.rlist[i] ] = i;
       for(int i=snode.ncol; i<snode.nrow; i++)
-         map[ snode.rlist[i] ] = i + node.ndelay_in;
+         map[ snode.rlist[i] ] = i + node.ndelay_in();
       
       // Assemble front: fully-summed columns 
       for (auto* child=node.first_child; child!=NULL; child=child->next_child) {
 
-         SymbolicFront &csnode = child->symb; // Children symbolic node
+         sylver::SymbolicFront &csnode = child->symb(); // Children symbolic node
 
          int cm = csnode.nrow - csnode.ncol;
          csnode.map = new int[cm];
@@ -1236,47 +1237,18 @@ namespace spldlt {
          int ldcontrib = csnode.nrow - csnode.ncol;
          if (csnode.exec_loc == -1) {
             // Assemble contributions from child front
-
-            // printf("[assemble] child->ndelay_out = %d\n", child->ndelay_out);
-
-            /* Handle delays - go to back of node
-             * (i.e. become the last rows as in lower triangular format) */
-            // for(int i=0; i<child->ndelay_out; i++) {
-            //    // Add delayed rows (from delayed cols)
-            //    T *dest = &node.lcol[delay_col*(ldl+1)];
-            //    int lds = align_lda<T>(csnode.nrow + child->ndelay_in);
-            //    T *src = &child->lcol[(child->nelim+i)*(lds+1)];
-            //    node.perm[delay_col] = child->perm[child->nelim+i];
-            //    for(int j=0; j<child->ndelay_out-i; j++) {
-            //       dest[j] = src[j];
-            //    }
-            //    // Add child's non-fully summed rows (from delayed cols)
-            //    dest = node.lcol;
-            //    src = &child->lcol[child->nelim*lds + child->ndelay_in +i*lds];
-            //    for(int j=csnode.ncol; j<csnode.nrow; j++) {
-            //       int r = map[ csnode.rlist[j] ];
-            //       // int r = csnode.map[j];
-            //       if(r < ncol) dest[r*ldl+delay_col] = src[j];
-            //       else         dest[delay_col*ldl+r] = src[j];
-            //    }
-            //    delay_col++;
-            // }
-
             assemble_delays(*child, delay_col, node);
             
-            delay_col += child->ndelay_out;
+            delay_col += child->ndelay_out();
 
             // Handle expected contributions (only if something there)
             if (ldcontrib>0) {
-               // int *cache = new int[cm];
-               // spral::ssids::cpu::assemble_expected(0, cm, node, *child, map, cache);
-               // delete cache;
                   
-               int cnrow = child->get_nrow();
-               int cncol = child->get_ncol();
+               int cnrow = child->nrow();
+               int cncol = child->ncol();
                   
                int csa = cncol / blksz;
-               int cnr = child->get_nr(); // number of block rows
+               int cnr = child->nr(); // number of block rows
                // Loop over blocks in contribution blocks
                for (int jj = csa; jj < cnr; ++jj) {
                   for (int ii = jj; ii < cnr; ++ii) {
@@ -1331,7 +1303,7 @@ namespace spldlt {
                int c = csnode.map[ j ]; // Destination column                  
                T const* src = &cval[j*ldcontrib];
                if (c < snode.ncol) {
-                  int ldd = node.get_ldl();
+                  int ldd = node.ldl();
                   T *dest = &node.lcol[c*ldd];
 
                   for (int i = j ; i < cn; ++i) {
@@ -1358,7 +1330,7 @@ namespace spldlt {
       // Assemble front: non fully-summed columns i.e. contribution block 
       for (auto* child=node.first_child; child!=NULL; child=child->next_child) {
 
-         SymbolicFront const& child_sfront = child->symb;
+         sylver::SymbolicFront const& child_sfront = child->symb();
          // SymbolicFront &child_sfront = symb_[child->symb.idx];
 
          int ldcontrib = child_sfront.nrow - child_sfront.ncol;
@@ -1376,13 +1348,13 @@ namespace spldlt {
             }
             else {                     
 
-               int cncol = child->get_ncol();
-               int cnrow = child->get_nrow();
-               int blksz = child->blksz;
+               int cncol = child->ncol();
+               int cnrow = child->nrow();
+               int blksz = child->blksz();
                
                int csa = cncol / blksz;
                // Number of block rows in child node
-               int cnr = child->get_nr();
+               int cnr = child->nr();
                // Lopp over blocks in contribution blocks
                for (int jj = csa; jj < cnr; ++jj) {                     
                   for (int ii = jj; ii < cnr; ++ii) {

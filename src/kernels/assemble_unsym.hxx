@@ -5,7 +5,7 @@
 
 // Sylver
 #include "NumericFront.hxx"
-#include "Block.hxx"
+#include "BlockUnsym.hxx"
 
 // STD
 #include <iostream>
@@ -29,11 +29,11 @@ namespace sylver {
          typedef typename std::allocator_traits<FactorAlloc>::template rebind_traits<int> FAIntTraits;
          typename FAIntTraits::allocator_type factor_alloc_int(factor_alloc);
 
-         front.ndelay_in = 0; // Init incoming delays 
+         front.ndelay_in(0); // Init incoming delays 
 
-         int const nrow = front.get_nrow();
-         int const numfs = front.get_ncol(); // Number of fully-summed rows/columns
-         size_t const ldl = front.get_ldl(); // L factor 
+         int const nrow = front.nrow();
+         int const numfs = front.ncol(); // Number of fully-summed rows/columns
+         size_t const ldl = front.ldl(); // L factor 
          size_t const ldu = front.get_ldu(); // U factor
          
          std::cout << "[alloc_front_unsym_diagdom] ";
@@ -65,9 +65,9 @@ namespace sylver {
       void register_front_unsym(
             spldlt::NumericFront<T, PoolAlloc> &front) {
          
-         int const mblk = front.get_nr();
-         int const blksz = front.blksz;
-         int const n = front.get_ncol();
+         int const mblk = front.nr();
+         int const blksz = front.blksz();
+         int const n = front.ncol();
 
          for(int jblk=0; jblk<mblk; jblk++) {
             

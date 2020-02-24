@@ -33,14 +33,14 @@ namespace spldlt {
 
       int nc = 0;
       for (auto* child=node.first_child; child!=NULL; child=child->next_child) {
-         cnode_hdls[nc] = child->symb.hdl;
+         cnode_hdls[nc] = child->symb().hdl;
          ++nc;
       }
 
       assert(nchild==nc);
       
       spldlt::starpu::insert_fini_cnodes(
-            node.get_hdl(), cnode_hdls, nchild, &node, posdef);
+            node.hdl(), cnode_hdls, nchild, &node, posdef);
 
       delete[] cnode_hdls;
 #else
@@ -71,13 +71,13 @@ namespace spldlt {
       
       int i = 0;
       for (auto* child=node.first_child; child!=NULL; child=child->next_child) {
-         cnode_hdls[i] = child->symb.hdl;
+         cnode_hdls[i] = child->symb().hdl;
          ++i;
       }
       // printf("[assemble_contrib_task] node = %d, nchild = %d\n", node.symb.idx+1, nchild);
 
       spldlt::starpu::insert_assemble_contrib(
-            node.get_hdl(), cnode_hdls, nchild, //node.contrib_hdl,
+            node.hdl(), cnode_hdls, nchild, //node.contrib_hdl,
             &node, child_contrib, &workspaces);
 
       delete[] cnode_hdls;
@@ -109,7 +109,7 @@ namespace spldlt {
       
       int i = 0;
       for (auto* child=node.first_child; child!=NULL; child=child->next_child) {
-         cnode_hdls[i] = child->symb.hdl;
+         cnode_hdls[i] = child->symb().hdl;
          ++i;
       }
 
@@ -117,7 +117,7 @@ namespace spldlt {
       
       // printf("[assemble_task] node = %d, nchild = %d\n", snode.idx+1, nchild);
       spldlt::starpu::insert_assemble(
-            node.get_hdl(), cnode_hdls, nchild,
+            node.hdl(), cnode_hdls, nchild,
             n, &node, child_contrib, &pool_alloc);
 
       delete[] cnode_hdls;

@@ -1,19 +1,7 @@
-# List tests drivers
-set(tests_drivers)
+include(${CMAKE_SOURCE_DIR}/cmake/create_test.cmake)
 
 # Include modules files from SyLVER
 include_directories(${CMAKE_BINARY_DIR}/src)
-
-# Unit tests
-list(APPEND tests_drivers "drivers/factor_node_test.cxx")
-list(APPEND tests_drivers "drivers/kernel_test.cxx")
-list(APPEND tests_drivers "drivers/sylver_test.F90")
-
-# GPU
-if(SYLVER_ENABLE_CUDA)
-  list(APPEND tests_drivers "drivers/update_block_gpu_test.cxx")
-  list(APPEND tests_drivers "drivers/factor_gpu_test.cxx")
-endif()
 
 # Get object files from SSIDS tests 
 file(
@@ -37,39 +25,35 @@ if(SYLVER_ENABLE_CUDA)
     tests_cuda_src
     *.cu
     *.cuh)
-
-  cuda_add_library(sylver_tests_cuda ${tests_cuda_src})
-
 endif()
 
-
-add_library(sylver_tests ${tests_src})
-
-# if (${KERNEL_TESTS} MATCHES "ON")
-#   set_target_properties(sylver_tests PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
-# endif()
-# set_target_properties(sylver_tests PROPERTIES POSITION_INDEPENDENT_CODE ON)
-
-foreach(tests_driver ${tests_drivers})
-
-  MESSAGE( STATUS "Tests driver: " ${tests_driver} )
-
-  get_filename_component(tests_driver_name ${tests_driver} NAME_WE)
-
-  add_executable(${tests_driver_name} ${tests_driver})
-
-  target_include_directories(${tests_driver_name} PUBLIC ${SyLVER_SOURCE_DIR}/tests)
-  target_include_directories(${tests_driver_name} PUBLIC ${SyLVER_DIR})
-  target_include_directories(${tests_driver_name} PUBLIC ${CMAKE_BINARY_DIR}/src)
-  target_include_directories(${tests_driver_name} PUBLIC ${CMAKE_BINARY_DIR}/tests)
-  target_include_directories(${tests_driver_name} PUBLIC ${SPRAL_DIR})
-  target_link_libraries(${tests_driver_name} sylver_tests)
-  if(SYLVER_ENABLE_CUDA)
-    target_link_libraries(${tests_driver_name} sylver_tests_cuda)
+if(SYLVER_ENABLE_CUDA)
+  if(SYLVER_NATIVE_CUDA)
+    add_library(
+      sylver_tests
+      ${tests_src}
+      ${tests_cuda_src})
+  else()
+    add_library(
+      sylver_tests
+      ${tests_src})
+    cuda_add_library(sylver_tests_cuda ${tests_cuda_src})
   endif()
-  target_link_libraries(${tests_driver_name} sylver)
-  target_link_libraries(${tests_driver_name} ${obj})
-  target_link_libraries(${tests_driver_name} ${SPRAL_LIBRARIES})
-  target_link_libraries(${tests_driver_name} ${LIBS})
+else()
+  add_library(
+    sylver_tests
+    ${tests_src})
+endif()
 
-endforeach()
+sylver_tests_add_driver("drivers/factor_node_test.cxx")
+# GPU
+if(SYLVER_ENABLE_CUDA)
+  sylver_tests_add_driver("drivers/update_block_gpu_test.cxx")
+  sylver_tests_add_driver("drivers/factor_gpu_test.cxx")
+endif()
+
+# sylver_create_test("drivers/kernel_test.cxx")
+sylver_create_test("drivers/form_contrib_tests.cxx")
+# sylver_create_test("drivers/factor_node_posdef_tests.cxx")
+sylver_create_test("drivers/factor_node_indef_tests.cxx")
+sylver_create_test("drivers/sylver_test.F90")

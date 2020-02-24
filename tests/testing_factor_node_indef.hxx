@@ -26,10 +26,11 @@
 #include <starpu_cublas.h>
 #include <starpu_cublas_v2.h>
 #endif
-#include "StarPU/scheduler.h"
+#include "StarPU/codelets.hxx"
+#include "StarPU/factor_failed.hxx"
 #include "StarPU/kernels.hxx"
 #include "StarPU/kernels_indef.hxx"
-#include "StarPU/factor_failed.hxx"
+#include "StarPU/scheduler.h"
 #endif
 
 namespace spldlt { namespace tests {
@@ -88,12 +89,11 @@ namespace spldlt { namespace tests {
       typedef spral::ssids::cpu::BuddyAllocator<T, std::allocator<T>> PoolAllocator;
       PoolAllocator pool_alloc(lda*n);
 
-      SymbolicFront sfront;
+      sylver::SymbolicFront sfront;
       sfront.nrow = m;
       sfront.ncol = n;
       NumericFront<T, PoolAllocator> front(sfront, pool_alloc, blksz);
-      front.ndelay_in = 0; // No incoming delayed columns      
-      front.ndelay_out = 0;
+
       // Init node
       // Setup allocator for factors
       typedef spral::test::AlignedAllocator<T> FactorAllocator;
@@ -141,11 +141,16 @@ namespace spldlt { namespace tests {
 #if defined(SPLDLT_USE_GPU)
       conf->ncuda = ngpu;
 
-      // conf->sched_policy_name = "eager";
-
-      conf->sched_policy_name = "heteroprio";
-      conf->sched_policy_init = &init_heteroprio;
-
+      // Select scheduling strategy in StarPU
+      if (ngpu > 0) {
+         conf->sched_policy_name = "heteroprio";
+         conf->sched_policy_init = &init_heteroprio;
+      }
+      else{
+         // If no GPU is enabled, use Eager scheduler
+         conf->sched_policy_name = "eager"; // FIXME: use lws scheduler?
+      }
+         
 #else
       conf->sched_policy_name = "lws";
 #endif
@@ -196,24 +201,27 @@ namespace spldlt { namespace tests {
       spldlt::starpu::codelet_init<T, FactorAllocator, PoolAllocator>();
       spldlt::starpu::codelet_init_indef<T, iblksz, Backup, PoolAllocator>();
       spldlt::starpu::codelet_init_factor_indef<T, PoolAllocator>();
-      spldlt::starpu::codelet_init_factor_failed<T, PoolAllocator>();
+      sylver::spldlt::starpu::codelet_init_factor_failed<T, PoolAllocator>();
 
-      // extern struct starpu_codelet cl_update_contrib_block_app;
+      // if (ngpu > 0) {
+      //    // extern struct starpu_codelet cl_update_contrib_block_app;
 
-      // Force update_contrib taks on the CPU/GPU
-      // cl_update_contrib_block_app.where = STARPU_CPU;
-      cl_update_contrib_block_app.where = STARPU_CUDA;
+      //    // Force update_contrib taks on the CPU/GPU
+      //    // cl_update_contrib_block_app.where = STARPU_CPU;
+      //    cl_update_contrib_block_app.where = STARPU_CUDA;
       
-      // Force UpdateN taks on the CPU/GPU
-      // cl_updateN_block_app.where = STARPU_CPU; 
-      // cl_updateN_block_app.where = STARPU_CUDA;
-      cl_updateN_block_app.where = STARPU_CUDA | STARPU_CPU;
+      //    // Force UpdateN taks on the CPU/GPU
+      //    // cl_updateN_block_app.where = STARPU_CPU; 
+      //    // cl_updateN_block_app.where = STARPU_CUDA;
+      //    cl_updateN_block_app.where = STARPU_CUDA | STARPU_CPU;
+      // }
 #endif
 
 #if defined(SPLDLT_USE_STARPU)
-      // Register symbolic handles
-      starpu_void_data_register(&(sfront.hdl)); // Symbolic handle on node
-      starpu_void_data_register(&(front.contrib_hdl)); // Symbolic handle on contrib blocks 
+      // Register symbolic handles on node
+      front.register_symb();
+      // Register symbolic handle for contribution block
+      front.register_symb_contrib();
       // Register StarPU data handles
       spldlt::starpu::register_node_indef(front);
 #endif
@@ -234,11 +242,11 @@ namespace spldlt { namespace tests {
       long ttotal = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count();
 
       if(debug) printf("[factor_node_indef_test] factorization done\n");
-      if(debug) printf("[factor_node_indef_test] nelim1 = %d\n", front.nelim1);
+      if(debug) printf("[factor_node_indef_test] nelim first pass = %d\n", front.nelim_first_pass());
       
-      int nelim = front.nelim; // Number of eliminated columns
-      int q1 = front.nelim1;
-      int q2 = nelim - front.nelim1;
+      int nelim = front.nelim(); // Number of eliminated columns
+      int q1 = front.nelim_first_pass();
+      int q2 = nelim - front.nelim_first_pass();
             
       std::cout << "FIRST FACTOR CALL ELIMINATED " << q1 << " of " << n << " pivots" << std::endl;
       std::cout << "SECOND FACTOR CALL ELIMINATED " << q2 << " of " << n << " pivots" << std::endl;
@@ -247,11 +255,23 @@ namespace spldlt { namespace tests {
       spldlt::starpu::unregister_node_indef<T, PoolAllocator, false>(front); // Synchronous unregister
       // starpu_task_wait_for_all(); // Wait for unregistration of handles      
       starpu_data_unregister(sfront.hdl); // Node's symbolic handle
-      starpu_data_unregister(front.contrib_hdl);
+      starpu_data_unregister(front.contrib_hdl());
 
       starpu_data_unregister(spldlt::starpu::workspace_hdl);
 #endif
-      
+
+#if defined(SPLDLT_USE_STARPU)
+#if defined(SPLDLT_USE_GPU)
+      // auto start_mem_pin = std::chrono::high_resolution_clock::now();
+      starpu_memory_unpin(front.lcol, lda*n*sizeof(T));
+      // auto end_mem_pin = std::chrono::high_resolution_clock::now();
+      // long t_mem_pin = 
+      //    std::chrono::duration_cast<std::chrono::nanoseconds>
+      //    (end_mem_pin-start_mem_pin).count();
+      // printf("[factor_node_posdef_test] memory pin (s) = %e\n", 1e-9*t_mem_pin);
+#endif
+#endif
+
       // Deinitialize solver (including shutdown tasking system)
 #if defined(SPLDLT_USE_STARPU)
 #if defined(SPLDLT_USE_GPU)
@@ -289,7 +309,7 @@ namespace spldlt { namespace tests {
          // Copy A (columns n+1 to m) into L
          memcpy(&l[lda*n], &a[lda*n], lda*(m-n)*sizeof(T));
          // Add entries (columns n+1 to m) form CB into L
-         if (front.nelim > 0) add_cb_to_a(front, l, lda);
+         if (front.nelim() > 0) add_cb_to_a(front, l, lda);
          
          // Debug
          // Ignore CB and do update
@@ -337,7 +357,7 @@ namespace spldlt { namespace tests {
       // Check residual
       T bwderr = sylver::tests::backward_error(m, a, lda, b, 1, soln, m);
       /*if(debug)*/ printf("bwderr = %le\n", bwderr);
-      EXPECT_LE(bwderr, 5e-14) << "(test " << test << " seed " << seed << ")" << std::endl;
+      EXPECT_LE(u*bwderr, 5e-14) << "(test " << test << " seed " << seed << ")" << std::endl;
 
       ////////////////////////////////////////
       // Print results

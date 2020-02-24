@@ -11,7 +11,7 @@ using namespace spldlt; // TODO remove or change to sylver namespace if necessar
 
 namespace {
    typedef double T; // Working precision
-   typedef spldlt::AppendAlloc<T> FactorAlloc; // Factor allocator
+   typedef sylver::AppendAlloc<T> FactorAlloc; // Factor allocator
    const int PAGE_SIZE = 8*1024*1024; // 8MB
    typedef sylver::splu::NumericTreeUnsym<T, FactorAlloc, true, PAGE_SIZE> NumericTreeUnsymDiagdomDbl; 
 }
@@ -25,7 +25,7 @@ void* splu_create_numeric_tree_dbl(
       ) {
 
    // Retreive SymbolicTree object from pointer
-   auto& symbolic_tree = *static_cast<SymbolicTree*>(symbolic_tree_ptr);
+   auto& symbolic_tree = *static_cast<sylver::SymbolicTree*>(symbolic_tree_ptr);
 
    auto* tree = new NumericTreeUnsymDiagdomDbl(symbolic_tree, val, scaling, *options);
    return (void *) tree;

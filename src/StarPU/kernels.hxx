@@ -12,7 +12,9 @@
 #include "kernels/factor.hxx"
 #if defined(SPLDLT_USE_GPU)
 #include "kernels/gpu/wrappers.hxx"
+#include "StarPU/cuda/kernels.hxx"
 #endif
+
 // SSIDS
 #include "ssids/cpu/cpu_iface.hxx"
 #include "ssids/contrib.h"
@@ -38,12 +40,12 @@ namespace starpu {
       // printf("[unregister_node_submit]\n");
          
       // Get node info
-      SymbolicFront &snode = node.symb;
-      int blksz = node.blksz;
-      int m = node.get_nrow();
-      int n = node.get_ncol();
-      int nr = node.get_nr(); // Number of block rows
-      int nc = node.get_nc(); // Number of block columns
+      sylver::SymbolicFront &snode = node.symb();
+      int blksz = node.blksz();
+      int m = node.nrow();
+      int n = node.ncol();
+      int nr = node.nr(); // Number of block rows
+      int nc = node.nc(); // Number of block columns
 
       // Unregister block handles in the factors
       for(int j = 0; j < nc; ++j) {
@@ -112,8 +114,8 @@ namespace starpu {
                   
       int ret;
 
-      int nr = front->get_nr();
-      int nc = front->get_nc();
+      int nr = front->nr();
+      int nc = front->nc();
 
       int nhdls = nr*nc;
       struct starpu_data_descr *descrs = new starpu_data_descr[nhdls+1];
@@ -365,47 +367,8 @@ namespace starpu {
          starpu_data_handle_t node_hdl,
          int prio);
       
-   ////////////////////////////////////////////////////////////////////////////////
+   ////////////////////////////////////////////////////////////
    // update_block StarPU task
-
-#if defined(SPLDLT_USE_GPU)
-
-   // GPU task
-   template<typename T>
-   void update_block_gpu_func(void *buffers[], void *cl_arg) {
-
-      // Get pointer on L_ij block
-      T *lij = (T*)STARPU_MATRIX_GET_PTR(buffers[0]);
-      unsigned m = STARPU_MATRIX_GET_NX(buffers[0]);
-      unsigned n = STARPU_MATRIX_GET_NY(buffers[0]);
-      unsigned ld_lij = STARPU_MATRIX_GET_LD(buffers[0]);
-                  
-      // Get pointer on L_ik block
-      T *lik = (T*)STARPU_MATRIX_GET_PTR(buffers[1]);
-      unsigned k = STARPU_MATRIX_GET_NY(buffers[1]);
-      unsigned ld_lik = STARPU_MATRIX_GET_LD(buffers[1]); 
-
-      // Get pointer on L_jk block
-      T *ljk = (T*)STARPU_MATRIX_GET_PTR(buffers[2]);
-      unsigned ld_ljk = STARPU_MATRIX_GET_LD(buffers[2]); 
-        
-      T ralpha = -1.0;
-      T rbeta = 1.0;
-
-      cublasHandle_t handle = starpu_cublas_get_local_handle();
-         
-      sylver::gpu::dev_gemm(
-            handle,
-            CUBLAS_OP_N, CUBLAS_OP_T,
-            m, n, k,
-            &ralpha, 
-            lik, ld_lik, ljk, ld_ljk,
-            &rbeta,
-            lij, ld_lij);
-         
-   }
-
-#endif
 
    // CPU kernel
    template<typename T>
@@ -441,73 +404,9 @@ namespace starpu {
          starpu_data_handle_t node_hdl,
          int prio);
 
-   ////////////////////////////////////////////////////////////////////////////////
+   ////////////////////////////////////////////////////////////
    // update_contrib_block StarPU task
-
-#if defined(SPLDLT_USE_GPU)
-
-   // GPU task
-   template<typename T>
-   void update_contrib_block_gpu_func(void *buffers[], void *cl_arg) {
-
-      // Get pointer on L_ij block
-      T *lij = (T *)STARPU_MATRIX_GET_PTR(buffers[0]);
-      unsigned m = STARPU_MATRIX_GET_NX(buffers[0]);
-      unsigned n = STARPU_MATRIX_GET_NY(buffers[0]);
-      unsigned ld_lij = STARPU_MATRIX_GET_LD(buffers[0]);
-                  
-      // Get pointer on L_ik block
-      T *lik = (T *)STARPU_MATRIX_GET_PTR(buffers[1]);
-      unsigned k = STARPU_MATRIX_GET_NY(buffers[1]);
-      unsigned ld_lik = STARPU_MATRIX_GET_LD(buffers[1]); 
-
-      // Get pointer on L_jk block
-      T *ljk = (T *)STARPU_MATRIX_GET_PTR(buffers[2]);
-      unsigned ld_ljk = STARPU_MATRIX_GET_LD(buffers[2]); 
-
-      T *upd = (T *)STARPU_MATRIX_GET_PTR(buffers[3]);
-      unsigned updm = STARPU_MATRIX_GET_NX(buffers[3]);
-      unsigned updn = STARPU_MATRIX_GET_NY(buffers[3]);
-      unsigned ldupd = STARPU_MATRIX_GET_LD(buffers[3]);
-
-      int kk, blksz;
-
-      starpu_codelet_unpack_args(
-            cl_arg, &kk, &blksz);
-        
-      T ralpha = -1.0;
-      T rbeta = 1.0;
-
-      cublasHandle_t handle = starpu_cublas_get_local_handle();
-         
-      sylver::gpu::dev_gemm(
-            handle,
-            CUBLAS_OP_N, CUBLAS_OP_T,
-            m, n, k,
-            &ralpha, 
-            lik, ld_lik, ljk, ld_ljk,
-            &rbeta,
-            lij, ld_lij);
-         
-
-      if(n<blksz) {
-
-         rbeta = (kk==0) ? 0.0 : 1.0;
-
-         sylver::gpu::dev_gemm(
-               handle,
-               CUBLAS_OP_N, CUBLAS_OP_T,
-               updm, updn, k,
-               &ralpha, 
-               &lik[m-updm], ld_lik, &ljk[n], ld_ljk,
-               &rbeta,
-               upd, ldupd);
-
-      }
-   }
-
-#endif
-
+   
    // CPU kernel
    template<typename T>
    void update_contrib_block_cpu_func(void *buffers[], void *cl_arg) {
@@ -605,49 +504,6 @@ namespace starpu {
 
    ////////////////////////////////////////////////////////////////////////////////
    // update_contrib StarPU task
-
-#if defined(SPLDLT_USE_GPU)
-
-   // GPU task
-   template<typename T>
-   void update_contrib_gpu_func(void *buffers[], void *cl_arg) {
-
-      // Get pointer on L_ij block
-      T *lij = (T *)STARPU_MATRIX_GET_PTR(buffers[0]);
-      unsigned m = STARPU_MATRIX_GET_NX(buffers[0]);
-      unsigned n = STARPU_MATRIX_GET_NY(buffers[0]);
-      unsigned ld_lij = STARPU_MATRIX_GET_LD(buffers[0]);
-                  
-      // Get pointer on L_ik block
-      T *lik = (T *)STARPU_MATRIX_GET_PTR(buffers[1]);
-      unsigned k = STARPU_MATRIX_GET_NY(buffers[1]);
-      unsigned ld_lik = STARPU_MATRIX_GET_LD(buffers[1]); 
-
-      // Get pointer on L_jk block
-      T *ljk = (T *)STARPU_MATRIX_GET_PTR(buffers[2]);
-      unsigned ld_ljk = STARPU_MATRIX_GET_LD(buffers[2]); 
-        
-      int kk;
-
-      starpu_codelet_unpack_args(cl_arg, &kk);
-
-      T ralpha = -1.0;
-      T rbeta = (kk==0) ? 0.0 : 1.0;
-
-      cublasHandle_t handle = starpu_cublas_get_local_handle();
-         
-      sylver::gpu::dev_gemm(
-            handle,
-            CUBLAS_OP_N, CUBLAS_OP_T,
-            m, n, k,
-            &ralpha, 
-            lik, ld_lik, ljk, ld_ljk,
-            &rbeta,
-            lij, ld_lij);
-         
-   }
-
-#endif
 
    // CPU task
    template<typename T>
@@ -1118,7 +974,7 @@ namespace starpu {
    void subtree_assemble_cpu_func(void *buffers[], void *cl_arg) {
 
       NumericFront<T, PoolAlloc> *node = nullptr;
-      SymbolicFront *csnode;
+      sylver::SymbolicFront *csnode;
       void **child_contrib;
       int contrib_idx;
 
@@ -1138,7 +994,7 @@ namespace starpu {
    template <typename T, typename PoolAlloc>
    void insert_subtree_assemble(
          spldlt::NumericFront<T, PoolAlloc> *node,
-         SymbolicFront *csnode,
+         sylver::SymbolicFront *csnode,
          starpu_data_handle_t node_hdl,
          starpu_data_handle_t root_hdl,
          starpu_data_handle_t *dest_hdls, int ndest,
@@ -1166,7 +1022,7 @@ namespace starpu {
       ret = starpu_task_insert(&cl_subtree_assemble,
                                STARPU_DATA_MODE_ARRAY, descrs, nh,
                                STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
-                               STARPU_VALUE, &csnode, sizeof(SymbolicFront*),
+                               STARPU_VALUE, &csnode, sizeof(sylver::SymbolicFront*),
                                STARPU_VALUE, &child_contrib, sizeof(void**),
                                STARPU_VALUE, &contrib_idx, sizeof(int),
                                0);
@@ -1182,7 +1038,7 @@ namespace starpu {
    void subtree_assemble_contrib_cpu_func(void *buffers[], void *cl_arg) {
 
       NumericFront<T, PoolAlloc> *node = nullptr;
-      SymbolicFront *csnode = nullptr;
+      sylver::SymbolicFront *csnode = nullptr;
       void **child_contrib;
       int contrib_idx;
 
@@ -1201,7 +1057,7 @@ namespace starpu {
    template <typename T, typename PoolAlloc>
    void insert_subtree_assemble_contrib(
          NumericFront<T, PoolAlloc> *node,
-         SymbolicFront *csnode,
+         sylver::SymbolicFront *csnode,
          starpu_data_handle_t node_hdl,
          starpu_data_handle_t contrib_hdl,
          starpu_data_handle_t root_hdl,
@@ -1234,7 +1090,7 @@ namespace starpu {
       ret = starpu_task_insert(&cl_subtree_assemble_contrib,
                                STARPU_DATA_MODE_ARRAY, descrs, nh,
                                STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
-                               STARPU_VALUE, &csnode, sizeof(SymbolicFront*),
+                               STARPU_VALUE, &csnode, sizeof(sylver::SymbolicFront*),
                                STARPU_VALUE, &child_contrib, sizeof(void**),
                                STARPU_VALUE, &contrib_idx, sizeof(int),
                                STARPU_PRIORITY, prio,
@@ -1443,7 +1299,7 @@ namespace starpu {
    void activate_node_cpu_func(void *buffers[], void *cl_arg) {
          
       bool posdef;
-      SymbolicFront *snode;
+      sylver::SymbolicFront *snode;
       NumericFront<T, PoolAlloc> *node;
       void** child_contrib;
       int blksz;
@@ -1467,7 +1323,7 @@ namespace starpu {
          starpu_data_handle_t node_hdl, // Node's symbolic handle
          starpu_data_handle_t *cnode_hdls, int nhdl, // Children node's symbolic handles
          bool posdef,
-         SymbolicFront *snode,
+         sylver::SymbolicFront *snode,
          NumericFront<T, PoolAlloc> *node,
          void** child_contrib,
          int blksz,
@@ -1490,7 +1346,7 @@ namespace starpu {
       ret = starpu_task_insert(&cl_activate_node,
                                STARPU_DATA_MODE_ARRAY, descrs, nh,
                                STARPU_VALUE, &posdef, sizeof(bool),
-                               STARPU_VALUE, &snode, sizeof(SymbolicFront*),
+                               STARPU_VALUE, &snode, sizeof(sylver::SymbolicFront*),
                                STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
                                STARPU_VALUE, &child_contrib, sizeof(void**),
                                STARPU_VALUE, &blksz, sizeof(int),
@@ -1500,7 +1356,7 @@ namespace starpu {
       delete[] descrs;
    }
 
-   ////////////////////////////////////////////////////////////////////////////////
+   ////////////////////////////////////////////////////////////
    // Activate and init node
 
    template <typename T, typename FactorAlloc, typename PoolAlloc>
@@ -1517,8 +1373,6 @@ namespace starpu {
       starpu_codelet_unpack_args(
             cl_arg, &posdef, &node, &child_contrib, 
             &factor_alloc, &pool_alloc, &aval, &scaling);
-
-      // printf("[activate_init_node_cpu_func] node idx = %d\n", node->symb.idx+1);
          
       // Allocate data structures
       activate_front(
@@ -1553,8 +1407,6 @@ namespace starpu {
          descrs[nh].handle = cnode_hdls[i]; descrs[nh].mode = STARPU_R;
          nh++;
       }
-
-      // printf("[insert_activate_init_node] node = %d, nh = %d\n", snode->idx, nh);
          
       int ret;
       ret = starpu_task_insert(&cl_activate_init_node,
@@ -1571,175 +1423,5 @@ namespace starpu {
 
       delete[] descrs;
    }
-      
-   ////////////////////////////////////////////////////////////////////////////////
 
-   // As it is not possible to statically intialize codelet in C++,
-   // we do it via this function
-   template <typename T, typename FactorAlloc, typename PoolAlloc>
-   void codelet_init() {
-
-      // activate node StarPU codelet
-      starpu_codelet_init(&cl_activate_node);
-      cl_activate_node.where = STARPU_CPU;
-      cl_activate_node.nbuffers = STARPU_VARIABLE_NBUFFERS;
-      cl_activate_node.name = "ActivateNode";
-      cl_activate_node.cpu_funcs[0] = activate_node_cpu_func<T, FactorAlloc,PoolAlloc>;
-
-      // init_node StarPU codelet
-      starpu_codelet_init(&cl_init_node);
-      cl_init_node.where = STARPU_CPU;
-      cl_init_node.nbuffers = STARPU_VARIABLE_NBUFFERS;
-      cl_init_node.name = "InitNode";
-      cl_init_node.cpu_funcs[0] = init_node_cpu_func<T, PoolAlloc>;
-
-      // activate_init node StarPU codelet
-      starpu_codelet_init(&cl_activate_init_node);
-      cl_activate_init_node.where = STARPU_CPU;
-      cl_activate_init_node.nbuffers = STARPU_VARIABLE_NBUFFERS;
-      cl_activate_init_node.name = "ActivateInitNode";
-      cl_activate_init_node.cpu_funcs[0] = activate_init_node_cpu_func<T, FactorAlloc,PoolAlloc>;
-
-      // fini_node StarPU codelet
-      starpu_codelet_init(&cl_fini_node);
-      cl_fini_node.where = STARPU_CPU;
-      cl_fini_node.nbuffers = STARPU_VARIABLE_NBUFFERS;
-      cl_fini_node.name = "FiniNode";
-      cl_fini_node.cpu_funcs[0] = fini_node_cpu_func<T, PoolAlloc>;
-
-      // factorize_block StarPU codelet
-      starpu_codelet_init(&cl_factorize_block);
-      cl_factorize_block.where = STARPU_CPU;
-      cl_factorize_block.nbuffers = STARPU_VARIABLE_NBUFFERS;
-      cl_factorize_block.name = "FactoBlk";
-      cl_factorize_block.cpu_funcs[0] = factorize_block_cpu_func<T>;
-
-      // factorize_contrib_block StarPU codelet
-      starpu_codelet_init(&cl_factorize_contrib_block);
-      cl_factorize_contrib_block.where = STARPU_CPU;
-      cl_factorize_contrib_block.nbuffers = STARPU_VARIABLE_NBUFFERS;
-      cl_factorize_contrib_block.name = "FactoContribBlk";
-      cl_factorize_contrib_block.cpu_funcs[0] = factorize_contrib_block_cpu_func<T>;
-
-      // solve_block StarPU codelet
-      starpu_codelet_init(&cl_solve_block);
-      cl_solve_block.where = STARPU_CPU;
-      cl_solve_block.nbuffers = STARPU_VARIABLE_NBUFFERS;
-      cl_solve_block.name = "SolveBlk";
-      cl_solve_block.cpu_funcs[0] = solve_block_cpu_func<T>;
-
-      // solve_contrib_block StarPU codelet
-      starpu_codelet_init(&cl_solve_contrib_block);
-      cl_solve_contrib_block.where = STARPU_CPU;
-      cl_solve_contrib_block.nbuffers = STARPU_VARIABLE_NBUFFERS;
-      cl_solve_contrib_block.name = "SolveContribBlock";
-      cl_solve_contrib_block.cpu_funcs[0] = solve_contrib_block_cpu_func<T>;
-
-      // update_block StarPU codelet
-      starpu_codelet_init(&cl_update_block);
-#if defined(SPLDLT_USE_GPU)
-      cl_update_block.where = STARPU_CPU | STARPU_CUDA;
-      // cl_update_block.where = STARPU_CPU; // Debug
-#else
-      cl_update_block.where = STARPU_CPU;
-#endif
-      cl_update_block.nbuffers = STARPU_VARIABLE_NBUFFERS;
-      cl_update_block.name = "UpdateBlock";
-#if defined(SPLDLT_USE_GPU)
-      cl_update_block.cuda_funcs[0] = update_block_gpu_func<T>;
-      cl_update_block.cuda_flags[0] = STARPU_CUDA_ASYNC;
-#endif
-      cl_update_block.cpu_funcs[0] = update_block_cpu_func<T>;
-
-      // update_contrib_block StarPU codelet
-      starpu_codelet_init(&cl_update_contrib_block);
-#if defined(SPLDLT_USE_GPU)
-      cl_update_contrib_block.where = STARPU_CPU | STARPU_CUDA;
-#else
-      cl_update_contrib_block.where = STARPU_CPU;
-#endif
-      cl_update_contrib_block.nbuffers = STARPU_VARIABLE_NBUFFERS;
-      cl_update_contrib_block.name = "UpdateContribBlock";
-#if defined(SPLDLT_USE_GPU)
-      cl_update_contrib_block.cuda_funcs[0] = update_contrib_block_gpu_func<T>;
-      cl_update_contrib_block.cuda_flags[0] = STARPU_CUDA_ASYNC;
-#endif
-      cl_update_contrib_block.cpu_funcs[0] = update_contrib_block_cpu_func<T>;
-
-      // // update_diag_block StarPU codelet
-      // starpu_codelet_init(&cl_update_diag_block);
-      // cl_update_diag_block.where = STARPU_CPU;
-      // cl_update_diag_block.nbuffers = STARPU_VARIABLE_NBUFFERS;
-      // cl_update_diag_block.name = "UPDATE_BLK";
-      // cl_update_diag_block.cpu_funcs[0] = update_diag_block_cpu_func;
-
-      // update_contrib StarPU codelet
-      starpu_codelet_init(&cl_update_contrib);
-#if defined(SPLDLT_USE_GPU)
-      cl_update_contrib.where = STARPU_CPU | STARPU_CUDA;
-      // cl_update_contrib.where = STARPU_CPU;
-#else
-      cl_update_contrib.where = STARPU_CPU;
-#endif
-      cl_update_contrib.nbuffers = STARPU_VARIABLE_NBUFFERS;
-      cl_update_contrib.name = "UpdateContrib";
-#if defined(SPLDLT_USE_GPU)
-      cl_update_contrib.cuda_funcs[0] = update_contrib_gpu_func<T>;
-      cl_update_contrib.cuda_flags[0] = STARPU_CUDA_ASYNC;
-#endif
-      cl_update_contrib.cpu_funcs[0] = update_contrib_cpu_func<T>;
-
-      // // update_between StarPU codelet
-      // starpu_codelet_init(&cl_update_between);
-      // cl_update_between.where = STARPU_CPU;
-      // cl_update_between.nbuffers = STARPU_VARIABLE_NBUFFERS;
-      // cl_update_between.name = "UPDATE_BETWEEN_BLK";
-      // cl_update_between.cpu_funcs[0] = update_between_cpu_func<T, PoolAlloc>;
-
-      // assemble_block StarPU codelet
-      starpu_codelet_init(&cl_assemble_block);
-      cl_assemble_block.where = STARPU_CPU;
-      cl_assemble_block.nbuffers = STARPU_VARIABLE_NBUFFERS;
-      cl_assemble_block.name = "AssembleBlk";
-      cl_assemble_block.cpu_funcs[0] = assemble_block_cpu_func<T, PoolAlloc>;
-
-      // assemble_contrib_block StarPU codelet
-      starpu_codelet_init(&cl_assemble_contrib_block);
-      cl_assemble_contrib_block.where = STARPU_CPU;
-      cl_assemble_contrib_block.nbuffers = STARPU_VARIABLE_NBUFFERS;
-      cl_assemble_contrib_block.name = "AssembleContribBlk";
-      cl_assemble_contrib_block.cpu_funcs[0] = assemble_contrib_block_cpu_func<T, PoolAlloc>;
-
-      // subtree_assemble StarPU codelet
-      starpu_codelet_init(&cl_subtree_assemble);
-      cl_subtree_assemble.where = STARPU_CPU;
-      cl_subtree_assemble.nbuffers = STARPU_VARIABLE_NBUFFERS;
-      cl_subtree_assemble.name = "SubtreeAssemble";
-      cl_subtree_assemble.cpu_funcs[0] = subtree_assemble_cpu_func<T, PoolAlloc>;
-
-      // subtree_assemble_contrib StarPU codelet
-      starpu_codelet_init(&cl_subtree_assemble_contrib);
-      cl_subtree_assemble_contrib.where = STARPU_CPU;
-      cl_subtree_assemble_contrib.nbuffers = STARPU_VARIABLE_NBUFFERS;
-      cl_subtree_assemble_contrib.name = "SubtreeAssembleContrib";
-      cl_subtree_assemble_contrib.cpu_funcs[0] = subtree_assemble_contrib_cpu_func<T, PoolAlloc>;
-
-      // facto_subtree StarPU codelet
-      starpu_codelet_init(&cl_factor_subtree);
-      cl_factor_subtree.where = STARPU_CPU;
-      cl_factor_subtree.nbuffers = STARPU_VARIABLE_NBUFFERS;
-      cl_factor_subtree.name = "FactorSubtree";
-      cl_factor_subtree.cpu_funcs[0] = factor_subtree_cpu_func<T>;
-
-#if defined(SPLDLT_USE_GPU)
-      // facto_subtree_gpu StarPU codelet
-      starpu_codelet_init(&cl_factor_subtree_gpu);
-      cl_factor_subtree_gpu.where = STARPU_CUDA;
-      cl_factor_subtree_gpu.nbuffers = STARPU_VARIABLE_NBUFFERS;
-      cl_factor_subtree_gpu.name = "FactorSubtreeGPU";
-      // This function can handle subtrees on the GPU
-      cl_factor_subtree_gpu.cuda_funcs[0] = factor_subtree_cpu_func<T>; 
-#endif
-
-   }
 }} // namespaces spldlt::starpu

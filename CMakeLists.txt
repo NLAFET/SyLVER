@@ -14,6 +14,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
 # Load CMake helpers
 include(cmake/build_helpers.cmake)
+include(cmake/install_helpers.cmake)
 
 ################################################################################
 # Linker options
@@ -51,13 +52,28 @@ set(CMAKE_CXX_EXTENSIONS OFF) #...without compiler extensions like gnu++11
 # message("CMAKE_CXX_FLAGS_RELWITHDEBINFO: ${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
 # message("CMAKE_CXX_FLAGS_MINSIZEREL: ${CMAKE_CXX_FLAGS_MINSIZEREL}")
 
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native")
-set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -march=native")
-set(CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL} -march=native")
-# IBM machine
-# set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -mcpu=native")
-# set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -mcpu=native")
-# set(CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL} -mcpu=native")
+# set(DUMMY "-smth")
+# enable_cxx_compiler_flag_if_supported(DUMMY "-march=native")
+# enable_cxx_compiler_flag_if_supported(DUMMY "-march=tet")
+# enable_cxx_compiler_flag_if_supported(DUMMY "-tet")
+# enable_cxx_compiler_flag_if_supported(DUMMY "-g")
+# message("DUMMY: ${DUMMY}")
+
+enable_cxx_compiler_flag_if_supported(CMAKE_CXX_FLAGS_RELEASE "-march=native")
+enable_cxx_compiler_flag_if_supported(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-march=native")
+enable_cxx_compiler_flag_if_supported(CMAKE_CXX_FLAGS_MINSIZEREL "-march=native")
+
+if(NOT SYLVER_HAVE_FLAG_march=native)
+  # This is useful on IBM machines where march=native is not
+  # necessarily suported
+  enable_cxx_compiler_flag_if_supported(CMAKE_CXX_FLAGS_RELEASE "-mcpu=native")
+  enable_cxx_compiler_flag_if_supported(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-mcpu=native")
+  enable_cxx_compiler_flag_if_supported(CMAKE_CXX_FLAGS_MINSIZEREL "-march=native")
+endif()
+
+# message("CMAKE_CXX_FLAGS_RELEASE: ${CMAKE_CXX_FLAGS_RELEASE}")
+# message("CMAKE_CXX_FLAGS_RELWITHDEBINFO: ${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
+# message("CMAKE_CXX_FLAGS_MINSIZEREL: ${CMAKE_CXX_FLAGS_MINSIZEREL}")
 
 # Debug flags
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -ggdb")
@@ -143,11 +159,11 @@ option(SYLVER_ENABLE_PROFILING "Activate profiling info" OFF)
 option(SYLVER_ENABLE_CUTLASS "CUTLASS library available" OFF)
 
 # Have la-hp scheduler
-option(HAVE_LAHP "LA-heteroprio scheduler available" OFF)
-if (${HAVE_LAHP} MATCHES "ON")
-  add_definitions(-DHAVE_LAHP)
-endif()
-MESSAGE(STATUS "LAHP: " ${HAVE_LAHP})
+# option(HAVE_LAHP "LA-heteroprio scheduler available" OFF)
+# if (${HAVE_LAHP} MATCHES "ON")
+#   add_definitions(-DHAVE_LAHP)
+# endif()
+# MESSAGE(STATUS "LAHP: " ${HAVE_LAHP})
 
 # Print options summuary 
 message(STATUS "Runtime: " ${SYLVER_RUNTIME})
@@ -598,6 +614,11 @@ elseif(${SYLVER_RUNTIME} MATCHES "StarPU")
 
 endif()
 
+if(SYLVER_BUILD_TESTS)
+  enable_testing()
+  include(CTest)
+endif()
+
 add_subdirectory(src)
 
 ########################################
@@ -623,6 +644,8 @@ endif()
 if(SYLVER_BUILD_DRIVERS)
   add_subdirectory(drivers)
 endif()
+
+sylver_install()
 
 ################################################################################
 # Print summary
@@ -651,13 +674,23 @@ if(${SYLVER_RUNTIME} MATCHES "StarPU")
   message(" ")
 endif()
 if(SYLVER_ENABLE_CUDA)
-  message(
-    "CUDA host compiler: ${CUDA_HOST_COMPILER}\n"
-    "CUDA libraries: ${CUDA_LIBRARIES}\n"
-    "CUBLAS libraries: ${CUDA_CUBLAS_LIBRARIES}\n"
-    "NVVC comiler: ${CUDA_NVCC_EXECUTABLE}\n"
-    "NVCC FLAGS: ${CUDA_NVCC_FLAGS}\n"
-    )
+  if(SYLVER_NATIVE_CUDA)
+    message(
+      "CUDA host compiler: ${CMAKE_CUDA_HOST_COMPILER}\n"
+      "CUDA libraries: ${CUDA_RUNTIME_LIBS}\n"
+      "CUBLAS libraries: ${CUBLAS}\n"
+      "NVVC compiler: ${CMAKE_CUDA_COMPILER}\n"
+      "NVCC FLAGS: ${CMAKE_CUDA_FLAGS}\n"
+      )
+  else()
+    message(
+      "CUDA host compiler: ${CUDA_HOST_COMPILER}\n"
+      "CUDA libraries: ${CUDA_LIBRARIES}\n"
+      "CUBLAS libraries: ${CUDA_CUBLAS_LIBRARIES}\n"
+      "NVVC compiler: ${CUDA_NVCC_EXECUTABLE}\n"
+      "NVCC FLAGS: ${CUDA_NVCC_FLAGS}\n"
+      )
+  endif()
   message(" ")
 endif()
 # if (${USE_OMP} MATCHES ON)

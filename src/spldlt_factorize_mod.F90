@@ -987,19 +987,18 @@ contains
     use sylver_inform_mod, only : sylver_inform
     implicit none
 
-    class(spldlt_fkeep_type), target :: spldlt_fkeep
-    type(spldlt_akeep_type), intent(in) :: spldlt_akeep
+    class(spldlt_fkeep_type), target, intent(in) :: spldlt_fkeep
+    type(spldlt_akeep_type), target, intent(in) :: spldlt_akeep
     integer, intent(in) :: nrhs
     integer, intent(in) :: ldx
     real(wp), dimension(ldx,nrhs), intent(inout) :: x
     type(sylver_inform), intent(inout) :: inform
-    integer, intent(inout) :: job
+    integer, intent(in) :: job
 
     type(ssids_inform) :: ssids_info
     real(wp), dimension(:,:), allocatable :: x2
-    type(ssids_akeep) :: akeep
+    type(ssids_akeep), pointer :: akeep
     type(ssids_fkeep), pointer :: fkeep
-    integer :: local_job
     character(50)  :: context  ! Procedure name (used when printing).
 
     integer :: i
@@ -1011,10 +1010,11 @@ contains
     logical(c_bool) :: posdef
 
     context = 'spldlt_solve'
-    akeep = spldlt_akeep%akeep
+    akeep => spldlt_akeep%akeep
+    fkeep => spldlt_fkeep%fkeep
     n = akeep%n
 
-    posdef = spldlt_fkeep%fkeep%pos_def
+    posdef = fkeep%pos_def
     ! posdef = .true.
     ssids_info%stat = 0
 
@@ -1026,11 +1026,21 @@ contains
     ! print *, "solve, n: ", n
 
     ! permute and scale
-    ! TODO
-    ! Just copy
-    do r = 1, nrhs
-       x2(1:n, r) = x(akeep%invp(1:n), r)
-    end do
+    if (allocated(fkeep%scaling) .and. &
+       (job == SYLVER_SOLVE_JOB_ALL .or. &
+       job == SSIDS_SOLVE_JOB_FWD)) then
+       ! Copy and scale
+       do r = 1, nrhs
+          do i = 1, n
+             x2(i,r) = x(akeep%invp(i),r) * fkeep%scaling(i)
+          end do
+       end do
+    else
+       ! Just copy
+       do r = 1, nrhs
+          x2(1:n, r) = x(akeep%invp(1:n), r)
+       end do
+    end if
 
     fkeep => spldlt_fkeep%fkeep
 
@@ -1082,9 +1092,9 @@ contains
     end do
 
     if (allocated(fkeep%scaling) .and. ( &
-         local_job == SYLVER_SOLVE_JOB_ALL .or. &
-         local_job == SYLVER_SOLVE_JOB_BWD .or. &
-         local_job == SYLVER_SOLVE_JOB_DIAG_BWD)) then
+         job == SYLVER_SOLVE_JOB_ALL .or. &
+         job == SYLVER_SOLVE_JOB_BWD .or. &
+         job == SYLVER_SOLVE_JOB_DIAG_BWD)) then
        ! Copy and scale
        do r = 1, nrhs
           do i = 1, n

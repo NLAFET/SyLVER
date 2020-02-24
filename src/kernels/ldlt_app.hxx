@@ -308,20 +308,6 @@ public:
       return nelim;
    };
 
-// #if defined(SPLDLT_USE_STARPU)
-//    starpu_data_handle_t get_d_hdl() const { return d_hdl_; }
-
-//    void register_d_hdl(const T *d) {
-//       starpu_vector_data_register(
-//             &d_hdl_, STARPU_MAIN_RAM, reinterpret_cast<uintptr_t>(d), 2*n_,
-//             sizeof(T));
-//    }
-
-//    void unregister_d_hdl() {
-//       starpu_data_unregister_submit(d_hdl_);
-//    }
-// #endif
-
 private:
    int const n_; ///< number of columns in matrix
    int const block_size_; ///< block size for matrix
@@ -364,7 +350,9 @@ void move_up_rect(int m, int rfrom, Column const& jdata, T* out, T const* aval, 
 
 /** Copies failed rows and columns^T to specified locations */
 template<typename T, typename Column>
-void copy_failed_diag(int m, int n, Column const& idata, Column const& jdata, T* rout, T* cout, T* dout, int ldout, T const* aval, int lda) {
+void copy_failed_diag(
+      int m, int n, Column const& idata, Column const& jdata, T* rout, T* cout,
+      T* dout, int ldout, T const* aval, int lda) {
    /* copy rows */
    for(int j=0; j<jdata.nelim; ++j)
    for(int i=idata.nelim, iout=0; i<m; ++i, ++iout)

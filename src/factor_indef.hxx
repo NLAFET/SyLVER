@@ -8,12 +8,15 @@
 #include "kernels/ldlt_app.hxx"
 #include "kernels/factor_indef.hxx"
 #include "kernels/assemble.hxx"
-#include "tasks_indef.hxx"
+#include "factor_failed.hxx"
+#include "tasks/indef.hxx"
 #include "tasks/factor_failed.hxx"
 #if defined(SPLDLT_USE_STARPU)
+#include "StarPU/codelets.hxx"
 #include "StarPU/kernels_indef.hxx"
 using namespace spldlt::starpu;
 #endif
+#include "Tile.hxx"
 
 // SSIDS
 #include "ssids/cpu/kernels/ldlt_nopiv.hxx"
@@ -78,7 +81,7 @@ namespace spldlt {
       typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
 
       // Start from first column
-      front.nelim = 0; // TODO add parameter from;
+      front.nelim(0); // TODO add parameter from;
 
       // LDLT with APTP strategy
       if (options.pivot_method==sylver::PivotMethod::app_block) {
@@ -92,15 +95,15 @@ namespace spldlt {
          // Factor front
          FactorSymIndefSpec::factor_front_indef_app_notask(
                front, options, stats, work, pool_alloc, 
-               front.nelim // Return the number of succesfully
+               front.nelim() // Return the number of succesfully
                            // eliminated columns
                );
 
-         int nrow = front.get_nrow();
-         int ncol = front.get_ncol();
+         int nrow = front.nrow();
+         int ncol = front.ncol();
          int ldl = front.get_ldl();
          
-         if (front.nelim < ncol) { 
+         if (front.nelim() < ncol) { 
             // Some columns remain uneliminated after the first pass
             
             spldlt::ldlt_app_internal::
@@ -114,7 +117,7 @@ namespace spldlt {
             // Permute failed entries at the back of the front
             FactorSymIndefSpec::permute_failed(
                   nrow, ncol, front.perm, front.lcol, ldl,
-                  front.nelim, cdata, front.blksz,
+                  front.nelim(), cdata, front.blksz(),
                   pool_alloc);
          }
          
@@ -141,8 +144,8 @@ namespace spldlt {
       typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
       
       /* Extract useful information about node */
-      int m = node.get_nrow();
-      int n = node.get_ncol();
+      int m = node.nrow();
+      int n = node.ncol();
       size_t ldl = align_lda<T>(m);
       T *lcol = node.lcol;
       T *d = &node.lcol[n*ldl];
@@ -154,13 +157,13 @@ namespace spldlt {
 
       // printf("[factor_front_indef] m = %d, n = %d\n", node.get_nrow(), node.get_ncol());
 
-      int blksz = node.blksz;
+      int blksz = node.blksz();
       // node.nelim = nelim;      
       bool const debug = false;
       T *upd = nullptr;
 
       // Factorize from first column
-      node.nelim = 0; // TODO add parameter from;
+      node.nelim(0); // TODO add parameter from;
 
       if (options.pivot_method==sylver::PivotMethod::app_block) {
 
@@ -170,7 +173,7 @@ namespace spldlt {
          // Factor fully-summed columns and form contrib blocks
          FactorSymIndefSpec::factor_front_indef_app(
                node, options, worker_stats, 0.0, upd, 0, workspaces, pool_alloc,
-               node.nelim);
+               node.nelim());
 
          // Release backup and permute failed columns
          FactorSymIndefSpec::release_permute_failed_task(
@@ -1233,8 +1236,8 @@ namespace spldlt {
 #if defined(SPLDLT_USE_STARPU)
 
          ColumnData<T, IntAlloc> &cdata = *node.cdata;
-         int n = node.get_ncol();
-         int const nblk = calc_nblk(n, node.blksz);
+         int n = node.ncol();
+         int const nblk = calc_nblk(n, node.blksz());
 
          starpu_data_handle_t *col_hdls = new starpu_data_handle_t[nblk];
          for (int c = 0; c < nblk; c++)
@@ -1246,24 +1249,21 @@ namespace spldlt {
 
          delete[] col_hdls;
 #else
-         int m = node.get_nrow();
-         int n = node.get_ncol();
+         int m = node.nrow();
+         int n = node.ncol();
          size_t ldl = align_lda<T>(m);
          T *lcol = node.lcol;
-         int *perm = node.perm;
-         int num_elim = node.nelim;
-         int blksz = node.blksz;
 
          CopyBackup<T, Allocator> &backup = *node.backup; 
          ColumnData<T, IntAlloc> &cdata = *node.cdata;
          
          backup.release_all_memory(); 
 
-         if (num_elim < n)
+         if (node.nelim() < n)
             permute_failed (
-                  m, n, perm, lcol, ldl,
-                  num_elim, 
-                  cdata, blksz,
+                  m, n, node.perm, lcol, ldl,
+                  node.nelim(), 
+                  cdata, node.blksz(),
                   alloc);         
 #endif
 
@@ -1284,18 +1284,18 @@ namespace spldlt {
             int& next_elim, int const from_blk=0) {
 
          // Front info
-         int const nblk = front.get_nc();
-         int const mblk = front.get_nr();
+         int const nblk = front.nc();
+         int const mblk = front.nr();
          
-         int const block_size = front.blksz;
-         int const m = front.get_nrow();
-         int const n = front.get_ncol();
+         int const block_size = front.blksz();
+         int const m = front.nrow();
+         int const n = front.ncol();
          T *lcol = front.lcol;
          int ldl = front.get_ldl();
          T *d = &front.lcol[n*ldl];
          int* perm = front.perm;
          std::vector<Block<T, iblksz, IntAlloc>>& blocks = front.blocks;
-         std::vector<spldlt::Tile<T, Allocator>>& contrib_blocks = front.contrib_blocks;
+         std::vector<sylver::Tile<T, Allocator>>& contrib_blocks = front.contrib_blocks;
          ColumnData<T, IntAlloc> &cdata = *front.cdata;
          CopyBackup<T, Allocator> &backup = *front.backup;
 
@@ -1392,7 +1392,7 @@ namespace spldlt {
                for (int jblk = rsa; jblk < mblk; ++jblk) {
                   for (int iblk = jblk;  iblk < mblk; ++iblk) {
 
-                     Tile<T, Allocator>& upd = front.get_contrib_block(iblk, jblk);
+                     sylver::Tile<T, Allocator>& upd = front.get_contrib_block(iblk, jblk);
                      
                      update_contrib_block_app
                         <T, IntAlloc, Allocator>
@@ -1432,15 +1432,15 @@ namespace spldlt {
          
          typedef spldlt::ldlt_app_internal::Block<T, iblksz, IntAlloc> BlockSpec;
          
-         int const block_size = node.blksz;
-         int const m = node.get_nrow();
-         int const n = node.get_ncol();
+         int const block_size = node.blksz();
+         int const m = node.nrow();
+         int const n = node.ncol();
          T *lcol = node.lcol;
          int ldl = align_lda<T>(m);
          T *d = &node.lcol[n*ldl];
          int *perm = node.perm;
          std::vector<Block<T, iblksz, IntAlloc>>& blocks = node.blocks;
-         std::vector<spldlt::Tile<T, Allocator>>& contrib_blocks = node.contrib_blocks;
+         std::vector<sylver::Tile<T, Allocator>>& contrib_blocks = node.contrib_blocks;
          ColumnData<T, IntAlloc> &cdata = *node.cdata;
          CopyBackup<T, Allocator> &backup = *node.backup;
          

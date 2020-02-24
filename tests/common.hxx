@@ -6,6 +6,7 @@
 #include "kernels/gpu/common.hxx"
 #include "kernels/gpu/wrappers.hxx"
 #endif
+#include "Tile.hxx"
 
 #include <cstdio>
 #include <cmath>
@@ -387,15 +388,15 @@ namespace spldlt {
                bool debug=false>
       void copy_a_to_cb(T* a, int lda, NumericFront<T, PoolAllocator>& node) {
 
-         int m = node.get_nrow();
-         int n = node.get_ncol();
+         int m = node.nrow();
+         int n = node.ncol();
          size_t contrib_dimn = m-n; // Dimension of contribution block
-         int blksz =  node.blksz;
+         int blksz =  node.blksz();
 
          if (contrib_dimn <= 0) return;
          if(debug) printf("[copy_front_cb] contrib dimn = %zu\n", contrib_dimn);
 
-         int nr = node.get_nr();
+         int nr = node.nr();
          int rsa = n/blksz;
          int ncontrib = nr-rsa;
 
@@ -406,7 +407,7 @@ namespace spldlt {
             // int blkn = std::min((j+1)*blksz, m) - first_col;
             for(int i = j; i < nr; i++) {
 
-               spldlt::Tile<T, PoolAllocator>& cb = node.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib];
+               sylver::Tile<T, PoolAllocator>& cb = node.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib];
             
                // First col in contrib block
                int first_row = std::max(i*blksz, n);
@@ -431,13 +432,13 @@ namespace spldlt {
                bool debug=false>
       void copy_cb_to_a(NumericFront<T, PoolAllocator>& node, T* a, int lda) {
 
-         int m = node.get_nrow();
-         int n = node.get_ncol();
+         int m = node.nrow();
+         int n = node.ncol();
          size_t contrib_dimn = m-n; // Dimension of contribution block
-         int blksz =  node.blksz;
+         int blksz =  node.blksz();
          if (contrib_dimn <= 0) return;
 
-         int nr = node.get_nr();
+         int nr = node.nr();
          int rsa = n/blksz;
          int ncontrib = nr-rsa;
 
@@ -452,7 +453,7 @@ namespace spldlt {
                // Tile height
                // int blkm = std::min((i+1)*blksz, m) - first_row;
            
-               spldlt::Tile<T, PoolAllocator>& cb = node.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib];
+               sylver::Tile<T, PoolAllocator>& cb = node.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib];
 
                // FIXME: use copy routine from BLAS
                for (int c = 0; c < cb.n; ++c) {
@@ -472,13 +473,13 @@ namespace spldlt {
                bool debug=false>
       void add_cb_to_a(NumericFront<T, PoolAllocator>& node, T* a, int lda) {
 
-         int m = node.get_nrow();
-         int n = node.get_ncol();
+         int m = node.nrow();
+         int n = node.ncol();
          size_t contrib_dimn = m-n; // Dimension of contribution block
-         int blksz =  node.blksz;
+         int blksz =  node.blksz();
          if (contrib_dimn <= 0) return;
 
-         int nr = node.get_nr();
+         int nr = node.nr();
          int rsa = n/blksz;
          int ncontrib = nr-rsa;
 
@@ -493,7 +494,7 @@ namespace spldlt {
                // Tile height
                // int blkm = std::min((i+1)*blksz, m) - first_row;
            
-               spldlt::Tile<T, PoolAllocator>& cb = node.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib];
+               sylver::Tile<T, PoolAllocator>& cb = node.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib];
 
                // FIXME: use copy routine from BLAS
                for (int c = 0; c < cb.n; ++c) {
@@ -510,13 +511,13 @@ namespace spldlt {
       template<typename T, typename PoolAllocator>
       void print_cb(char const* format, NumericFront<T, PoolAllocator>& node) {
 
-         int m = node.get_nrow();
-         int n = node.get_ncol();
+         int m = node.nrow();
+         int n = node.ncol();
          size_t contrib_dimn = m-n; // Dimension of contribution block
-         int blksz =  node.blksz;
+         int blksz =  node.blksz();
          if (contrib_dimn <= 0) return;
 
-         int nr = node.get_nr();
+         int nr = node.nr();
          int rsa = n/blksz;
          int ncontrib = nr-rsa;
       

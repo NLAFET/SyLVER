@@ -5,6 +5,7 @@
 
 // SyLVER
 #include "sylver_ciface.hxx"
+#include "StarPU/factor_failed.hxx"
 
 // STD
 #include <assert.h>
@@ -25,19 +26,19 @@ namespace spldlt {
 #if defined(SPLDLT_USE_STARPU)
 
       typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
-      int blksz = node.blksz;
+      int blksz = node.blksz();
       spldlt::ldlt_app_internal::ColumnData<T, IntAlloc> &cdata = *node.cdata;
-      int const nblk = node.get_nc(); // Number of block-columns
+      int const nblk = node.nc(); // Number of block-columns
       starpu_data_handle_t *hdls = nullptr;
       int nh = 0;
-      int n = node.get_ncol();
-      int m = node.get_nrow();
+      int n = node.ncol();
+      int m = node.nrow();
 
       if ((m-n) > 0) {         
          // In case there is a contribution block (non-root nodes)
          
          int rsa = n / blksz; // Index of first block in contribution blocks
-         int nr = node.get_nr(); // Number of block rows
+         int nr = node.nr(); // Number of block rows
          int ncb = nr-rsa;
          hdls = new starpu_data_handle_t[ncb*ncb];
       
@@ -49,8 +50,8 @@ namespace spldlt {
          }
       }
       
-      spldlt::starpu::insert_factor_front_indef_failed(
-            cdata[nblk-1].get_hdl(), node.get_contrib_hdl(),
+      sylver::spldlt::starpu::insert_factor_front_indef_failed(
+            cdata[nblk-1].get_hdl(), node.contrib_hdl(),
             hdls, nh,
             &node, &workspaces, &options, &worker_stats
             );

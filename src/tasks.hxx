@@ -12,6 +12,7 @@
 #include "StarPU/kernels.hxx"
 #include "StarPU/kernels_indef.hxx"
 #endif
+#include "Tile.hxx"
 
 #include <assert.h>
 
@@ -71,7 +72,7 @@ namespace spldlt {
    template <typename T, typename FactorAlloc, typename PoolAlloc>
    void activate_front_task(
          bool posdef,
-         SymbolicFront& snode,
+         sylver::SymbolicFront& snode,
          NumericFront<T, PoolAlloc>& node,
          void** child_contrib,
          int blksz,
@@ -117,7 +118,7 @@ namespace spldlt {
       
       spldlt::starpu::insert_init_node(
             &front,
-            front.get_hdl(),
+            front.hdl(),
             aval,
             scaling,
             prio);
@@ -138,8 +139,8 @@ namespace spldlt {
 
 #if defined(SPLDLT_USE_STARPU)
 
-      int nr = node.get_nr();
-      int nc = node.get_nc();
+      int nr = node.nr();
+      int nc = node.nc();
 
       // std::cout << "[fini_node_task] idx = " << node.symb.idx+1 << std::endl; 
       // std::cout << "[fini_node_task] nr = " << nr << ", nc = " << nc << std::endl; 
@@ -156,7 +157,7 @@ namespace spldlt {
       }
       
       spldlt::starpu::insert_fini_node(
-            node.get_hdl(), hdls, nh, &node, posdef, INIT_PRIO);
+            node.hdl(), hdls, nh, &node, posdef, INIT_PRIO);
 
       delete[] hdls;
 #else
@@ -188,14 +189,14 @@ namespace spldlt {
       
       int nc = 0;
       for (auto* child=node.first_child; child!=NULL; child=child->next_child) {
-         cnode_hdls[nc] = child->get_hdl();
+         cnode_hdls[nc] = child->hdl();
          ++nc;
       }
 
       assert(nchild==nc);
       
       spldlt::starpu::insert_activate_init_node(
-            node.get_hdl(),
+            node.hdl(),
             cnode_hdls, nc,
             posdef,
             &node,
@@ -228,13 +229,13 @@ namespace spldlt {
          int prio,
          std::vector<sylver::inform_t>& worker_stats) {
 
-      SymbolicFront const& snode = node.symb;
-      int const blksz = node.blksz;
+      sylver::SymbolicFront const& snode = node.symb();
+      int const blksz = node.blksz();
 
-      int m = node.get_nrow();
-      int n = node.get_ncol();
-      int nr = node.get_nr(); // Number of block rows
-      int nc = node.get_nc(); // Number of block columns
+      int m = node.nrow();
+      int n = node.ncol();
+      int nr = node.nr(); // Number of block rows
+      int nc = node.nc(); // Number of block columns
       
       int blkm = std::min(blksz, m - kk*blksz);
       int blkn = std::min(blksz, n - kk*blksz);
@@ -294,15 +295,15 @@ namespace spldlt {
          T *a_ik, int lda_ik,         
          int prio) {
 
-      SymbolicFront const& snode = node.symb;
-      int blksz = node.blksz;
+      sylver::SymbolicFront const& snode = node.symb();
+      int blksz = node.blksz();
       
-      int m = node.get_nrow();
-      int n = node.get_ncol();
+      int m = node.nrow();
+      int n = node.ncol();
       int ldcontrib = m-n;
 
-      int nr = node.get_nr(); // number of block rows
-      int nc = node.get_nc(); // number of block columns
+      int nr = node.nr(); // number of block rows
+      int nc = node.nc(); // number of block columns
 
       int rsa = n / blksz; // Row/Col index of first block in contrib 
 
@@ -345,7 +346,7 @@ namespace spldlt {
    
    template <typename T, typename PoolAlloc>
    void update_block_task(
-         SymbolicFront const& snode,
+         sylver::SymbolicFront const& snode,
          NumericFront<T, PoolAlloc> &node,
          int k, /* block column index of A_ik and A_jk blocks */
          int i, /* block row index of A_ik and A_ij blocks  */
@@ -356,8 +357,8 @@ namespace spldlt {
          T *a_jk, int lda_jk,
          int blksz, int prio) {
 
-      int m = snode.nrow + node.ndelay_in;
-      int n = snode.ncol + node.ndelay_in;
+      int m = snode.nrow + node.ndelay_in();
+      int n = snode.ncol + node.ndelay_in();
       int ldcontrib = m-n;
 
       int blkm = std::min(blksz, m - i*blksz);
@@ -407,59 +408,18 @@ namespace spldlt {
 #endif
    }
 
-//    template <typename T>
-//    void update_diag_block_task(
-//          SymbolicSNode const& snode,
-//          int kk, /* block column index of A_ik and A_jk blocks */
-//          int ii, /* block row index of A_ik and A_ij blocks  */
-//          int jj, /* block row index of A_jk and block column index of
-//                     A_ij blocks */
-//          T *a_ij, int lda_ij,
-//          T *a_ik, int lda_ik,
-//          T *a_jk, int lda_jk,
-//          int blksz, int prio) {
-
-//       int m = snode.nrow;
-//       int n = snode.ncol;
-
-// #if defined(SPLDLT_USE_STARPU)
-
-//       int nr = (m-1) / blksz + 1; // number of block rows
-//       int nc = (n-1) / blksz + 1; // number of block columns
-
-//       insert_update_diag_block(
-//             snode.handles[jj*nr + ii], // A_ij block handle 
-//             snode.handles[kk*nr + ii], // A_ik block handle
-//             snode.handles[kk*nr + jj],  // A_jk block handle
-//             prio);
-
-// #else
-
-//       int blkm = std::min(blksz, m - ii*blksz);
-//       int blkn = std::min(blksz, n - jj*blksz);
-//       int blkk = std::min(blksz, n - kk*blksz);
-
-//       update_diag_block(blkm, blkn, a_ij, lda_ij,
-//                         blkk,
-//                         a_ik, lda_ik,
-//                         a_jk, lda_jk);
-
-// #endif
-//    }
-
-
    ////////////////////////////////////////////////////////////////////////////////
    // Update contrib block task
 
    template <typename T, typename PoolAlloc>
    void update_contrib_task(
-         SymbolicFront const& snode,
+         sylver::SymbolicFront const& snode,
          NumericFront<T, PoolAlloc> &node,
          int k, int i, int j,
          int blksz, int prio) {
 
-      int m = node.get_nrow();
-      int n = node.get_ncol(); 
+      int m = node.nrow();
+      int n = node.ncol(); 
 
       int blkm = std::min(blksz, m - i*blksz);
       int blkn = std::min(blksz, m - j*blksz);
@@ -470,8 +430,8 @@ namespace spldlt {
       int ldcontrib = m-n;
       T *contrib = node.contrib;
 
-      int nr = node.get_nr();
-      int nc = node.get_nc();
+      int nr = node.nr();
+      int nc = node.nc();
 
 #if defined(SPLDLT_USE_STARPU)
 
@@ -516,7 +476,7 @@ namespace spldlt {
    inline void factor_subtree_task(
          void *akeep,
          void *fkeep,
-         SymbolicFront& root,
+         sylver::SymbolicFront& root,
          T *aval, T *scaling,
          int p, void **child_contrib,
          sylver::options_t *options,
@@ -589,7 +549,7 @@ namespace spldlt {
    template <typename T, typename PoolAlloc>   
    void assemble_subtree_task(
          NumericFront<T,PoolAlloc>& front, // Destination node 
-         SymbolicFront &csfront, // Root of the subtree
+         sylver::SymbolicFront &csfront, // Root of the subtree
          void** child_contrib, 
          int contrib_idx, // Index of subtree to assemble
          int *cmap, // row/column mapping array 
@@ -597,12 +557,12 @@ namespace spldlt {
 
 #if defined(SPLDLT_USE_STARPU)
 
-      int blksz = front.blksz;
+      int blksz = front.blksz();
 
-      int nrow = front.get_nrow();
-      int ncol = front.get_ncol();
-      int nr = front.get_nr(); // Number of block rows in destination node
-      int nc = front.get_nc(); // Number of block columns in destination node
+      int nrow = front.nrow();
+      int ncol = front.ncol();
+      int nr = front.nr(); // Number of block rows in destination node
+      int nc = front.nc(); // Number of block columns in destination node
       int cc = -1; // Block column index in destination node
       int rr = -1; // Block row index in destination node
 
@@ -636,7 +596,7 @@ namespace spldlt {
       // Insert assembly tasks if there are any contributions
       if (nh>0) {
          spldlt::starpu::insert_subtree_assemble(
-               &front, &csfront, front.get_hdl(), csfront.hdl, hdls, nh, 
+               &front, &csfront, front.hdl(), csfront.hdl, hdls, nh, 
                child_contrib, contrib_idx);
       }
 
@@ -654,20 +614,20 @@ namespace spldlt {
    template <typename T, typename PoolAlloc>   
    void assemble_contrib_subtree_task(
          NumericFront<T,PoolAlloc>& node, // Destination node
-         SymbolicFront& csnode, // Root of the subtree
+         sylver::SymbolicFront& csnode, // Root of the subtree
          void** child_contrib, 
          int contrib_idx, // Index of subtree to assemble
          int *cmap, // row/column mapping array 
          int prio) {
 
-      int blksz = node.blksz;
+      int blksz = node.blksz();
 
 #if defined(SPLDLT_USE_STARPU)
 // #if 0
-      SymbolicFront const& snode = node.symb;
+      sylver::SymbolicFront const& snode = node.symb();
 
-      int ncol = node.get_ncol();
-      int nr = node.get_nr();
+      int ncol = node.ncol();
+      int nr = node.nr();
       int rsa = ncol / blksz; // Rows/Cols index of first block in contrib 
       int ncontrib = nr-rsa; // Number of block rows/cols in contrib
 
@@ -709,7 +669,7 @@ namespace spldlt {
          // printf("[assemble_contrib_subtree_task] nh = %d\n", nh);
 
          spldlt::starpu::insert_subtree_assemble_contrib(
-               &node, &csnode, snode.hdl, node.contrib_hdl, csnode.hdl, hdls, nh, 
+               &node, &csnode, snode.hdl, node.contrib_hdl(), csnode.hdl, hdls, nh, 
                child_contrib, contrib_idx, prio);
       }
       
@@ -737,21 +697,21 @@ namespace spldlt {
 #if defined(SPLDLT_USE_STARPU)
 
       // Node info
-      SymbolicFront const& snode = node.symb;
-      int const blksz = node.blksz;      
-      int const nrow = node.get_nrow();
-      int const ncol = node.get_ncol();
-      int const nr = node.get_nr(); // Number of block-rows in destination node
-      int const nc = node.get_nc(); // Number of block-columns in destination node
+      sylver::SymbolicFront const& snode = node.symb();
+      int const blksz = node.blksz();
+      int const nrow = node.nrow();
+      int const ncol = node.ncol();
+      int const nr = node.nr(); // Number of block-rows in destination node
+      int const nc = node.nc(); // Number of block-columns in destination node
 
       // StarPU handle array holding destination blocks handles
       starpu_data_handle_t *hdls = new starpu_data_handle_t[nr*nc]; // Upperbound nr*nc handles 
       int nh = 0;
 
       // Children node info
-      // SymbolicFront const& csnode = cnode.symb;
-      int cnrow = cnode.get_nrow();
-      int cncol = cnode.get_ncol();
+      // sylver::SymbolicFront const& csnode = cnode.symb;
+      int cnrow = cnode.nrow();
+      int cncol = cnode.ncol();
       int cm = cnrow-cncol;
 
       // colum indexes
@@ -801,25 +761,17 @@ namespace spldlt {
          }
       }
 
-      // if (nh <= 0)
-      //    printf("[assemble_block_task] nh = %d, ii = %d, jj = %d, delay_out = %d, delay_in = %d\n", 
-      //           nh, ii, jj, cnode.ndelay_out, cnode.ndelay_in);
-
       // Insert assembly tasks if there are contributions
       if (nh > 0) {
          
-         // int cnr =  cnode.get_nr();
-         // int crsa = cnode.get_ncol()/blksz;
-         // int cncontrib = cnr-crsa;
-         
          // Contrib block to be assembled into current node
-         Tile<T, PoolAlloc>& cb = cnode.get_contrib_block(ii, jj);
+         sylver::Tile<T, PoolAlloc>& cb = cnode.get_contrib_block(ii, jj);
 
          spldlt::starpu::insert_assemble_block(
                &node, &cnode, ii, jj, cmap,
                cb.hdl,
                hdls, nh,
-               node.get_hdl(), cnode.get_hdl(),
+               node.hdl(), cnode.hdl(),
                prio);
       }
 
@@ -847,16 +799,16 @@ namespace spldlt {
          std::vector<spral::ssids::cpu::Workspace>& workspaces,
          int prio) {
 
-      int blksz = node.blksz;
+      int blksz = node.blksz();
 
 #if defined(SPLDLT_USE_STARPU)
 
       // Node info
-      SymbolicFront const& snode = node.symb;   
-      int nrow = node.get_nrow();
-      int ncol = node.get_ncol();
-      int nr = node.get_nr(); // Number of block-rows in destination node
-      int nc = node.get_nc(); // Number of block-columns in destination node
+      sylver::SymbolicFront const& snode = node.symb();   
+      int nrow = node.nrow();
+      int ncol = node.ncol();
+      int nr = node.nr(); // Number of block-rows in destination node
+      int nc = node.nc(); // Number of block-columns in destination node
       int rsa = ncol/blksz; // rows/cols index of first block in contrib 
       int ncontrib = nr-rsa; // number of block rows/cols in contrib
 
@@ -865,9 +817,9 @@ namespace spldlt {
       int nh = 0;
 
       // Children node info
-      // SymbolicFront const& csnode = cnode.symb;
-      int cnrow = cnode.get_nrow();
-      int cncol = cnode.get_ncol();
+      // sylver::SymbolicFront const& csnode = cnode.symb;
+      int cnrow = cnode.nrow();
+      int cncol = cnode.ncol();
 
       int cm = cnrow-cncol;
 
@@ -918,14 +870,14 @@ namespace spldlt {
       if (nh>0) {
          
          // Contrib block to assembled into node
-         Tile<T, PoolAlloc>& cb = cnode.get_contrib_block(ii, jj);
+         sylver::Tile<T, PoolAlloc>& cb = cnode.get_contrib_block(ii, jj);
 
          spldlt::starpu::insert_assemble_contrib_block(
                &node, &cnode, ii, jj, cmap, 
                cb.hdl,
                hdls, nh,
-               node.get_hdl(), node.contrib_hdl,
-               cnode.get_hdl(),
+               node.hdl(), node.contrib_hdl(),
+               cnode.hdl(),
                &workspaces,
                prio);
 

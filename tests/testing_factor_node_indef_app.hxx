@@ -22,6 +22,7 @@
 
 #if defined(SPLDLT_USE_STARPU)
 #include <starpu.h>
+#include "StarPU/codelets.hxx"
 #include "StarPU/kernels.hxx"
 #include "StarPU/kernels_indef.hxx"
 #endif
@@ -75,12 +76,11 @@ namespace spldlt { namespace tests {
       typedef BuddyAllocator<T, std::allocator<T>> PoolAllocator;
       PoolAllocator pool_alloc(lda*n);
 
-      SymbolicFront sfront;
+      sylver::SymbolicFront sfront;
       sfront.nrow = m;
       sfront.ncol = n;
       NumericFront<T, PoolAllocator> front(sfront, pool_alloc, blksz);
-      front.ndelay_in = 0; // No incoming delayed columns      
-      front.ndelay_out = 0;
+
       // Init node
       // Setup allocator for factors
       typedef spral::test::AlignedAllocator<T> FactorAllocator;
@@ -167,14 +167,14 @@ namespace spldlt { namespace tests {
       T *upd = nullptr;
       int q1 = 0; // Number of eliminated colmuns (first pass)
 
-      front.nelim = 0;
+      front.nelim(0);
 
       // Factor front (first and second pass) and from contrib blocks
       FactorSymIndef
          <T, INNER_BLOCK_SIZE, Backup, debug, PoolAllocator>
          ::factor_front_indef_app(
                front, options, worker_stats, 0.0, upd, 0, workspaces, pool_alloc,
-               front.nelim);
+               front.nelim());
 
 #if defined(SPLDLT_USE_STARPU)
       starpu_task_wait_for_all();      

@@ -12,14 +12,15 @@
 
 #include <memory>
 
-using namespace spldlt; // TODO change to sylver::spldlt namespace
+using namespace sylver;
+using namespace ::spldlt; // TODO change to sylver::spldlt namespace
 
 namespace {
    typedef double T;
    const int PAGE_SIZE = 8*1024*1024; // 8MB
    // Stack allocator
-   typedef NumericTree<T, PAGE_SIZE, spldlt::AppendAlloc<T>, true> NumericTreePosdefDbl; // posdef = true
-   typedef NumericTree<T, PAGE_SIZE, spldlt::AppendAlloc<T>, false> NumericTreeIndefDbl; // posdef = false
+   typedef ::spldlt::NumericTree<T, PAGE_SIZE, sylver::AppendAlloc<T>, true> NumericTreePosdefDbl; // posdef = true
+   typedef ::spldlt::NumericTree<T, PAGE_SIZE, sylver::AppendAlloc<T>, false> NumericTreeIndefDbl; // posdef = false
    // Default allocator 
    // typedef NumericTree<T, PAGE_SIZE, std::allocator<T>, true> NumericTreePosdefDbl; // posdef = true
    // typedef NumericTree<T, PAGE_SIZE, std::allocator<T>, false> NumericTreeIndefDbl; // posdef = false
@@ -40,7 +41,7 @@ void *spldlt_create_numeric_tree_dbl(
       ) {
 
    // Retreive SymbolicTree object from pointer
-   auto &symbolic_tree = *static_cast<SymbolicTree*>(symbolic_tree_ptr);
+   auto &symbolic_tree = *static_cast<sylver::SymbolicTree*>(symbolic_tree_ptr);
 
    if (posdef) {
       auto* tree = new NumericTreePosdefDbl

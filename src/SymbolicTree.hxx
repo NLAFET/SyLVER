@@ -10,7 +10,7 @@
 
 // using namespace spral::ssids::cpu;
 
-namespace spldlt {
+namespace sylver {
 
    class SymbolicTree {
    public:
@@ -130,10 +130,24 @@ namespace spldlt {
       }
       
       /// @brief Return the number of nodes in the assembly tree
-      inline int get_nnodes() const {
+      inline int nnodes() const {
          return nnodes_;
       }
 
+      /// @brief Return the number of subtrees in the assembly tree
+      inline int nsubtrees() const {
+         return nsubtrees_;
+      }
+
+      /// @brief Return akeep structure
+      inline void* akeep() const {
+         return akeep_;
+      }
+
+      inline int const* subtrees() const {
+         return subtrees_;
+      }
+      
    public:
       int const n; //< Maximum row index
    private:
@@ -147,8 +161,8 @@ namespace spldlt {
       int const* subtrees_;
       std::vector<SymbolicFront> fronts_;
 
-      template<typename T, size_t PAGE_SIZE, typename FactorAllocator, bool posdef>
-      friend class NumericTree;
+      // template<typename T, size_t PAGE_SIZE, typename FactorAllocator, bool posdef>
+      // friend class ::spldlt::NumericTree;
    };
    
 } /* end of namespace spldlt */

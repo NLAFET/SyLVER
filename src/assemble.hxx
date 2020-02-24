@@ -21,7 +21,7 @@ namespace spldlt {
       // Deactivate children fronts
       for (auto* child=node.first_child; child!=NULL; child=child->next_child) {
 
-         SymbolicFront const& csnode = child->symb;
+         sylver::SymbolicFront const& csnode = child->symb();
 
          if (csnode.exec_loc == -1) {
             // fini_node(*child);
@@ -32,7 +32,7 @@ namespace spldlt {
          }
 #if defined(SPLDLT_USE_STARPU)
          // Unregister symbolic handle on child node
-         starpu_data_unregister_submit(csnode.hdl);
+         child->unregister_submit_symb();
 #endif
       } // Loop over child nodes
 
@@ -52,12 +52,12 @@ namespace spldlt {
 
       // printf("[assemble_contrib]\n");
 
-      int blksz = node.blksz;
+      int blksz = node.blksz();
 
       // Assemble front: non fully-summed columns i.e. contribution block 
       for (auto* child=node.first_child; child!=NULL; child=child->next_child) {
 
-         SymbolicFront& child_sfront = child->symb;
+         sylver::SymbolicFront& child_sfront = child->symb();
          // SymbolicFront &child_sfront = symb_[child->symb.idx];
 
          int ldcontrib = child_sfront.nrow - child_sfront.ncol;
@@ -85,12 +85,12 @@ namespace spldlt {
             }
             else {                     
 
-               int cncol = child->get_ncol();
-               int cnrow = child->get_nrow();
+               int cncol = child->ncol();
+               int cnrow = child->nrow();
 
                int csa = cncol / blksz;
                // Number of block rows in child node
-               int cnr = child->get_nr();
+               int cnr = child->nr();
                // Lopp over blocks in contribution blocks
                for (int jj = csa; jj < cnr; ++jj) {                     
                   for (int ii = jj; ii < cnr; ++ii) {
@@ -133,11 +133,11 @@ namespace spldlt {
 
       typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> PoolAllocInt;
 
-      int blksz = node.blksz;
-      SymbolicFront snode = node.symb;
+      int blksz = node.blksz();
+      sylver::SymbolicFront snode = node.symb();
 
-      int nrow = node.get_nrow();
-      int ncol = node.get_ncol();
+      int nrow = node.nrow();
+      int ncol = node.ncol();
       size_t ldl = align_lda<double>(nrow);
 
       /*
@@ -157,12 +157,12 @@ namespace spldlt {
       for(int i=0; i<snode.ncol; i++)
          map[ snode.rlist[i] ] = i;
       for(int i=snode.ncol; i<snode.nrow; i++)
-         map[ snode.rlist[i] ] = i + node.ndelay_in;
+         map[ snode.rlist[i] ] = i + node.ndelay_in();
       
       // Assemble front: fully-summed columns 
       for (auto* child=node.first_child; child!=NULL; child=child->next_child) {
 
-         SymbolicFront &csnode = child->symb; // Children symbolic node
+         sylver::SymbolicFront &csnode = child->symb(); // Children symbolic node
 
          int cm = csnode.nrow - csnode.ncol;
          csnode.map = new int[cm];
@@ -207,7 +207,7 @@ namespace spldlt {
 // #if defined(SPLDLT_USE_STARPU)
 //             starpu_task_wait_for_all();
 // #endif      
-            delay_col += child->ndelay_out;
+            delay_col += child->ndelay_out();
 
             // Handle expected contributions (only if something there)
             if (ldcontrib>0) {
@@ -215,10 +215,10 @@ namespace spldlt {
                // spral::ssids::cpu::assemble_expected(0, cm, node, *child, map, cache);
                // delete cache;
 
-               int cncol = child->get_ncol();
+               int cncol = child->ncol();
 
                int csa = cncol / blksz;
-               int cnr = child->get_nr(); // number of block rows
+               int cnr = child->nr(); // number of block rows
                // Loop over blocks in contribution blocks
                for (int jj = csa; jj < cnr; ++jj) {
                   for (int ii = jj; ii < cnr; ++ii) {
