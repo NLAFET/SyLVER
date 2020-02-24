@@ -216,6 +216,7 @@ if (HWLOC_FOUND)
   link_directories(${HWLOC_LIBRARY_DIRS})
   link_libraries(${HWLOC_LIBRARIES})
   set(LIBS ${LIBS} ${HWLOC_LIBRARIES})
+  # message(STATUS "HWLOC libraries: ${HWLOC_LIBRARIES}")
 else()
   message(STATUS "HWLOC library cannot be found during the compilation of SyLVER. You can provide the path of the HWLOC library using either the -DHWLOC_DIR option or the HWLOC_DIR environment variable")
 endif()
@@ -447,6 +448,8 @@ if(SYLVER_SPRAL_USE_INTERNAL)
   # Compiler flags
   set(SPRAL_CONFIGURE_OPTIONS "${SPRAL_CONFIGURE_OPTIONS} CFLAGS=\"${CMAKE_C_FLAGS_ALL}\" CXXFLAGS=\"${CMAKE_CXX_FLAGS_ALL}\" FCFLAGS=\"${CMAKE_Fortran_FLAGS_ALL}\"")
   # string(APPEND SPRAL_CONFIGURE_OPTIONS " CFLAGS=${CMAKE_C_FLAGS_ALL} CXXFLAGS=${CMAKE_CXX_FLAGS_ALL} FCFLAGS=${CMAKE_Fortran_FLAGS_ALL}")
+  # HWLOC
+  string(APPEND SPRAL_CONFIGURE_OPTIONS " --with-hwloc=\"${HWLOC_LIBRARIES}\"")
   # Metis
   string(APPEND SPRAL_CONFIGURE_OPTIONS " --with-metis=\"${METIS_LIBRARIES}\"")
   # OpenMP
