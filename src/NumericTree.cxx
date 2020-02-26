@@ -1,8 +1,6 @@
 /// @file
 /// @copyright 2016- The Science and Technology Facilities Council (STFC)
 /// @author Florent Lopez
-// #include "ssids/cpu/ThreadStats.hxx"
-// #include "ssids/cpu/cpu_iface.hxx"
 
 #include "sylver_ciface.hxx"
 #include "NumericTree.hxx"

@@ -576,7 +576,7 @@ contains
 #if defined(SPLDLT_USE_STARPU)
     use starpu_f_mod, only: starpu_f_cpu_worker_get_count, starpu_f_cuda_worker_get_count  
 #endif
-    use sylver_topology_mod
+    use sylver_topology_mod, only: sylver_topology_create_flat, sylver_topology_create
     use, intrinsic :: iso_c_binding
     implicit none
     
@@ -827,11 +827,13 @@ contains
     
     ! Create machine topology
     !
-    ! Make sure akeep%topology structure is not allocated
-    if (allocated(akeep%topology)) deallocate(akeep%topology, stat=st)
-    ! Allocate and create machine topology
+    ! Allocate and create machine topology stored in `akeep%topology`
+#if defined(SPLDLT_USE_STARPU) && defined(SPLDLT_USE_OMP)
     call sylver_topology_create(ncpu, ngpu, options, akeep%topology)
-
+#else
+    call sylver_topology_create_flat(ncpu, ngpu, options, akeep%topology)
+#endif
+    
     ! perform rest of analyse
     if (akeep%check) then
        call analyse_core(spldlt_akeep, n, akeep%ptr, akeep%row, ptr2, row2, &
@@ -1446,13 +1448,6 @@ contains
     
     character(50) :: context = 'prune_tree'! Procedure name (used when printing).
 
-    ! print *, '[prune_tree]', ' nth = ', nth, 'ngpu = ', ngpu 
-
-    ! nregion = ngpu
-    ! if (nth .gt. 0) then
-    !    nregion = ngpu+1 ! Count 1 region for the CPUs
-    ! end if
-
     ! Use nth as the number of CPU regions i.e NUMA nodes
     nregion = ngpu + nth 
 
@@ -1504,29 +1499,8 @@ contains
     loc = nregion+1 ! Global context by default
     
     totflops = weight(nnodes+1)
-!     ! write(*,*)'totflops: ', totflops
-!     ! write(*,*)'weights: ', akeep%weight 
-!     ! write(*,*)'nnodes: ', akeep%nnodes
-!     ! write(*,*)'root: ', sparent(1)
-!     ! initialize the l0 layer with the root nodes
+
     nlz = 0
-!     ! do node = 1, akeep%nnodes+1
-!     !    write(*,*) 'node: ', node, ', weight: ', akeep%weight(node)
-!     !    if (sparent(node) .gt. akeep%nnodes) then
-!     !    ! if (sparent(node) .le. 0) then
-!     !       ! write(*,*) 'weight: ', real(akeep%weight(node), kind(1.d0))
-!     !       ! write(*,*) 'thresh: ', smallth*real(totflops, kind(1.d0))
-!     !       if(real(akeep%weight(node), kind(1.d0)) .gt. smallth*real(totflops, kind(1.d0))) then
-!     !          nlz = nlz+1
-!     !          lzero(nlz) = node
-!     !          lzero_w(nlz) = -akeep%weight(node)
-!     !          write(*,*) 'node: ', node,', weight: ', akeep%weight(node)
-!     !       else
-!     !          akeep%small(node) = 1 ! node is too small; mark it
-!     !       end if
-!     !    end if
-!     !    if(keep%nodes(node)%nchild .eq. 0) totleaves = totleaves+1
-!     ! end do
 
     node = nnodes+1 ! Root node (symbolic)
     nlz = nlz+1
@@ -1550,7 +1524,6 @@ contains
        ! sort lzero_w into ascending order and apply the same order on
        ! lzero array
        call sort(lzero_w, nlz, map=lzero)
-       ! write(*,*) 'lzero_w: ', lzero_w(1:nlz)
        ! map subtrees to threads round-robin 
        do i=1, nlz
           ! find the least loaded proc
@@ -1561,15 +1534,10 @@ contains
              proc_w(p) = proc_w(p) + abs(lzero_w(i))
           end if
           loc(lzero(i)) = p
-          ! print *, "node = ", lzero(i)
-          ! print *, "proc_w = ", proc_w
-          ! print *, "p = ", p
        end do
-       !write(*,*)'minval(proc_w) = ', minval(proc_w)
-       ! write(*,*)'nlz: ', nlz       
+
        ! all the subtrees have been mapped. Evaluate load balance
        rm = real(minval(proc_w))/real(maxval(proc_w))
-       !print *, "rm: ", rm
 
        if(nlz .gt. nregion*max(2.d0,(log(real(nregion,kind(1.d0)))/log(2.d0))**2)) exit ! exit if already too many nodes in l0
        if((rm .gt. minlb) .and. (nlz .ge. 1*nregion)) exit ! if balance is higher than 90%, we're happy
@@ -1587,14 +1555,12 @@ contains
                 if(smallth .lt. 1e-4) then
                    exit godown
                 else
-                   ! print *, "[prune_tree] restart pruning"
                    goto 10
                 end if
              end if
           end if
           n = lzero(leaves+1) ! n is the node that must be replaced
-          ! print *, "n:", n, ", nchild:", fkeep%nodes(n)%nchild, ", sz:", size(fkeep%nodes(n)%child)
-          ! print *, "children:", fkeep%nodes(n)%child
+
           ! append children of n
           do i=1, size(nodes(n)%child) ! nchild(n)
              c = nodes(n)%child(i)
@@ -1606,7 +1572,7 @@ contains
                 lzero  (nlz) = c
                 lzero_w(nlz) = -weight(c)
              else !if (small(c) .eq. 0) then ! make sure this node has not been marked already
-                ! print *, "small subtree, c = ", c, ", smallth = ", smallth
+
                 small(nodes(c)%least_desc:c) = -c
                 small(c) = 1 ! node is too smal; mark it
                 nsubtrees = nsubtrees + 1 ! add new partition
@@ -1623,61 +1589,18 @@ contains
           if(found) exit findn ! if at least one child was added then we redo the mapping
           leaves = leaves+1
        end do findn
-       ! write(*,*) 'lzero: ', lzero(1:nlz)
 
        ! swap n with last element
        lzero  (leaves+1) = lzero  (nlz)
        lzero_w(leaves+1) = lzero_w(nlz)
        nlz = nlz-1
     end do godown
-
-    ! write(*, '("[prune_tree] load balance =", es10.3)') rm
-    ! write(*,*)'nlz: ', nlz
-    ! write(*,*)'final lzero: ', lzero(1:nlz)
-
-    ! debug
-    ! small = 0
-    ! nsubtrees = 0
-    ! nlz = 57
-    ! lzero = (/  727,   525,  1301,  1321,   846,  1136,  1256,   945,   481,   446,  1219,  1070,   969,   504,   389,   867,  1237,  1087,   784,  1191,   668,   766,  1174,   822,   420,   889,   580,   923,   547,  1055,   807,  1357,   689,   492,   646,   988,  1278,   602,   738,  1018,  1147,  1006,   359,  1105,   565,   998,   536,  1158,  1029,  1336,   704,   746,  1345,   623,   895,  1363, 332 /)
-    
-    ! mark all the children of nodes in l0
-    ! print *, "nlz = ", nlz
-    ! print *, "lzero = ", lzero(1:nlz)
-        
-    ! j = 0
-    ! write(*,'(a)', advance = "no") "lzero = (/"
-    ! do i=1, nlz
-    !    write(*,'(i5)', advance = "no") lzero(i)
-    !    if (i .lt. nlz) write(*,'(a)', advance = "no") ", "
-    !    j = j+1
-    ! end do
-    ! write(*,'(a)', advance = "no") "/)"
-    ! write(*,'(a)') " "
-
-    ! write(*,'(i5)') j
               
     do i=1, nlz
        n = lzero(i)
-
-! #if defined(SPLDLT_USE_STARPU) && defined(SPLDLT_USE_OMP)
-!        print *, "node ", n, ", loc = ", loc(n)
-! #endif       
-       ! small(nodes(n)%least_desc:n) = -n
-       ! small(n) = 1
-       ! nsubtrees = nsubtrees + 1 ! add new partition                 
-       ! contrib_dest(nsubtrees) = 0
-       ! if (n .lt. nnodes) then
-       !    j = sparent(n) ! get parent node
-       !    if (j .lt. nnodes) contrib_dest(nsubtrees) = j
-       ! end if
-       ! subtree_sa(nsubtrees) = nodes(n)%least_desc
-       ! subtree_en(nsubtrees) = n
        
        do j=1, size(nodes(n)%child) ! fkeep%nodes(n)%nchild
           c = nodes(n)%child(j)
-          ! print *, "c: ", c
-          ! write(*,*)'desc: ', fkeep%nodes(c)%least_desc
           if (small(c) .eq. 0) then ! Check if we havn't flaged it already
              small(nodes(c)%least_desc:c) = -c
              small(c) = 1
@@ -1691,31 +1614,6 @@ contains
        end do
     end do
     
-    ! debug
-    ! j = 0
-    ! do i = 1, nnodes
-    !    if (small(i) .eq. 1) then
-    !       j = j+1
-    !    end if
-    ! end do
-
-    ! print *, "[prune_tree] nubtrees 2 = ", j
-
-    ! nsubtrees = 0
- 
-    ! n = 332
-
-    ! small(nodes(n)%least_desc:n) = -n
-    ! small(n) = 1
-    ! nsubtrees = nsubtrees + 1 ! add new partition             
-    ! contrib_dest(nsubtrees) = 0
-    ! if (n .lt. nnodes) then
-    !    j = sparent(n) ! get parent node
-    !    if (j .lt. nnodes) contrib_dest(nsubtrees) = j
-    ! end if
-    ! subtree_sa(nsubtrees) = nodes(n)%least_desc
-    ! subtree_en(nsubtrees) = n
-
     ! Clean memory
     deallocate(lzero_w)
     deallocate(lzero)

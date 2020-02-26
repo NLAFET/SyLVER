@@ -10,8 +10,6 @@ module sylver_datatypes_mod
 
   integer, parameter, public :: sylver_nb_default = 256 ! Block size
 
-  ! integer, parameter, public :: sylver_nb_default = 256 ! Block size
-
   ! Success flag
   integer, parameter, public :: SYLVER_SUCCESS                 = 0
 
