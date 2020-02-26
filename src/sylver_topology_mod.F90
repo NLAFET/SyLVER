@@ -62,39 +62,64 @@ contains
     type(numa_region), dimension(:), allocatable, intent(out) :: regions
 
     integer :: i
-    integer(C_INT) :: nregions
+    integer :: ncpu_tot
+    ! Number of NUMA regions available on the architecture
+    integer(C_INT) :: c_nregions
     type(C_PTR) :: c_regions
     type(c_numa_region), dimension(:), pointer, contiguous :: f_regions
+    integer nregions
+   
     integer :: st ! Error management
 
+    ! print *, "[sylver_topology_create_numa] ngpu = ", ngpu
+    
     ! Make sure akeep%topology array is not allocated
     if (allocated(regions)) deallocate(regions, stat=st)
+    
+    call sylver_topology_create_c(c_nregions, c_regions)
 
-    call sylver_topology_create_c(nregions, c_regions)
-
-    if (nregions .le. 0) then
+    if (c_nregions .le. 0) then
        ! Something went wrong and hwloc detected no NUMA nodes so we
        ! fallback to flat architecture
        call sylver_topology_create_flat(ncpu, ngpu, regions)
        return
     end if
-
+    
     ! Create NUMA regions
     if (c_associated(c_regions)) then
-       call c_f_pointer(c_regions, f_regions, shape=(/ nregions /))
+       call c_f_pointer(c_regions, f_regions, shape=(/ c_nregions /))
+
+       ! Count the number of NUMA regions involved in the computation
+       ! repending on `ncpu`
+       !
+       ! Zero the number of NUMA region needed 
+       nregions = 0
+       ! Zero the total number of CPU cores available in the NUMA regions
+       ncpu_tot = 0
+       do i = 1, c_nregions
+          ! Add NUMA region
+          nregions = nregions + 1
+          ! Add corresponding CPU cores
+          ncpu_tot = ncpu_tot + f_regions(i)%nproc
+          ! Exit loop if we have enough CPU cores
+          if (ncpu_tot .ge. ncpu) exit
+       end do
 
        ! Copy to allocatable array
        allocate(regions(nregions), stat=st)
        if (st .ne. 0) return
        do i = 1, nregions
           regions(i)%nproc = f_regions(i)%nproc
+          allocate(regions(i)%gpus(0), stat=st)
        end do
     end if
 
-    ! Add GPUs to the first region.
+    ! Attach all GPU devices to the first region (there should be at
+    ! least one region)
+    if (allocated(regions(1)%gpus)) deallocate(regions(1)%gpus)
     allocate(regions(1)%gpus(ngpu), stat=st)
     do i = 1, ngpu
-       ! FIXME: should device be zero-indexed
+       ! FIXME: should device be zero-indexed?
        regions(1)%gpus(i) = i
     end do
     
