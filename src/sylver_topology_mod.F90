@@ -94,7 +94,8 @@ contains
     ! Add GPUs to the first region.
     allocate(regions(1)%gpus(ngpu), stat=st)
     do i = 1, ngpu
-       regions(1)%gpus(i) = i-1 ! Device should be zero-indexed
+       ! FIXME: should device be zero-indexed
+       regions(1)%gpus(i) = i
     end do
     
   end subroutine sylver_topology_create_numa

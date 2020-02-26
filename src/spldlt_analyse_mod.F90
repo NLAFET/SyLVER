@@ -827,12 +827,21 @@ contains
     
     ! Create machine topology
     !
-    ! Allocate and create machine topology stored in `akeep%topology`
+    ! Allocate and create machine topology in `akeep%topology`
 #if defined(SPLDLT_USE_STARPU) && defined(SPLDLT_USE_OMP)
     call sylver_topology_create(ncpu, ngpu, options, akeep%topology)
 #else
     call sylver_topology_create_flat(ncpu, ngpu, options, akeep%topology)
 #endif
+
+    ! Print machine topology
+    if (options%print_level .ge. 1) then
+       do i = 1, size(akeep%topology)
+          print *, "NUMA region ", i, " with ", akeep%topology(i)%nproc, " cores"
+          if(size(akeep%topology(i)%gpus).gt.0) &
+               print *, "---> gpus ", akeep%topology(i)%gpus
+       end do
+    end if
     
     ! perform rest of analyse
     if (akeep%check) then
@@ -987,7 +996,7 @@ contains
     do i = 1, size(topology)
        ngpu = ngpu + size(topology(i)%gpus)
     end do
-    if(options%print_level .gt. 1) print *, "running on ", nregion, " regions and ", ngpu, " gpus"
+    ! if(options%print_level .gt. 1) print *, "running on ", nregion, " regions and ", ngpu, " gpus"
 
     ! Keep splitting until we meet balance criterion
     best_load_balance = huge(best_load_balance)
