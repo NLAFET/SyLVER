@@ -108,7 +108,7 @@ contains
     integer, intent(in) :: ncpu
     ! Number of CUDA wokers involved the execution
     integer, intent(in) :: ngpu
-    ! SyLVER options 
+    ! SyLVER options
     type(sylver_options), target, intent(in) :: options
     ! Machine topology
     type(numa_region), dimension(:), allocatable, intent(out) :: regions
