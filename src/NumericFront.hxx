@@ -573,8 +573,6 @@ namespace spldlt {
       NumericFront<T, PoolAllocator>* next_child; // Pointer to parent's next child
 
       /* Data that changes during factorize */
-      // int nelim1; // Number of columns succesfully eliminated during first pass
-      // int nelim; // Number of columns succesfully eliminated
       // Factors
       T *lcol; // Pointer to start of factor data
       T *ucol; // Factor U
