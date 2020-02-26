@@ -16,6 +16,7 @@ module sylver_ciface_mod
      integer(C_INT) :: nb
      integer(C_INT) :: pivot_method
      integer(C_INT) :: failed_pivot_method
+     integer(C_INT) :: cpu_topology
   end type options_c
 
   !> @brief Interoperable subset of sylver_inform structure
@@ -49,7 +50,8 @@ contains
     coptions%nb             = foptions%nb
     coptions%pivot_method   = min(3, max(1, foptions%pivot_method))
     coptions%failed_pivot_method = min(2, max(1, foptions%failed_pivot_method))
-
+    coptions%cpu_topology = foptions%cpu_topology
+    
   end subroutine copy_options_f2c
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

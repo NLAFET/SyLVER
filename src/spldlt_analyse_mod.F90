@@ -250,8 +250,13 @@ contains
     
     nth = akeep%akeep%topology(1)%nproc
 #if defined(SPLDLT_USE_STARPU) && defined(SPLDLT_USE_OMP)
+    ! Set the number of CPU regions
+    
     ! nth = 2 ! FIXME Use number of NUMA sockets
-    nth = 1 ! FIXME Use number of NUMA sockets
+    ! nth = 1 ! FIXME Use number of NUMA sockets
+
+    ! Number of CPU region is equal to the number of NUMA nodes
+    nth = size(akeep%akeep%topology, 1)
 #endif
 
     loc = akeep%akeep%subtree(p)%exec_loc
@@ -284,7 +289,7 @@ contains
 #if defined(SPLDLT_USE_GPU)
     use spral_ssids_gpu_subtree, only : construct_gpu_symbolic_subtree
 #endif
-    use sylver_datatypes_mod, only: spldlt_options, set_ssids_options
+    use sylver_datatypes_mod, only: sylver_options, set_ssids_options
     implicit none
 
     type(spldlt_akeep_type), target, intent(inout) :: spldlt_akeep ! spldlt akeep structure 
@@ -298,7 +303,6 @@ contains
     integer, dimension(n), intent(out) :: invp 
       ! Work array. Used to hold inverse of order but
       ! is NOT set to inverse for the final order that is returned.
-    ! type(spldlt_options), target, intent(in) :: options
     type(sylver_options), target, intent(in) :: options
     type(sylver_inform), intent(inout) :: inform
 
@@ -381,9 +385,17 @@ contains
 #if defined(SPLDLT_USE_STARPU) && defined(SPLDLT_USE_OMP)
 
     ! nth = 2 ! FIXME Use number of NUMA sockets
-    nth = 1 ! Flat topology
+    ! nth = 1 ! Flat topology
+
+    ! Number of CPU region is equal to the number of NUMA nodes
+    nth = size(akeep%topology, 1)
 
 #endif
+
+    if(options%print_level .gt. 1) then
+       print *, "[analyse_core] Number of CPU regions = ", nth
+    end if
+    
     ! Allocate structures and init for tree prunning
     allocate(small(akeep%nnodes+1))
     allocate(contrib_dest(akeep%nnodes+1))
@@ -544,12 +556,12 @@ contains
     goto 200
     
   end subroutine analyse_core
-
+  
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   !> @brief Analyse phase for symmetric matrix.
   !>
-  ! TODO 32-bits wrapper
+  ! TODO Add 32-bits wrapper
   subroutine spldlt_analyse(spldlt_akeep, n, ptr, row, options, inform, order, val, ncpu, ngpu, check)
     use spral_ssids, only: ssids_free
     use spral_metis_wrapper, only : metis_order
@@ -560,10 +572,11 @@ contains
     use spral_match_order, only : match_order_metis
     use spral_matrix_util, only : SPRAL_MATRIX_REAL_SYM_INDEF, &
          SPRAL_MATRIX_REAL_SYM_PSDEF, clean_cscl_oop
-    use sylver_datatypes_mod, only: spldlt_options
+    use sylver_datatypes_mod, only: sylver_options
 #if defined(SPLDLT_USE_STARPU)
     use starpu_f_mod, only: starpu_f_cpu_worker_get_count, starpu_f_cuda_worker_get_count  
 #endif
+    use sylver_topology_mod
     use, intrinsic :: iso_c_binding
     implicit none
     
@@ -571,7 +584,6 @@ contains
     integer, intent(in) :: n ! Matrix dimension
     integer(long), intent(in) :: ptr(:)
     integer, intent(in) :: row(:)
-    ! type(spldlt_options), target, intent(in) :: options ! SpLDLT options
     type(sylver_options), target, intent(in) :: options ! SpLDLT options
     type(sylver_inform), intent(inout) :: inform
     integer, dimension(:), allocatable, optional, intent(inout) :: order
@@ -784,10 +796,13 @@ contains
        deallocate(val2,stat=st)
     end select
 
-    ! Define the number of CPU workers
+    ! Determine the number of CPU workers
     if (present(ncpu)) then
+       ! Use the number of CPU workers requested in arguments
        ncpu_topo = ncpu
     else
+       ! Use the number of CPU workers enabled when initializing the
+       ! runtime system
 #if defined(SPLDLT_USE_STARPU)
        !print *, "cpu_worker_get_count = ", starpu_f_cpu_worker_get_count()
        ncpu_topo = starpu_f_cpu_worker_get_count()
@@ -796,31 +811,26 @@ contains
 #endif
     endif
     
-    ! Define the number of GPU workers
+    ! Determine the number of CUDA workers
     if (present(ngpu)) then
+       ! Use the number of CUDA workers requested in arguments
        ngpu_topo = ngpu
     else
+       ! Use the number of CUDA workers enabled when initializing the
+       ! runtime system
 #if defined(SPLDLT_USE_STARPU)
        ngpu_topo = starpu_f_cuda_worker_get_count()
 #else
        ngpu_topo = 0
 #endif
     endif
-
-    ! Create flat topology
+    
+    ! Create machine topology
+    !
+    ! Make sure akeep%topology structure is not allocated
     if (allocated(akeep%topology)) deallocate(akeep%topology, stat=st)
-    allocate(akeep%topology(1), stat=st)
-    akeep%topology(1)%nproc = ncpu_topo
-    allocate(akeep%topology(1)%gpus(ngpu_topo), stat=st)
-    do i = 1, ngpu_topo
-       akeep%topology(1)%gpus(i) = i
-    end do
-    ! print *, "Input topology"
-    ! do i = 1, size(akeep%topology)
-    !    print *, "Region ", i, " with ", akeep%topology(i)%nproc, " cores"
-    !    if(size(akeep%topology(i)%gpus).gt.0) &
-    !         print *, "---> gpus ", akeep%topology(i)%gpus
-    ! end do
+    ! Allocate and create machine topology
+    call sylver_topology_create(ncpu, ngpu, options, akeep%topology)
 
     ! perform rest of analyse
     if (akeep%check) then

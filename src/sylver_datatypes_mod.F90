@@ -10,6 +10,8 @@ module sylver_datatypes_mod
 
   integer, parameter, public :: sylver_nb_default = 256 ! Block size
 
+  ! integer, parameter, public :: sylver_nb_default = 256 ! Block size
+
   ! Success flag
   integer, parameter, public :: SYLVER_SUCCESS                 = 0
 
@@ -61,6 +63,16 @@ module sylver_datatypes_mod
   integer, parameter, public :: SYLVER_FAILED_PIVOT_METHOD_TPP    = 1
   integer, parameter, public :: SYLVER_FAILED_PIVOT_METHOD_PASS   = 2
 
+  ! CPU topology
+  !
+  ! Choose CPU topology depending on number of CPU and GPU workers  
+  integer, parameter, public :: SYLVER_CPU_TOPOLOGY_AUTO = 1
+  ! Ignore CPU memory hierarchy and consider all cores as part of one
+  ! CPU
+  integer, parameter, public :: SYLVER_CPU_TOPOLOGY_FLAT = 2
+  ! Use NUMA topology
+  integer, parameter, public :: SYLVER_CPU_TOPOLOGY_NUMA = 3
+  
   !
   ! Data type for control parameters in SpLDLT
   !
@@ -138,7 +150,7 @@ module sylver_datatypes_mod
      integer(long) :: small_subtree_threshold = 4*10**6 ! Flops below
        ! which we treat a subtree as small and use the single core kernel
      integer :: nb = sylver_nb_default! Block size used for the task generation 
-
+     integer :: cpu_topology = SYLVER_CPU_TOPOLOGY_AUTO
      !
      ! Options used by spldlt_factorize() with posdef=.false.
      !
