@@ -165,17 +165,6 @@ option(SYLVER_ENABLE_CUTLASS "CUTLASS library available" OFF)
 # endif()
 # MESSAGE(STATUS "LAHP: " ${HAVE_LAHP})
 
-# Print options summuary 
-message(STATUS "Runtime: " ${SYLVER_RUNTIME})
-message(STATUS "Enable CUDA: " ${SYLVER_ENABLE_CUDA})
-message(STATUS "Enable OpenMP: " ${SYLVER_ENABLE_OMP})
-message(STATUS "Use internal SPRAL: " ${SYLVER_SPRAL_USE_INTERNAL})
-message(STATUS "Build examples: " ${SYLVER_BUILD_EXAMPLES})
-message(STATUS "Build tests: " ${SYLVER_BUILD_TESTS})
-message(STATUS "Build drivers: " ${SYLVER_BUILD_DRIVERS})
-message(STATUS "Profiling: " ${SYLVER_ENABLE_PROFILING})
-message(STATUS "CUTLASS: " ${SYLVER_ENABLE_CUTLASS})
-
 if (SYLVER_ENABLE_PROFILING)
   add_definitions(-DSPLDLT_USE_PROFILING)
   add_definitions(-DSYLVER_ENABLE_PROFILING)
@@ -328,6 +317,8 @@ if(SYLVER_ENABLE_OMP)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_Fortran_FLAGS}")
 
     add_definitions(-DSPLDLT_USE_OMP)
+    add_definitions(-DSYLVER_HAVE_OMP)
+
   else()
     message(FATAL_ERROR "OpenMP library NOT found")
   endif()
@@ -342,7 +333,7 @@ if(SYLVER_ENABLE_CUDA)
   add_definitions(-DSYLVER_HAVE_CUDA)
 
   # Use CUDA as a native language within CMake
-  set(SYLVER_NATIVE_CUDA OFF CACHE BOOL "Utilize the CMake native CUDA flow")
+  set(SYLVER_NATIVE_CUDA ON CACHE BOOL "Utilize the CMake native CUDA flow")
   mark_as_advanced(SYLVER_NATIVE_CUDA)
 
   set(SyLVER_NVCC_ARCHS "60;61;70;75" CACHE STRING "The SM architectures to build code for.")
@@ -652,6 +643,19 @@ sylver_install()
 
 message("--------------------------------------------------------------------------------")
 message("Configuration of SyLVER done.")
+message(" ")
+message("Options:")
+message(" ")
+# Print options summuary 
+message( " Runtime: " ${SYLVER_RUNTIME})
+message( " Enable CUDA: " ${SYLVER_ENABLE_CUDA})
+message( " Enable OpenMP: " ${SYLVER_ENABLE_OMP})
+message( " Use internal SPRAL: " ${SYLVER_SPRAL_USE_INTERNAL})
+message( " Build examples: " ${SYLVER_BUILD_EXAMPLES})
+message( " Build tests: " ${SYLVER_BUILD_TESTS})
+message( " Build drivers: " ${SYLVER_BUILD_DRIVERS})
+message( " Profiling: " ${SYLVER_ENABLE_PROFILING})
+message( " CUTLASS: " ${SYLVER_ENABLE_CUTLASS})
 message(" ")
 message(
   "Build type: ${CMAKE_BUILD_TYPE}\n"
