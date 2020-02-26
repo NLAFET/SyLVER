@@ -119,10 +119,6 @@ program spldlt_test
    ! Initialization of SpLDLT
    call sylver_init(ncpu, ngpu)
 
-   ! Setup options for analysis
-   ! options%prune_tree = .true. ! Enable tree pruning
-   ! options%prune_tree = .false. ! Deactivate tree pruning
-
    ! Perform analysis
    call spldlt_analyse(spldlt_akeep, n, ptr, row, options, inform, val=val, &
         ncpu=ncpu, ngpu=ngpu)

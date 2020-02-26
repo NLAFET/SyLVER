@@ -19,6 +19,13 @@ namespace sylver {
       pass = 2
    };
 
+   enum struct CPUTopology : int
+      {
+       automatic = 1,
+       flat = 2,
+       numa = 3
+      };
+   
    /// @brief Interoperable subset of sylver_options
    struct options_c {
       int print_level;
@@ -30,6 +37,7 @@ namespace sylver {
       int nb; // Block size
       sylver::PivotMethod pivot_method;
       sylver::FailedPivotMethod failed_pivot_method;
+      sylver::CPUTopology cpu_topology;
       
       /// @brief Copy structure into a
       /// spral::ssids::cpu::cpu_factor_options structure
