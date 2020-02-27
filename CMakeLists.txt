@@ -134,7 +134,7 @@ endif()
 # Options
 
 ## Set runtime system to be used for the execution
-set(SYLVER_RUNTIME "STF" CACHE STRING "Runtime system")
+set(SYLVER_RUNTIME "StarPU" CACHE STRING "Runtime system")
 set_property(CACHE SYLVER_RUNTIME PROPERTY STRINGS STF StarPU)
 # # Set BLAS and LAPACK libraries to use for linking
 # SET(BLAS_LAPACK "MKL" CACHE STRING "BLAS and LAPACK libraries")

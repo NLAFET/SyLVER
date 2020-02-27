@@ -23,7 +23,7 @@ achieved as follow:
 ```bash
 mkdir build # create build directory
 cd build 
-cmake <path-to-source> -DRUNTIME=StarPU # configure compilation
+cmake <path-to-source> -DSYLVER_RUNTIME=StarPU -DSYLVER_ENABLE_CUDA=ON # configure compilation
 make # run compilation 
 ```
 
@@ -62,18 +62,18 @@ CMake option or the `HWLOC_DIR` environment variable.
 
 ### Runtime system ###
 
-By default, CMake will configure the compilation for a serial version
-of SyLVER that can be explicitly requested using the option
-`-DRUNTIME=STF`.
-
-The `-DRUNTIME=StarPU` enables the compilation of the parallel version
-of SyLVER using [StarPU runtime
+The `-DSYLVER_RUNTIME=StarPU` enables the compilation of the parallel
+version of SyLVER using [StarPU runtime
 system](http://starpu.gforge.inria.fr/). In this case the StarPU
 version needs to be at least 1.3.0. The StarPU library is found with
 the `FindSTARPU.cmake` script located in the `cmake/Modules`
 directory. Note that, for this script to be able to find the StarPU
 library, you need to set the environment variable `STARPU_DIR` to the
 path of you StarPU install base directory.
+
+By default, CMake will configure the compilation for a parallel
+version of SyLVER using StarPU. The sequential version can be compiled
+using the option `-DSYLVER_RUNTIME=STF`.
 
 ### BLAS and LAPACK ###
 
