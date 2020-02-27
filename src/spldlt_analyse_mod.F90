@@ -248,7 +248,6 @@ contains
 
     p = p_c+1 ! p_c is zero-indexed
     
-    nth = akeep%akeep%topology(1)%nproc
 #if defined(SPLDLT_USE_STARPU) && defined(SPLDLT_USE_OMP)
     ! Set the number of CPU regions
     
@@ -257,17 +256,37 @@ contains
 
     ! Number of CPU region is equal to the number of NUMA nodes
     nth = size(akeep%akeep%topology, 1)
-#endif
 
     loc = akeep%akeep%subtree(p)%exec_loc
-    ! print *, "[subtree_get_devid_c] subtree = ", p , ", loc = ", loc, ", nth = ", nth
     if (loc.le.nth) then
        device = -1
     else
-       device = loc-nth-1
+       device = (loc-1) / nth
+       device = device - 1
     end if
-    
+    print *, "[subtree_get_devid_c] subtree = ", p , ", loc = ", loc, ", nth = ", nth, ", device = ", device
+
     subtree_get_devid_c = device
+
+#else
+    !
+    ! Assume flat topology
+    !
+
+    nth = akeep%akeep%topology(1)%nproc
+    
+    loc = akeep%akeep%subtree(p)%exec_loc
+    if (loc.le.nth) then
+       device = -1
+    else
+       device = loc-nth
+       device = device - 1
+    end if
+    print *, "[subtree_get_devid_c] subtree = ", p , ", loc = ", loc, ", nth = ", nth, ", device = ", device
+
+    subtree_get_devid_c = device
+
+#endif
     
   end function subtree_get_devid_c
 
@@ -996,7 +1015,7 @@ contains
     do i = 1, size(topology)
        ngpu = ngpu + size(topology(i)%gpus)
     end do
-    ! if(options%print_level .gt. 1) print *, "running on ", nregion, " regions and ", ngpu, " gpus"
+    if(options%print_level .gt. 1) print *, "running on ", nregion, " regions and ", ngpu, " gpus"
 
     ! Keep splitting until we meet balance criterion
     best_load_balance = huge(best_load_balance)
@@ -1015,13 +1034,13 @@ contains
        if (st .ne. 0) return
     end do
 
-    print *, "[find_subtree_partition] max_load_inbalance = ", options%max_load_inbalance
-    print *, "[find_subtree_partition] load_balance = ", load_balance
+    if(options%print_level .gt. 1) print *, "[find_subtree_partition] max_load_inbalance = ", options%max_load_inbalance
+    if(options%print_level .gt. 1) print *, "[find_subtree_partition] load_balance = ", load_balance
 
     ! Consolidate adjacent non-children nodes into same part and regen exec_alloc
     !print *
     !print *, "pre merge", part(1:nparts+1)
-    !print *, "exec_loc ", exec_loc(1:nparts)
+    ! if(options%print_level .gt. 1) print *, "exec_loc ", exec_loc(1:nparts)
     j = 1
     do i = 2, nparts
        part(j+1) = part(i)
@@ -1040,7 +1059,7 @@ contains
          exec_loc, st)
     if (st .ne. 0) return
     !print *, "exec_loc ", exec_loc(1:nparts)
-    print *, "[find_subtree_partition] load_balance = ", load_balance
+    if(options%print_level .gt. 1) print *, "[find_subtree_partition] load_balance = ", load_balance
 
     ! Merge adjacent subtrees that are executing on the same node so long as
     ! there is no more than one contribution to a parent subtree

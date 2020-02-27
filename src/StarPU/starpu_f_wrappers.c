@@ -36,9 +36,10 @@ int starpu_f_init_c(
   if (ngpu > 0) {
      // Use Heteroprio scheduler only if at least one GPU worker is
      // used in the execution
-     conf.sched_policy_name = "heteroprio";
-     conf.sched_policy_init = &init_heteroprio;
-     printf("[starpu_f_init_c] Use Heteroprio scheduler\n");      
+     conf.sched_policy_name = "lws";
+     /* conf.sched_policy_name = "heteroprio"; */
+     /* conf.sched_policy_init = &init_heteroprio; */
+     /* printf("[starpu_f_init_c] Use Heteroprio scheduler\n"); */
   }
   else {
      // Use LWS scheduler if only CPU workers are enabled

@@ -284,6 +284,12 @@ program spldlt_test
           argnum = argnum + 1
           read (argval, *) options%u
           print *, 'Pivoting threshold u = ', options%u
+       case("--flat-topology")
+          print *, 'Force flat topology of CPU workers'
+          options%cpu_topology = SYLVER_CPU_TOPOLOGY_FLAT
+       case("--numa-topology")
+          print *, 'Enable NUMA topology of CPU workers'
+          options%cpu_topology = SYLVER_CPU_TOPOLOGY_NUMA
        case default
           print *, "Unrecognised command line argument: ", argval
           stop
