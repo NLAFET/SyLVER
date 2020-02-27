@@ -35,40 +35,11 @@ make # run compilation
 sparse linear algebra and associated algorithm and has several
 important features used in SyLVER. The latest release of SPRAL can be
 found on its [GitHub
-repository](https://github.com/ralna/spral/releases). The compilation
-of SPRAL is handled by autotools and for example can be done as follow
-when using the GCC compilers:
+repository](https://github.com/ralna/spral/releases).
 
-```bash
-cd spral
-mkdir build
-cd build
-../configure CXX=g++ FC=gfortran CC=gcc CFLAGS="-g -O2 -march=native" CXXFLAGS="-g -O2 -march=native" FCFLAGS="-g -O2 -march=native" --with-metis="-L/path/to/metis -lmetis" --with-blas="-L/path/to/blas -lblas" --with-lapack="-L/path/to/lapack -llapack" --disable-openmp --disable-gpu
-make
-```
-Note that the compilation flags used for SPRAL **must match** the flags
-used in the compilation of SyLVER. Here we use the flags `-g -O2
--march=native` that correspond to the `RelWithDebInfo` build type in
-SyLVER.
-
-Here we use the `--disable-openmp` option because SyLVER works with
-the serial version of SPRAL. Additionally, in this example we disabled
-the compilation of the SPRAL GPU kernels using the `--disable-gpu`
-option.
-
-**Sequential version** of BLAS and LAPACK should be used. We recommend
-using the [MKL](https://software.intel.com/mkl) library for best
-performance on Intel machines and
-[ESSL](https://www.ibm.com/support/knowledgecenter/en/SSFHY8/essl_welcome.html)
-on IBM machines. The [MKL link line
-advisor](https://software.intel.com/en-us/articles/intel-mkl-link-line-advisor)
-can be useful to fill the `--with-blas` and `--with-lapack` options.
-
-When compiling SyLVER you need to provide both the path to the SPRAL
-source directory which can be given using the `-DSPRAL_SRC_DIR` CMake
-option or the `SPRAL_SRC_DIR` environment variable and the path to the
-SPRAL library which can be given using the `-DSPRAL_DIR` CMake option
-or the `SPRAL_DIR` environment variable.
+SPRAL is automatically built during the compilation of SyLVER. See
+[documentation](https://sylver.readthedocs.io/en/latest/?badge=latest)
+if you wish to use your own version of SPRAL for building SyLVER.
 
 ### MeTiS ###
 
