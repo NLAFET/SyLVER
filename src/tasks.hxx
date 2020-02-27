@@ -494,9 +494,9 @@ namespace spldlt {
       int devid = subtree_get_devid_c(akeep, p);
       workerid = starpu_worker_get_by_devid(STARPU_CUDA_WORKER, devid);
 
-      if (options->print_level > 1) {
-         std::cout << "[" << context << "] subtree = " << p << ", devid = " << devid << ", workerid = " << workerid << std::endl;
-      }
+      // if (options->print_level > 1) {
+      //    std::cout << "[" << context << "] subtree = " << p << ", devid = " << devid << ", workerid = " << workerid << std::endl;
+      // }
 #endif
 
       if (workerid>=0) {

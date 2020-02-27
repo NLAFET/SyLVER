@@ -264,7 +264,7 @@ contains
        device = (loc-1) / nth
        device = device - 1
     end if
-    print *, "[subtree_get_devid_c] subtree = ", p , ", loc = ", loc, ", nth = ", nth, ", device = ", device
+    ! print *, "[subtree_get_devid_c] subtree = ", p , ", loc = ", loc, ", nth = ", nth, ", device = ", device
 
     subtree_get_devid_c = device
 

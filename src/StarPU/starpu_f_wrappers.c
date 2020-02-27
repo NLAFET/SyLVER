@@ -31,11 +31,11 @@ int starpu_f_init_c(
 
 #if defined(SPLDLT_USE_GPU)
   /* conf->sched_policy_name = "dmdas"; */
-  /* conf.sched_policy_name = "eager"; */
   /* conf->sched_policy_name = "lws"; */
   if (ngpu > 0) {
      // Use Heteroprio scheduler only if at least one GPU worker is
      // used in the execution
+     /* conf.sched_policy_name = "eager"; */
      conf.sched_policy_name = "lws";
      /* conf.sched_policy_name = "heteroprio"; */
      /* conf.sched_policy_init = &init_heteroprio; */
