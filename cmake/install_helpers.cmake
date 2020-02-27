@@ -28,5 +28,15 @@ function(sylver_install)
     DESTINATION "${SYLVER_INSTALL_INCLUDE_DIR}"
     FILES_MATCHING PATTERN "*.mod"
     )
+  if(SYLVER_SPRAL_USE_INTERNAL)
+    install(DIRECTORY "${SyLVER_BINARY_DIR}/spral/build/"
+      DESTINATION "${SYLVER_INSTALL_INCLUDE_DIR}"
+      FILES_MATCHING PATTERN "*.mod"
+      )
+    install(DIRECTORY "${SyLVER_BINARY_DIR}/spral/build/"
+      DESTINATION "${SYLVER_INSTALL_LIBRARY_DIR}"
+      FILES_MATCHING PATTERN "libspral.a"
+      )
+  endif()
   
 endfunction()

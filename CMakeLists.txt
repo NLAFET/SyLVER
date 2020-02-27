@@ -507,9 +507,10 @@ if(SYLVER_SPRAL_USE_INTERNAL)
     CONFIGURE_COMMAND ${CMAKE_BINARY_DIR}/spral-config.sh
     BUILD_COMMAND make
     INSTALL_COMMAND ""
+    # INSTALL_COMMAND cp ${CMAKE_BINARY_DIR}/spral/build/libspral.a ${CMAKE_BINARY_DIR}/
     BINARY_DIR ${SPRAL_DIR}
     )  
-  
+
 else()
   # Use external SPRAL library
   
