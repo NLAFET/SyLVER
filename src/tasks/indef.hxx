@@ -101,14 +101,14 @@ namespace spldlt {
       if (ndelay <= 0) return;
          
       // Figure out blocks involved in the assembly so that we can
-      // give this information data to StarPU.
+      // give this information to StarPU.
       int rr = -1;
       int cc = -1;
 
-      // Here we gather the handles for all blocks for rows and
-      // columns comprised between delay_col and
-      // delay_col+cnode.ndelay_out()-1. As a result, we might select
-      // more blocks than necessary.
+      // Here we collect the StarPU handles for all blocks for rows
+      // and columns comprised between `delay_col` and `delay_col +
+      // cnode.ndelay_out() - 1`. As a result, we might select more
+      // blocks than necessary.
       
       // Row and Column index of first destination block for this
       // assembly

@@ -560,12 +560,12 @@ namespace spldlt {
 
 #if defined(SPLDLT_USE_STARPU)
 
-      int blksz = front.blksz();
+      // Front info
+      int const blksz = front.blksz();
+      int const ncol = front.ncol();
+      int const nr = front.nr(); // Number of block rows in destination node
+      int const nc = front.nc(); // Number of block columns in destination node
 
-      int nrow = front.nrow();
-      int ncol = front.ncol();
-      int nr = front.nr(); // Number of block rows in destination node
-      int nc = front.nc(); // Number of block columns in destination node
       int cc = -1; // Block column index in destination node
       int rr = -1; // Block row index in destination node
 
@@ -573,7 +573,7 @@ namespace spldlt {
       int nh = 0;
 
       int cn = csfront.nrow - csfront.ncol;
-      
+      // std::cout << "[assemble_subtree_task] cn = " << cn << std::endl;
       for(int j = 0; j < cn; ++j) {
 
          int c = cmap[ j ]; // Destination column
@@ -586,11 +586,15 @@ namespace spldlt {
 
             for (int i = j ; i < cn; ++i) {
 
+               // Row index in parent front of i-th rows in
+               // contribution block
                int r = cmap[ i ];
+               
                if (rr==(r/blksz)) continue;
                rr = r/blksz;
                
-               hdls[nh] = front.blocks[cc*nr+rr].get_hdl();
+               // hdls[nh] = front.blocks[cc*nr+rr].get_hdl();
+               hdls[nh] = front.block_hdl(rr,cc);
                nh++;            
             }
          }         
@@ -702,10 +706,11 @@ namespace spldlt {
       // Node info
       sylver::SymbolicFront const& snode = node.symb();
       int const blksz = node.blksz();
-      int const nrow = node.nrow();
       int const ncol = node.ncol();
-      int const nr = node.nr(); // Number of block-rows in destination node
-      int const nc = node.nc(); // Number of block-columns in destination node
+      // Number of block-rows in destination node
+      int const nr = node.nr();
+      // Number of block-columns in destination node
+      int const nc = node.nc();
 
       // StarPU handle array holding destination blocks handles
       starpu_data_handle_t *hdls = new starpu_data_handle_t[nr*nc]; // Upperbound nr*nc handles 
@@ -758,7 +763,9 @@ namespace spldlt {
                assert(nh < (nr*nc));
 
                // hdls[nh] = snode.handles[cc*nr+rr];
-               hdls[nh] = node.blocks[cc*nr+rr].get_hdl();
+               // hdls[nh] = node.blocks[cc*nr+rr].get_hdl();
+               hdls[nh] = node.block_hdl(rr, cc);
+
                nh++;
             }
          }
