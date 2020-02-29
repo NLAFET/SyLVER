@@ -92,8 +92,10 @@ namespace splu {
 
                   int row = std::max(i*this->blksz(), n) - n; // First row in block
                   
-                  this->contrib_blocks[(j-rsa)*ncontrib+(i-rsa)].a = &col[row];
-                  this->contrib_blocks[(j-rsa)*ncontrib+(i-rsa)].lda = col_ld; 
+                  // this->contrib_blocks[(j-rsa)*ncontrib+(i-rsa)].a = &col[row];
+                  // this->contrib_blocks[(j-rsa)*ncontrib+(i-rsa)].lda = col_ld; 
+                  this->contrib_block(i, j).a = &col[row];
+                  this->contrib_block(i, j).lda = col_ld; 
                }                  
             }
             

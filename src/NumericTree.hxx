@@ -328,9 +328,9 @@ namespace spldlt {
                   pool_alloc_, aval, scaling);
 
             //          }
-            // #if defined(SPLDLT_USE_STARPU)
-            //             starpu_task_wait_for_all();
-            // #endif
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
             //             return;
             //             for(int ni = 0; ni < symb_.nnodes_; ++ni) {
             //             SymbolicFront& sfront = symb_[ni];
@@ -343,9 +343,10 @@ namespace spldlt {
             // assemble(symb_.n, fronts_[ni], child_contrib, pool_alloc_);
             assemble_task(symb_.n, fronts_[ni], child_contrib, pool_alloc_);
 
-            // #if defined(SPLDLT_USE_STARPU)
-            //             starpu_task_wait_for_all();
-            // #endif
+// #if defined(SPLDLT_USE_STARPU)
+//             // Debug
+//             starpu_task_wait_for_all();
+// #endif
 
             // factor_front_indef_notask(
             //       options, pool_alloc_, fronts_[ni], workspaces[0], worker_stats[0]);
@@ -353,9 +354,9 @@ namespace spldlt {
             factor_front_indef_task(
                   fronts_[ni], workspaces,  pool_alloc_, options, 
                   worker_stats);
-            // #if defined(SPLDLT_USE_STARPU)
-            //             starpu_task_wait_for_all();
-            // #endif
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
             // factor_front_indef(
             //       fronts_[ni], workspaces, pool_alloc_, options, 
             //       worker_stats);
@@ -380,9 +381,10 @@ namespace spldlt {
 
             fini_cnodes_task(fronts_[ni], false);
 
-            // #if defined(SPLDLT_USE_STARPU)
-            //             starpu_task_wait_for_all();
-            // #endif
+// #if defined(SPLDLT_USE_STARPU)
+//             // Debug
+//             starpu_task_wait_for_all();
+// #endif
 
          } // loop over nodes
 

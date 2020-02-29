@@ -254,9 +254,9 @@ namespace spldlt {
          // contribution block
          spldlt::starpu::insert_factor_block(
                kk,
-               // snode.handles[kk*nr + kk],
                node(kk, kk).get_hdl(),
-               node.contrib_blocks[0].hdl,
+               // node.contrib_blocks[0].hdl,
+               node.contrib_block(kk,kk).hdl,
                snode.hdl,
                prio,
                &worker_stats);
@@ -320,7 +320,8 @@ namespace spldlt {
                // snode.handles[k*nr + i], // subdiag block handle
                node(k, k).get_hdl(),
                node(i, k).get_hdl(),
-               node.contrib_blocks[i-rsa].hdl, // subdiag block handle
+               // node.contrib_blocks[i-rsa].hdl, // subdiag block handle
+               node.contrib_block(i, k).hdl, // subdiag block handle
                snode.hdl,
                prio);
       }
@@ -377,21 +378,15 @@ namespace spldlt {
 
          spldlt::starpu::insert_update_block(
                k, blksz,
-               // snode.handles[j*nr + i], // A_ij block handle 
-               // snode.handles[k*nr + i], // A_ik block handle
-               // snode.handles[k*nr + j],  // A_jk block handle
                node(i, j).get_hdl(),
                node(i, k).get_hdl(),
                node(j, k).get_hdl(),
-               node.contrib_blocks[i-rsa].hdl,
+               node.contrib_block(i, k).hdl,
                snode.hdl,
                prio);
       }
       else {
          spldlt::starpu::insert_update_block(
-               // snode.handles[j*nr + i], // A_ij block handle 
-               // snode.handles[k*nr + i], // A_ik block handle
-               // snode.handles[k*nr + j],  // A_jk block handle
                node(i, j).get_hdl(),
                node(i, k).get_hdl(),
                node(j, k).get_hdl(),
@@ -435,12 +430,13 @@ namespace spldlt {
 
 #if defined(SPLDLT_USE_STARPU)
 
-      int rsa = n/blksz;
-      int ncontrib = nr-rsa;
+      // int rsa = n/blksz;
+      // int ncontrib = nr-rsa;
 
       spldlt::starpu::insert_update_contrib(
             k,
-            node.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib].hdl,
+            // node.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib].hdl,
+            node.contrib_block(i, j).hdl,
             node(i, k).get_hdl(),
             node(j, k).get_hdl(),
             // snode.handles[k*nr + i],
@@ -663,7 +659,8 @@ namespace spldlt {
                if (rr == (r/blksz)) continue;
                rr = r / blksz; // Destination block row
 
-               hdls[nh] = node.contrib_blocks[(cc-rsa)*ncontrib+(rr-rsa)].hdl;
+               // hdls[nh] = node.contrib_blocks[(cc-rsa)*ncontrib+(rr-rsa)].hdl;
+               hdls[nh] = node.contrib_block(rr, cc).hdl;
                nh++;
                
             }
@@ -775,7 +772,7 @@ namespace spldlt {
       if (nh > 0) {
          
          // Contrib block to be assembled into current node
-         sylver::Tile<T, PoolAlloc>& cb = cnode.get_contrib_block(ii, jj);
+         sylver::Tile<T, PoolAlloc>& cb = cnode.contrib_block(ii, jj);
 
          spldlt::starpu::insert_assemble_block(
                &node, &cnode, ii, jj, cmap,
@@ -870,7 +867,7 @@ namespace spldlt {
                
                // hdls[nh] = snode.contrib_handles[(cc-rsa)*ncontrib+(rr-rsa)];
                // hdls[nh] = node.contrib_blocks[(cc-rsa)*ncontrib+(rr-rsa)].hdl;
-               hdls[nh] = node.get_contrib_block(rr, cc).hdl;
+               hdls[nh] = node.contrib_block(rr, cc).hdl;
                nh++;
             }
          }
@@ -880,7 +877,7 @@ namespace spldlt {
       if (nh>0) {
          
          // Contrib block to assembled into node
-         sylver::Tile<T, PoolAlloc>& cb = cnode.get_contrib_block(ii, jj);
+         sylver::Tile<T, PoolAlloc>& cb = cnode.contrib_block(ii, jj);
 
          spldlt::starpu::insert_assemble_contrib_block(
                &node, &cnode, ii, jj, cmap, 

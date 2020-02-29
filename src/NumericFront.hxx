@@ -99,10 +99,12 @@ namespace spldlt {
                for(int i = j; i < nr; i++) {
 
                   int row = std::max(i*this->blksz(), n) - first_col; 
-                  
-                  this->contrib_blocks[(j-rsa)*ncontrib+(i-rsa)].a = &col[row];
-                  this->contrib_blocks[(j-rsa)*ncontrib+(i-rsa)].lda = col_ld; 
-                  // contrib_blocks[j*ncontrib+i].a = &col[()]
+                  assert(row >= 0);
+                  // this->contrib_blocks[(j-rsa)*ncontrib+(i-rsa)].a = &col[row];
+                  // this->contrib_blocks[(j-rsa)*ncontrib+(i-rsa)].lda = col_ld; 
+                  this->contrib_block(i, j).a = &col[row];
+                  this->contrib_block(i, j).lda = col_ld; 
+
                }                  
             }
 

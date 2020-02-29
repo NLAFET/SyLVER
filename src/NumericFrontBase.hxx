@@ -42,7 +42,7 @@ namespace sylver {
       /// @Brief Return block (i,j) in the contribution block
       /// @param i row index of block in the frontal matrix
       /// @param j column index of block in the frontal matrix
-      inline sylver::Tile<T, PoolAllocator>& get_contrib_block(int i, int j) {
+      inline sylver::Tile<T, PoolAllocator>& contrib_block(int i, int j) {
 
          // No bound checks when accessing the element in the
          // contrib_blocks vector
@@ -53,6 +53,24 @@ namespace sylver {
          int nr = this->nr();
          int ncontrib = nr-sa;
 
+         assert((i >= sa) && (j >= sa));
+            
+         return contrib_blocks[(i-sa)+(j-sa)*ncontrib];
+      }
+
+      inline sylver::Tile<T, PoolAllocator> const& contrib_block(int i, int j) const {
+
+         // No bound checks when accessing the element in the
+         // contrib_blocks vector
+         assert(this->symb().nrow > this->symb().ncol);
+         
+         int n = this->ncol();
+         int sa = n / this->blksz();
+         int nr = this->nr();
+         int ncontrib = nr-sa;
+
+         assert((i >= sa) && (j >= sa));
+            
          return contrib_blocks[(i-sa)+(j-sa)*ncontrib];
       }
 
