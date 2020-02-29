@@ -3,9 +3,12 @@
 /// @author Florent Lopez
 #pragma once
 
-namespace spldlt {
+namespace sylver {
+namespace splu {
+
+   const int INNER_BLOCK_SIZE = 32;
 
    // template<typename T>
    // int factor_block_unsym_app() }
    
-}
+}} // End of namespace sylver::splu

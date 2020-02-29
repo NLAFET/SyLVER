@@ -9,6 +9,7 @@
 #include "kernels/assemble_unsym.hxx"
 #include "kernels/ldlt_app.hxx"
 #include "Tile.hxx"
+#include "NumericFrontUnsym.hxx"
 
 // SSIDS
 #include "ssids/cpu/Workspace.hxx"
@@ -20,7 +21,7 @@ namespace splu {
    // Sparse LU factorization tasks
    template <typename T, typename PoolAlloc, typename FactorAlloc>
    void activate_init_front_unsym_task(
-         spldlt::NumericFront<T, PoolAlloc> &front, 
+         sylver::splu::NumericFrontUnsym<T, PoolAlloc> &front, 
          FactorAlloc& factor_alloc, 
          bool diagdom) {
       

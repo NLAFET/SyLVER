@@ -8,7 +8,7 @@
 #include "sylver_ciface.hxx"
 #include "SymbolicTree.hxx"
 #include "SymbolicFront.hxx"
-#include "NumericFront.hxx"
+#include "NumericFrontUnsym.hxx"
 #include "tasks/unsym.hxx"
 
 // STD 
@@ -104,7 +104,7 @@ namespace splu {
          for(int ni = 0; ni < symb_.nnodes()+1; ++ni) {
                
             sylver::SymbolicFront& sfront = symb_[ni];
-            spldlt::NumericFront<T,PoolAllocator>& front = fronts_[ni];
+            sylver::splu::NumericFrontUnsym<T,PoolAllocator>& front = fronts_[ni];
 
             // Skip if current node is within a subtree 
             if (sfront.is_in_subtree()) continue;
@@ -232,7 +232,7 @@ namespace splu {
          
    private:
       sylver::SymbolicTree& symb_; ///< Structure holding symbolic factorization data 
-      std::vector<spldlt::NumericFront<T,PoolAllocator>> fronts_; // Vector
+      std::vector<sylver::splu::NumericFrontUnsym<T,PoolAllocator>> fronts_; // Vector
       // containing frontal matrices
       FactorAllocator factor_alloc_; ///< Allocator specific to
       // permanent memory

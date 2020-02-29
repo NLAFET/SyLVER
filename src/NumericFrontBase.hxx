@@ -5,6 +5,7 @@
 
 // SyLVER
 #include "SymbolicFront.hxx"
+#include "Tile.hxx"
 // SSIDS
 #include "ssids/cpu/cpu_iface.hxx"
 
@@ -37,6 +38,23 @@ namespace sylver {
          return this->symb().hdl;
       }
 #endif
+
+      /// @Brief Return block (i,j) in the contribution block
+      /// @param i row index of block in the frontal matrix
+      /// @param j column index of block in the frontal matrix
+      inline sylver::Tile<T, PoolAllocator>& get_contrib_block(int i, int j) {
+
+         // No bound checks when accessing the element in the
+         // contrib_blocks vector
+         assert(this->symb().nrow > this->symb().ncol);
+         
+         int n = this->ncol();
+         int sa = n / this->blksz();
+         int nr = this->nr();
+         int ncontrib = nr-sa;
+
+         return contrib_blocks[(i-sa)+(j-sa)*ncontrib];
+      }
 
       /** \brief Return leading dimension of node's lcol member. */
       inline size_t ldl() const {
@@ -129,7 +147,9 @@ namespace sylver {
 
       // Return associated symbolic node
       SymbolicFront& symb() const { return symb_;};
-      
+   public:
+      // Blocks in the frontal matrix contributions
+      std::vector<sylver::Tile<T, PoolAllocator>> contrib_blocks;
    protected:
       int blksz_; // Tileing size
 #if defined(SPLDLT_USE_STARPU)

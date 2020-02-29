@@ -38,7 +38,6 @@
 #if defined(SPLDLT_USE_STARPU)
 #include <starpu.h>
 #include <mutex>
-// #include <atomic>
 #endif
 
 #include "BuddyAllocator.hxx"
