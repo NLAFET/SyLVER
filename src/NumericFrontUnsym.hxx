@@ -40,13 +40,13 @@ namespace splu {
          // free_contrib_blocks();
          // free_backup();
          // free_cdata();
-         free_blocks_unsym();
+         free_blocks();
       }
 
       /// @brief Allocate memory for contribution blocks in the
       /// unsymmetric case
       // Use 1D memory layout by default
-      void alloc_contrib_blocks_unsym() {
+      void alloc_contrib_blocks() {
 
          int m = this->nrow();
          int n = this->ncol();
@@ -102,7 +102,7 @@ namespace splu {
 
       /// @brief Cleanup memory associated with contribution blocks in
       /// non symmetric case
-      void free_contrib_blocks_unsym() {
+      void free_contrib_blocks() {
 
          // printf("[free_contrib_blocks_unsym]\n");
 
@@ -138,7 +138,7 @@ namespace splu {
          }
       }
 
-            void alloc_blocks_unsym() {
+      void alloc_blocks() {
          
          typedef typename std::allocator_traits<PoolAllocator>::template rebind_traits<sylver::splu::BlockUnsym<T>> BlkAllocTraits;
          typename BlkAllocTraits::allocator_type blkAlloc(this->pool_alloc());
@@ -204,7 +204,7 @@ namespace splu {
       }
 
       /// @brief Release meemory associated with block data structures
-      void free_blocks_unsym() {
+      void free_blocks() {
 
          if (!blocks_unsym_) return;
          
@@ -220,7 +220,7 @@ namespace splu {
 
       /// @brief Allocate backups in all blocks for the unsymmetric
       /// case
-      void alloc_backup_blocks_unsym() {
+      void alloc_backup_blocks() {
 
          int const n = this->ncol();
          int const nr = this->nr(); 
@@ -238,7 +238,7 @@ namespace splu {
          }
       }
 
-      void release_backup_blocks_unsym() {
+      void release_backup_blocks() {
 
          int const n = this->ncol();
          int const nr = this->nr(); 

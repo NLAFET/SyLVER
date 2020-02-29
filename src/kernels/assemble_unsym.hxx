@@ -44,7 +44,7 @@ namespace splu {
       if (nrow <= 0) return; // Front is empty i.e. only symbolic 
 
       // Allocate contribution block
-      front.alloc_contrib_blocks_unsym();
+      front.alloc_contrib_blocks();
 
       size_t lenl = ldl*numfs;
       size_t lenu = ldu*(nrow-numfs);
@@ -54,7 +54,7 @@ namespace splu {
       if (lenu > 0)
          front.ucol = FADoubleTraits::allocate(factor_alloc_double, lenu);
          
-      front.alloc_blocks_unsym();
+      front.alloc_blocks();
    }
 
 #if defined(SPLDLT_USE_STARPU)
