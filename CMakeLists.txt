@@ -97,7 +97,7 @@ if(NOT SYLVER_HAVE_Fortran_FLAG_march=native)
   # This is useful on IBM machines where march=native is not
   # necessarily suported
   enable_fortran_compiler_flag_if_supported(CMAKE_Fortran_FLAGS_RELEASE "-mcpu=native")
-  enable_fortran_compiler_flag_if_supported(CMAKE_Fortan_FLAGS_RELWITHDEBINFO "-mcpu=native")
+  enable_fortran_compiler_flag_if_supported(CMAKE_Fortran_FLAGS_RELWITHDEBINFO "-mcpu=native")
   enable_fortran_compiler_flag_if_supported(CMAKE_Fortran_FLAGS_MINSIZEREL "-mcpu=native")
 endif()
 
