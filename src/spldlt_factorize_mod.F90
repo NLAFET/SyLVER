@@ -592,33 +592,11 @@ contains
 
     posdef = fkeep%pos_def
 
-    ! ! Factor subtrees
-    ! do i = 1, akeep%nparts
-
-    !    exec_loc = akeep%subtree(i)%exec_loc
-    !    if (akeep%contrib_idx(i) .le. akeep%nparts) exec_loc_aux(akeep%contrib_idx(i)) = exec_loc
-    !    if (exec_loc .eq. -1) cycle
-
-    !    print *, "[spldlt_factorize] part = ", i
-
-    !    ! TODO Use scaling if required
-    !    fkeep%subtree(i)%ptr => akeep%subtree(i)%ptr%factor( &
-    !         fkeep%pos_def, val, &
-    !         child_contrib(akeep%contrib_ptr(i):akeep%contrib_ptr(i+1)-1), &
-    !         options, inform &
-    !         )
-
-    !    if (akeep%contrib_idx(i) .gt. akeep%nparts) cycle ! part is a root
-    !    child_contrib(akeep%contrib_idx(i)) = &
-    !         fkeep%subtree(i)%ptr%get_contrib()
-    !    child_contrib(akeep%contrib_idx(i))%ready = .true.
-
-    ! end do
-
     ! Convert child_contrib to contrib_ptr
     allocate(child_contrib_c(size(child_contrib)), stat=st)
     if (st .ne. 0) goto 100
     do i = 1, size(child_contrib)
+       child_contrib%ready = .false.
        child_contrib_c(i) = C_LOC(child_contrib(i))
     end do
 
@@ -636,9 +614,11 @@ contains
     call copy_inform_c2f(cinform, inform)
 
     ! Cleanup Memory
-    deallocate(child_contrib_c)
+    deallocate(child_contrib_c, stat=st)
+    if (st .ne. 0) goto 100
     ! deallocate(exec_loc_aux)
-    deallocate(child_contrib)
+    deallocate(child_contrib, stat=st)
+    if (st .ne. 0) goto 100
 
     return
 100 continue

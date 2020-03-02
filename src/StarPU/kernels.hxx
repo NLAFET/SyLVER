@@ -40,12 +40,12 @@ namespace starpu {
       // printf("[unregister_node_submit]\n");
          
       // Get node info
-      sylver::SymbolicFront &snode = node.symb();
-      int blksz = node.blksz();
-      int m = node.nrow();
-      int n = node.ncol();
-      int nr = node.nr(); // Number of block rows
-      int nc = node.nc(); // Number of block columns
+      sylver::SymbolicFront const& snode = node.symb();
+      int const blksz = node.blksz();
+      int const m = node.nrow();
+      int const n = node.ncol();
+      int const nr = node.nr(); // Number of block rows
+      int const nc = node.nc(); // Number of block columns
 
       // Unregister block handles in the factors
       for(int j = 0; j < nc; ++j) {

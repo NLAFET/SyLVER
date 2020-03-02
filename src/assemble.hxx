@@ -240,13 +240,20 @@ namespace spldlt {
 
             // Assemble expected contributions
 
+            // Kernel call (synchronous)
             // assemble_subtree(node, csnode, child_contrib, csnode.contrib_idx);
+
+            // Task call (asynchronous)
             assemble_subtree_task(
                   node, csnode, child_contrib, csnode.contrib_idx,
                   csnode.map, ASSEMBLE_PRIO);
 
          }
-      }
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif         
+      } // Loop over children nodes
+
    } // assemble
 
 } // end of namespace spldlt

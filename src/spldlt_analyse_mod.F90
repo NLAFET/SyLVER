@@ -400,7 +400,7 @@ contains
     ! nth = 1 ! debug
     ! nth = 4 ! debug
 
-    write(op, '(a)') context 
+    ! write(op, '(a)') context 
 #if defined(SPLDLT_USE_STARPU) && defined(SPLDLT_USE_OMP)
 
     ! nth = 2 ! FIXME Use number of NUMA sockets

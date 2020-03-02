@@ -75,7 +75,8 @@ namespace spldlt {
          sylver::options_t& options,
          PoolAlloc& pool_alloc,
          NumericFront<T, PoolAlloc>& front,
-         spral::ssids::cpu::Workspace& work,
+         // spral::ssids::cpu::Workspace& work,
+         std::vector<spral::ssids::cpu::Workspace>& workspaces,
          sylver::inform_t& stats) {
 
       typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
@@ -92,18 +93,13 @@ namespace spldlt {
             FactorSymIndef<T, INNER_BLOCK_SIZE, Backup, debug, PoolAlloc>
             FactorSymIndefSpec;
 
+         int& nelim = front.nelim(); 
+            
          // Factor front
          FactorSymIndefSpec::factor_front_indef_app_notask(
-               front, options, stats, work, pool_alloc, 
-               front.nelim() // Return the number of succesfully
-                           // eliminated columns
-               );
-
-         int nrow = front.nrow();
-         int ncol = front.ncol();
-         int ldl = front.get_ldl();
+               front, options, stats, workspaces[0], pool_alloc, nelim);
          
-         if (front.nelim() < ncol) { 
+         if (front.nelim() < front.ncol()) { 
             // Some columns remain uneliminated after the first pass
             
             spldlt::ldlt_app_internal::
@@ -116,7 +112,8 @@ namespace spldlt {
                                          // to this front
             // Permute failed entries at the back of the front
             FactorSymIndefSpec::permute_failed(
-                  nrow, ncol, front.perm, front.lcol, ldl,
+                  front.nrow(), front.ncol(), front.perm,
+                  front.lcol, front.ldl(),
                   front.nelim(), cdata, front.blksz(),
                   pool_alloc);
          }
@@ -124,7 +121,7 @@ namespace spldlt {
       } // PivotMethod::app_block
 
       // Process uneliminated columns 
-      factor_front_indef_failed(front, work, options, stats);
+      factor_front_indef_failed(front, workspaces, options, stats);
       
    }
 
@@ -1291,7 +1288,7 @@ namespace spldlt {
          int const m = front.nrow();
          int const n = front.ncol();
          T *lcol = front.lcol;
-         int ldl = front.get_ldl();
+         int ldl = front.ldl();
          T *d = &front.lcol[n*ldl];
          int* perm = front.perm;
          std::vector<Block<T, iblksz, IntAlloc>>& blocks = front.blocks;
@@ -1392,7 +1389,7 @@ namespace spldlt {
                for (int jblk = rsa; jblk < mblk; ++jblk) {
                   for (int iblk = jblk;  iblk < mblk; ++iblk) {
 
-                     sylver::Tile<T, Allocator>& upd = front.get_contrib_block(iblk, jblk);
+                     sylver::Tile<T, Allocator>& upd = front.contrib_block(iblk, jblk);
                      
                      update_contrib_block_app
                         <T, IntAlloc, Allocator>
