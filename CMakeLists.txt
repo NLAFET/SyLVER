@@ -61,7 +61,7 @@ if(NOT SYLVER_HAVE_CXX_FLAG_march=native)
   # necessarily suported
   enable_cxx_compiler_flag_if_supported(CMAKE_CXX_FLAGS_RELEASE "-mcpu=native")
   enable_cxx_compiler_flag_if_supported(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-mcpu=native")
-  enable_cxx_compiler_flag_if_supported(CMAKE_CXX_FLAGS_MINSIZEREL "-march=native")
+  enable_cxx_compiler_flag_if_supported(CMAKE_CXX_FLAGS_MINSIZEREL "-mcpu=native")
 endif()
 
 # message("CMAKE_CXX_FLAGS_RELEASE: ${CMAKE_CXX_FLAGS_RELEASE}")
@@ -98,7 +98,7 @@ if(NOT SYLVER_HAVE_Fortran_FLAG_march=native)
   # necessarily suported
   enable_fortran_compiler_flag_if_supported(CMAKE_Fortran_FLAGS_RELEASE "-mcpu=native")
   enable_fortran_compiler_flag_if_supported(CMAKE_Fortan_FLAGS_RELWITHDEBINFO "-mcpu=native")
-  enable_fortran_compiler_flag_if_supported(CMAKE_Fortran_FLAGS_MINSIZEREL "-march=native")
+  enable_fortran_compiler_flag_if_supported(CMAKE_Fortran_FLAGS_MINSIZEREL "-mcpu=native")
 endif()
 
 # IBM machine
