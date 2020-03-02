@@ -269,7 +269,9 @@ namespace spldlt {
                STARPU_CLUSTER_TYPE, STARPU_CLUSTER_OPENMP,
                0);
          // printf("[factor_mf_indef] machine id = %d\n", clusters->id);
+
          assert(clusters != nullptr);
+
          if (options.print_level > 1)
             starpu_cluster_print(clusters);
          // starpu_uncluster_machine(clusters);
@@ -371,9 +373,9 @@ namespace spldlt {
             // fully-summed columns
             // assemble_contrib(fronts_[ni], child_contrib, workspaces);
             assemble_contrib_task(fronts_[ni], child_contrib, workspaces);
-            // #if defined(SPLDLT_USE_STARPU)
-            //             starpu_task_wait_for_all();
-            // #endif
+// #if defined(SPLDLT_USE_STARPU)
+//             starpu_task_wait_for_all();
+// #endif
             
 #if defined(SPLDLT_USE_STARPU)
             spldlt::starpu::

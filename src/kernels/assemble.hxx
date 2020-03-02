@@ -973,6 +973,76 @@ namespace spldlt {
 
    // }
 
+   ////////////////////////////////////////////////////////////
+   // assemble_contrib_subtree_block
+   template <typename T, typename PoolAlloc>
+   void assemble_contrib_subtree_block(
+         NumericFront<T,PoolAlloc>& node,
+         sylver::SymbolicFront const& csnode,
+         void** child_contrib,
+         int contrib_idx, // Index of subtree to assemble
+         int ii, // Block-row index
+         int jj // Block-column index
+         ) {
+
+      sylver::SymbolicFront const& snode = node.symb();
+      int const blksz = node.blksz();
+
+      /* Initialise variables */
+      int const ncol = node.ncol();
+      int const nrow = node.nrow();
+
+      // Retreive contribution block from subtrees
+      int cn, ldcontrib, ndelay, lddelay;
+      T const *cval, *delay_val;
+      int const *crlist, *delay_perm;
+      // spral_ssids_contrib_get_data(
+      contrib_get_data(
+            child_contrib[contrib_idx], &cn, &cval, &ldcontrib, &crlist,
+            &ndelay, &delay_perm, &delay_val, &lddelay
+            );
+      // printf("[assemble_contrib_subtree] ndelay = %d, cval = %p\n", ndelay, cval);
+      if(!cval) return; // child was all delays, nothing more to do
+
+      // Loop over columns of block-column `jj` 
+      for(int j = jj*blksz;
+          j < std::min((jj+1)*blksz,cn); ++j) {               
+
+         int c = csnode.map[ j ]; // Destination column
+
+         T const* src = &cval[j*ldcontrib];
+
+         // Make sure that the destination column is in the
+         // contribution of parent node
+         if (c >= snode.ncol) {
+
+            int cc = c / blksz; // Destination block column
+            int dest_col_sa = (ncol > cc*blksz) ? 0 : (cc*blksz-ncol); // First col in block
+
+            // Loop over rows of block-row `ii`
+            for (int i = std::max(ii*blksz, j) ;
+                 i < std::min((ii+1)*blksz,cn); ++i) {
+
+               // Destination row in parent front
+               int r = csnode.map[ i ];
+               int rr = r / blksz; // Destination block row
+               int dest_row_sa = (ncol > rr*blksz) ? 0 : (rr*blksz-ncol);
+
+               // Destination block in contributions of parent node
+               auto& dest_blk = node.contrib_block(rr, cc);
+
+               int dest_blk_lda = dest_blk.lda;
+               assert( (c - ncol - dest_col_sa) >= 0 );
+               T *dest = &dest_blk.a[ (c - ncol - dest_col_sa)*dest_blk_lda ];
+               // Assemble destination block
+               assert( (r - ncol - dest_row_sa) >= 0 );
+               dest[ r - ncol - dest_row_sa ] += src[i];
+               
+            }
+         }         
+      }
+   }
+   
    ////////////////////////////////////////////////////////////////////////////////   
    // Assemble contrib subtree
    template <typename T, typename PoolAlloc>
@@ -984,11 +1054,11 @@ namespace spldlt {
          ) {
 
       sylver::SymbolicFront const& snode = node.symb();
-      int blksz = node.blksz();
+      int const blksz = node.blksz();
 
       /* Initialise variables */
-      int ncol = node.ncol();
-      int nrow = node.nrow();
+      int const ncol = node.ncol();
+      int const nrow = node.nrow();
 
       // Retreive contribution block from subtrees
       int cn, ldcontrib, ndelay, lddelay;
@@ -1004,7 +1074,7 @@ namespace spldlt {
 
       int sa = ncol / blksz; // Index of first block in contrib
       int nr = (nrow-1) / blksz + 1;
-      int ncontrib = nr-sa;
+
       for(int j = 0; j < cn; ++j) {
 
          int c = csnode.map[ j ]; // Destination column
@@ -1021,11 +1091,13 @@ namespace spldlt {
                int rr = r / blksz; // Destination block row
                // First row index in CB of destination block
                int dest_row_sa = (ncol > rr*blksz) ? 0 : (rr*blksz-ncol);
-               // sylver::Tile<T, PoolAlloc> &dest_blk = node.contrib_blocks[(rr-sa)+(cc-sa)*ncontrib];
+
                sylver::Tile<T, PoolAlloc> &dest_blk = node.contrib_block(rr, cc);
                int dest_blk_lda = dest_blk.lda;
+               assert( (c - ncol - dest_col_sa) >= 0 );
                T *dest = &dest_blk.a[ (c - ncol - dest_col_sa)*dest_blk_lda ];
                // Assemble destination block
+               assert( (r - ncol - dest_row_sa) >= 0 );
                dest[ r - ncol - dest_row_sa ] += src[i];
             }
          }
