@@ -56,7 +56,7 @@ enable_cxx_compiler_flag_if_supported(CMAKE_CXX_FLAGS_RELEASE "-march=native")
 enable_cxx_compiler_flag_if_supported(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-march=native")
 enable_cxx_compiler_flag_if_supported(CMAKE_CXX_FLAGS_MINSIZEREL "-march=native")
 
-if(NOT SYLVER_HAVE_FLAG_march=native)
+if(NOT SYLVER_HAVE_CXX_FLAG_march=native)
   # This is useful on IBM machines where march=native is not
   # necessarily suported
   enable_cxx_compiler_flag_if_supported(CMAKE_CXX_FLAGS_RELEASE "-mcpu=native")
@@ -89,7 +89,18 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -ggdb")
 ########################################
 # Fortran flags
 
-set(CMAKE_Fortran_FLAGS_RELWITHDEBINFO "${CMAKE_Fortran_FLAGS_RELWITHDEBINFO} -march=native")
+enable_fortran_compiler_flag_if_supported(CMAKE_Fortran_FLAGS_RELEASE "-march=native")
+enable_fortran_compiler_flag_if_supported(CMAKE_Fortran_FLAGS_RELWITHDEBINFO "-march=native")
+enable_fortran_compiler_flag_if_supported(CMAKE_Fortran_FLAGS_MINSIZEREL "-march=native")
+
+if(NOT SYLVER_HAVE_Fortran_FLAG_march=native)
+  # This is useful on IBM machines where march=native is not
+  # necessarily suported
+  enable_cxx_compiler_flag_if_supported(CMAKE_Fortran_FLAGS_RELEASE "-mcpu=native")
+  enable_cxx_compiler_flag_if_supported(CMAKE_Fortan_FLAGS_RELWITHDEBINFO "-mcpu=native")
+  enable_cxx_compiler_flag_if_supported(CMAKE_Fortran_FLAGS_MINSIZEREL "-march=native")
+endif()
+
 # IBM machine
 # set(CMAKE_Fortran_FLAGS_RELWITHDEBINFO "${CMAKE_Fortran_FLAGS_RELWITHDEBINFO} -mcpu=native")
 # Debug flags
