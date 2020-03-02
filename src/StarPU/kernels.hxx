@@ -968,6 +968,23 @@ namespace starpu {
    // }
 
    ////////////////////////////////////////////////////////////////////////////////
+   // Assemble subtree block task
+
+   // CPU kernel
+   template <typename T, typename PoolAlloc>
+   void subtree_assemble_block_cpu_func(void *buffers[], void *cl_arg) {
+
+      NumericFront<T, PoolAlloc> *node = nullptr;
+      sylver::SymbolicFront *csnode;
+      void **child_contrib;
+      int contrib_idx;
+      int ii = -1; // Block-row index 
+      int jj = -1; // Block-column index
+
+      
+   }   
+   
+   ////////////////////////////////////////////////////////////////////////////////
    // Assemble subtree task
 
    // CPU kernel
