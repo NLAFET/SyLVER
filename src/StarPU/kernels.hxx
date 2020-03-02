@@ -978,11 +978,67 @@ namespace starpu {
       sylver::SymbolicFront *csnode;
       void **child_contrib;
       int contrib_idx;
-      int ii = -1; // Block-row index 
-      int jj = -1; // Block-column index
+      int i = -1; // Block-row index 
+      int j = -1; // Block-column index
 
+      starpu_codelet_unpack_args(
+            cl_arg,
+            &node, &csnode,
+            &child_contrib, &contrib_idx,
+            &i, &j);
       
+      assemble_subtree_block(
+            *node, *csnode, child_contrib, contrib_idx, i, j);
    }   
+
+   // subtree_assemble StarPU codelet
+   extern struct starpu_codelet cl_subtree_assemble_block;
+
+   template <typename T, typename PoolAlloc>
+   void insert_subtree_assemble_block(
+         spldlt::NumericFront<T, PoolAlloc> *node,
+         sylver::SymbolicFront *csnode,
+         starpu_data_handle_t node_hdl,
+         starpu_data_handle_t root_hdl,
+         starpu_data_handle_t *dest_hdls, int ndest,
+         void **child_contrib, int contrib_idx,
+         int i, int j
+         ) {
+
+      int ret;
+      int nh = 0;
+
+      // Number of StarPU data descriptors
+      int ndescr = ndest+2;
+      
+      struct starpu_data_descr *descrs = new starpu_data_descr[ndescr];
+
+      for (int i=0; i<ndest; i++) {
+         assert(nh < ndescr);
+         descrs[nh].handle = dest_hdls[i]; descrs[nh].mode = STARPU_RW;
+         nh++;
+      }
+
+      // Handle on subtree
+      assert(nh < ndescr);
+      descrs[nh].handle = root_hdl; descrs[nh].mode = STARPU_R;
+      nh++;
+
+      ret = starpu_task_insert(
+            &cl_subtree_assemble_block,
+            STARPU_DATA_MODE_ARRAY, descrs, nh,
+            STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
+            STARPU_VALUE, &csnode, sizeof(sylver::SymbolicFront*),
+            STARPU_VALUE, &child_contrib, sizeof(void**),
+            STARPU_VALUE, &contrib_idx, sizeof(int),
+            STARPU_VALUE, &i, sizeof(int),
+            STARPU_VALUE, &j, sizeof(int),
+            0);
+      STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
+      
+      delete[] descrs;
+
+   }
    
    ////////////////////////////////////////////////////////////////////////////////
    // Assemble subtree task
@@ -998,9 +1054,10 @@ namespace starpu {
 
       // printf("[subtree_assemble_cpu_func]\n");
 
-      starpu_codelet_unpack_args(cl_arg,
-                                 &node, &csnode,
-                                 &child_contrib, &contrib_idx);
+      starpu_codelet_unpack_args(
+            cl_arg,
+            &node, &csnode,
+            &child_contrib, &contrib_idx);
 
       assemble_subtree(*node, *csnode, child_contrib, contrib_idx);
 
@@ -1037,13 +1094,15 @@ namespace starpu {
       // descrs[nh].handle = node_hdl; descrs[nh].mode = STARPU_R;
       // nh++;
 
-      ret = starpu_task_insert(&cl_subtree_assemble,
-                               STARPU_DATA_MODE_ARRAY, descrs, nh,
-                               STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
-                               STARPU_VALUE, &csnode, sizeof(sylver::SymbolicFront*),
-                               STARPU_VALUE, &child_contrib, sizeof(void**),
-                               STARPU_VALUE, &contrib_idx, sizeof(int),
-                               0);
+      ret = starpu_task_insert(
+            &cl_subtree_assemble,
+            STARPU_DATA_MODE_ARRAY, descrs, nh,
+            STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
+            STARPU_VALUE, &csnode, sizeof(sylver::SymbolicFront*),
+            STARPU_VALUE, &child_contrib, sizeof(void**),
+            STARPU_VALUE, &contrib_idx, sizeof(int),
+            0);
+      STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
        
       delete[] descrs;
    }
@@ -1305,7 +1364,9 @@ namespace starpu {
             STARPU_FLOPS, flops,
 #endif
             0);
+      STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
 
+      
       delete[] descrs;
 
    }
@@ -1370,6 +1431,7 @@ namespace starpu {
                                STARPU_VALUE, &blksz, sizeof(int),
                                STARPU_VALUE, &factor_alloc, sizeof(FactorAlloc*),
                                0);
+      STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
 
       delete[] descrs;
    }

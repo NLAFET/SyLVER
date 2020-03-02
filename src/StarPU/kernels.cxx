@@ -250,6 +250,9 @@ namespace spldlt { namespace starpu {
       // subtree_assemble StarPU codelet
       struct starpu_codelet cl_subtree_assemble;
 
+      // subtree_assemble_block StarPU codelet
+      struct starpu_codelet cl_subtree_assemble_block;
+
       // subtree_assemble_contrib StarPU codelet
       struct starpu_codelet cl_subtree_assemble_contrib;
 

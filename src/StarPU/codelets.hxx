@@ -161,6 +161,13 @@ namespace starpu {
       cl_subtree_assemble.name = "SubtreeAssemble";
       cl_subtree_assemble.cpu_funcs[0] = subtree_assemble_cpu_func<T, PoolAlloc>;
 
+      // subtree_assemble_block StarPU codelet
+      starpu_codelet_init(&cl_subtree_assemble_block);
+      cl_subtree_assemble_block.where = STARPU_CPU;
+      cl_subtree_assemble_block.nbuffers = STARPU_VARIABLE_NBUFFERS;
+      cl_subtree_assemble_block.name = "SubtreeAssembleBlk";
+      cl_subtree_assemble_block.cpu_funcs[0] = subtree_assemble_block_cpu_func<T, PoolAlloc>;
+      
       // subtree_assemble_contrib StarPU codelet
       starpu_codelet_init(&cl_subtree_assemble_contrib);
       cl_subtree_assemble_contrib.where = STARPU_CPU;
