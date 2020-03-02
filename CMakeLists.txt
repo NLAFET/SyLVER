@@ -393,6 +393,7 @@ if(SYLVER_ENABLE_CUDA)
   else()
     find_package(CUDA REQUIRED)
 
+    string(APPEND CUDA_NVCC_FLAGS " -std=c++11")
     string(APPEND CUDA_NVCC_FLAGS " -g -O2")
 
     # string(APPEND CUDA_NVCC_FLAGS "-g")
