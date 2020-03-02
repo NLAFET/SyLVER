@@ -93,15 +93,23 @@ namespace spldlt {
                int col_m = m - first_col;
                int col_ld = col_m;
                size_t col_dimn = col_ld*blk_n;
-               T *col = (col_dimn>0) ? 
-                  PATraits::allocate(this->pool_alloc(), col_dimn) : nullptr;  
+               T *col = nullptr;
+
+               if (col_dimn>0) {
+                  // Allocate block column in memory
+                  col = PATraits::allocate(this->pool_alloc(), col_dimn);
+#if defined(SPLDLT_USE_STARPU)
+#if defined(SPLDLT_USE_GPU)
+                  int ret = starpu_memory_pin(col, col_dimn*sizeof(T));
+                  STARPU_CHECK_RETURN_VALUE(ret, "starpu_memory_pin");
+#endif
+#endif
+               }
 
                for(int i = j; i < nr; i++) {
 
                   int row = std::max(i*this->blksz(), n) - first_col; 
                   assert(row >= 0);
-                  // this->contrib_blocks[(j-rsa)*ncontrib+(i-rsa)].a = &col[row];
-                  // this->contrib_blocks[(j-rsa)*ncontrib+(i-rsa)].lda = col_ld; 
                   this->contrib_block(i, j).a = &col[row];
                   this->contrib_block(i, j).lda = col_ld; 
 
@@ -152,8 +160,16 @@ namespace spldlt {
                // Diagonal block holding the data for the block-column
                T *col = this->contrib_blocks[j*(ncontrib+1)].a;
                assert(col != nullptr);
-               PATraits::deallocate(this->pool_alloc(), col, col_dimn);
 
+#if defined(SPLDLT_USE_STARPU)
+#if defined(SPLDLT_USE_GPU)
+                  int ret = starpu_memory_unpin(col, col_dimn*sizeof(T));
+                  STARPU_CHECK_RETURN_VALUE(ret, "starpu_memory_unpin");
+#endif
+#endif
+               
+               PATraits::deallocate(this->pool_alloc(), col, col_dimn);
+               
                for(int i = j; i < ncontrib; i++) {
 
                   int row = i*this->blksz() - first_col; 
@@ -180,16 +196,17 @@ namespace spldlt {
       /// zeroing
       void zero_contrib_blocks() {
 
-         int m = this->nrow();
-         int n = this->ncol();            
-         size_t contrib_dimn = m-n; // Dimension of contribution block
+         int const m = this->nrow();
+         int const n = this->ncol();            
+         size_t const contrib_dimn = m-n; // Dimension of contribution block
          if (contrib_dimn>0 && this->contrib_blocks.size()>0) {
-            int nr = this->nr(); // number of block rows in front amtrix
-            int rsa = n / this->blksz(); // index of first block in contribution blocks  
-            int ncontrib = nr-rsa;
+            int const nr = this->nr(); // number of block rows in front amtrix
+            int const rsa = n / this->blksz(); // index of first block in contribution blocks  
+            int const ncontrib = nr-rsa;
             for(int j = 0; j < ncontrib; j++) {
                for(int i = j; i < ncontrib; i++) {
-                  this->contrib_blocks[j*ncontrib+i].zero();
+                  // this->contrib_blocks[j*ncontrib+i].zero();
+                  this->contrib_block(i,j).zero();
                }
             }            
          }

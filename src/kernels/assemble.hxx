@@ -373,7 +373,8 @@ namespace spldlt {
 
 #if defined(SPLDLT_USE_STARPU)
 #if defined(SPLDLT_USE_GPU)
-      starpu_memory_pin(front.lcol, len*sizeof(T));
+      int ret = starpu_memory_pin(front.lcol, len*sizeof(T));
+      STARPU_CHECK_RETURN_VALUE(ret, "starpu_memory_pin");
 #endif
 #endif
       int err;
@@ -443,6 +444,14 @@ namespace spldlt {
       size_t len =  (ldl+2) * ncol; // indef (includes D)
 
       front.lcol = FATypeTraits::allocate(factor_alloc_type, len);
+      assert(front.lcol != nullptr);
+
+#if defined(SPLDLT_USE_STARPU)
+#if defined(SPLDLT_USE_GPU)
+      int ret = starpu_memory_pin(front.lcol, len*sizeof(T));
+      STARPU_CHECK_RETURN_VALUE(ret, "starpu_memory_pin");
+#endif
+#endif
       
       // Get space for contribution block + (explicitly do not zero it!)
       front.alloc_contrib_blocks();

@@ -46,7 +46,7 @@ namespace sylver {
          if(!a) return;
          for (int j = 0; j < n; j++) {
             for (int i = 0; i < m; i++) {
-               a[j*lda+i] = 0.0;
+               a[j*lda+i] = static_cast<T>(0.0);
             }
          }
       }

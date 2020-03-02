@@ -3,6 +3,7 @@
 /// @author Florent Lopez
 #pragma once
 
+#include "BlockBase.hxx"
 #include "kernels/ldlt_app.hxx"
 #include "kernels/factor_unsym.hxx"
 
