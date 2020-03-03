@@ -97,6 +97,10 @@ contains
        ! Zero the total number of CPU cores available in the NUMA regions
        ncpu_tot = 0
        do i = 1, c_nregions
+          if (f_regions(i)%nproc .le. 0) then
+             ! If the current NUMA region has no cores, we ignore it
+             cycle
+          end if
           ! Add NUMA region
           nregions = nregions + 1
           ! Add corresponding CPU cores
@@ -109,6 +113,10 @@ contains
        allocate(regions(nregions), stat=st)
        if (st .ne. 0) return
        do i = 1, nregions
+          if (f_regions(i)%nproc .le. 0) then
+             ! If the current NUMA region has no cores, we ignore it
+             cycle
+          end if
           regions(i)%nproc = f_regions(i)%nproc
           allocate(regions(i)%gpus(0), stat=st)
        end do
