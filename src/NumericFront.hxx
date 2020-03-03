@@ -164,7 +164,7 @@ namespace spldlt {
 #if defined(SPLDLT_USE_STARPU)
 #if defined(SPLDLT_USE_GPU)
                   int ret = starpu_memory_unpin(col, col_dimn*sizeof(T));
-                  STARPU_CHECK_RETURN_VALUE(ret, "starpu_memory_unpin");
+                  // STARPU_CHECK_RETURN_VALUE(ret, "starpu_memory_unpin");
 #endif
 #endif
                
