@@ -72,9 +72,9 @@ can be useful to fill the ``--with-blas`` and ``--with-lapack``
 options.
 
 When compiling SyLVER you need to provide both the path to the SPRAL
-source directory which can be given using the ``-DSPRAL_SRC_DIR``
+source directory which can be given using the ``-D SPRAL_SRC_DIR``
 CMake option or the ``SPRAL_SRC_DIR`` environment variable and the
-path to the SPRAL library which can be given using the ``-DSPRAL_DIR``
+path to the SPRAL library which can be given using the ``-D SPRAL_DIR``
 CMake option or the ``SPRAL_DIR`` environment variable.
                 
 METIS
@@ -86,7 +86,7 @@ needed when linking the SyLVER package for building examples and test
 drivers.
 
 When compiling SyLVER you can provide the path to the MeTiS library
-using either ``-DMETIS_DIR`` CMake option or the ``METIS_DIR``
+using either ``-D METIS_DIR`` CMake option or the ``METIS_DIR``
 environment variable.
 
 hwloc
@@ -127,12 +127,12 @@ These libraries are found via the CMake scripts `FindBLAS
 <https://cmake.org/cmake/help/latest/module/FindBLAS.html>`_ and
 `FindLAPACK
 <https://cmake.org/cmake/help/latest/module/FindBLAS.html>`_ and
-therefore it is possible to use the options ``-DBLA_VENDOR`` to
+therefore it is possible to use the options ``-D BLA_VENDOR`` to
 indicate which libraries to use. For example:
 
 .. code-block:: bash
 
-   cmake <path-to-source> -DBLA_VENDOR=Intel10_64lp_seq # configure compilation
+   cmake <path-to-source> -D BLA_VENDOR=Intel10_64lp_seq # configure compilation
 
 selects and locates the sequential BLAS and LAPACK implementation for
 the compilation and when linking test drivers, example and tests.
