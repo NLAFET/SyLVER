@@ -31,14 +31,15 @@
 #include <starpu.h>
 #endif
 
+namespace sylver {
 namespace spldlt {
 
    template<typename T,
-            size_t PAGE_SIZE,
+            std::size_t PAGE_SIZE,
             typename FactorAllocator,
             bool posdef>
    class NumericTree {
-      typedef spldlt::BuddyAllocator<T,std::allocator<T>> PoolAllocator;
+      typedef ::sylver::BuddyAllocator<T,std::allocator<T>> PoolAllocator;
       typedef CopyBackup<T, PoolAllocator> Backup;
    public:
 
@@ -801,4 +802,4 @@ namespace spldlt {
         // memory e.g. contribution blocks.
    };
          
-} /* end of namespace spldlt */
+}} // End of namespace sylver::spldlt

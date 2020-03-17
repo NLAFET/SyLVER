@@ -16,6 +16,7 @@
 // SSIDS
 #include "ssids/cpu/cpu_iface.hxx"
 
+namespace sylver {
 namespace spldlt {
 
    template <typename T, typename PoolAllocator>
@@ -352,4 +353,4 @@ namespace spldlt {
       std::vector<BlockSpec> blocks;
    };
 
-} /* namespaces spldlt */
+}} // End of namespaces sylver::spldlt

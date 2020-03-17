@@ -18,7 +18,7 @@
 #endif
 #include <vector>
 
-namespace spldlt {
+namespace sylver {
 
 namespace buddy_alloc_internal {
 

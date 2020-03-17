@@ -12,6 +12,7 @@
 #include "StarPU/kernels_indef.hxx"
 #endif
 
+namespace sylver {
 namespace spldlt {
 
 
@@ -126,7 +127,7 @@ namespace spldlt {
 
       assemble_notask(n, node, child_contrib, pool_alloc);
 
-#endif      
+#endif
    }
 
-} // end of namespace spldlt
+}} // end of namespace sylver::spldlt

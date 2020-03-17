@@ -9,6 +9,7 @@
 #include "StarPU/factor_indef.hxx"
 #endif
 
+namespace sylver {
 namespace spldlt {
 
    ////////////////////////////////////////////////////////////
@@ -84,4 +85,4 @@ namespace spldlt {
 
    }
    
-} // end of namespace spldlt
+}} // End of namespace sylver::spldlt

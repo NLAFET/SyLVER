@@ -42,6 +42,7 @@
 
 #include "BuddyAllocator.hxx"
 
+namespace sylver {
 namespace spldlt {
 
    const int INNER_BLOCK_SIZE = 32;
@@ -1467,6 +1468,6 @@ private:
 
 // };
 
-} /* namespace spldlt::ldlt_app_internal */
+} // End of namespace sylver::spldlt::ldlt_app_internal
 
-} /* namespaces spldlt */
+}} // End of namespaces sylver::spldlt

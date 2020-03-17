@@ -7,8 +7,6 @@
 #include "sylver_ciface.hxx"
 #include "AppendAlloc.hxx"
 
-using namespace spldlt; // TODO remove or change to sylver namespace if necessary
-
 namespace {
    typedef double T; // Working precision
    typedef sylver::AppendAlloc<T> FactorAlloc; // Factor allocator

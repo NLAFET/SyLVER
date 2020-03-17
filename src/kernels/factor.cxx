@@ -4,6 +4,7 @@
 
 #include "factor.hxx"
 
+namespace sylver {
 namespace spldlt {
 
    // @brief Factor subtree kernel in double precision
@@ -62,4 +63,5 @@ namespace spldlt {
 
       spldlt_factor_subtree_c(akeep, fkeep, p, aval, scaling, child_contrib, options, stats);
    }
-}
+
+}} // End of namespace sylver::spldlt

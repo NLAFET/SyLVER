@@ -30,7 +30,7 @@ namespace splu {
    /// assembly tree.
    template<typename T, typename FactorAllocator, bool diagdom, size_t PAGE_SIZE>
    class NumericTreeUnsym {
-      typedef spldlt::BuddyAllocator<T,std::allocator<T>> PoolAllocator;
+      typedef ::sylver::BuddyAllocator<T,std::allocator<T>> PoolAllocator;
    public:
       // Delete copy constructors for safety re allocated memory
       NumericTreeUnsym(const NumericTreeUnsym&) =delete;

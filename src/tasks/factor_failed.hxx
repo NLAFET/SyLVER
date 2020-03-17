@@ -10,6 +10,7 @@
 // STD
 #include <assert.h>
 
+namespace sylver {
 namespace spldlt {
 
    ////////////////////////////////////////////////////////////
@@ -69,4 +70,4 @@ namespace spldlt {
    }
 
 
-} // end of namespace spldlt
+}} // end of namespace sylver::spldlt

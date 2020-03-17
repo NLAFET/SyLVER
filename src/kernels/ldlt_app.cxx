@@ -6,6 +6,8 @@
 #include "kernels/ldlt_app.hxx"
 
 // namespace spral { namespace ssids { namespace cpu {
+
+namespace sylver {
 namespace spldlt {
 
 using namespace spral::ssids::cpu;
@@ -105,4 +107,4 @@ template void ldlt_app_solve_bwd<double>(int, int, double const*, int, int, doub
 
 // }}} /* namespaces spral::ssids::cpu */
 
-}
+}} // End of namespace sylver::spldlt

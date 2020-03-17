@@ -17,6 +17,7 @@
 // #include "ssids/cpu/kernels/assemble.hxx"
 #include "ssids/contrib.h"
 
+namespace sylver {
 namespace spldlt {
 
 #if defined(SPLDLT_USE_STARPU)
@@ -1518,5 +1519,5 @@ namespace spldlt {
 
    } // assemble_contrib_notask
 
-} /* end of namespace spldlt */
+}} // End of namespace sylver::spldlt
 

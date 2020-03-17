@@ -27,6 +27,7 @@
 #include <starpu_cublas_v2.h>
 #endif
 
+namespace sylver {
 namespace spldlt {
 namespace starpu {
    
@@ -1184,4 +1185,4 @@ namespace starpu {
       delete[] descrs;
    }
       
-}} /* namespaces spldlt::starpu  */
+}}} // End of namespaces sylver::spldlt::starpu

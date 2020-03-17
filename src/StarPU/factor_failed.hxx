@@ -24,7 +24,7 @@ namespace starpu {
    template <typename T, typename PoolAlloc>
    void factor_front_indef_failed_cpu_func(void *buffers[], void *cl_arg) {
          
-      ::spldlt::NumericFront<T, PoolAlloc> *node = nullptr;
+      sylver::spldlt::NumericFront<T, PoolAlloc> *node = nullptr;
       std::vector<spral::ssids::cpu::Workspace> *workspaces = nullptr;
       sylver::options_t *options = nullptr;
       std::vector<sylver::inform_t> *worker_stats = nullptr;
@@ -52,7 +52,7 @@ namespace starpu {
          starpu_data_handle_t col_hdl,
          starpu_data_handle_t contrib_hdl,
          starpu_data_handle_t *hdls, int nhdl,
-         ::spldlt::NumericFront<T, PoolAlloc> *node,
+         sylver::spldlt::NumericFront<T, PoolAlloc> *node,
          std::vector<spral::ssids::cpu::Workspace> *workspaces,
          sylver::options_t *options,
          std::vector<sylver::inform_t> *worker_stats
@@ -79,7 +79,7 @@ namespace starpu {
             // STARPU_RW, col_hdl,
             // STARPU_RW, contrib_hdl,
             STARPU_DATA_MODE_ARRAY, descrs, nh,
-            STARPU_VALUE, &node, sizeof(::spldlt::NumericFront<T, PoolAlloc>*),
+            STARPU_VALUE, &node, sizeof(sylver::spldlt::NumericFront<T, PoolAlloc>*),
             STARPU_VALUE, &workspaces, sizeof(std::vector<spral::ssids::cpu::Workspace>*),
             STARPU_VALUE, &options, sizeof(sylver::options_t*),
             STARPU_VALUE, &worker_stats, sizeof(std::vector<sylver::inform_t>*),

@@ -14,13 +14,13 @@
 #if defined(SPLDLT_USE_STARPU)
 #include "StarPU/codelets.hxx"
 #include "StarPU/kernels_indef.hxx"
-using namespace spldlt::starpu;
 #endif
 #include "Tile.hxx"
 
 // SSIDS
 #include "ssids/cpu/kernels/ldlt_nopiv.hxx"
 
+namespace sylver {
 namespace spldlt {
 
    /// @brief Factor subtree
@@ -192,7 +192,7 @@ namespace spldlt {
    template <typename T, int iblksz, typename Backup, typename PoolAlloc>
    void factor_indef_init() {
 #if defined(SPLDLT_USE_STARPU)
-      codelet_init_indef<T, iblksz, Backup, PoolAlloc>();
+      sylver::spldlt::starpu::codelet_init_indef<T, iblksz, Backup, PoolAlloc>();
       // spldlt::starpu::codelet_init<T, FactorAllocator, PoolAllocator>();
       // spldlt::starpu::codelet_init_indef<T, iblksz, Backup, PoolAllocator>();
       // spldlt::starpu::codelet_init_factor_indef<T, PoolAllocator>();
@@ -275,7 +275,7 @@ namespace spldlt {
 
          // printf("[factor_block_app_task] m = %d, n = %d\n", dblk.get_m(), dblk.get_n());
 
-         spldlt::starpu::insert_factor_block_app(
+         sylver::spldlt::starpu::insert_factor_block_app(
                dblk.get_hdl(), cdata[blk].get_d_hdl(), cdata[blk].get_hdl(),
                dblk.get_m(), dblk.get_n(), 
                blk,
@@ -318,7 +318,7 @@ namespace spldlt {
 
 #if defined(SPLDLT_USE_STARPU)
 
-         spldlt::starpu::insert_applyN_block_app(
+         sylver::spldlt::starpu::insert_applyN_block_app(
                dblk.get_hdl(), rblk.get_hdl(),
                cdata[blk].get_hdl(),
                dblk.get_m(), dblk.get_n(), 
@@ -354,7 +354,7 @@ namespace spldlt {
 
 #if defined(SPLDLT_USE_STARPU)
 
-         spldlt::starpu::insert_applyT_block_app (
+         sylver::spldlt::starpu::insert_applyT_block_app (
                dblk.get_hdl(), cblk.get_hdl(),
                cdata[blk].get_hdl(),
                dblk.get_m(), dblk.get_n(), 
@@ -393,7 +393,7 @@ namespace spldlt {
 
 #if defined(SPLDLT_USE_STARPU)
 
-         spldlt::starpu::insert_updateN_block_app(
+         sylver::spldlt::starpu::insert_updateN_block_app(
                isrc.get_hdl(), jsrc.get_hdl(), ublk.get_hdl(), 
                cdata[blk].get_d_hdl(), cdata[blk].get_hdl(),
                ublk.get_m(), ublk.get_n(), 
@@ -445,7 +445,7 @@ namespace spldlt {
 
 #if defined(SPLDLT_USE_STARPU)
          
-         spldlt::starpu::insert_updateT_block_app(
+         sylver::spldlt::starpu::insert_updateT_block_app(
                isrc.get_hdl(), jsrc.get_hdl(), ublk.get_hdl(), 
                cdata[blk].get_hdl(),
                ublk.get_m(), ublk.get_n(),
@@ -476,7 +476,7 @@ namespace spldlt {
 
 #if defined(SPLDLT_USE_STARPU)
 
-         spldlt::starpu::insert_adjust(
+         sylver::spldlt::starpu::insert_adjust(
                cdata[blk].get_hdl(), blk,
                &next_elim, &cdata,
                ADJUST_APP_PRIO);
@@ -521,7 +521,7 @@ namespace spldlt {
 
 #if defined(SPLDLT_USE_STARPU)
 
-         spldlt::starpu::insert_restore_failed_block_app(
+         sylver::spldlt::starpu::insert_restore_failed_block_app(
                jblk.get_hdl(), blk.get_hdl(), cdata[elim_col].get_hdl(),
                blk.get_m(), blk.get_n(),
                blk.get_row(), blk.get_col(), elim_col,
@@ -1240,7 +1240,7 @@ namespace spldlt {
          for (int c = 0; c < nblk; c++)
             col_hdls[c] = cdata[c].get_hdl();
             
-         insert_permute_failed(
+         sylver::spldlt::starpu::insert_permute_failed(
                col_hdls, nblk,
                &node, &alloc);
 
@@ -2003,4 +2003,4 @@ namespace spldlt {
       }
    };
 
-} /* namespace spldlt */
+}} // End of namespace sylver::spldlt

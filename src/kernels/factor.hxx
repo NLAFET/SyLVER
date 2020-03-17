@@ -13,6 +13,7 @@
 #include "ssids/cpu/cpu_iface.hxx"
 #include "ssids/cpu/ThreadStats.hxx"
 
+namespace sylver {
 namespace spldlt {
 
    // @brief Factor subtree kernel in double precision
@@ -391,4 +392,4 @@ namespace spldlt {
    //          work, rowmap, colmap);
    // }
 
-} // End of namespace spldlt
+}} // End of namespace sylver::spldlt

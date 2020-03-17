@@ -7,6 +7,7 @@
 // SSIDS
 #include "ssids/contrib.h"
 
+namespace sylver {
 namespace spldlt {
 
    // @brief Retrieve contrib data from subtree for assembly
@@ -36,4 +37,5 @@ namespace spldlt {
       // Call specialised routine
       spral_ssids_contrib_get_data(contrib, n, val, ldval, rlist, ndelay, delay_perm, delay_val, lddelay);
    }
-}
+
+}} // End of namespace sylver::spldlt

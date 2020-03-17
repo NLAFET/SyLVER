@@ -8,6 +8,7 @@
 #include <cassert>
 #include <cmath>
 
+namespace sylver {
 namespace spldlt {
 
    /// @brief Permute rows r1 and r2 in a.
@@ -107,4 +108,4 @@ namespace spldlt {
       }
    }
 
-} // end of namespace spldlt
+}} // End of namespace syler::spldlt

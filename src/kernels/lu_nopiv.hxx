@@ -5,7 +5,8 @@
 
 #include <cassert>
 
-namespace spldlt {
+namespace sylver {
+namespace splu {
 
    /// @param m number of rows
    /// @param n number of columns
@@ -71,4 +72,4 @@ namespace spldlt {
 
    }
    
-} // end of namespace spldlt
+}} // End of namespace sylver::splu

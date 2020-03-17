@@ -6,8 +6,6 @@
 #include "NumericTree.hxx"
 #include "AppendAlloc.hxx"
 
-// #include "ssids/cpu/AppendAlloc.hxx"
-
 #include <memory>
 
 using namespace sylver;

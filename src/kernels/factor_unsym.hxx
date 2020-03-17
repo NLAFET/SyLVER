@@ -7,7 +7,8 @@
 #include "kernels/wrappers.hxx"
 #include "kernels/lu_pp.hxx"
 
-namespace spldlt {
+namespace sylver {
+namespace splu {
    
    ////////////////////////////////////////////////////////////
 
@@ -127,4 +128,4 @@ namespace spldlt {
 
    }
 
-} // end of namespace spldlt
+}} // end of namespace sylver::splu

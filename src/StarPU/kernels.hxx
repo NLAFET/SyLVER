@@ -28,6 +28,7 @@
 #include "omp.hxx"
 #endif
 
+namespace sylver {
 namespace spldlt {
 namespace starpu {
 
@@ -986,6 +987,8 @@ namespace starpu {
             &node, &csnode,
             &child_contrib, &contrib_idx,
             &i, &j);
+
+      assert((i >= 0) && (j >= 0));
       
       assemble_subtree_block(
             *node, *csnode, child_contrib, contrib_idx, i, j);
@@ -1504,4 +1507,4 @@ namespace starpu {
       delete[] descrs;
    }
 
-}} // namespaces spldlt::starpu
+}}} // namespaces sylver::spldlt::starpu

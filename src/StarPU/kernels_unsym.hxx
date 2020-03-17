@@ -13,4 +13,4 @@ namespace starpu {
       
    extern starpu_data_handle_t workspace_hdl;
 
-}}}
+}}} // End of namespace sylver::splu::starpu

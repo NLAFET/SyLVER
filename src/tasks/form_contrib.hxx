@@ -18,6 +18,7 @@
 // SSIDS
 #include "ssids/cpu/Workspace.hxx"
 
+namespace sylver {
 namespace spldlt {
 
    template <typename T, typename PoolAlloc>
@@ -118,4 +119,4 @@ namespace spldlt {
    }
    
    
-} // end of namespace spldlt
+}} // end of namespace sylver::spldlt

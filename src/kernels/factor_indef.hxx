@@ -14,6 +14,7 @@
 #include "ssids/cpu/Workspace.hxx"
 #include "ssids/cpu/kernels/calc_ld.hxx"
 
+namespace sylver {
 namespace spldlt {
 
    /// @brief Performs update of contribution block
@@ -336,4 +337,4 @@ namespace spldlt {
       // }
    }
 
-} // end of namespace spldlt
+}} // End of namespace sylver::spldlt

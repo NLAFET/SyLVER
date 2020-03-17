@@ -5,7 +5,8 @@
 
 #include "kernels/common.hxx"
 
-namespace spldlt {
+namespace sylver {
+namespace splu {
 
    template <typename T>
    void swap_rc(int r1, int r2, int c1, int c2, int m, int *rperm, int *cperm, 
@@ -126,4 +127,4 @@ namespace spldlt {
       return nelim;
    }
 
-} // end of namespace spldlt
+}} // End of namespace splu

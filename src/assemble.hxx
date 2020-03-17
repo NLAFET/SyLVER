@@ -7,7 +7,9 @@
 #include "SymbolicFront.hxx"
 #include "NumericFront.hxx"
 #include "tasks.hxx"
+#include "tasks/indef.hxx"
 
+namespace sylver {
 namespace spldlt {
 
    ////////////////////////////////////////////////////////////////////////////////   
@@ -256,4 +258,4 @@ namespace spldlt {
 
    } // assemble
 
-} // end of namespace spldlt
+}} // End of namespace sylver::spldlt

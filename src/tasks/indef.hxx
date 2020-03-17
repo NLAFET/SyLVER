@@ -17,6 +17,7 @@
 // SSIDS 
 #include "ssids/cpu/cpu_iface.hxx"
 
+namespace sylver {
 namespace spldlt {
 
    ////////////////////////////////////////////////////////////
@@ -343,4 +344,4 @@ namespace spldlt {
 #endif
    }
    
-} // namespace spldlt
+}} // namespace sylver::spldlt

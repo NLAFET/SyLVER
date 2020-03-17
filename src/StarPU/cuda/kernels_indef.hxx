@@ -46,7 +46,7 @@ namespace starpu {
       int jblk; // destination block's column index     
       int blk; // source block's column index     
 
-      ::spldlt::ldlt_app_internal::ColumnData<T,IntAlloc> *cdata = nullptr;
+      sylver::spldlt::ldlt_app_internal::ColumnData<T,IntAlloc> *cdata = nullptr;
       Backup *backup = nullptr;
          
       T beta;
@@ -78,7 +78,7 @@ namespace starpu {
       cudaStream_t stream = starpu_cuda_get_local_stream();
       cublasHandle_t handle = starpu_cublas_get_local_handle();
 
-      ::spldlt::gpu::update_block(
+      sylver::spldlt::gpu::update_block(
             stream, handle,
             updm, updn,
             d_lij, ld_lij,
@@ -117,7 +117,7 @@ namespace starpu {
       T *d_ld = (T *)STARPU_MATRIX_GET_PTR(buffers[4]); // Get pointer on scratch memory
       unsigned ldld = STARPU_MATRIX_GET_LD(buffers[4]); // Get leading dimensions
 
-      ::spldlt::NumericFront<T, PoolAlloc> *node = nullptr;
+      sylver::spldlt::NumericFront<T, PoolAlloc> *node = nullptr;
       int k, i, j;
       std::vector<spral::ssids::cpu::Workspace> *workspaces;
 
@@ -127,7 +127,7 @@ namespace starpu {
       cudaStream_t stream = starpu_cuda_get_local_stream();
       cublasHandle_t handle = starpu_cublas_get_local_handle();
          
-      ::spldlt::gpu::update_contrib_block_app
+      sylver::spldlt::gpu::update_contrib_block_app
            <T, IntAlloc, PoolAlloc>(
                  stream, handle,
                  *node,

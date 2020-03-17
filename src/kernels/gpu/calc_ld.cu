@@ -131,6 +131,7 @@ namespace /* anon */ {
 
 } // end of anon namespace
 
+namespace sylver {
 namespace spldlt {
 namespace gpu {
    
@@ -160,4 +161,4 @@ namespace gpu {
          (m, n, l, ldl, d, ld, ldld);
 
    }
-}} // End of namespace spldlt::gpu
+}}} // End of namespace sylver::spldlt::gpu

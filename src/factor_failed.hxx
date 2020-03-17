@@ -27,15 +27,15 @@ namespace spldlt {
    /// @brief Factor the failed pivots in a frontal matrix
    template <typename T, typename PoolAlloc>
    void factor_front_indef_failed(
-         ::spldlt::NumericFront<T, PoolAlloc>& node,
+         sylver::spldlt::NumericFront<T, PoolAlloc>& node,
          std::vector<spral::ssids::cpu::Workspace>& workspaces, 
          // spral::ssids::cpu::Workspace& work,
          sylver::options_t& options,
          sylver::inform_t& stats) {
 
-      int m = node.nrow();
-      int n = node.ncol();
-      size_t ldl = node.ldl();
+      int const m = node.nrow();
+      int const n = node.ncol();
+      size_t const ldl = node.ldl();
       T *lcol = node.lcol;
       T *d = &lcol[n*ldl];
       int *perm = node.perm;
@@ -143,7 +143,7 @@ namespace spldlt {
 #if defined(SPLDLT_USE_STARPU)
 // #if defined(SPLDLT_USE_GPU)
       // if(!formcb) {
-      int nodeidx = node.symb().idx;
+      int const nodeidx = node.symb().idx;
       // printf("[factor_front_indef_failed] nodeidx = %d\n", nodeidx);
       starpu_tag_t tag_factor_failed = (starpu_tag_t) (3*nodeidx+2);
       starpu_tag_notify_from_apps(tag_factor_failed);
