@@ -84,10 +84,10 @@ namespace spldlt {
 #if defined(SPLDLT_USE_STARPU)
 
       // Node info
-      int blksz = node.blksz();
-      int ncol = node.ncol(); // Number of block-rows in destination node
-      int nr = node.nr(); // Number of block-rows in destination node
-      int nc = node.nc(); // Number of block-columns in destination node
+      int const blksz = node.blksz();
+      int const ncol = node.ncol(); // Number of block-rows in destination node
+      int const nr = node.nr(); // Number of block-rows in destination node
+      int const nc = node.nc(); // Number of block-columns in destination node
       starpu_data_handle_t *hdls = new starpu_data_handle_t[nr*nc];
       int nh = 0; // Number of handles/blocks in node
 
