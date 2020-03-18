@@ -9,12 +9,12 @@
 #include "BuddyAllocator.hxx"
 #include "SymbolicTree.hxx"
 #include "NumericFront.hxx"
-#include "tasks.hxx"
 #include "factor.hxx"
 #include "factor_indef.hxx"
 #include "assemble.hxx"
-#include "tasks_factor_indef.hxx"
 #include "tasks/assemble.hxx"
+#include "tasks/factor_indef.hxx"
+#include "tasks/tasks.hxx"
 #if defined(SPLDLT_USE_STARPU)
 #include "StarPU/codelets.hxx"
 #endif

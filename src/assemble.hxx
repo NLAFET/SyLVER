@@ -6,8 +6,8 @@
 // SyLVER
 #include "SymbolicFront.hxx"
 #include "NumericFront.hxx"
-#include "tasks.hxx"
 #include "tasks/indef.hxx"
+#include "tasks/tasks.hxx"
 
 namespace sylver {
 namespace spldlt {

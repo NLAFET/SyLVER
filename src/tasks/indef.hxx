@@ -4,8 +4,9 @@
 #pragma once
 
 // SyLVER
-#include "kernels/ldlt_app.hxx"
+#include "kernels/assemble.hxx"
 #include "kernels/factor_indef.hxx"
+#include "kernels/ldlt_app.hxx"
 #include "Tile.hxx"
 // STD
 #include <assert.h>

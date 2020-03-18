@@ -33,8 +33,6 @@ set(sources
   SymbolicFront.hxx
   SymbolicTree.cxx
   SymbolicTree.hxx
-  tasks_factor_indef.hxx
-  tasks.hxx
   Tile.hxx
   topology.cxx
   topology.hxx)
@@ -42,8 +40,10 @@ set(sources
 set(tasks_sources
   tasks/assemble.hxx
   tasks/factor_failed.hxx
+  tasks/factor_indef.hxx
   tasks/form_contrib.hxx
   tasks/indef.hxx
+  tasks/tasks.hxx
   tasks/unsym.hxx)
   
 # get kernel source file
