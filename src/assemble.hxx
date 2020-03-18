@@ -76,13 +76,16 @@ namespace spldlt {
 // #if defined(SPLDLT_USE_STARPU)
 //             starpu_task_wait_for_all();
 // #endif
+
+               // Serial assembly of contrib block into parent fronts.
                assemble_contrib_subtree_task(
                      node, child_sfront, child_contrib,
                      child_sfront.contrib_idx, child_sfront.map,
-                     ASSEMBLE_PRIO);
-// #if defined(SPLDLT_USE_STARPU)
-//             starpu_task_wait_for_all();
-// #endif
+                     ASSEMBLE_PRIO);               
+
+               // #if defined(SPLDLT_USE_STARPU)
+               //             starpu_task_wait_for_all();
+               // #endif
 
             }
             else {                     
@@ -246,6 +249,7 @@ namespace spldlt {
             // assemble_subtree(node, csnode, child_contrib, csnode.contrib_idx);
 
             // Task call (asynchronous)
+            // Serial assembly
             assemble_subtree_task(
                   node, csnode, child_contrib, csnode.contrib_idx,
                   csnode.map, ASSEMBLE_PRIO);

@@ -544,8 +544,76 @@ namespace spldlt {
 //    }
 
    
+
    ////////////////////////////////////////////////////////////
-   // Assemble subtree task
+   // assemble_subtree_block_task
+
+   template <typename T, typename PoolAlloc>   
+   void assemble_subtree_block_task(
+         NumericFront<T,PoolAlloc>& front, // Destination node 
+         sylver::SymbolicFront const& csfront, // Root of the subtree
+         int ii, int jj,
+         void** child_contrib, 
+         int contrib_idx, // Index of subtree to assemble
+         int prio) {
+
+      assert((ii >= 0) && (jj >= 0));
+      assert(nullptr != csfront.map);
+      
+#if defined(SPLDLT_USE_STARPU)
+
+      // Destination node info
+      //
+      int const blksz = front.blksz();
+      int const ncol = front.ncol();
+      // Number of block-rows in destination node
+      int const nr = front.nr();
+      // Number of block-columns in destination node
+      int const nc = front.nc();
+
+      // Block column index in destination node
+      int cc = -1;
+      // Block row index in destination node
+      int rr = -1;
+
+      // Source node info
+      //
+      // Contrib block dimensions 
+      int const cn = csfront.nrow - csfront.ncol;
+      
+      // Array of StarPU handles for destination blocks
+      starpu_data_handle_t *hdls = new starpu_data_handle_t[nr*nc];
+      // Number of destination blocks involved in assembly operation
+      int nh = 0;
+
+      // Loop over columns of block-column `jj` 
+      for(int j = jj*blksz;
+          j < std::min((jj+1)*blksz,cn); ++j) {               
+
+         int c = csfront.map[ j ]; // Destination column
+
+         if (cc == (c/blksz)) continue;
+         // Make sure we stay in fully-summed coefficients
+         if (c < front.symb().ncol) {
+
+            cc = c / blksz;
+            rr = -1;
+
+            //
+            // TODO..
+         }
+      }
+#else      
+
+      assemble_subtree_block(
+            front, csfront, child_contrib, contrib_idx, ii, jj);
+#endif
+      
+   }
+   
+   ////////////////////////////////////////////////////////////
+   // assemble_subtree_task
+   
    template <typename T, typename PoolAlloc>   
    void assemble_subtree_task(
          NumericFront<T,PoolAlloc>& front, // Destination node 
@@ -576,7 +644,7 @@ namespace spldlt {
          int c = cmap[ j ]; // Destination column
 
          if (cc == (c/blksz)) continue;
-         if (c < ncol) {
+         if (c < front.symb().ncol) {
 
             cc = c / blksz;
             rr = -1;
@@ -628,7 +696,6 @@ namespace spldlt {
 
 #if defined(SPLDLT_USE_STARPU)
 // #if 0
-      sylver::SymbolicFront const& snode = node.symb();
 
       int ncol = node.ncol();
       int nr = node.nr();
@@ -649,7 +716,7 @@ namespace spldlt {
 
          if (cc == (c/blksz)) continue;
 
-         if (c >= snode.ncol) {
+         if (c >= node.symb().ncol) {
 
             cc = c / blksz; // Destination block column
             rr = -1;
@@ -674,7 +741,7 @@ namespace spldlt {
          // printf("[assemble_contrib_subtree_task] nh = %d\n", nh);
 
          spldlt::starpu::insert_subtree_assemble_contrib(
-               &node, &csnode, snode.hdl, node.contrib_hdl(), csnode.hdl, hdls, nh, 
+               &node, &csnode, node.hdl(), node.contrib_hdl(), csnode.hdl, hdls, nh, 
                child_contrib, contrib_idx, prio);
       }
       
@@ -741,7 +808,7 @@ namespace spldlt {
 
          if (cc == (c/blksz)) continue;
 
-         if (c < ncol) {
+         if (c < node.symb().ncol) {
 
             cc = c/blksz;
             rr = -1;
