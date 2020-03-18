@@ -599,10 +599,32 @@ namespace spldlt {
             cc = c / blksz;
             rr = -1;
 
-            //
-            // TODO..
+            for (int i = std::max(ii*blksz, j) ;
+                 i < std::min((ii+1)*blksz,cn); ++i) {
+
+               // Row mapping index (in parent front) of the i-th rows
+               // in contribution block
+               int r = csfront.map[ i ];
+               
+               if (rr==(r/blksz)) continue;
+               rr = r/blksz;
+
+               hdls[nh] = front.block_hdl(rr,cc);
+               nh++;
+               
+            }
+
          }
       }
+
+      if (nh>0) {
+         sylver::spldlt::starpu::insert_subtree_assemble_block(
+               &front, &csfront, front.hdl(), csfront.hdl, hdls, nh,
+               child_contrib, contrib_idx, ii, jj);
+      }
+
+      delete[] hdls;
+
 #else      
 
       assemble_subtree_block(
@@ -643,6 +665,11 @@ namespace spldlt {
 
          int c = cmap[ j ]; // Destination column
 
+         // Make sure column is whitin the nodes dimensions
+         assert((c >= 0) && (c < front.nrow()));
+         // Make sure column is not in the delays
+         assert((c < front.symb().ncol) || (c >= front.ncol()));
+
          if (cc == (c/blksz)) continue;
          if (c < front.symb().ncol) {
 
@@ -651,14 +678,13 @@ namespace spldlt {
 
             for (int i = j ; i < cn; ++i) {
 
-               // Row index in parent front of i-th rows in
-               // contribution block
+               // Row mapping index (in parent front) of the i-th rows
+               // in contribution block
                int r = cmap[ i ];
                
                if (rr==(r/blksz)) continue;
                rr = r/blksz;
-               
-               // hdls[nh] = front.blocks[cc*nr+rr].get_hdl();
+
                hdls[nh] = front.block_hdl(rr,cc);
                nh++;            
             }
@@ -667,7 +693,7 @@ namespace spldlt {
 
       // Insert assembly tasks if there are any contributions
       if (nh>0) {
-         spldlt::starpu::insert_subtree_assemble(
+         sylver::spldlt::starpu::insert_subtree_assemble(
                &front, &csfront, front.hdl(), csfront.hdl, hdls, nh, 
                child_contrib, contrib_idx);
       }
@@ -683,6 +709,7 @@ namespace spldlt {
    
    ////////////////////////////////////////////////////////////
    // Subtree assemble contrib task
+
    template <typename T, typename PoolAlloc>   
    void assemble_contrib_subtree_task(
          NumericFront<T,PoolAlloc>& node, // Destination node
@@ -713,6 +740,11 @@ namespace spldlt {
       for(int j = 0; j < cn; ++j) {
 
          int c = cmap[ j ]; // Destination column
+
+         // Make sure column is whitin the nodes dimensions
+         assert((c >= 0) && (c < node.nrow()));
+         // Make sure column is not in the delays
+         assert((c < node.symb().ncol) || (c >= node.ncol()));
 
          if (cc == (c/blksz)) continue;
 
@@ -803,7 +835,6 @@ namespace spldlt {
       for (int j=c_sa; j<c_en; ++j) {
          
          // Column index in parent node.
-         // int c = map[ csnode.rlist[csnode.ncol+j] ];
          int c = cmap[ j ];
 
          if (cc == (c/blksz)) continue;
@@ -945,7 +976,7 @@ namespace spldlt {
       if (nh>0) {
          
          // Contrib block to assembled into node
-         sylver::Tile<T, PoolAlloc>& cb = cnode.contrib_block(ii, jj);
+         auto& cb = cnode.contrib_block(ii, jj);
 
          spldlt::starpu::insert_assemble_contrib_block(
                &node, &cnode, ii, jj, cmap, 
