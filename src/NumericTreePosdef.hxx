@@ -18,6 +18,7 @@
 #include <cstddef>
 #include <iostream>
 
+#include "ssids/cpu/kernels/cholesky.hxx"
 #include "ssids/cpu/Workspace.hxx"
 
 namespace sylver {
@@ -347,6 +348,116 @@ namespace spldlt {
 #endif
          }
 
+      }
+
+   public:
+      
+      void solve_fwd(int nrhs, double* x, int ldx) const {
+
+         // Allocate memory
+         double* xlocal = new double[nrhs*symb_.n];
+        
+         // Main loop
+         for(int ni=0; ni<symb_.nnodes(); ++ni) {
+
+            // Skip iteration if node is in a subtree
+            if (symb_[ni].exec_loc != -1) continue;
+
+            int m = symb_[ni].nrow;
+            int n = symb_[ni].ncol;
+            int nelim = n;
+            int ndin = 0;
+            int ldl = align_lda<T>(m);
+
+            // posdef there is no permutation
+            int const *map = symb_[ni].rlist;
+
+            // Gather into dense vector xlocal
+            // FIXME: don't bother copying elements of x > m, just use beta=0
+            //        in dgemm call and then add as we scatter
+            for(int r = 0; r < nrhs; ++r) {
+               for(int i = 0; i < m; ++i) {
+                  xlocal[r*symb_.n+i] = x[r*ldx + map[i]-1]; // Fortran indexed
+               }
+            }
+            
+            // Perform dense solve
+            spral::ssids::cpu::cholesky_solve_fwd(
+                  m, n, fronts_[ni].lcol, ldl, nrhs, xlocal, symb_.n);
+
+            // tests/debug
+            // spral::ssids::cpu::cholesky_solve_fwd(
+            //       m+ndin, nelim, fronts_[ni].lcol, ldl, nrhs, xlocal, symb_.n);
+
+
+            /* Scatter result */
+            for(int r=0; r<nrhs; ++r) {
+               for(int i=0; i<m; ++i) {
+                  x[r*ldx + map[i]-1] = xlocal[r*symb_.n+i];
+               }
+            }
+         }
+
+         /* Cleanup memory */
+         delete[] xlocal;
+      }
+
+      template <bool do_diag, bool do_bwd>
+      void solve_diag_bwd_inner(int nrhs, double* x, int ldx) const {
+         if(!do_bwd) return; // diagonal solve is a no-op for posdef
+
+         // Allocate memory - map only needed for indef bwd/diag_bwd solve
+         double* xlocal = new double[nrhs*symb_.n];
+         int* map_alloc = nullptr;
+
+         // Perform solve
+         for(int ni=symb_.nnodes()-1; ni>=0; --ni) {
+            
+            // Skip iteration if node is in a subtree
+            if (symb_[ni].exec_loc != -1) continue;
+
+            int m = symb_[ni].nrow;
+            int n = symb_[ni].ncol;
+            int nelim = n;
+
+            // Mapping array: no permutation
+            int const *map = symb_[ni].rlist;
+
+            /* Gather into dense vector xlocal */
+            int blkm = (do_bwd) ? m : nelim;
+            int ldl = align_lda<T>(m);
+            for(int r=0; r<nrhs; ++r)
+               for(int i=0; i<blkm; ++i)
+                  xlocal[r*symb_.n+i] = x[r*ldx + map[i]-1];
+
+            // Perform dense solve
+            spral::ssids::cpu::cholesky_solve_bwd(
+                  m, n, fronts_[ni].lcol, ldl, nrhs, xlocal, symb_.n);
+
+            // tests/debug
+            // spral::ssids::cpu::cholesky_solve_bwd(
+            //       m+ndin, nelim, fronts_[ni].lcol, ldl, nrhs, xlocal, symb_.n);
+
+            /* Scatter result (only first nelim entries have changed) */
+            for(int r=0; r<nrhs; ++r)
+               for(int i=0; i<nelim; ++i)
+                  x[r*ldx + map[i]-1] = xlocal[r*symb_.n+i];
+         }
+
+         /* Cleanup memory */
+         delete[] xlocal;
+      }
+
+      void solve_diag(int nrhs, double* x, int ldx) const {
+         solve_diag_bwd_inner<true, false>(nrhs, x, ldx);
+      }
+
+      void solve_diag_bwd(int nrhs, double* x, int ldx) const {
+         solve_diag_bwd_inner<true, true>(nrhs, x, ldx);
+      }
+
+      void solve_bwd(int nrhs, double* x, int ldx) const {
+         solve_diag_bwd_inner<false, true>(nrhs, x, ldx);
       }
 
    private:
