@@ -114,7 +114,7 @@ namespace spldlt {
 #if defined(SPLDLT_USE_STARPU)
          starpu_task_wait_for_all();
 
-         starpu_data_unregister(spldlt::starpu::workspace_hdl);
+         // starpu_data_unregister(spldlt::starpu::workspace_hdl);
 #endif
 
          // Initialize inform

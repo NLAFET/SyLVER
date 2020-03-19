@@ -545,10 +545,16 @@ contains
     scaling_c = c_null_ptr
     if (allocated(fkeep%scaling)) scaling_c = C_LOC(fkeep%scaling)
     call copy_options_f2c(options, coptions) ! Create C interoperable option structure
-    spldlt_fkeep%numeric_tree%ctree = spldlt_create_numeric_tree_c( &
+    if (posdef) then
+       spldlt_fkeep%numeric_tree%ctree = spldlt_create_numeric_tree_posdef_c( &
+            cfkeep, spldlt_akeep%symbolic_tree_c, val, scaling_c, &
+            child_contrib_c, coptions, cinform)
+    else
+       spldlt_fkeep%numeric_tree%ctree = spldlt_create_numeric_tree_c( &
          posdef, cfkeep, spldlt_akeep%symbolic_tree_c, val, scaling_c, &
          child_contrib_c, coptions, cinform)
-
+    end if
+       
     ! Extract to Fortran data structures
     call copy_inform_c2f(cinform, inform)
 
@@ -1049,7 +1055,11 @@ contains
 
     ! print *, "solve fwd, x: ", x(1:ldx, 1)
 
-    flag = spldlt_tree_solve_fwd_c(posdef, numeric_tree%ctree, nrhs, x, ldx)
+    if (posdef) then
+       flag = spldlt_tree_solve_fwd_posdef_c(numeric_tree%ctree, nrhs, x, ldx)
+    else
+       flag = spldlt_tree_solve_fwd_c(posdef, numeric_tree%ctree, nrhs, x, ldx)
+    end if
     ! TODO error managment
     ! if(flag.ne.SSIDS_SUCCESS) inform%flag = flag
 
@@ -1071,7 +1081,12 @@ contains
 
     integer(c_int) :: flag ! return value
 
-    flag = spldlt_tree_solve_bwd_c(posdef, numeric_tree%ctree, nrhs, x, ldx)
+    if (posdef) then
+       ! Perform backward substitutions
+       flag = spldlt_tree_solve_bwd_posdef_c(numeric_tree%ctree, nrhs, x, ldx)
+    else
+       flag = spldlt_tree_solve_bwd_c(posdef, numeric_tree%ctree, nrhs, x, ldx)
+    end if
     ! TODO error managment
     ! if(flag.ne.SSIDS_SUCCESS) inform%flag = flag
   end subroutine solve_bwd
@@ -1090,7 +1105,13 @@ contains
 
     integer(c_int) :: flag ! return value
 
-    flag = spldlt_tree_solve_diag_bwd_c(posdef, numeric_tree%ctree, nrhs, x, ldx)
+    if (posdef) then
+       ! Perform backward substitutions (no diagonal factor)
+       flag = spldlt_tree_solve_bwd_posdef_c(numeric_tree%ctree, nrhs, x, ldx)
+    else
+       flag = spldlt_tree_solve_diag_bwd_c(posdef, numeric_tree%ctree, nrhs, x, ldx)
+    end if
+    
     ! TODO error managment
     ! if(flag.ne.SSIDS_SUCCESS) inform%flag = flag
   end subroutine solve_diag_bwd
@@ -1109,6 +1130,9 @@ contains
 
     integer(c_int) :: flag ! return value
 
+    ! Nothing to do if matrix is positive-definite
+    if (posdef) return
+    
     flag = spldlt_tree_solve_diag_c(posdef, numeric_tree%ctree, nrhs, x, ldx)
 
   end subroutine solve_diag
