@@ -402,10 +402,9 @@ namespace spldlt {
          delete[] xlocal;
       }
 
-      template <bool do_diag, bool do_bwd>
-      void solve_diag_bwd_inner(int nrhs, double* x, int ldx) const {
-         if(!do_bwd) return; // diagonal solve is a no-op for posdef
-
+      void solve_bwd(
+            int nrhs, double* x, int ldx) const {
+         
          // Allocate memory - map only needed for indef bwd/diag_bwd solve
          double* xlocal = new double[nrhs*symb_.n];
          int* map_alloc = nullptr;
@@ -424,7 +423,7 @@ namespace spldlt {
             int const *map = symb_[ni].rlist;
 
             /* Gather into dense vector xlocal */
-            int blkm = (do_bwd) ? m : nelim;
+            int blkm = m;
             int ldl = align_lda<T>(m);
             for(int r=0; r<nrhs; ++r)
                for(int i=0; i<blkm; ++i)
@@ -446,18 +445,6 @@ namespace spldlt {
 
          /* Cleanup memory */
          delete[] xlocal;
-      }
-
-      void solve_diag(int nrhs, double* x, int ldx) const {
-         solve_diag_bwd_inner<true, false>(nrhs, x, ldx);
-      }
-
-      void solve_diag_bwd(int nrhs, double* x, int ldx) const {
-         solve_diag_bwd_inner<true, true>(nrhs, x, ldx);
-      }
-
-      void solve_bwd(int nrhs, double* x, int ldx) const {
-         solve_diag_bwd_inner<false, true>(nrhs, x, ldx);
       }
 
    private:

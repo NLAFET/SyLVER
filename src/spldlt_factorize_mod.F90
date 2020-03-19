@@ -64,6 +64,34 @@ module spldlt_factorize_mod
      end subroutine spldlt_destroy_numeric_tree_dlb
   end interface spldlt_destroy_numeric_tree_c
 
+  ! Create a numeric subtree, for a positive definite matrix, from the
+  ! symbolic one and return a C ptr on the tree structure
+  interface spldlt_create_numeric_tree_posdef_c
+     type(c_ptr) function spldlt_create_numeric_tree_posdef_dlb( &
+          fkeep, symbolic_tree, aval, scaling, child_contrib, options, &
+          inform) bind(C, name="spldlt_create_numeric_tree_posdef_dbl")
+       use, intrinsic :: iso_c_binding
+       use sylver_datatypes_mod, only: sylver_options
+       use sylver_ciface_mod
+       type(c_ptr), value :: fkeep
+       type(c_ptr), value :: symbolic_tree
+       real(c_double), dimension(*), intent(in) :: aval
+       type(C_PTR), value :: scaling
+       type(c_ptr), dimension(*), intent(inout) :: child_contrib
+       type(options_c), intent(in) :: options ! SSIDS options
+       type(inform_c), intent(out) :: inform
+     end function spldlt_create_numeric_tree_posdef_dlb
+  end interface spldlt_create_numeric_tree_posdef_c
+
+  ! Destroy the C ptr on numeric tree strucutre
+  interface spldlt_destroy_numeric_tree_posdef_c
+     subroutine spldlt_destroy_numeric_tree_posdef_dlb(numeric_tree) &
+          bind(C, name="spldlt_destroy_numeric_tree_posdef_dbl")          
+       use, intrinsic :: iso_c_binding
+       type(c_ptr), value :: numeric_tree
+     end subroutine spldlt_destroy_numeric_tree_posdef_dlb
+  end interface spldlt_destroy_numeric_tree_posdef_c
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   ! forward solve
@@ -122,6 +150,37 @@ module spldlt_factorize_mod
      end function spldlt_tree_solve_diag_dbl
   end interface spldlt_tree_solve_diag_c
 
+  !
+  ! Positive-definite matrices
+  !
+  
+  ! Forward solve
+  interface spldlt_tree_solve_fwd_posdef_c
+     integer(c_int) function spldlt_tree_solve_fwd_posdef_dbl( &
+          numeric_tree, nrhs, x, ldx) &
+          bind(C, name="spldlt_tree_solve_fwd_posdef_dbl")
+       use, intrinsic :: iso_c_binding
+       type(c_ptr), value :: numeric_tree
+       integer(c_int), value :: nrhs
+       real(c_double), dimension(*), intent(inout) :: x
+       integer(c_int), value :: ldx
+     end function spldlt_tree_solve_fwd_posdef_dbl
+  end interface spldlt_tree_solve_fwd_posdef_c
+
+  ! Backward solve
+  interface spldlt_tree_solve_bwd_posdef_c
+     integer(c_int) function spldlt_tree_solve_bwd_posdef_dbl( &
+          numeric_tree, nrhs, x, ldx) &
+          bind(C, name="spldlt_tree_solve_bwd_posdef_dbl")
+       use, intrinsic :: iso_c_binding
+       type(c_ptr), value :: numeric_tree
+       integer(c_int), value :: nrhs
+       real(c_double), dimension(*), intent(inout) :: x
+       integer(c_int), value :: ldx       
+     end function spldlt_tree_solve_bwd_posdef_dbl
+  end interface spldlt_tree_solve_bwd_posdef_c
+
+  
   ! SSIDS interfaces
   interface
      type(C_PTR) function c_create_numeric_subtree(posdef, symbolic_subtree, &
