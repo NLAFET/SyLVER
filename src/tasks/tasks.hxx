@@ -706,9 +706,26 @@ namespace spldlt {
 
 #endif
    }
+
+   ////////////////////////////////////////////////////////////
+   // assemble_contrib_subtree_block_task
+
+   // Assemble coefficient in contrib block `(ii, jj)` into parent
+   // nodes
+   template <typename T, typename PoolAlloc>
+   void assemble_contrib_subtree_block_task(
+         NumericFront<T,PoolAlloc>& node, // Destination node
+         sylver::SymbolicFront const& csnode, // Root of the subtree
+         int ii, int jj,
+         void** child_contrib, 
+         int contrib_idx, // Index of subtree to assemble
+         int prio) {
+
+
+   }
    
    ////////////////////////////////////////////////////////////
-   // Subtree assemble contrib task
+   // assemble_contrib_subtree_task
 
    template <typename T, typename PoolAlloc>   
    void assemble_contrib_subtree_task(
