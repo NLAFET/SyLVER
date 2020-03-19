@@ -12,6 +12,7 @@
 #include "StarPU/codelets_posdef.hxx"
 #endif
 #include "sylver_ciface.hxx"
+#include "tasks/assemble_block.hxx"
 #include "tasks/tasks.hxx"
 
 #include <cstddef>

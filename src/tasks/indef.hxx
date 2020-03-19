@@ -344,5 +344,5 @@ namespace spldlt {
             
 #endif
    }
-   
-}} // namespace sylver::spldlt
+
+}} // End of namespace sylver::spldlt

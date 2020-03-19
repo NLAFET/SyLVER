@@ -258,6 +258,9 @@ namespace starpu {
    // subtree_assemble_contrib StarPU codelet
    struct starpu_codelet cl_subtree_assemble_contrib;
 
+   // subtree_assemble_contrib_block StarPU codelet
+   struct starpu_codelet cl_subtree_assemble_contrib_block;
+
    // assemble_block StarPU codelet
    struct starpu_codelet cl_assemble_block;
 

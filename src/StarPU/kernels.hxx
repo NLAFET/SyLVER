@@ -1110,6 +1110,89 @@ namespace starpu {
       delete[] descrs;
    }
 
+
+   ////////////////////////////////////////////////////////////
+   // Subtree assemble contrib block task
+
+   // CPU kernel
+   template <typename T, typename PoolAlloc>
+   void subtree_assemble_contrib_block_cpu_func(void *buffers[], void *cl_arg) {
+
+      NumericFront<T, PoolAlloc> *node = nullptr;
+      sylver::SymbolicFront *csnode = nullptr;
+      void **child_contrib;
+      int contrib_idx;
+      int i = -1; // Block-row index 
+      int j = -1; // Block-column index
+
+      starpu_codelet_unpack_args(
+            cl_arg,
+            &node, &csnode,
+            &child_contrib, &contrib_idx,
+            &i, &j);
+
+      assert((i >= 0) && (j >= 0));
+      assert(nullptr != node);
+      assert(nullptr != csnode);
+      
+      assemble_contrib_subtree_block(
+            *node, *csnode, child_contrib, contrib_idx, i, j);
+                                     
+   }
+
+   // StarPU codelet
+   extern struct starpu_codelet cl_subtree_assemble_contrib_block;
+
+
+   template <typename T, typename PoolAlloc>
+   void insert_subtree_assemble_contrib_block(
+         NumericFront<T, PoolAlloc> *node,
+         sylver::SymbolicFront const* csnode,
+         int i, int j,
+         starpu_data_handle_t node_hdl,
+         starpu_data_handle_t contrib_hdl,
+         starpu_data_handle_t root_hdl,
+         starpu_data_handle_t *dest_hdls, int ndest,
+         void **child_contrib, int contrib_idx,
+         int prio) {
+
+      int ret;
+      int nh = 0;
+         
+      struct starpu_data_descr *descrs = new starpu_data_descr[ndest+3];
+
+      for (int i=0; i<ndest; i++) {
+         descrs[nh].handle = dest_hdls[i]; descrs[nh].mode = (starpu_data_access_mode) (STARPU_RW | STARPU_COMMUTE);
+         nh++;
+      }
+
+      // Handle on subtree
+      descrs[nh].handle = root_hdl; descrs[nh].mode = STARPU_R;
+      nh++;
+
+      // Handle on node to be assembled
+      // descrs[nh].handle = node_hdl; descrs[nh].mode = STARPU_R;
+      // nh++;
+
+      // Handle on contrib blocks
+      descrs[nh].handle = contrib_hdl; descrs[nh].mode = STARPU_R;
+      nh++;
+
+      ret = starpu_task_insert(&cl_subtree_assemble_contrib_block,
+                               STARPU_DATA_MODE_ARRAY, descrs, nh,
+                               STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
+                               STARPU_VALUE, &csnode, sizeof(sylver::SymbolicFront*),
+                               STARPU_VALUE, &child_contrib, sizeof(void**),
+                               STARPU_VALUE, &contrib_idx, sizeof(int),
+                               STARPU_VALUE, &i, sizeof(int),
+                               STARPU_VALUE, &j, sizeof(int),
+                               STARPU_PRIORITY, prio,
+                               0);
+
+      delete[] descrs;
+
+   }
+   
    ////////////////////////////////////////////////////////////
    // Subtree assemble contrib task
 
@@ -1128,7 +1211,7 @@ namespace starpu {
                                  &node, &csnode,
                                  &child_contrib, &contrib_idx);
 
-      assemble_contrib_subtree(*node, *csnode, child_contrib,contrib_idx);
+      assemble_contrib_subtree(*node, *csnode, child_contrib, contrib_idx);
    }
 
    // StarPU codelet

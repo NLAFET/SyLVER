@@ -59,7 +59,7 @@ namespace spldlt {
       // Assemble front: non fully-summed columns i.e. contribution block 
       for (auto* child=node.first_child; child!=NULL; child=child->next_child) {
 
-         sylver::SymbolicFront& child_sfront = child->symb();
+         sylver::SymbolicFront const& child_sfront = child->symb();
          // SymbolicFront &child_sfront = symb_[child->symb.idx];
 
          int ldcontrib = child_sfront.nrow - child_sfront.ncol;
@@ -78,15 +78,35 @@ namespace spldlt {
 // #endif
 
                // Serial assembly of contrib block into parent fronts.
-               assemble_contrib_subtree_task(
-                     node, child_sfront, child_contrib,
-                     child_sfront.contrib_idx, child_sfront.map,
-                     ASSEMBLE_PRIO);               
+               // assemble_contrib_subtree_task(
+               //       node, child_sfront, child_contrib,
+               //       child_sfront.contrib_idx, child_sfront.map,
+               //       ASSEMBLE_PRIO);               
 
                // #if defined(SPLDLT_USE_STARPU)
                //             starpu_task_wait_for_all();
                // #endif
 
+               // Blocked assembly of contrib block into parent
+               // fronts.
+
+               int const cn = child->nrow() - child->ncol();
+               // Number of blocks in contrib
+               int const nblk = ((cn - 1) / child->blksz()) + 1;
+
+               // Loop over block-columns in `child` node contrib
+               // contribution
+               for (int jj = 0; jj < nblk; ++jj) {
+                  // Loop over sub-diag block-rows in `child` node
+                  // contributions
+                  for (int ii = jj; ii < nblk; ++ii) {
+                     assemble_contrib_subtree_block_task(
+                           node, child_sfront, ii, jj,
+                           child_contrib, child_sfront.contrib_idx,
+                           ASSEMBLE_PRIO);
+                  }
+               }
+               
             }
             else {                     
 

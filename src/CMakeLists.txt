@@ -39,6 +39,7 @@ set(sources
 
 set(tasks_sources
   tasks/assemble.hxx
+  tasks/assemble_block.hxx
   tasks/factor_failed.hxx
   tasks/factor_indef.hxx
   tasks/form_contrib.hxx

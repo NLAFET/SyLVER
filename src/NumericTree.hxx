@@ -13,6 +13,7 @@
 #include "factor_indef.hxx"
 #include "assemble.hxx"
 #include "tasks/assemble.hxx"
+#include "tasks/assemble_block.hxx"
 #include "tasks/factor_indef.hxx"
 #include "tasks/tasks.hxx"
 #if defined(SPLDLT_USE_STARPU)
