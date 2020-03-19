@@ -1083,7 +1083,7 @@ namespace starpu {
          starpu_data_handle_t *hdls, int nhdl,
          starpu_data_handle_t root_hdl,
          NumericFront<T, PoolAlloc> *node,
-         sylver::SymbolicFront *csnode,
+         sylver::SymbolicFront const* csnode,
          void **child_contrib, int contrib_idx,
          int delay_col) {
 

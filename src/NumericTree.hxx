@@ -274,8 +274,9 @@ namespace spldlt {
 
          assert(clusters != nullptr);
 
-         if (options.print_level > 1)
+         if (options.print_level > 1) {
             starpu_cluster_print(clusters);
+         }
          // starpu_uncluster_machine(clusters);
          auto subtree_start = std::chrono::high_resolution_clock::now();                  
 

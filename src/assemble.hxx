@@ -189,14 +189,14 @@ namespace spldlt {
       // Assemble front: fully-summed columns 
       for (auto* child=node.first_child; child!=NULL; child=child->next_child) {
 
-         sylver::SymbolicFront &csnode = child->symb(); // Children symbolic node
+         sylver::SymbolicFront& csnode = child->symb(); // Children symbolic node
 
-         int cm = csnode.nrow - csnode.ncol;
+         int const cm = csnode.nrow - csnode.ncol;
          csnode.map = new int[cm];
          for (int i=0; i<cm; i++)
             csnode.map[i] = map[ csnode.rlist[csnode.ncol+i] ];
 
-         int ldcontrib = csnode.nrow - csnode.ncol;
+         int const ldcontrib = csnode.nrow - csnode.ncol;
          if (csnode.exec_loc == -1) {
             //
             // Assemble contributions from children front
@@ -270,9 +270,28 @@ namespace spldlt {
 
             // Task call (asynchronous)
             // Serial assembly
-            assemble_subtree_task(
-                  node, csnode, child_contrib, csnode.contrib_idx,
-                  csnode.map, ASSEMBLE_PRIO);
+            // assemble_subtree_task(
+            //       node, csnode, child_contrib, csnode.contrib_idx,
+            //       csnode.map, ASSEMBLE_PRIO);
+
+            // Task call (asynchronous)
+            // Parallel assembly
+
+            // Number of blocks in contrib
+            int const nblk = ((cn - 1) / child->blksz()) + 1;
+
+            // Loop over block-columns in `child` node contrib
+            // contribution
+            for (int jj = 0; jj < nblk; ++jj) {
+               // Loop over sub-diag block-rows in `child` node
+               // contributions
+               for (int ii = jj; ii < nblk; ++ii) {
+                  assemble_subtree_block_task(
+                        node, csnode, ii, jj,
+                        child_contrib, csnode.contrib_idx,
+                        ASSEMBLE_PRIO);
+               }
+            }
 
          }
 // #if defined(SPLDLT_USE_STARPU)

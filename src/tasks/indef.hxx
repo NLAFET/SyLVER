@@ -77,7 +77,7 @@ namespace spldlt {
    template <typename T, typename PoolAlloc>
    void assemble_delays_subtree_task(
          NumericFront<T,PoolAlloc>& node, // Destination node 
-         sylver::SymbolicFront &csnode, // Root of the subtree
+         sylver::SymbolicFront const& csnode, // Root of the subtree
          void** child_contrib, 
          int contrib_idx, // Index of subtree to assemble
          int delay_col) {

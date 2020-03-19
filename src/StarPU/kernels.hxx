@@ -1000,7 +1000,7 @@ namespace starpu {
    template <typename T, typename PoolAlloc>
    void insert_subtree_assemble_block(
          spldlt::NumericFront<T, PoolAlloc> *node,
-         sylver::SymbolicFront *csnode,
+         sylver::SymbolicFront const* csnode,
          starpu_data_handle_t node_hdl,
          starpu_data_handle_t root_hdl,
          starpu_data_handle_t *dest_hdls, int ndest,
