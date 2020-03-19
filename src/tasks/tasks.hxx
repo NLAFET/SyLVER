@@ -721,6 +721,49 @@ namespace spldlt {
          int contrib_idx, // Index of subtree to assemble
          int prio) {
 
+#if defined(SYLVER_HAVE_STARPU)
+         
+      int const blksz = node.blksz();
+
+      // Destination node info
+      //
+      int const ncol = node.ncol();
+      int const nr = node.nr();
+      int const rsa = ncol / blksz; // Rows/Cols index of first block in contrib 
+      int const ncontrib = nr-rsa; // Number of block rows/cols in contrib
+
+      starpu_data_handle_t *hdls = new starpu_data_handle_t[ncontrib*ncontrib];
+      int nh = 0;
+
+      // Source node info
+      //
+
+      // Contrib block dimensions
+      int const cn = csnode.nrow - csnode.ncol;
+      
+
+      // Loop over columns of block-column `jj` 
+      for(int j = jj*blksz;
+          j < std::min((jj+1)*blksz,cn); ++j) {               
+
+         // TODO..
+      }
+
+      // Insert assembly tasks if there are any contributions
+      if (nh > 0) {
+         // sylver::spldlt::starpu::
+         // TODO..
+
+      }
+      
+      delete[] hdls;
+
+#else
+
+      assemble_contrib_subtree_block(
+            node, csnode, child_contrib, contrib_idx, ii, jj);
+
+#endif
 
    }
    
@@ -736,15 +779,15 @@ namespace spldlt {
          int *cmap, // row/column mapping array 
          int prio) {
 
-      int blksz = node.blksz();
+      int const blksz = node.blksz();
 
 #if defined(SPLDLT_USE_STARPU)
 // #if 0
 
-      int ncol = node.ncol();
-      int nr = node.nr();
-      int rsa = ncol / blksz; // Rows/Cols index of first block in contrib 
-      int ncontrib = nr-rsa; // Number of block rows/cols in contrib
+      int const ncol = node.ncol();
+      int const nr = node.nr();
+      int const rsa = ncol / blksz; // Rows/Cols index of first block in contrib 
+      int const ncontrib = nr-rsa; // Number of block rows/cols in contrib
 
       int cc = -1; // Block column index in destination node
       int rr = -1; // Block row index in destination node
@@ -752,7 +795,7 @@ namespace spldlt {
       starpu_data_handle_t *hdls = new starpu_data_handle_t[ncontrib*ncontrib];
       int nh = 0;
 
-      int cn = csnode.nrow - csnode.ncol;
+      int const cn = csnode.nrow - csnode.ncol;
 
       for(int j = 0; j < cn; ++j) {
 
@@ -789,7 +832,7 @@ namespace spldlt {
 
          // printf("[assemble_contrib_subtree_task] nh = %d\n", nh);
 
-         spldlt::starpu::insert_subtree_assemble_contrib(
+         sylver::spldlt::starpu::insert_subtree_assemble_contrib(
                &node, &csnode, node.hdl(), node.contrib_hdl(), csnode.hdl, hdls, nh, 
                child_contrib, contrib_idx, prio);
       }
