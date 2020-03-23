@@ -21,9 +21,18 @@ namespace sylver {
 
    enum struct CPUTopology : int
       {
-       automatic = 1,
+       // Default
+       def = 1,
        flat = 2,
        numa = 3
+      };
+
+   enum struct Scheduler : int
+      {
+       // Default
+       def = 1, 
+       lws = 2,
+       heteroprio = 3       
       };
    
    /// @brief Interoperable subset of sylver_options

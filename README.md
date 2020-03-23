@@ -23,7 +23,7 @@ achieved as follow:
 ```bash
 mkdir build # create build directory
 cd build 
-cmake <path-to-source> -DSYLVER_RUNTIME=StarPU -DSYLVER_ENABLE_CUDA=ON # configure compilation
+cmake <path-to-source> -D SYLVER_RUNTIME=StarPU -D SYLVER_ENABLE_CUDA=ON # configure compilation
 make # run compilation 
 ```
 
@@ -49,7 +49,7 @@ needed when linking the SyLVER package for building examples and test
 drivers.
 
 When compiling SyLVER you can provide the path to the MeTiS library
-using either `-DMETIS_DIR` CMake option or the `METIS_DIR`
+using either `-D METIS_DIR` CMake option or the `METIS_DIR`
 environment variable.
 
 ### hwloc ###
@@ -57,7 +57,7 @@ environment variable.
 The [hwloc](https://www.open-mpi.org/projects/hwloc/) library is
 topology discovery library which is necessary for linking the examples
 and test drivers if SPRAL was compiled with it. In this case, the
-library path can be given to CMake using either the `-DHWLOC_DIR`
+library path can be given to CMake using either the `-D HWLOC_DIR`
 CMake option or the `HWLOC_DIR` environment variable.
 
 ### Runtime system ###
@@ -73,7 +73,7 @@ path of you StarPU install base directory.
 
 By default, CMake will configure the compilation for a parallel
 version of SyLVER using StarPU. The sequential version can be compiled
-using the option `-DSYLVER_RUNTIME=STF`.
+using the option `-D SYLVER_RUNTIME=STF`.
 
 ### BLAS and LAPACK ###
 
@@ -91,20 +91,20 @@ These libraries are found via the CMake scripts
 [FindBLAS](https://cmake.org/cmake/help/latest/module/FindBLAS.html)
 and
 [FindLAPACK](https://cmake.org/cmake/help/latest/module/FindBLAS.html)
-and therefore it is possible to use the options `-DBLA_VENDOR` to
+and therefore it is possible to use the options `-D BLA_VENDOR` to
 indicate which libraries to use. For example:
 
 ```bash
-cmake <path-to-source> -DBLA_VENDOR=Intel10_64lp_seq # configure compilation
+cmake <path-to-source> -D BLA_VENDOR=Intel10_64lp_seq # configure compilation
 ```
 
 selects and locates the sequential BLAS and LAPACK implementation for
 the compilation and when linking test drivers, example and tests.
 
 If CMake is unable to locate the requested libraries via the
-`-DBLA_VENDOR`, it is still possible to give them explicitly using the
-`-DLLBAS` and `-DLLAPACK` options. For example:
+`-D BLA_VENDOR`, it is still possible to give them explicitly using the
+`-D LLBAS` and `-D LLAPACK` options. For example:
 
 ```bash
-cmake <path-to-source> -DLBLAS="-L/path/to/blas -lblas" -DLLAPACK="-L/path/to/lapack -llapack" # configure compilation
+cmake <path-to-source> -D LBLAS="-L/path/to/blas -lblas" -D LLAPACK="-L/path/to/lapack -llapack" # configure compilation
 ```

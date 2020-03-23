@@ -37,8 +37,7 @@ namespace spldlt {
 
    template<typename T,
             std::size_t PAGE_SIZE,
-            typename FactorAllocator,
-            bool posdef>
+            typename FactorAllocator>
    class NumericTree {
       typedef ::sylver::BuddyAllocator<T,std::allocator<T>> PoolAllocator;
       typedef CopyBackup<T, PoolAllocator> Backup;
@@ -106,45 +105,36 @@ namespace spldlt {
          // Initialize StarPU codelets
          spldlt::starpu::codelets_init
             <T, INNER_BLOCK_SIZE, Backup, FactorAllocator, PoolAllocator>
-            (posdef);
+            (false);
 #endif
 
          // starpu_task_wait_for_all();
          // starpu_fxt_trace_user_event();
          // printf("[NumericTree] nnodes = %d\n", symb_.nnodes_);
          auto start = std::chrono::high_resolution_clock::now();
-         if (posdef) {
-            factor_mf_posdef(
+         factor_mf_indef(
                   aval, scaling, child_contrib, workspaces,
                   options, worker_stats);
-         }
-         else {
-            factor_mf_indef(
-                  aval, scaling, child_contrib, workspaces,
-                  options, worker_stats);
-         }
          auto end = std::chrono::high_resolution_clock::now();
          long ttotal = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count();
          if (options.print_level > 1) printf("[NumericTree] Task submission: %e\n", 1e-9*ttotal);
 
 
 #if defined(SPLDLT_USE_STARPU)
-            starpu_task_wait_for_all();
+         starpu_task_wait_for_all();
 
-            starpu_data_unregister(spldlt::starpu::workspace_hdl);
+         starpu_data_unregister(spldlt::starpu::workspace_hdl);
 
-            if (!posdef) {
-               // Clear StarPU tags used in indef fatorization
-               for(int ni = 0; ni < symb_.nnodes(); ++ni) {
-                  starpu_tag_t tag_assemble_contrib = (starpu_tag_t) (3*ni+1);
-                  starpu_tag_t tag_factor_failed = (starpu_tag_t) (3*ni+2);
-                  starpu_tag_t tag_nelim = (starpu_tag_t) (3*ni);
+         // Clear StarPU tags used in indef fatorization
+         for(int ni = 0; ni < symb_.nnodes(); ++ni) {
+            starpu_tag_t tag_assemble_contrib = (starpu_tag_t) (3*ni+1);
+            starpu_tag_t tag_factor_failed = (starpu_tag_t) (3*ni+2);
+            starpu_tag_t tag_nelim = (starpu_tag_t) (3*ni);
 
-                  starpu_tag_remove(tag_assemble_contrib);
-                  starpu_tag_remove(tag_factor_failed);
-                  starpu_tag_remove(tag_nelim);
-               }
-            }
+            starpu_tag_remove(tag_assemble_contrib);
+            starpu_tag_remove(tag_factor_failed);
+            starpu_tag_remove(tag_nelim);
+         }
 #endif
                   
          // Initialize inform
@@ -154,40 +144,37 @@ namespace spldlt {
             inform += tinform;
          if(inform.flag < 0) return;
 
-         if(posdef) {
-            // all inform remain zero
-         } else { // indefinite
-            for(int ni=0; ni<symb_.nnodes(); ni++) {
-               int m = symb_[ni].nrow + fronts_[ni].ndelay_in();
-               inform.maxfront = std::max(inform.maxfront, m);
-               int n = symb_[ni].ncol + fronts_[ni].ndelay_in();
-               int ldl = align_lda<T>(m);
-               T *d = fronts_[ni].lcol + n*ldl;
-               for(int i=0; i<fronts_[ni].nelim(); ) {
-                  T a11 = d[2*i];
-                  T a21 = d[2*i+1];
-                  if(i+1==fronts_[ni].nelim() || std::isfinite(d[2*i+2])) {
-                     // 1x1 pivot (or zero)
-                     if(a11 == 0.0) {
-                        // NB: If we reach this stage, options.action must be true.
-                        inform.flag = sylver::Flag::WARNING_FACT_SINGULAR;
-                        inform.num_zero++;
-                     }
-                     if(a11 < 0.0) inform.num_neg++;
-                     i++;
-                  } else {
-                     // 2x2 pivot
-                     T a22 = d[2*i+3];
-                     inform.num_two++;
-                     T det = a11*a22 - a21*a21; // product of evals
-                     T trace = a11 + a22; // sum of evals
-                     if(det < 0) inform.num_neg++;
-                     else if(trace < 0) inform.num_neg+=2;
-                     i+=2;
+         for(int ni=0; ni<symb_.nnodes(); ni++) {
+            int m = symb_[ni].nrow + fronts_[ni].ndelay_in();
+            inform.maxfront = std::max(inform.maxfront, m);
+            int n = symb_[ni].ncol + fronts_[ni].ndelay_in();
+            int ldl = align_lda<T>(m);
+            T *d = fronts_[ni].lcol + n*ldl;
+            for(int i=0; i<fronts_[ni].nelim(); ) {
+               T a11 = d[2*i];
+               T a21 = d[2*i+1];
+               if(i+1==fronts_[ni].nelim() || std::isfinite(d[2*i+2])) {
+                  // 1x1 pivot (or zero)
+                  if(a11 == 0.0) {
+                     // NB: If we reach this stage, options.action must be true.
+                     inform.flag = sylver::Flag::WARNING_FACT_SINGULAR;
+                     inform.num_zero++;
                   }
+                  if(a11 < 0.0) inform.num_neg++;
+                  i++;
+               } else {
+                  // 2x2 pivot
+                  T a22 = d[2*i+3];
+                  inform.num_two++;
+                  T det = a11*a22 - a21*a21; // product of evals
+                  T trace = a11 + a22; // sum of evals
+                  if(det < 0) inform.num_neg++;
+                  else if(trace < 0) inform.num_neg+=2;
+                  i+=2;
                }
             }
          }
+
       }
       
       ////////////////////////////////////////////////////////////
@@ -239,7 +226,7 @@ namespace spldlt {
          case sylver::CPUTopology::numa:
             hwloc_obj_type = HWLOC_OBJ_NUMANODE;
             break;
-         case sylver::CPUTopology::automatic:
+         case sylver::CPUTopology::def:
             {
                // Decide which clusturing to use depending on the number
                // of CPU and CUDA workers
@@ -415,236 +402,11 @@ namespace spldlt {
 
       }
 
-      ////////////////////////////////////////////////////////////
-      // factor_mf_posdef
-      
-      void factor_mf_posdef(
-            T *aval, T *scaling, void** child_contrib,
-            std::vector<spral::ssids::cpu::Workspace>& workspaces,
-            sylver::options_t& options,
-            std::vector<sylver::inform_t>& worker_stats) {
-
-         // printf("[factor_mf_posdef] nparts = %d\n", symb_.nparts_);
-
-         // Blocking size
-         int const blksz = options.nb;
-
-#if defined(SPLDLT_USE_STARPU)
-         // TODO move hdl registration to activate task
-         for(int ni = 0; ni < symb_.nnodes(); ++ni) {
-            // Register symbolic handles on node
-            // starpu_void_data_register(&(symb_[ni].hdl));
-            fronts_[ni].register_symb();
-            // Register symbolic handle for contribution block
-            // starpu_void_data_register(&(fronts_[ni].contrib_hdl()));
-            fronts_[ni].register_symb_contrib();
-         }
-#endif
-
-
-#if defined(SPLDLT_USE_STARPU) && defined(SPLDLT_USE_OMP)
-
-         struct starpu_cluster_machine *clusters;
-         clusters = starpu_cluster_machine(
-               // HWLOC_OBJ_SOCKET, 
-               // HWLOC_OBJ_NUMANODE,
-               HWLOC_OBJ_MACHINE,
-               // STARPU_CLUSTER_PARTITION_ONE, STARPU_CLUSTER_NB, 2,
-               STARPU_CLUSTER_TYPE, STARPU_CLUSTER_OPENMP,
-               0);
-         // printf("[factor_mf_posdef] machine id = %d\n", clusters->id);
-         starpu_cluster_print(clusters);
-         // starpu_uncluster_machine(clusters);
-         auto subtree_start = std::chrono::high_resolution_clock::now();                  
-
-#endif
-         
-         for(int p = 0; p < symb_.nsubtrees(); ++p) {
-            int root = symb_.subtrees()[p]-1; // subtrees is 1-indexed
-            // printf("[factor_mf] nsubtrees = %d, p = %d, root = %d\n", symb_.nsubtrees_, p, root);
-            factor_subtree_task(
-                  symb_.akeep(), fkeep_, symb_[root], aval, scaling, p, 
-                  child_contrib, &options, worker_stats);
-         }
-
-#if defined(SPLDLT_USE_STARPU) && defined(SPLDLT_USE_OMP)
-
-         starpu_task_wait_for_all(); // FIXME Can we avoid this synchronization
-         
-         starpu_uncluster_machine(clusters);
-         auto subtree_end = std::chrono::high_resolution_clock::now();                  
-         long t_subtree = std::chrono::duration_cast<std::chrono::nanoseconds>(subtree_end-subtree_start).count();
-         if (options.print_level > 1) printf("[factor_mf_posdef] factor subtrees: %e\n", 1e-9*t_subtree);
-
-#endif
-
-         // Allocate mapping array
-         int *map = new int[symb_.n+1];
-
-         // Loop over node in the assemnly tree
-         for(int ni = 0; ni < symb_.nnodes(); ++ni) {
-            
-            spldlt::NumericFront<T,PoolAllocator>& front = fronts_[ni];
-            sylver::SymbolicFront& sfront = symb_[ni];
-            
-            // Skip iteration if node is in a subtree
-            if (sfront.is_in_subtree()) continue;
-            
-            // Activate frontal matrix
-            activate_front(posdef, front, child_contrib, factor_alloc_);
-
-            // Initialize frontal matrix 
-            // init_node(sfront, fronts_[ni], aval); // debug
-            init_node_task(front, aval, scaling, INIT_PRIO);
-            // sylver_task_wait_for_all();
-
-            // build lookup vector, allowing for insertion of delayed vars
-            // Note that while rlist[] is 1-indexed this is fine so long as lookup
-            // is also 1-indexed (which it is as it is another node's rlist[]
-            for(int i=0; i<sfront.ncol; i++)
-               map[ sfront.rlist[i] ] = i;
-            for(int i=sfront.ncol; i<sfront.nrow; i++)
-               map[ sfront.rlist[i] ] = i + fronts_[ni].ndelay_in();
-
-            // Assemble front: fully-summed columns 
-            for (auto* child=fronts_[ni].first_child; child!=NULL; child=child->next_child) {
-           
-               sylver::SymbolicFront& child_sfront = symb_[child->symb().idx]; // Children symbolic node
-
-               int ldcontrib = child_sfront.nrow - child_sfront.ncol;
-               // Handle expected contributions (only if something there)
-               if (ldcontrib>0) {
-
-                  int cm = child_sfront.nrow - child_sfront.ncol;
-                  // int* cache = work.get_ptr<int>(cm); // TODO move cache array
-                  // Compute column mapping from child front into parent 
-                  child_sfront.map = new int[cm];
-                  for (int i=0; i<cm; i++)
-                     child_sfront.map[i] = map[ child_sfront.rlist[child_sfront.ncol+i] ];
-
-                  // Skip iteration if child node is in a subtree
-                  if (child_sfront.exec_loc != -1) {
-
-                     // Assemble contribution block from subtrees into
-                     // fully-summed coefficients
-                     assemble_subtree_task(
-                           fronts_[ni], child_sfront, child_contrib, 
-                           child_sfront.contrib_idx, child_sfront.map, 
-                           ASSEMBLE_PRIO);
-                     
-                  }
-                  else {
-
-                     int csa = child_sfront.ncol / blksz;
-                     int cnr = (child_sfront.nrow-1) / blksz + 1; // number of block rows
-                     // Loop over blocks in contribution blocks
-                     for (int jj = csa; jj < cnr; ++jj) {
-                        for (int ii = jj; ii < cnr; ++ii) {
-                           // assemble_block(fronts_[ni], *child, ii, jj, child_sfront.map);
-                           assemble_block_task(
-                                 fronts_[ni], *child,
-                                 ii, jj, 
-                                 child_sfront.map,
-                                 ASSEMBLE_PRIO);
-                        }
-                     }
-                  }
-               }
-            } // Loop over child nodes
-            // sylver_task_wait_for_all();
-
-            // Compute factors and Schur complement
-            factor_front_posdef(fronts_[ni], options, worker_stats);
-            // sylver_task_wait_for_all();
-
-            // Assemble front: non fully-summed columns i.e. contribution block 
-            for (auto* child=fronts_[ni].first_child; child!=NULL; child=child->next_child) {
-               
-               // SymbolicNode const& csnode = child->symb;
-               sylver::SymbolicFront& child_sfront = symb_[child->symb().idx];
-               
-               int ldcontrib = child_sfront.nrow - child_sfront.ncol;
-               // Handle expected contributions (only if something there)
-               // if (child->contrib) {
-               if (ldcontrib>0) {
-                  // Skip iteration if child node is in a subtree
-                  if (child_sfront.is_in_subtree()) {
-                     
-                     // Assemble contribution block from subtrees into non
-                     // fully-summed coefficients
-                     assemble_contrib_subtree_task(
-                           fronts_[ni], child_sfront, child_contrib, 
-                           child_sfront.contrib_idx, child_sfront.map, 
-                           ASSEMBLE_PRIO);
-
-                  }
-                  else {
-                     
-                     // int cm = csnode.nrow - csnode.ncol;
-                     // int* cache = work.get_ptr<int>(cm); // TODO move cache array
-                     // for (int i=0; i<cm; i++)
-                     // csnode.map[i] = map[ csnode.rlist[csnode.ncol+i] ];
-
-                     int csa = child_sfront.ncol / blksz;
-                     // Number of block rows in child node
-                     int cnr = (child_sfront.nrow-1) / blksz + 1; 
-                     // int cnc = (csnode.ncol-1) / blksz + 1; // number of block columns in child node
-                     // Lopp over blocks in contribution blocks
-                     for (int jj = csa; jj < cnr; ++jj) {                     
-                        // int c_sa = (csnode.ncol > jj*blksz) ? 0 : (jj*blksz-csnode.ncol); // first col in block
-                        // int c_en = std::min((jj+1)*blksz-csnode.ncol, cm); // last col in block
-                        // assemble_expected_contrib(c_sa, c_en, nodes_[ni], *child, map, cache);
-                        for (int ii = jj; ii < cnr; ++ii) {
-                           // assemble_contrib_block(nodes_[ni], *child, ii, jj, csnode.map, blksz)
-                           assemble_contrib_block_task(
-                                 fronts_[ni], *child, ii, jj, 
-                                 child_sfront.map, workspaces, ASSEMBLE_PRIO);
-                        }
-                     }
-                  }
-               }
-
-               if (!child_sfront.is_in_subtree()) {
-                  // fini_node(*child);
-                  fini_node_task(*child, true);
-               }
-#if defined(SPLDLT_USE_STARPU)
-               // Unregister symbolic handle on child node
-               child->unregister_submit_symb();
-               child->unregister_submit_symb_contrib();
-#endif
-
-
-            } // Loop over child nodes
-
-         } // Loop over nodes in the assemnly tree
-
-         // Finish root node
-         NumericFront<T, PoolAllocator>& front = fronts_[symb_.nnodes()];
-         for (auto* child=front.first_child; child!=NULL; child=child->next_child) {
-            sylver::SymbolicFront const& child_sfront = symb_[child->symb().idx];
-            if (!child_sfront.is_in_subtree()) {
-               // fini_node(*child);
-               fini_node_task(*child, true);
-            }
-#if defined(SPLDLT_USE_STARPU)
-            // Unregister symbolic handle on child node
-            child->unregister_submit_symb();
-            child->unregister_submit_symb_contrib();
-#endif
-         }
-
-      }
-
       void solve_fwd(int nrhs, double* x, int ldx) const {
-
-         // printf("[NumericTree] solve fwd, nrhs: %d\n", nrhs);
-         // for (int i = 0; i < ldx; ++i) printf(" %10.4f", x[i]);
-         // printf("[NumericTree] solve fwd, posdef: %d\n", posdef);
 
          /* Allocate memory */
          double* xlocal = new double[nrhs*symb_.n];
-         int* map_alloc = (!posdef) ? new int[symb_.n] : nullptr; // only indef
+         int* map_alloc = new int[symb_.n]; // only indef
         
          /* Main loop */
          for(int ni=0; ni<symb_.nnodes(); ++ni) {
@@ -654,23 +416,18 @@ namespace spldlt {
 
             int m = symb_[ni].nrow;
             int n = symb_[ni].ncol;
-            int nelim = (posdef) ? n : fronts_[ni].nelim();
-            int ndin = (posdef) ? 0 : fronts_[ni].ndelay_in();
+            int nelim = fronts_[ni].nelim();
+            int ndin = fronts_[ni].ndelay_in();
             int ldl = align_lda<T>(m+ndin);
             // printf("[NumericTree] solve fwd, node: %d, nelim: %d, ldl: %d\n", ni, nelim, ldl);
             /* Build map (indef only) */
             int const *map;
-            if(!posdef) {
-               // indef need to allow for permutation and/or delays
-               for(int i=0; i<n+ndin; ++i)
-                  map_alloc[i] = fronts_[ni].perm[i];
-               for(int i=n; i<m; ++i)
-                  map_alloc[i+ndin] = symb_[ni].rlist[i];
-               map = map_alloc;
-            } else {
-               // posdef there is no permutation
-               map = symb_[ni].rlist;
-            }
+            // indef need to allow for permutation and/or delays
+            for(int i=0; i<n+ndin; ++i)
+               map_alloc[i] = fronts_[ni].perm[i];
+            for(int i=n; i<m; ++i)
+               map_alloc[i+ndin] = symb_[ni].rlist[i];
+            map = map_alloc;
 
             /* Gather into dense vector xlocal */
             // FIXME: don't bother copying elements of x > m, just use beta=0
@@ -680,18 +437,8 @@ namespace spldlt {
                   xlocal[r*symb_.n+i] = x[r*ldx + map[i]-1]; // Fortran indexed
 
             /* Perform dense solve */
-            if(posdef) {
-               spral::ssids::cpu::cholesky_solve_fwd(
-                     m, n, fronts_[ni].lcol, ldl, nrhs, xlocal, symb_.n);
-            } else { /* indef */
-               spral::ssids::cpu::ldlt_app_solve_fwd(
-                     m+ndin, nelim, fronts_[ni].lcol, ldl, nrhs, xlocal, symb_.n);
-            }
-
-            // tests/debug
-            // spral::ssids::cpu::cholesky_solve_fwd(
-            //       m+ndin, nelim, fronts_[ni].lcol, ldl, nrhs, xlocal, symb_.n);
-
+            spral::ssids::cpu::ldlt_app_solve_fwd(
+                  m+ndin, nelim, fronts_[ni].lcol, ldl, nrhs, xlocal, symb_.n);
 
             /* Scatter result */
             for(int r=0; r<nrhs; ++r)
@@ -700,19 +447,18 @@ namespace spldlt {
          }
 
          /* Cleanup memory */
-         if(!posdef) delete[] map_alloc; // only used in indef case
+         delete[] map_alloc; // only used in indef case
          delete[] xlocal;
       }
 
       template <bool do_diag, bool do_bwd>
       void solve_diag_bwd_inner(int nrhs, double* x, int ldx) const {
-         if(posdef && !do_bwd) return; // diagonal solve is a no-op for posdef
 
          // printf("[solve_diag_bwd_inner] do_diag = %d, do_bwd = %d\n", do_diag, do_bwd);
 
          /* Allocate memory - map only needed for indef bwd/diag_bwd solve */
          double* xlocal = new double[nrhs*symb_.n];
-         int* map_alloc = (!posdef && do_bwd) ? new int[symb_.n]
+         int* map_alloc = (do_bwd) ? new int[symb_.n]
             : nullptr;
 
          /* Perform solve */
@@ -723,27 +469,20 @@ namespace spldlt {
 
             int m = symb_[ni].nrow;
             int n = symb_[ni].ncol;
-            int nelim = (posdef) ? n
-               : fronts_[ni].nelim();
-            int ndin = (posdef) ? 0
-               : fronts_[ni].ndelay_in();
+            int nelim = fronts_[ni].nelim();
+            int ndin = fronts_[ni].ndelay_in();
 
             /* Build map (indef only) */
             int const *map;
-            if(!posdef) {
-               // indef need to allow for permutation and/or delays
-               if(do_bwd) {
-                  for(int i=0; i<n+ndin; ++i)
-                     map_alloc[i] = fronts_[ni].perm[i];
-                  for(int i=n; i<m; ++i)
-                     map_alloc[i+ndin] = symb_[ni].rlist[i];
-                  map = map_alloc;
-               } else { // if only doing diagonal, only need first nelim<=n+ndin
-                  map = fronts_[ni].perm;
-               }
-            } else {
-               // posdef there is no permutation
-               map = symb_[ni].rlist;
+            // indef need to allow for permutation and/or delays
+            if(do_bwd) {
+               for(int i=0; i<n+ndin; ++i)
+                  map_alloc[i] = fronts_[ni].perm[i];
+               for(int i=n; i<m; ++i)
+                  map_alloc[i+ndin] = symb_[ni].rlist[i];
+               map = map_alloc;
+            } else { // if only doing diagonal, only need first nelim<=n+ndin
+               map = fronts_[ni].perm;
             }
 
             /* Gather into dense vector xlocal */
@@ -755,21 +494,16 @@ namespace spldlt {
                   xlocal[r*symb_.n+i] = x[r*ldx + map[i]-1];
 
             /* Perform dense solve */
-            if(posdef) {
-               spral::ssids::cpu::cholesky_solve_bwd(
-                     m, n, fronts_[ni].lcol, ldl, nrhs, xlocal, symb_.n);
-            } else {
-               if(do_diag) spral::ssids::cpu::ldlt_app_solve_diag(
-                     nelim, &fronts_[ni].lcol[(n+ndin)*ldl], nrhs, xlocal, symb_.n
-                     );
-               if(do_bwd) spral::ssids::cpu::ldlt_app_solve_bwd(
-                     m+ndin, nelim, fronts_[ni].lcol, ldl, nrhs, xlocal, symb_.n
-                     );
+            if (do_diag) {
+               spral::ssids::cpu::ldlt_app_solve_diag(
+                     nelim, &fronts_[ni].lcol[(n+ndin)*ldl], nrhs, xlocal,
+                     symb_.n);
             }
-
-            // tests/debug
-            // spral::ssids::cpu::cholesky_solve_bwd(
-            //       m+ndin, nelim, fronts_[ni].lcol, ldl, nrhs, xlocal, symb_.n);
+            if (do_bwd) {
+               spral::ssids::cpu::ldlt_app_solve_bwd(
+                     m+ndin, nelim, fronts_[ni].lcol, ldl, nrhs, xlocal,
+                     symb_.n);
+            }
 
             /* Scatter result (only first nelim entries have changed) */
             for(int r=0; r<nrhs; ++r)
@@ -778,7 +512,7 @@ namespace spldlt {
          }
 
          /* Cleanup memory */
-         if(!posdef && do_bwd) delete[] map_alloc; // only used in indef case
+         if(do_bwd) delete[] map_alloc; // only used in indef case
          delete[] xlocal;
       }
 

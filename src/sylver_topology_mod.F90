@@ -156,7 +156,7 @@ contains
 
        call sylver_topology_create_numa(ncpu, ngpu, regions)
 
-    else if(options%cpu_topology .eq. SYLVER_CPU_TOPOLOGY_AUTO) then
+    else if(options%cpu_topology .eq. SYLVER_CPU_TOPOLOGY_DEFAULT) then
 
        if (ngpu .gt. 0) then
           ! If CPU-only execution is requested, use NUMA topology

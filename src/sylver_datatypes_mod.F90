@@ -64,12 +64,22 @@ module sylver_datatypes_mod
   ! CPU topology
   !
   ! Choose CPU topology depending on number of CPU and GPU workers  
-  integer, parameter, public :: SYLVER_CPU_TOPOLOGY_AUTO = 1
+  integer, parameter, public :: SYLVER_CPU_TOPOLOGY_DEFAULT = 1
   ! Ignore CPU memory hierarchy and consider all cores as part of one
   ! CPU
   integer, parameter, public :: SYLVER_CPU_TOPOLOGY_FLAT = 2
   ! Use NUMA topology
   integer, parameter, public :: SYLVER_CPU_TOPOLOGY_NUMA = 3
+
+  ! Scheduling strategy
+
+  ! Automatically chosen based on machine topology (e.g. number of CPU
+  ! and GPU workers)
+  integer, parameter, public :: SYLVER_SCHEDULER_DEFAULT = 1
+  ! Locality work stealing
+  integer, parameter, public :: SYLVER_SCHEDULER_LWS = 2
+  ! Heteroprio
+  integer, parameter, public :: SYLVER_SCHEDULER_HETEROPRIO = 3
   
   !
   ! Data type for control parameters in SpLDLT
@@ -148,7 +158,7 @@ module sylver_datatypes_mod
      integer(long) :: small_subtree_threshold = 4*10**6 ! Flops below
        ! which we treat a subtree as small and use the single core kernel
      integer :: nb = sylver_nb_default! Block size used for the task generation 
-     integer :: cpu_topology = SYLVER_CPU_TOPOLOGY_AUTO
+     integer :: cpu_topology = SYLVER_CPU_TOPOLOGY_DEFAULT
      !
      ! Options used by spldlt_factorize() with posdef=.false.
      !
@@ -177,6 +187,10 @@ module sylver_datatypes_mod
      character(len=:), allocatable :: rb_dump ! Filename to dump matrix in
        ! prior to factorization. No dump takes place if not allocated (the
        ! default).
+
+     ! Scheduling strategy
+     integer :: sched = SYLVER_SCHEDULER_DEFAULT
+     
    contains
      procedure :: print_summary_analyse
      procedure :: print_summary_factor     

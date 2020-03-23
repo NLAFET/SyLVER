@@ -970,8 +970,11 @@ contains
     fkeep => spldlt_fkeep%fkeep
 
     ! Subtree solves
+
+    !
     ! Fwd solve
-    ! do part = 1, akeep%nparts
+    !
+    
     do part = 1, spldlt_akeep%nsubtrees
        if (akeep%subtree(part)%exec_loc .eq. -1) cycle
        call fkeep%subtree(part)%ptr%solve_fwd(nrhs, x2, n, ssids_info)
@@ -1009,7 +1012,7 @@ contains
     call spldlt_fkeep%numeric_tree%solve_diag_bwd(posdef, nrhs, x2, ldx)
 
     ! Diag bwd solve
-    !do part = akeep%nparts, 1, -1
+
     do part = spldlt_akeep%nsubtrees, 1, -1
        if (akeep%subtree(part)%exec_loc .eq. -1) cycle
        call fkeep%subtree(part)%ptr%solve_diag_bwd(nrhs, x2, n, ssids_info)

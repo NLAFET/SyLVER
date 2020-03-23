@@ -290,6 +290,12 @@ program spldlt_test
        case("--numa-topology")
           print *, 'Enable NUMA topology of CPU workers'
           options%cpu_topology = SYLVER_CPU_TOPOLOGY_NUMA
+       case("--sched=lws")
+          print *, 'Enable LWS scheduler'
+          options%sched = SYLVER_SCHEDULER_LWS
+       case("--sched=hp")
+          print *, 'Enable Heteroprio scheduler'
+          options%sched = SYLVER_SCHEDULER_HETEROPRIO          
        case default
           print *, "Unrecognised command line argument: ", argval
           stop
