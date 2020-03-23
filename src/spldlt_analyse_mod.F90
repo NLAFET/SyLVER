@@ -850,7 +850,7 @@ contains
 #if defined(SPLDLT_USE_STARPU) && defined(SPLDLT_USE_OMP)
     call sylver_topology_create(ncpu, ngpu, options, akeep%topology)
 #else
-    call sylver_topology_create_flat(ncpu, ngpu, options, akeep%topology)
+    call sylver_topology_create_flat(ncpu, ngpu, akeep%topology)
 #endif
 
     ! Print machine topology
