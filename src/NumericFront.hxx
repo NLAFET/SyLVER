@@ -114,7 +114,7 @@ namespace spldlt {
                   this->contrib_block(i, j).a = &col[row];
                   this->contrib_block(i, j).lda = col_ld; 
 
-               }                  
+               }
             }
 
 #else
