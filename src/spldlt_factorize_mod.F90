@@ -906,6 +906,7 @@ contains
   ! Solve phase
   subroutine solve(spldlt_fkeep, spldlt_akeep, nrhs, x, ldx, inform, job)
     use spral_ssids_datatypes
+    use spral_cuda
     use spral_ssids_fkeep, only : ssids_fkeep
     use spral_ssids_inform, only : ssids_inform
     use spldlt_analyse_mod
@@ -934,6 +935,8 @@ contains
     
     logical(c_bool) :: posdef
 
+    integer :: cuda_error
+    
     context = 'spldlt_solve'
     akeep => spldlt_akeep%akeep
     fkeep => spldlt_fkeep%fkeep
@@ -946,6 +949,7 @@ contains
     allocate(x2(n, nrhs), stat=inform%stat)
     if(inform%stat.ne.0) goto 100
 
+    ! print *, "solve, nrhs: ", nrhs, ", ldx: ", ldx
     ! print *, "solve, nrhs: ", nrhs, ", ldx: ", ldx
     ! print *, "solve, x: ", x
     ! print *, "solve, n: ", n
@@ -1001,7 +1005,7 @@ contains
     ! ! Bwd solve
     ! call spldlt_fkeep%numeric_tree%solve_bwd(posdef, nrhs, x2, ldx)
 
-    ! ! Bwd solve
+    ! Bwd solve
     ! do part = akeep%nparts, 1, -1
     !    if (akeep%subtree(part)%exec_loc .eq. -1) cycle
     !    call fkeep%subtree(part)%ptr%solve_bwd(nrhs, x2, n, inform)
@@ -1012,6 +1016,25 @@ contains
     call spldlt_fkeep%numeric_tree%solve_diag_bwd(posdef, nrhs, x2, ldx)
 
     ! Diag bwd solve
+
+    ! do part = spldlt_akeep%nsubtrees, 1, -1
+    !    ! print *, "solve, exec_loc = ", akeep%subtree(part)%exec_loc
+    !    if (akeep%subtree(part)%exec_loc .eq. -1) cycle
+
+    !    ! if (akeep%subtree(part)%exec_loc .eq. 2) then
+
+    !    ! call fkeep%subtree(part)%ptr%solve_diag(nrhs, x2, n, ssids_info)
+    !    ! call fkeep%subtree(part)%ptr%solve_bwd(nrhs, x2, n, ssids_info)
+
+    !    call fkeep%subtree(part)%ptr%solve_diag_bwd(nrhs, x2, n, ssids_info)
+
+    !    ! end if
+       
+    !    ! call fkeep%subtree(part)%ptr%solve_diag(nrhs, x2, n, ssids_info)
+    !    ! call fkeep%subtree(part)%ptr%solve_bwd(nrhs, x2, n, ssids_info)
+
+    !    if (ssids_info%stat .ne. 0) goto 100
+    ! end do
 
     do part = spldlt_akeep%nsubtrees, 1, -1
        if (akeep%subtree(part)%exec_loc .eq. -1) cycle
