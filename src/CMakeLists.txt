@@ -90,6 +90,8 @@ if(${SYLVER_RUNTIME} MATCHES "StarPU")
     StarPU/kernels_unsym.hxx
     StarPU/scheduler.c
     StarPU/scheduler.h
+    StarPU/subtree.cxx
+    StarPU/subtree.hxx
     StarPU/starpu_f_mod.F90
     StarPU/starpu_f_wrappers.c)
   

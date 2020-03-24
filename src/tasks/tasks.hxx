@@ -11,6 +11,7 @@
 #if defined(SPLDLT_USE_STARPU)
 #include "StarPU/kernels.hxx"
 #include "StarPU/kernels_indef.hxx"
+#include "StarPU/subtree.hxx"
 #endif
 #include "Tile.hxx"
 
@@ -348,7 +349,6 @@ namespace spldlt {
    
    template <typename T, typename PoolAlloc>
    void update_block_task(
-         sylver::SymbolicFront const& snode,
          NumericFront<T, PoolAlloc> &node,
          int k, /* block column index of A_ik and A_jk blocks */
          int i, /* block row index of A_ik and A_ij blocks  */
@@ -357,11 +357,13 @@ namespace spldlt {
          T *a_ij, int lda_ij,
          T *a_ik, int lda_ik,
          T *a_jk, int lda_jk,
-         int blksz, int prio) {
+         int prio) {
 
-      int m = snode.nrow + node.ndelay_in();
-      int n = snode.ncol + node.ndelay_in();
-      int ldcontrib = m-n;
+      int const blksz = node.blksz();
+         
+      int const m = node.nrow();
+      int const n = node.ncol();
+      int const ldcontrib = m-n;
 
       int blkm = std::min(blksz, m - i*blksz);
       int blkn = std::min(blksz, n - j*blksz);
@@ -369,21 +371,19 @@ namespace spldlt {
 
 #if defined(SPLDLT_USE_STARPU)
 
-      int nr = (m-1)/blksz + 1; // number of block rows
-      int nc = (n-1)/blksz + 1; // number of block columns
+      int nr = node.nr(); // number of block rows
+      int nc = node.nc(); // number of block columns
 
-      // TODO doen't work in supernodal mode
+      // FIXME: doen't work in supernodal mode
       if ((ldcontrib>0) && (blkn<blksz)) {
-
-         int rsa = n/blksz; // Row/Col index of first block in contrib 
 
          spldlt::starpu::insert_update_block(
                k, blksz,
                node(i, j).get_hdl(),
                node(i, k).get_hdl(),
                node(j, k).get_hdl(),
-               node.contrib_block(i, k).hdl,
-               snode.hdl,
+               node.contrib_block(i, j).hdl,
+               node.hdl(),
                prio);
       }
       else {
@@ -391,7 +391,7 @@ namespace spldlt {
                node(i, j).get_hdl(),
                node(i, k).get_hdl(),
                node(j, k).get_hdl(),
-               snode.hdl,
+               node.hdl(),
                prio);
       }
 #else

@@ -22,7 +22,7 @@ namespace spldlt {
          std::vector<sylver::inform_t>& worker_stats
          ) {
 
-      std::string context = "factor_front_posdef";      
+      std::string const context = "factor_front_posdef";      
       sylver::SymbolicFront& snode = node.symb(); // Symbolic front data 
 
       // Extract useful information about node
@@ -31,7 +31,7 @@ namespace spldlt {
       int const lda = node.ldl(); // Leading dimensions
       T *lcol = node.lcol; // Pointer to L factor 
       int const ldcontrib = m-n; // Dimension of contrib block
-      int const blksz = options.nb; // Block size
+      int const blksz = node.blksz(); // Block size
       int const nr = node.nr(); // Number of block rows
       int const nc = node.nc(); // Number of block columns
    
@@ -43,7 +43,9 @@ namespace spldlt {
 
          int blkn = std::min(blksz, n-j*blksz);
          int blkm = std::min(blksz, m-j*blksz);
-         // Factor block         
+
+         //
+         // Factor diagonal block         
          factor_block_task(node, j, FACTOR_PRIO, worker_stats);
 
          // #if defined(SPLDLT_USE_STARPU)
@@ -85,11 +87,12 @@ namespace spldlt {
                   // upd = (i*blksz < n) ? contrib : &contrib[(i*blksz)-n];
                
                // TODO fix STF version
-               update_block_task(snode, node, j, i, k,
-                                 &lcol[ (k*blksz*lda) + (i*blksz)], lda,
-                                 &lcol[(j*blksz*lda) + (i*blksz)], lda, 
-                                 &lcol[(j*blksz*lda) + (k*blksz)], lda,
-                                 blksz, UPDATE_PRIO);
+               update_block_task(
+                     node, j, i, k,
+                     &lcol[ (k*blksz*lda) + (i*blksz)], lda,
+                     &lcol[(j*blksz*lda) + (i*blksz)], lda, 
+                     &lcol[(j*blksz*lda) + (k*blksz)], lda,
+                     UPDATE_PRIO);
 
                // #if defined(SPLDLT_USE_STARPU)
                //                starpu_task_wait_for_all();

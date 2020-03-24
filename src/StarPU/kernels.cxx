@@ -243,24 +243,6 @@ namespace starpu {
       STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");         
    }
 
-   // factor_subtree StarPU codelet
-   struct starpu_codelet cl_factor_subtree;
-
-   // factor_subtree_gpu StarPU codelet
-   struct starpu_codelet cl_factor_subtree_gpu;
-
-   // subtree_assemble StarPU codelet
-   struct starpu_codelet cl_subtree_assemble;
-
-   // subtree_assemble_block StarPU codelet
-   struct starpu_codelet cl_subtree_assemble_block;
-
-   // subtree_assemble_contrib StarPU codelet
-   struct starpu_codelet cl_subtree_assemble_contrib;
-
-   // subtree_assemble_contrib_block StarPU codelet
-   struct starpu_codelet cl_subtree_assemble_contrib_block;
-
    // assemble_block StarPU codelet
    struct starpu_codelet cl_assemble_block;
 
