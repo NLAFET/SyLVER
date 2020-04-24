@@ -11,7 +11,8 @@ int main(int argc, char ** argv) {
   long *ptr   = NULL;
   int *row    = NULL;
   double *val = NULL;
-  int *order  = NULL;
+  // Matrix ordering
+  /* int *order  = NULL; */
   double *x   = NULL;
   double *rhs = NULL;
   double *y   = NULL;
@@ -21,12 +22,12 @@ int main(int argc, char ** argv) {
   /* spldlt_inform_t info; */
   sylver_options_t options;
   int stat;
-
-    // Create the matrix 
+  
+  // Create the matrix 
   // [  2 -1  0 ]
   // [ -1  2 -1 ]
   // [  0 -1  2 ]
-  posdef  = 0;
+  posdef  = 0; // Consider the matrix indefinite
   n       = 3;
   nnz     = 5;
   ptr = malloc((n+1) * sizeof(long));
@@ -38,9 +39,9 @@ int main(int argc, char ** argv) {
   for(int i = 0; i < nnz; i++) val[i] = 2.0;
   val[1] = - 1.0; val[3] = - 1.0;
 
-  order = malloc(n * sizeof(int));
-  ncpu  = 1;
-  ngpu  = 0;
+  /* order = malloc(n * sizeof(int)); */
+  ncpu  = 1; // Number of CPU cores enabled
+  ngpu  = 0; // Number of GPU devices enabled
 
   //Create RHS
   nrhs = 1;
@@ -49,12 +50,12 @@ int main(int argc, char ** argv) {
   for(int i = 0; i < n; i++) rhs[i] = 1.0;
   memcpy(x, rhs, n * sizeof(double));
 
-  /* spldlt_default_options(&options); */
-  /* options.options.ordering    = 1;//use Metis ordering */
-  /* options.options.scaling     = 0;//no scaling */
-  /* options.options.print_level = 1;//enable printing */
-  /* options.options.print_level = 0;//disable printing */
-  /* options.options.use_gpu     = 0;//disable GPU */
+  sylver_default_options(&options);
+  options.ordering    = 1; //Use Metis ordering
+  options.scaling     = 0; // No scaling
+  options.print_level = 1; // Enable printing
+  /* options.options.print_level = 0; // Disable printing */
+  /* options.options.use_gpu     = 0; // Disable GPU */
 
   /* spldlt_analyse(n, ptr, row, val, ncpu, &akeep, &options, &info); */
 
