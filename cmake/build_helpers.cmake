@@ -1,3 +1,15 @@
+function(sylver_default_includes name)
+  # set include path depending on used interface
+  target_include_directories("${name}"
+    PUBLIC
+    $<BUILD_INTERFACE:${SyLVER_BINARY_DIR}/include>
+    $<BUILD_INTERFACE:${SyLVER_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${SyLVER_BINARY_DIR}/src>
+    $<BUILD_INTERFACE:${SyLVER_SOURCE_DIR}/src>
+    $<INSTALL_INTERFACE:include>
+    )
+endfunction()
+
 function(sylver_add_example example)
   get_filename_component(example_name ${example} NAME_WE)
   add_executable(${example_name} ${example})
@@ -6,7 +18,9 @@ function(sylver_add_example example)
   target_include_directories(${example_name}
     PRIVATE
     ${CMAKE_BINARY_DIR}/src)
-
+  # Headers
+  sylver_default_includes(${example_name})
+  
   target_link_libraries(${example_name} PRIVATE sylver)
   target_link_libraries(${example_name} PRIVATE ${LIBS})
 endfunction()

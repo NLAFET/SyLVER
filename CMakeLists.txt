@@ -591,6 +591,10 @@ else()
   endif()
 endif()
 
+# Interfaces
+set(iface_sources
+  ${SyLVER_SOURCE_DIR}/interfaces/C/spldlt_ciface.F90)
+
 # Include source directory
 include_directories(${SyLVER_SOURCE_DIR}/src)
 

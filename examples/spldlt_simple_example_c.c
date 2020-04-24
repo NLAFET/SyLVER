@@ -2,9 +2,9 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include <spldlt_iface.h>
+#include "sylver/spldlt.h"
 
-int main(int argc, char ** argv){
+int main(int argc, char ** argv) {
 
   void *akeep = NULL;
   void *fkeep = NULL;

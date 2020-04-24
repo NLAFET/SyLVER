@@ -67,7 +67,11 @@ file(
 list(REMOVE_ITEM kernel_sources ${to_remove})
 
 # message(STATUS "Kernel sources: ${kernel_sources}")
-set(sources ${sources} ${tasks_sources} ${kernel_sources})
+set(sources
+  ${sources}
+  ${iface_sources}
+  ${tasks_sources}
+  ${kernel_sources})
 
 if(${SYLVER_RUNTIME} MATCHES "StarPU")
 
@@ -145,12 +149,14 @@ endif()
 if(SYLVER_ENABLE_CUDA)
 
   if(SYLVER_NATIVE_CUDA)
-
+    
     add_library(sylver
       ${sources}
       ${cuda_sources}
       ${starpu_cuda_sources})
-    
+
+    sylver_default_includes(sylver)
+
   else()
     
     add_library(sylver ${sources})
@@ -159,6 +165,9 @@ if(SYLVER_ENABLE_CUDA)
       sylver_cuda
       ${cuda_sources}
       ${starpu_cuda_sources})
+
+    sylver_default_includes(sylver)
+    sylver_default_includes(sylver_cuda)
 
     sylver_install_library(sylver_cuda)
 
