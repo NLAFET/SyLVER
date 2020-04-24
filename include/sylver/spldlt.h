@@ -60,6 +60,7 @@ extern "C" {
 /* } spldlt_inform_t; // EQUIV spral_ssids_inform struct */
 
 typedef struct {
+   int array_base;
    /* Printing options */  
    int print_level;
    int unit_diagnostics; 
@@ -89,7 +90,7 @@ typedef struct {
    double gpu_perf_coeff;
    /* Undocumented */
    int failed_pivot_method;
-   int sched;
+   int scheduler;
 } sylver_options_t;
 
 /* typedef struct{ */
