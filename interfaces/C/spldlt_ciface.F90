@@ -9,17 +9,17 @@ module spldlt_ciface
   implicit none
 
   type, bind(C) :: sylver_options_t
-     !
      ! Printing options
-     !
      integer(c_int) :: print_level
      integer(c_int) :: unit_diagnostics 
      integer(c_int) :: unit_error
      integer(c_int) :: unit_warning
-     !
      ! Options used in spldlt_analyse() and splu_analyse() 
-     !
      integer(c_int) :: ordering
+     integer(c_int) :: nemin
+     ! Tree partitioning
+     logical(c_bool) :: prune_tree
+     integer(c_long) :: min_gpu_work
   end type sylver_options_t
 
   ! interface check_backward_error

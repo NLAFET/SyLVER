@@ -16,75 +16,84 @@ extern "C" {
  * Derived types
  ************************************/
 
+/* typedef struct { */
+/*    int array_base; // Not in Fortran type */
+/*    int print_level; */
+/*    int unit_diagnostics; */
+/*    int unit_error; */
+/*    int unit_warning; */
+/*    int ordering; */
+/*    int nemin; */
+/*    bool ignore_numa; */
+/*    bool use_gpu; */
+/*    long min_gpu_work; */
+/*    float max_load_inbalance; */
+/*    float gpu_perf_coeff; */
+/*    int scaling; */
+/*    long small_subtree_threshold; */
+/*    int cpu_block_size; */
+/*    bool action; */
+/*    int pivot_method; */
+/*    double small; */
+/*    double u; */
+/*    char unused[80]; // Allow for future expansion */
+/* } spral_ssids_options_t; //Equiv spral_ssids_options */
+
+/* typedef struct { */
+/*    int flag; */
+/*    int matrix_dup; */
+/*    int matrix_missing_diag; */
+/*    int matrix_outrange; */
+/*    int matrix_rank; */
+/*    int maxdepth; */
+/*    int maxfront; */
+/*    int num_delay; */
+/*    long num_factor; */
+/*    long num_flops; */
+/*    int num_neg; */
+/*    int num_sup; */
+/*    int num_two; */
+/*    int stat; */
+/*    int cuda_error; */
+/*    int cublas_error; */
+/*    char unused[80]; // Allow for future expansion */
+/* } spldlt_inform_t; // EQUIV spral_ssids_inform struct */
+
 typedef struct {
-   int array_base; // Not in Fortran type
+   /* Printing options */  
    int print_level;
-   int unit_diagnostics;
+   int unit_diagnostics; 
    int unit_error;
    int unit_warning;
+   /* Options used in spldlt_analyse() and splu_analyse() */
    int ordering;
    int nemin;
-   bool ignore_numa;
-   bool use_gpu;
+   /* Tree partitioning */
+   bool prune_tree;
    long min_gpu_work;
-   float max_load_inbalance;
-   float gpu_perf_coeff;
-   int scaling;
-   long small_subtree_threshold;
-   int cpu_block_size;
-   bool action;
-   int pivot_method;
-   double small;
-   double u;
-   char unused[80]; // Allow for future expansion
-} spral_ssids_options_t; //Equiv spral_ssids_options
+} sylver_options_t;
 
-typedef struct {
-   int flag;
-   int matrix_dup;
-   int matrix_missing_diag;
-   int matrix_outrange;
-   int matrix_rank;
-   int maxdepth;
-   int maxfront;
-   int num_delay;
-   long num_factor;
-   long num_flops;
-   int num_neg;
-   int num_sup;
-   int num_two;
-   int stat;
-   int cuda_error;
-   int cublas_error;
-   char unused[80]; // Allow for future expansion
-} spldlt_inform_t; // EQUIV spral_ssids_inform struct
+/* typedef struct{ */
+/*   void              *akeep; */
+/*   void              *fkeep; */
+/*   spldlt_options_t  options; */
+/*   spldlt_inform_t   info; */
+/* } spldlt_data_t; */
 
-typedef struct{
-  spral_ssids_options_t options;
-  int prune_tree;
-} spldlt_options_t;
+/* extern void spldlt_init(int ncpu, int ngpu); */
 
-typedef struct{
-  void              *akeep;
-  void              *fkeep;
-  spldlt_options_t  options;
-  spldlt_inform_t   info;
-} spldlt_data_t;
+/* extern void spldlt_finalize(); */
 
-extern void spldlt_init(int ncpu, int ngpu);
+/* extern void spldlt_default_options(spldlt_options_t *options); */
 
-extern void spldlt_finalize();
-
-extern void spldlt_default_options(spldlt_options_t *options);
-
-extern void spldlt_analyse( int               n,
-                            long              *ptr,
-                            int               *row,
-                            double            *val, //Optional here
-                            int               ncpu,
-                            void              **akeep,
-                            spldlt_options_t  *options,
-                            spldlt_inform_t   *info);
+/* extern void spldlt_analyse( int               n, */
+/*                             long              *ptr, */
+/*                             int               *row, */
+/*                             double            *val, //Optional here */
+/*                             int               ncpu, */
+/*                             void              **akeep, */
+/*                             spldlt_options_t  *options, */
+/*                             spldlt_inform_t   *info); */
 
 //extern void spldlt_analyse_d( int               n,
 //                              long              *ptr,
@@ -96,20 +105,20 @@ extern void spldlt_analyse( int               n,
 //                              spldlt_inform_t   *info,
 //                              int               dumpMat);//MPI rank, othewise -1
 
-extern void spldlt_factor(int               posdef, //Boolean 
-                          double            *val,
-                          void              *akeep,
-                          void              **fkeep,
-                          spldlt_options_t  *options,
-                          spldlt_inform_t   *info);
+/* extern void spldlt_factor(int               posdef, //Boolean  */
+/*                           double            *val, */
+/*                           void              *akeep, */
+/*                           void              **fkeep, */
+/*                           spldlt_options_t  *options, */
+/*                           spldlt_inform_t   *info); */
 
-extern void spldlt_solve( int             job,
-                          int             nrhs,
-                          double          *x,
-                          int             ldx,
-                          void            *akeep,
-                          void            *fkeep,
-                          spldlt_inform_t *info);
+/* extern void spldlt_solve( int             job, */
+/*                           int             nrhs, */
+/*                           double          *x, */
+/*                           int             ldx, */
+/*                           void            *akeep, */
+/*                           void            *fkeep, */
+/*                           spldlt_inform_t *info); */
 
 //extern void spldlt_solve_d( int             job,
 //                            int             nrhs,
@@ -120,17 +129,17 @@ extern void spldlt_solve( int             job,
 //                            spldlt_inform_t *info,
 //                            int             dumpRhs);//MPI rank, othewise -1
 
-extern void spldlt_chkerr(int n,
-                          long *ptr,
-                          int *row,
-                          double *val,
-                          int nrhs,
-                          double *x,
-                          double *rhs);
+/* extern void spldlt_chkerr(int n, */
+/*                           long *ptr, */
+/*                           int *row, */
+/*                           double *val, */
+/*                           int nrhs, */
+/*                           double *x, */
+/*                           double *rhs); */
 
-extern int spldlt_free_akeep(void  **akeep);
+/* extern int spldlt_free_akeep(void  **akeep); */
 
-extern int spldlt_free_fkeep(void  **fkeep);
+/* extern int spldlt_free_fkeep(void  **fkeep); */
 
 #ifdef __cplusplus
 }

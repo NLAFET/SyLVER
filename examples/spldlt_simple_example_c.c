@@ -18,8 +18,8 @@ int main(int argc, char ** argv) {
   int n, nnz, nrhs;
   int ngpu, ncpu;
   int posdef;
-  spldlt_inform_t info;
-  spldlt_options_t options;
+  /* spldlt_inform_t info; */
+  sylver_options_t options;
   int stat;
 
     // Create the matrix 
@@ -49,30 +49,29 @@ int main(int argc, char ** argv) {
   for(int i = 0; i < n; i++) rhs[i] = 1.0;
   memcpy(x, rhs, n * sizeof(double));
 
-  spldlt_default_options(&options);
-  options.options.ordering    = 1;//use Metis ordering
-  options.options.scaling     = 0;//no scaling
-  options.options.print_level = 1;//enable printing
-  options.options.print_level = 0;//disable printing
-  options.options.use_gpu     = 0;//disable GPU
+  /* spldlt_default_options(&options); */
+  /* options.options.ordering    = 1;//use Metis ordering */
+  /* options.options.scaling     = 0;//no scaling */
+  /* options.options.print_level = 1;//enable printing */
+  /* options.options.print_level = 0;//disable printing */
+  /* options.options.use_gpu     = 0;//disable GPU */
 
-  spldlt_analyse(n, ptr, row, val, ncpu, &akeep, &options, &info);
+  /* spldlt_analyse(n, ptr, row, val, ncpu, &akeep, &options, &info); */
 
-  //Initialize SpLDLT
-  spldlt_init(ncpu, ngpu);
+  /* //Initialize SpLDLT */
+  /* spldlt_init(ncpu, ngpu); */
 
-  spldlt_factor(posdef, val, akeep, &fkeep, &options, &info);
+  /* spldlt_factor(posdef, val, akeep, &fkeep, &options, &info); */
 
-  spldlt_finalize();
+  /* spldlt_finalize(); */
 
-  spldlt_solve(0, nrhs, x, n, akeep, fkeep, &info);
+  /* spldlt_solve(0, nrhs, x, n, akeep, fkeep, &info); */
 
-  spldlt_chkerr(n, ptr, row, val, nrhs, x, rhs);
+  /* spldlt_chkerr(n, ptr, row, val, nrhs, x, rhs); */
 
-  stat = spldlt_free_akeep(&akeep);
+  /* stat = spldlt_free_akeep(&akeep); */
 
-  stat = spldlt_free_fkeep(&fkeep);
-
+  /* stat = spldlt_free_fkeep(&fkeep); */
 
   return 0;
 }
