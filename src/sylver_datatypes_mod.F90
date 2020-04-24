@@ -130,7 +130,7 @@ module sylver_datatypes_mod
        ! if it contains at least this many flops
      
      !
-     ! Options used by splu_factor()
+     ! Options used by spldlt_factor() and splu_factor()
      !
      integer :: scaling = 0 ! controls use of scaling. 
        !  <=0: user supplied (or no) scaling
@@ -140,7 +140,8 @@ module sylver_datatypes_mod
        !  >=4: Norm equilibriation algorithm (MC77-like)
 
      !
-     ! Options used by splu_factor() for controlling pivoting
+     ! Options used by spldlt_factor() and splu_factor() for
+     ! controlling pivoting
      !
      integer :: pivot_method = SYLVER_PIVOT_METHOD_APP_BLOCK
        ! Type of pivoting to use on CPU side:

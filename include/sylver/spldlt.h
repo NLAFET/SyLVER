@@ -71,6 +71,25 @@ typedef struct {
    /* Tree partitioning */
    bool prune_tree;
    long min_gpu_work;
+   /* Options used by spldlt_factor() and splu_factor() */
+   int scaling;
+   /* Options used by spldlt_factor() and splu_factor() for
+      controlling pivoting */
+   int pivot_method;
+   double small;
+   double u;
+   /* CPU-specific */
+   long small_subtree_threshold;
+   int nb;
+   int cpu_topology;
+   /* Options used by spldlt_factorize() with posdef=.false. */
+   bool action;
+   /* GPU-specific */
+   bool use_gpu;
+   double gpu_perf_coeff;
+   /* Undocumented */
+   int failed_pivot_method;
+   int sched;
 } sylver_options_t;
 
 /* typedef struct{ */

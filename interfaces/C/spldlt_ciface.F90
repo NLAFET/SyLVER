@@ -20,6 +20,25 @@ module spldlt_ciface
      ! Tree partitioning
      logical(c_bool) :: prune_tree
      integer(c_long) :: min_gpu_work
+     ! Options used by spldlt_factor() and splu_factor()
+     integer(c_int) :: scaling
+     ! Options used by spldlt_factor() and splu_factor() for
+     ! controlling pivoting
+     integer(c_int) :: pivot_method
+     real(c_double) :: small
+     real(c_double) :: u
+     ! CPU-specific
+     integer(c_long) :: small_subtree_threshold
+     integer(c_int) :: nb
+     integer(c_int) :: cpu_topology
+     ! Options used by spldlt_factorize() with posdef=.false.
+     logical(c_bool) :: action
+     ! GPU-specific
+     logical(c_bool) :: use_gpu
+     real(c_double) :: gpu_perf_coeff
+     ! Undocumented
+     integer(c_int) :: failed_pivot_method
+     integer(c_int) :: sched
   end type sylver_options_t
 
   ! interface check_backward_error
