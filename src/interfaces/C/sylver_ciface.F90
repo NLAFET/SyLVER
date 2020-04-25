@@ -40,6 +40,34 @@ module sylver_ciface
      integer(c_int) :: scheduler
   end type sylver_options_t
 
+  type, bind(C) :: sylver_inform_t
+     integer(c_int) :: flag
+     integer(c_int) :: matrix_dup
+     integer(c_int) :: matrix_missing_diag ! Number of missing diag. entries
+     integer(c_int) :: matrix_outrange ! Number of out-of-range entries.
+     integer(c_int) :: matrix_rank ! Rank of matrix (anal=structral, fact=actual)
+     integer(c_int) :: maxdepth ! Maximum depth of tree
+     integer(c_int) :: maxfront ! Maximum front size
+     integer(c_int) :: num_delay ! Number of delayed variables
+     integer(c_long) :: num_factor ! Number of entries in factors
+     integer(c_long) :: num_flops ! Number of floating point operations
+     integer(c_int) :: num_neg ! Number of negative pivots
+     integer(c_int) :: num_sup ! Number of supernodes
+     integer(c_int) :: num_two ! Number of 2x2 pivots used by factorization
+     integer(c_int) :: stat ! stat parameter
+     integer(c_int) :: cuda_error
+     integer(c_int) :: cublas_error
+     character(c_char) :: unused(80)     
+     ! Undocumented FIXME: should we document them?
+     ! integer(c_int) :: not_first_pass = 0
+     ! integer(c_int) :: not_second_pass = 0
+     ! integer(c_int) :: nparts = 0
+     ! integer(c_long) :: cpu_flops = 0
+     ! integer(c_long) :: gpu_flops = 0
+     ! integer(c_int) :: num_part = 0 ! Number of partitions in the etree
+     ! character(c_char) :: unused(80)
+  end type sylver_inform_t
+     
   ! interface check_backward_error
   !   module procedure check_backward_error_one
   !   module procedure check_backward_error_multi
@@ -89,9 +117,33 @@ contains
     
     ! foptions%max_load_inbalance= coptions%max_load_inbalance
     
-  end subroutine
+  end subroutine sylver_copy_options_in
 
+  subroutine sylver_copy_inform_out(finform, cinform)
+    use sylver_inform_mod
+    implicit none
 
+    type(sylver_inform), intent(in) :: finform
+    type(sylver_inform_t), intent(out) :: cinform
+
+    cinform%flag                  = finform%flag
+    cinform%matrix_dup            = finform%matrix_dup
+    cinform%matrix_missing_diag   = finform%matrix_missing_diag
+    cinform%matrix_outrange       = finform%matrix_outrange
+    cinform%matrix_rank           = finform%matrix_rank
+    cinform%maxdepth              = finform%maxdepth
+    cinform%maxfront              = finform%maxfront
+    cinform%num_delay             = finform%num_delay
+    cinform%num_factor            = finform%num_factor
+    cinform%num_flops             = finform%num_flops
+    cinform%num_neg               = finform%num_neg
+    cinform%num_sup               = finform%num_sup
+    cinform%num_two               = finform%num_two
+    cinform%stat                  = finform%stat
+    cinform%cuda_error            = finform%cuda_error
+    cinform%cublas_error          = finform%cublas_error
+    
+  end subroutine sylver_copy_inform_out
 
   ! subroutine compute_residual(n, ptr, row, val, nrhs, x, b, res)
   !   implicit none
@@ -319,75 +371,100 @@ subroutine sylver_c_finalize() &
 end subroutine sylver_c_finalize
 
 
-! subroutine spldlt_c_analyse(n, cptr, crow, cval, ncpu, cakeep, coptions, &
-!      cinform) bind(C, name="spldlt_analyse")
-!   use sylver_ciface
-!   use sylver_datatypes_mod
-!   use spldlt_analyse_mod
-!   implicit none
+subroutine spldlt_c_analyse(n, corder, cptr, crow, cval, cakeep, ccheck, coptions, &
+     cinform) bind(C, name="spldlt_analyse")
+  use sylver_ciface
+  use sylver_datatypes_mod
+  use spldlt_analyse_mod
+  implicit none
 
-!   integer(c_int),   value :: n
-!   type(c_ptr),      value :: cptr
-!   type(c_ptr),      value :: crow
-!   type(c_ptr),      value :: cval
-!   integer(c_int),   value :: ncpu
-!   type(c_ptr),              intent(inout) :: cakeep
-!   type(sylver_options_t),   intent(in)    :: coptions
-!   type(spral_ssids_inform), intent(out)   :: cinform
+  integer(c_int), value :: n
+  type(c_ptr), value :: corder
+  type(c_ptr), value :: cptr
+  type(c_ptr), value :: crow
+  type(c_ptr), value :: cval
+  !   integer(c_int),   value :: ncpu
+  type(c_ptr), intent(inout) :: cakeep
+  logical(c_bool), value :: ccheck
+  type(sylver_options_t), intent(in) :: coptions
+  type(sylver_inform_t), intent(out)   :: cinform
 
-!   integer(C_LONG),          pointer :: fptr(:)
-!   integer(C_INT),           pointer :: frow(:)
-!   real(C_DOUBLE),           pointer :: fval(:)
-!   type(spldlt_akeep_type),  pointer :: fakeep
-!   type(sylver_options)              :: foptions
-!   type(ssids_inform)                :: finform
-!   integer                           :: st
-!   logical :: cindexed
+  logical :: fcheck
+  integer(C_INT), dimension(:), pointer :: forder
+  integer(C_LONG),          pointer :: fptr(:)
+  integer(C_INT),           pointer :: frow(:)
+  real(C_DOUBLE),           pointer :: fval(:)
+  type(spldlt_akeep_type),  pointer :: fakeep
+  type(sylver_options)              :: foptions
+  type(sylver_inform)                :: finform
+  integer                           :: st
+  logical :: cindexed
 
-!   ! Copy options in first to find out whether we use Fortran or C indexing
-!   call copy_spldlt_options_in(coptions, foptions, cindexed)
+  ! Copy options in first to find out whether we use Fortran or C indexing
+  call sylver_copy_options_in(coptions, foptions, cindexed)
 
-!   ! Translate arguments
-!   if (C_ASSOCIATED(cptr)) then
-!      call C_F_POINTER(cptr, fptr, shape=(/ n+1 /))
-!   else
-!      print *, "Error, cptr is not associated"
-!      nullify(fptr)
-!   end if
+  ! Translate arguments
+  fcheck = ccheck
 
-!   if (C_ASSOCIATED(crow)) then
-!      call C_F_POINTER(crow, frow, shape=(/ fptr(n+1)-1 /))
-!   else
-!      print *, "Error, crow is not associated"
-!      nullify(frow)
-!   end if
+  if (C_ASSOCIATED(corder)) then
+     call c_f_pointer(corder, forder, shape=(/ n /))
+  else
+     nullify(forder)
+  end if
 
-!   if (C_ASSOCIATED(cval)) then
-!      call C_F_POINTER(cval, fval, shape=(/ fptr(n+1)-1 /))
-!   else
-!      print *, "Warning, cval is not associated"
-!      nullify(fval)
-!   end if
-!   if (C_ASSOCIATED(cakeep)) then
-!      ! Reuse old pointer
-!      call C_F_POINTER(cakeep, fakeep)
-!   else
-!      ! Create new pointer
-!      allocate(fakeep, stat=st)
-!      cakeep = C_LOC(fakeep)
-!   end if
+  if (C_ASSOCIATED(cptr)) then
+     call c_f_pointer(cptr, fptr, shape=(/ n+1 /))
+  else
+     ! print *, "Error, cptr is not associated"
+     nullify(fptr)
+  end if
 
-!   !print *, "Call analyse"
-!   ! Call Fortran routine
-!   if (ASSOCIATED(fval)) then
-!      call spldlt_analyse(fakeep, n, fptr, frow, foptions%options, finform, ncpu, val=fval)
-!   else
-!      call spldlt_analyse(fakeep, n, fptr, frow, foptions%options, finform, ncpu)
-!   end if
+  if (C_ASSOCIATED(crow)) then
+     call c_f_pointer(crow, frow, shape=(/ fptr(n+1)-1 /))
+  else
+     ! print *, "Error, crow is not associated"
+     nullify(frow)
+  end if
 
-!   ! Copy arguments out
-!   call copy_inform_out(finform, cinform)
-! end subroutine spldlt_c_analyse
+  if (C_ASSOCIATED(cval)) then
+     call c_f_pointer(cval, fval, shape=(/ fptr(n+1)-1 /))
+  else
+     ! print *, "Warning, cval is not associated"
+     nullify(fval)
+  end if
+
+  if (C_ASSOCIATED(cakeep)) then
+     ! Reuse old pointer
+     call c_f_pointer(cakeep, fakeep)
+  else
+     ! Create new pointer
+     allocate(fakeep, stat=st)
+     cakeep = c_loc(fakeep)
+  end if
+
+  ! Call Fortran routine
+  if (associated(forder)) then
+     if (associated(fval)) then
+        call spldlt_analyse(fakeep, n, fptr, frow, foptions, finform, order=forder, &
+             val=fval, check=fcheck)
+     else
+        call spldlt_analyse(fakeep, n, fptr, frow, foptions, finform, order=forder, &
+             check=fcheck)
+     end if
+  else
+     if (associated(fval)) then
+        call spldlt_analyse(fakeep, n, fptr, frow, foptions, finform, &
+             val=fval, check=fcheck)
+     else
+        call spldlt_analyse(fakeep, n, fptr, frow, foptions, finform, &
+             check=fcheck)
+     end if
+  end if
+
+  ! Copy arguments out
+  call sylver_copy_inform_out(finform, cinform)
+
+end subroutine spldlt_c_analyse
 
 
 

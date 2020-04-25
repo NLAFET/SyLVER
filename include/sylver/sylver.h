@@ -39,25 +39,25 @@ extern "C" {
 /*    char unused[80]; // Allow for future expansion */
 /* } spral_ssids_options_t; //Equiv spral_ssids_options */
 
-/* typedef struct { */
-/*    int flag; */
-/*    int matrix_dup; */
-/*    int matrix_missing_diag; */
-/*    int matrix_outrange; */
-/*    int matrix_rank; */
-/*    int maxdepth; */
-/*    int maxfront; */
-/*    int num_delay; */
-/*    long num_factor; */
-/*    long num_flops; */
-/*    int num_neg; */
-/*    int num_sup; */
-/*    int num_two; */
-/*    int stat; */
-/*    int cuda_error; */
-/*    int cublas_error; */
-/*    char unused[80]; // Allow for future expansion */
-/* } spldlt_inform_t; // EQUIV spral_ssids_inform struct */
+typedef struct {
+   int flag;
+   int matrix_dup;
+   int matrix_missing_diag;
+   int matrix_outrange;
+   int matrix_rank;
+   int maxdepth;
+   int maxfront;
+   int num_delay;
+   long num_factor;
+   long num_flops;
+   int num_neg;
+   int num_sup;
+   int num_two;
+   int stat;
+   int cuda_error;
+   int cublas_error;
+   char unused[80]; // Allow for future expansion
+} sylver_inform_t; // EQUIV spral_ssids_inform struct
 
 typedef struct {
    int array_base;
@@ -100,21 +100,18 @@ typedef struct {
 /*   spldlt_inform_t   info; */
 /* } spldlt_data_t; */
 
-/* extern void spldlt_init(int ncpu, int ngpu); */
+extern void sylver_init(int ncpu, int ngpu);
 
-/* extern void spldlt_finalize(); */
+extern void sylver_finalize();
 
-/* extern void spldlt_default_options(spldlt_options_t *options); */
+extern void sylver_default_options(sylver_options_t *options);
 
-/* extern void spldlt_analyse( int               n, */
-/*                             long              *ptr, */
-/*                             int               *row, */
-/*                             double            *val, //Optional here */
-/*                             int               ncpu, */
-/*                             void              **akeep, */
-/*                             spldlt_options_t  *options, */
-/*                             spldlt_inform_t   *info); */
-
+extern void spldlt_analyse(
+      int n, int *order,
+      long const* ptr, int const* row, double const* val,
+      void **akeep, bool check,
+      sylver_options_t const* options, sylver_inform_t const* inform);
+   
 //extern void spldlt_analyse_d( int               n,
 //                              long              *ptr,
 //                              int               *row,

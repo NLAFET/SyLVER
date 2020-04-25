@@ -581,7 +581,8 @@ contains
   !> @brief Analyse phase for symmetric matrix.
   !>
   ! TODO Add 32-bits wrapper
-  subroutine spldlt_analyse(spldlt_akeep, n, ptr, row, options, inform, order, val, ncpu, ngpu, check)
+  subroutine spldlt_analyse(spldlt_akeep, n, ptr, row, options, inform, order, &
+       val, ncpu, ngpu, check)
     use spral_ssids, only: ssids_free
     use spral_metis_wrapper, only : metis_order
     use spral_ssids_akeep, only: ssids_akeep
@@ -605,7 +606,7 @@ contains
     integer, intent(in) :: row(:)
     type(sylver_options), target, intent(in) :: options ! SpLDLT options
     type(sylver_inform), intent(inout) :: inform
-    integer, dimension(:), allocatable, optional, intent(inout) :: order
+    integer, dimension(:), optional, intent(inout) :: order
     real(wp), optional, intent(in) :: val(:) ! Matrix numerical values
     integer, optional, intent(inout) :: ncpu ! Number of CPU workers
     integer, optional, intent(inout) :: ngpu ! Number of GPU workers
@@ -848,9 +849,9 @@ contains
     !
     ! Allocate and create machine topology in `akeep%topology`
 #if defined(SPLDLT_USE_STARPU) && defined(SPLDLT_USE_OMP)
-    call sylver_topology_create(ncpu, ngpu, options, akeep%topology)
+    call sylver_topology_create(ncpu_topo, ngpu_topo, options, akeep%topology)
 #else
-    call sylver_topology_create_flat(ncpu, ngpu, akeep%topology)
+    call sylver_topology_create_flat(ncpu_topo, ngpu_topo, akeep%topology)
 #endif
 
     ! Print machine topology

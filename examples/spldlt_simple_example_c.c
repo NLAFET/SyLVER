@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "sylver/spldlt.h"
+#include "sylver/sylver.h"
 
 int main(int argc, char ** argv) {
 
@@ -12,14 +12,14 @@ int main(int argc, char ** argv) {
   int *row    = NULL;
   double *val = NULL;
   // Matrix ordering
-  /* int *order  = NULL; */
+  int *order  = NULL;
   double *x   = NULL;
   double *rhs = NULL;
   double *y   = NULL;
   int n, nnz, nrhs;
   int ngpu, ncpu;
   int posdef;
-  /* spldlt_inform_t info; */
+  sylver_inform_t inform;
   sylver_options_t options;
   int stat;
   
@@ -60,22 +60,21 @@ int main(int argc, char ** argv) {
   //Initialize SpLDLT
   sylver_init(ncpu, ngpu);
 
-  /* spldlt_analyse(n, ptr, row, val, ncpu, &akeep, &options, &info); */
+  bool check = true;
+  spldlt_analyse(n, order, ptr, row, val, &akeep, check, &options, &inform);
 
   /* spldlt_factor(posdef, val, akeep, &fkeep, &options, &info); */
-
-  /* spldlt_finalize(); */
 
   /* spldlt_solve(0, nrhs, x, n, akeep, fkeep, &info); */
 
   /* spldlt_chkerr(n, ptr, row, val, nrhs, x, rhs); */
 
-  /* stat = spldlt_free_akeep(&akeep); */
-
-  /* stat = spldlt_free_fkeep(&fkeep); */
 
   sylver_finalize();
-  
+
+  /* stat = spldlt_free_akeep(&akeep); */
+  /* stat = spldlt_free_fkeep(&fkeep); */
+
   // Cleanup memory
   free(ptr);
   free(row);

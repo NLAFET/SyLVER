@@ -47,15 +47,24 @@ set(tasks_sources
   tasks/tasks.hxx
   tasks/unsym.hxx)
   
-# get kernel source file
-file(
-  GLOB
-  kernel_sources 
-  kernels/*.F90
-  kernels/*.c
-  kernels/*.cxx
-  kernels/*.hxx
-  )
+set(kernel_sources
+  kernels/assemble.cxx
+  kernels/assemble.hxx
+  kernels/assemble_unsym.hxx
+  kernels/common.hxx
+  kernels/factor.cxx
+  kernels/factor.hxx
+  kernels/factor_indef.hxx
+  kernels/factor_unsym.hxx
+  kernels/ldlt_app.cxx
+  kernels/ldlt_app.hxx
+  kernels/llt.hxx
+  kernels/lu_app.hxx
+  kernels/lu_nopiv.hxx
+  kernels/lu_pp.hxx
+  kernels/lu_tpp.hxx
+  kernels/wrappers.cxx
+  kernels/wrappers.hxx)
 
 file(
   GLOB 
