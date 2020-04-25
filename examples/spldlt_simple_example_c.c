@@ -57,10 +57,10 @@ int main(int argc, char ** argv) {
   /* options.options.print_level = 0; // Disable printing */
   /* options.options.use_gpu     = 0; // Disable GPU */
 
-  /* spldlt_analyse(n, ptr, row, val, ncpu, &akeep, &options, &info); */
+  //Initialize SpLDLT
+  sylver_init(ncpu, ngpu);
 
-  /* //Initialize SpLDLT */
-  /* spldlt_init(ncpu, ngpu); */
+  /* spldlt_analyse(n, ptr, row, val, ncpu, &akeep, &options, &info); */
 
   /* spldlt_factor(posdef, val, akeep, &fkeep, &options, &info); */
 
@@ -74,5 +74,12 @@ int main(int argc, char ** argv) {
 
   /* stat = spldlt_free_fkeep(&fkeep); */
 
+  sylver_finalize();
+  
+  // Cleanup memory
+  free(ptr);
+  free(row);
+  free(val);  
+  
   return 0;
 }
