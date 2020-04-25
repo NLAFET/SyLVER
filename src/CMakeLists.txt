@@ -66,6 +66,10 @@ file(
 # list(REMOVE_ITEM sources ${to_remove})
 list(REMOVE_ITEM kernel_sources ${to_remove})
 
+# Interfaces
+set(iface_sources
+  interfaces/C/sylver_ciface.F90)
+
 # message(STATUS "Kernel sources: ${kernel_sources}")
 set(sources
   ${sources}
