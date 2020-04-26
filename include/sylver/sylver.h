@@ -16,29 +16,6 @@ extern "C" {
  * Derived types
  ************************************/
 
-/* typedef struct { */
-/*    int array_base; // Not in Fortran type */
-/*    int print_level; */
-/*    int unit_diagnostics; */
-/*    int unit_error; */
-/*    int unit_warning; */
-/*    int ordering; */
-/*    int nemin; */
-/*    bool ignore_numa; */
-/*    bool use_gpu; */
-/*    long min_gpu_work; */
-/*    float max_load_inbalance; */
-/*    float gpu_perf_coeff; */
-/*    int scaling; */
-/*    long small_subtree_threshold; */
-/*    int cpu_block_size; */
-/*    bool action; */
-/*    int pivot_method; */
-/*    double small; */
-/*    double u; */
-/*    char unused[80]; // Allow for future expansion */
-/* } spral_ssids_options_t; //Equiv spral_ssids_options */
-
 typedef struct {
    int flag;
    int matrix_dup;
@@ -92,13 +69,6 @@ typedef struct {
    int failed_pivot_method;
    int scheduler;
 } sylver_options_t;
-
-/* typedef struct{ */
-/*   void              *akeep; */
-/*   void              *fkeep; */
-/*   spldlt_options_t  options; */
-/*   spldlt_inform_t   info; */
-/* } spldlt_data_t; */
 
 extern void sylver_init(int ncpu, int ngpu);
 
