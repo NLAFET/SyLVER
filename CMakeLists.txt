@@ -168,6 +168,8 @@ option(SYLVER_SPRAL_USE_INTERNAL "Use OpenMP" ON)
 option(SYLVER_BUILD_EXAMPLES "Build examples" OFF)
 # Build SyLVER tests
 option(SYLVER_BUILD_TESTS "Build tests" OFF)
+# Build SyLVER unit tests
+option(SYLVER_BUILD_UNIT_TESTS "Build unit tests" OFF)
 # Build SyLVER drivers
 option(SYLVER_BUILD_DRIVERS "Build drivers" OFF)
 # Enable profiling
@@ -646,6 +648,10 @@ endif()
 
 ################################################################################
 # Unit tests
+if (SYLVER_BUILD_UNIT_TESTS)
+  include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/googletest.cmake)
+endif()
+
 if(SYLVER_BUILD_TESTS)
   add_subdirectory(tests)
 endif()
