@@ -467,7 +467,6 @@ subroutine spldlt_c_analyse(n, corder, cptr, crow, cval, cakeep, ccheck, coption
 end subroutine spldlt_c_analyse
 
 
-
 !subroutine spldlt_c_analyse_debug(n, cptr, crow, cval, ncpu, cakeep, coptions, &
 !  cinform, dumpMat) bind(C, name="spldlt_analyse_d")
 !  use spldlt_ciface
@@ -631,6 +630,7 @@ subroutine spldlt_c_factorize(cposdef, cptr, crow, val, cscale, cakeep, cfkeep, 
 
 end subroutine spldlt_c_factorize
 
+
 subroutine spldlt_c_solve(cjob, cnrhs, cx, cldx, cakeep, cfkeep, coptions, &
      cinform) bind(C, name="spldlt_solve")
   use sylver_datatypes_mod
@@ -710,8 +710,6 @@ subroutine spldlt_c_solve(cjob, cnrhs, cx, cldx, cakeep, cfkeep, coptions, &
   call sylver_copy_inform_out(finform, cinform)
 end subroutine spldlt_c_solve
 
-
-
 !subroutine spldlt_c_solve_debug(job, nrhs, cx, ldx, cakeep, cfkeep, &
 !    cinform, dumpRhs) bind(C, name="spldlt_solve_d")
 !  use spldlt_datatypes_mod
@@ -781,59 +779,51 @@ end subroutine spldlt_c_solve
 !end subroutine spldlt_c_solve_debug
 
 
-
-! integer(C_INT) function spldlt_c_free_akeep(cakeep) &
-!     bind(C, name="spldlt_free_akeep")
-!   use spldlt_ciface
-!   use spldlt_analyse_mod
-!   use spral_ssids, only: ssids_free
-!   implicit none
+subroutine spldlt_c_free_akeep(cakeep) &
+    bind(C, name="spldlt_free_akeep")
+  use sylver_ciface
+  use spldlt_analyse_mod
+  implicit none
    
-!   type(C_PTR), intent(inout) :: cakeep
+  type(C_PTR), intent(inout) :: cakeep
 
-!   type(spldlt_akeep_type), pointer :: fakeep
+  type(spldlt_akeep_type), pointer :: fakeep
 
-!   if (.not. C_ASSOCIATED(cakeep)) then
-!      ! Nothing to free
-!      spldlt_c_free_akeep = 0
-!      return
-!   end if
+  if (.not. C_ASSOCIATED(cakeep)) then
+     ! Nothing to free
+     return
+  end if
 
-!   call C_F_POINTER(cakeep, fakeep)
-!   !TODO should be replaced by a spldlt_free subroutine, when it exists
-!   call ssids_free(fakeep%akeep, spldlt_c_free_akeep)
-!   if (allocated(fakeep%subtree_en)) then
-!     deallocate(fakeep%subtree_en)
-!   end if
-!   deallocate(fakeep)
-!   cakeep = C_NULL_PTR
-! end function spldlt_c_free_akeep
+  call c_f_pointer(cakeep, fakeep)
+  call spldlt_akeep_free(fakeep)
+
+  deallocate(fakeep)
+  cakeep = c_null_ptr
+end subroutine spldlt_c_free_akeep
 
 
+subroutine spldlt_c_free_fkeep(cfkeep) &
+     bind(C, name="spldlt_free_fkeep")
+  use sylver_ciface
+  use spldlt_factorize_mod
+  use spral_ssids, only: ssids_free
+  implicit none
 
-! integer(C_INT) function spldlt_c_free_fkeep(cfkeep) &
-!     bind(C, name="spldlt_free_fkeep")
-!   use spldlt_ciface
-!   use spldlt_factorize_mod
-!   use spral_ssids, only: ssids_free
-!   implicit none
-   
-!   type(C_PTR), intent(inout) :: cfkeep
+  type(c_ptr), intent(inout) :: cfkeep
 
-!   type(spldlt_fkeep_type), pointer :: ffkeep
+  type(spldlt_fkeep_type), pointer :: ffkeep
 
-!   if (.not. C_ASSOCIATED(cfkeep)) then
-!      ! Nothing to free
-!      spldlt_c_free_fkeep = 0
-!      return
-!   end if
+  if (.not. C_ASSOCIATED(cfkeep)) then
+     ! Nothing to free
+     return
+  end if
 
-!   call C_F_POINTER(cfkeep, ffkeep)
-!   call ssids_free(ffkeep%fkeep, spldlt_c_free_fkeep)
-!   deallocate(ffkeep)
-!   cfkeep = C_NULL_PTR
-! end function spldlt_c_free_fkeep
-
+  call c_f_pointer(cfkeep, ffkeep)
+  call spldlt_fkeep_free(ffkeep)
+  
+  deallocate(ffkeep)
+  cfkeep = c_null_ptr
+end subroutine spldlt_c_free_fkeep
 
 
 ! subroutine spldlt_c_check_backward_error(n, cptr, crow, cval, nrhs, cx, crhs)&

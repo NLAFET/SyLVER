@@ -62,14 +62,18 @@ int main(int argc, char ** argv) {
 
   bool check = true;
 
+  /* Perform analysis */
   spldlt_analyse(n, order, ptr, row, val, &akeep, check, &options, &inform);
 
-  spldlt_factorize(posdef, NULL, NULL, val, NULL, akeep, &fkeep, &options, &inform);
+  /* Factorize matrix */
+  spldlt_factorize(
+        posdef, NULL, NULL, val, NULL, akeep, &fkeep, &options, &inform);
 
   /* Perfom complete solve: forward, diagonal and backward solve */
   int job = 0;
   int ldx = n;
   
+  /* Solve system and but solution into `x` */
   spldlt_solve(job, nrhs, x, ldx, akeep, fkeep, &options, &inform);
 
   /* spldlt_chkerr(n, ptr, row, val, nrhs, x, rhs); */
@@ -81,11 +85,12 @@ int main(int argc, char ** argv) {
      printf(" %.2f ", x[i]);
   }
   printf("\n");
-  
-  /* stat = spldlt_free_akeep(&akeep); */
-  /* stat = spldlt_free_fkeep(&fkeep); */
 
-  // Cleanup memory
+  /* Cleanup akeep and fkeep */
+  spldlt_free_akeep(&akeep);
+  spldlt_free_fkeep(&fkeep);
+
+  /* Cleanup memory */
   free(x);
   free(ptr);
   free(row);

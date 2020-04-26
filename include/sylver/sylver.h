@@ -148,9 +148,9 @@ extern void spldlt_solve(
 /*                           double *x, */
 /*                           double *rhs); */
 
-/* extern int spldlt_free_akeep(void  **akeep); */
+extern void spldlt_free_akeep(void **akeep);
 
-/* extern int spldlt_free_fkeep(void  **fkeep); */
+extern void spldlt_free_fkeep(void **fkeep);
 
 #ifdef __cplusplus
 }
