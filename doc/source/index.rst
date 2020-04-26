@@ -15,6 +15,7 @@ SyLVER
    introduction
    installation
    subroutines
+   capi
    types
    examples
    
