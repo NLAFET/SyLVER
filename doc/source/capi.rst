@@ -17,10 +17,10 @@ General
    computations should be passed to this routine.
 
    :param ncpu: number of CPUs to be used in the execution of SyLVER
-                routines.
+      routines.
    :param ngpu: number of GPUs to be used in the execution of SyLVER
-                routines. Note that if CUDA is not enabled during the
-                compilation, this value will be ignored.
+      routines. Note that if CUDA is not enabled during the
+      compilation, this value will be ignored.
    
 .. c:function:: void sylver_finalize()
 
@@ -51,7 +51,23 @@ SpLDLT
    passed unaltered in the subsequent calls to
    :c:func:`spldlt_factorize()`.
 
-   
+   :param n: number of columns in :math:`A`.
+   :param order: may be `NULL`; otherwise must be an array of size `n`
+      used on entry a user-supplied ordering
+      (:c:type:`options.ordering=0 <sylver_options_t.ordering>`). On
+      return, the actual ordering used.
+   :param ptr[n+1]: column pointers for :math:`A` (see `CSC format
+      <http://www.numerical.rl.ac.uk/spral/doc/latest/Fortran/csc_format.html>`_).
+   :param row[ptr[n]]: row indices for :math:`A` (see
+      `CSC format
+      <http://www.numerical.rl.ac.uk/spral/doc/latest/Fortran/csc_format.html>`_).
+   :param val: may be `NULL`; otherwise must be an array of size
+      `ptr[n]` containing non-zero values for :math:`A` (see `CSC
+      format
+      <http://www.numerical.rl.ac.uk/spral/doc/latest/Fortran/csc_format.html>`_). Only
+      used if a matching-based ordering is requested.
+
+
 .. c:function:: void spldlt_factorize(bool posdef, long const* ptr, int const* row, double const* val, double *scale, void *akeep, void **fkeep, sylver_options_t const* options, sylver_inform_t *inform)
 
 .. c:function:: void spldlt_solve( int job, int nrhs, double *x, int ldx, void *akeep, void *fkeep, sylver_options_t const* options, sylver_inform_t *inform)
