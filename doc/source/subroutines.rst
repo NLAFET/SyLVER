@@ -36,7 +36,7 @@ SpLDLT
    matrix supplied in `Compressed Sparse Column (CSC) format
    <http://www.numerical.rl.ac.uk/spral/doc/latest/Fortran/csc_format.html>`_. The
    resulting symbolic factors stored in :f:type:`spldlt_akeep` should be passed
-   unaltered in the subsequent calls to ssids_factor().
+   unaltered in the subsequent calls to :f:subr:`spldlt_factorize()`.
 
    :p spldlt_akeep akeep [out]: returns symbolic factorization, to be
       passed unchanged to subsequent routines.
@@ -108,7 +108,8 @@ SpLDLT
 
 .. f:subroutine:: spldlt_solve(akeep,fkeep,nrhs,x,ldx,options,inform[,job])
 
-   Solve (for multiple right-hand sides) one of the following equations:
+   Solve (for :math:`nrhs` right-hand sides) one of the following
+   equations:
 
    +---------------+--------------------------+
    | `job`         | Equation solved          |

@@ -37,8 +37,24 @@ General
 SpLDLT
 ======
 
+.. note::
+   
+   For the most efficient use of the package, CSC format should be
+   used without checking.
+
 .. c:function:: void spldlt_analyse(int n, int *order, long const* ptr, int const* row, double const* val, void **akeep, bool check, sylver_options_t const* options, sylver_inform_t *inform)
 
+   Perform the analyse (symbolic) phase of the factorization for a
+   matrix supplied in `Compressed Sparse Column (CSC) format
+   <http://www.numerical.rl.ac.uk/spral/doc/latest/Fortran/csc_format.html>`_. The
+   resulting symbolic factors stored in :c:type:`akeep` should be
+   passed unaltered in the subsequent calls to
+   :c:func:`spldlt_factorize()`.
+
+   
 .. c:function:: void spldlt_factorize(bool posdef, long const* ptr, int const* row, double const* val, double *scale, void *akeep, void **fkeep, sylver_options_t const* options, sylver_inform_t *inform)
 
 .. c:function:: void spldlt_solve( int job, int nrhs, double *x, int ldx, void *akeep, void *fkeep, sylver_options_t const* options, sylver_inform_t *inform)
+
+   Solve (for :math:`nrhs` right-hand sides) one of the following
+   equations:
