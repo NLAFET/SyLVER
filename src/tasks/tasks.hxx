@@ -236,8 +236,6 @@ namespace spldlt {
 
       int const m = node.nrow();
       int const n = node.ncol();
-      int const nr = node.nr(); // Number of block rows
-      int const nc = node.nc(); // Number of block columns
       
       int const blkm = std::min(blksz, m - kk*blksz);
       int const blkn = std::min(blksz, n - kk*blksz);
@@ -266,7 +264,6 @@ namespace spldlt {
       else {
          // Compute factors in the fully-summed 
          spldlt::starpu::insert_factor_block(
-               // snode.handles[kk*nr + kk],
                node(kk, kk).get_hdl(),
                snode.hdl,
                prio,
@@ -304,9 +301,6 @@ namespace spldlt {
       int n = node.ncol();
       int ldcontrib = m-n;
 
-      int nr = node.nr(); // number of block rows
-      int nc = node.nc(); // number of block columns
-
       int rsa = n / blksz; // Row/Col index of first block in contrib 
 
       int blkn = std::min(blksz, n - k*blksz);
@@ -318,11 +312,8 @@ namespace spldlt {
 
          spldlt::starpu::insert_solve_block(
                k, blksz,
-               // snode.handles[k*nr + k], // diag block handle 
-               // snode.handles[k*nr + i], // subdiag block handle
                node(k, k).get_hdl(),
                node(i, k).get_hdl(),
-               // node.contrib_blocks[i-rsa].hdl, // subdiag block handle
                node.contrib_block(i, k).hdl, // subdiag block handle
                snode.hdl,
                prio);
@@ -330,8 +321,6 @@ namespace spldlt {
       else {
 
          spldlt::starpu::insert_solve_block(
-               // snode.handles[k*nr + k], // diag block handle 
-               // snode.handles[k*nr + i], // subdiag block handle
                node(k, k).get_hdl(),
                node(i, k).get_hdl(),
                snode.hdl,
@@ -370,9 +359,6 @@ namespace spldlt {
       int blkk = std::min(blksz, n - k*blksz);
 
 #if defined(SPLDLT_USE_STARPU)
-
-      int nr = node.nr(); // number of block rows
-      int nc = node.nc(); // number of block columns
 
       // FIXME: doen't work in supernodal mode
       if ((ldcontrib>0) && (blkn<blksz)) {
@@ -426,22 +412,13 @@ namespace spldlt {
       int ldcontrib = m-n;
       T *contrib = node.contrib;
 
-      int nr = node.nr();
-      int nc = node.nc();
-
 #if defined(SPLDLT_USE_STARPU)
-
-      // int rsa = n/blksz;
-      // int ncontrib = nr-rsa;
 
       spldlt::starpu::insert_update_contrib(
             k,
-            // node.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib].hdl,
             node.contrib_block(i, j).hdl,
             node(i, k).get_hdl(),
             node(j, k).get_hdl(),
-            // snode.handles[k*nr + i],
-            // snode.handles[k*nr + j],
             snode.hdl,
             prio);
 
