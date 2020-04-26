@@ -67,7 +67,7 @@ namespace sylver {
 
          assert(a != nullptr);
          // Make sure pointer in allocated
-         if (!a) return;
+         if (!a_) return;
          // Register block in StarPU
          starpu_matrix_data_register(
                &hdl_, STARPU_MAIN_RAM, reinterpret_cast<uintptr_t>(a),
@@ -93,11 +93,11 @@ namespace sylver {
 
       /// @brief Zero block
       void zero() {
-         assert(a != nullptr);
-         if(!a) return;
-         for (int j = 0; j < n; j++) {
-            for (int i = 0; i < m; i++) {
-               a[j*lda+i] = static_cast<T>(0.0);
+         assert(a_ != nullptr);
+         if(!a_) return;
+         for (int j = 0; j < this->n(); j++) {
+            for (int i = 0; i < this->m(); i++) {
+               this->a_[j*this->lda()+i] = static_cast<T>(0.0);
             }
          }
       }
