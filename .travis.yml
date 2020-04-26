@@ -24,6 +24,11 @@ before_script:
   - export CC=gcc-8
   - export CXX=g++-8
   - export FC=gfortran-8
+  - mkdir $TRAVIS_BUILD_DIR/builds && mkdir $TRAVIS_BUILD_DIR/builds/starpu-1.3.3 
+  - starpu.gforge.inria.fr/files/starpu-1.3.3/starpu-1.3.3.tar.gz
+  - tar -xzvf starpu-1.3.3.tar.gz
+  - mkdir starpu-1.3.3/build
+  - cd starpu-1.3.3/build && ./configure --prefix=$TRAVIS_BUILD_DIR//builds/starpu-1.3.3 && make && make install 
 
 script:
   - ./ci/makebuild.sh
