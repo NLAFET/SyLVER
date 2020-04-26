@@ -1,6 +1,9 @@
 language: c++
 sudo: required
 
+before_install:
+  - apt-get update
+
 addons:
   apt:
     sources:
