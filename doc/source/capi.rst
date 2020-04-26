@@ -332,3 +332,50 @@ Data types
       resources.
 
       Default is `256`.
+
+   .. c:member:: int cpu_topology
+   
+      +-------------+----------------------------------------------------------+
+      | 1 (default) | Automatically chose the CPU tology depending on the      |
+      |             | underlying architecture.                                 |
+      +-------------+----------------------------------------------------------+
+      | 2           | Assume flat topology and in particular ignore NUMA       |
+      |             | structure.                                               |
+      +-------------+----------------------------------------------------------+
+      | 3           | Use NUMA structure of underlying architecture to better  |
+      |             | exploit data locality in the parallel execution          |
+      +-------------+----------------------------------------------------------+
+
+      Default is `1`.
+
+   .. c:member:: bool action
+   
+      Continue factorization of singular matrix on discovery of zero
+      pivot if `true` (a warning is issued), or abort if `false`.
+
+      The default is `true`.
+
+   .. c:member:: bool use_gpu
+   
+      Use an NVIDIA GPU if present.
+
+      Default is `true`.
+
+   .. c:member:: float gpu_perf_coeff
+   
+      GPU perfromance coefficient. How many times faster a GPU is than
+      CPU at factoring a subtree.
+
+      Default is `1.0`.
+
+
+.. c:type:: struct sylver_inform_t
+
+   Used to return information about the progress and needs of the
+   algorithm.
+
+   .. c:member:: int flag
+      
+      Exit status of the algorithm (see table below).
+
+   
