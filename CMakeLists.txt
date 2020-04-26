@@ -627,7 +627,7 @@ elseif(${SYLVER_RUNTIME} MATCHES "StarPU")
 
 endif()
 
-if(SYLVER_BUILD_TESTS)
+if(SYLVER_BUILD_TESTS OR SYLVER_BUILD_UNIT_TESTS)
   enable_testing()
   include(CTest)
 endif()

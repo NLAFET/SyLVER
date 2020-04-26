@@ -65,13 +65,13 @@ namespace sylver {
       // Register handle on block
       void register_handle() {
 
-         assert(a != nullptr);
+         assert(a_ != nullptr);
          // Make sure pointer in allocated
          if (!a_) return;
          // Register block in StarPU
          starpu_matrix_data_register(
-               &hdl_, STARPU_MAIN_RAM, reinterpret_cast<uintptr_t>(a),
-               lda, m, n, sizeof(T));
+               &hdl_, STARPU_MAIN_RAM, reinterpret_cast<uintptr_t>(this->a()),
+               this->lda(), this->m(), this->n(), sizeof(T));
       }
 
       // Unregister handle on block asynchronously
@@ -87,7 +87,9 @@ namespace sylver {
          else {
             starpu_data_unregister(hdl_);
          }
-         // starpu_data_unregister_submit(hdl);      
+
+         // Nullify handle pointer
+         this->hdl_ = nullptr;
       }
 #endif
 
