@@ -37,14 +37,8 @@ General
 SpLDLT
 ======
 
-.. c:function:: void spldlt_analyse(int n, int *order, long const*
-      ptr, int const* row, double const* val, void **akeep, bool
-      check, sylver_options_t const* options, sylver_inform_t
-      *inform)
+.. c:function:: void spldlt_analyse(int n, int *order, long const* ptr, int const* row, double const* val, void **akeep, bool check, sylver_options_t const* options, sylver_inform_t *inform)
 
-.. c:function:: void spldlt_factorize(bool posdef, long const* ptr,
-      int const* row, double const* val, double *scale, void *akeep,
-      void **fkeep, sylver_options_t const* options, sylver_inform_t
-      *inform)
+.. c:function:: void spldlt_factorize(bool posdef, long const* ptr, int const* row, double const* val, double *scale, void *akeep, void **fkeep, sylver_options_t const* options, sylver_inform_t *inform)
 
-.. c:function:: 
+.. c:function:: void spldlt_solve( int job, int nrhs, double *x, int ldx, void *akeep, void *fkeep, sylver_options_t const* options, sylver_inform_t *inform)
