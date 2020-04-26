@@ -8,6 +8,8 @@ addons:
       - ubuntu-toolchain-r-test
     packages:
       - gcc-8
+      - g++-8
+      - gfortran-8
       - libmetis-dev
       - libblas-dev
       - liblapack-dev
