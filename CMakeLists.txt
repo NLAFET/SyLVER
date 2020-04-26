@@ -632,6 +632,13 @@ if(SYLVER_BUILD_TESTS)
   include(CTest)
 endif()
 
+################################################################################
+# Unit tests
+if (SYLVER_BUILD_UNIT_TESTS)
+  include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/googletest.cmake)
+  include(GoogleTest)
+endif()
+
 add_subdirectory(src)
 
 ########################################
@@ -647,11 +654,7 @@ if(SYLVER_BUILD_EXAMPLES)
 endif()
 
 ################################################################################
-# Unit tests
-if (SYLVER_BUILD_UNIT_TESTS)
-  include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/googletest.cmake)
-endif()
-
+# Tests
 if(SYLVER_BUILD_TESTS)
   add_subdirectory(tests)
 endif()

@@ -43,3 +43,12 @@ function(sylver_tests_add_driver tests_driver)
   target_link_libraries(${tests_driver_name} ${LIBS})
   
 endfunction()
+
+function(sylver_create_unit_test testfile)
+
+  get_filename_component(testname ${testfile} NAME_WE)
+
+  add_executable(${testname} ${testfile})
+
+  target_link_libraries(${testname} gtest gmock gtest_main)
+endfunction()

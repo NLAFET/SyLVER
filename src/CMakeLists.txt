@@ -37,6 +37,11 @@ set(sources
   topology.cxx
   topology.hxx)
 
+if (SYLVER_BUILD_UNIT_TESTS)
+  add_subdirectory(test)
+endif()
+
+
 set(tasks_sources
   tasks/assemble.hxx
   tasks/assemble_block.hxx

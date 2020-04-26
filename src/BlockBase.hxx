@@ -6,6 +6,10 @@
 // STD
 #include <cassert>
 
+#if defined(SPLDLT_USE_STARPU)
+#include <starpu.h>
+#endif
+
 namespace sylver {
 
    template<typename T>
