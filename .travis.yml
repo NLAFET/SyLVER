@@ -17,7 +17,7 @@ addons:
       - libstarpu-dev
 
 before_script:
-  - chmod +x makebuild.sh
+  - chmod +x ./ci/makebuild.sh
   - export CC=gcc-8
   - export CXX=g++-8
   - export FC=gfortran-8
