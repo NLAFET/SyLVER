@@ -528,55 +528,108 @@ end subroutine spldlt_c_analyse
 !end subroutine spldlt_c_analyse_debug
 
 
+subroutine spldlt_c_factorize(cposdef, cptr, crow, val, cscale, cakeep, cfkeep, coptions, &
+     cinform) bind(C, name="spldlt_factorize")
+  use sylver_datatypes_mod
+  use spldlt_analyse_mod
+  use spldlt_factorize_mod
+  use sylver_ciface
+  implicit none
 
-! subroutine spldlt_c_factor(cposdef, val, cakeep, cfkeep, coptions, cinform) &
-!     bind(C, name="spldlt_factor")
-!   use sylver_datatypes_mod
-!   use spldlt_analyse_mod
-!   use spldlt_factorize_mod
-!   use spldlt_ciface
-!   implicit none
-
-!   logical(C_BOOL),  value                 :: cposdef
-!   real(C_DOUBLE),           intent(in)    :: val(*)
-!   type(C_PTR),      value                 :: cakeep
-!   type(C_PTR),              intent(inout) :: cfkeep
-!   type(spldlt_options_t),   intent(in)    :: coptions
-!   type(spral_ssids_inform), intent(out)   :: cinform
+  logical(c_bool), value :: cposdef
+  type(c_ptr), value :: cptr
+  type(c_ptr), value :: crow
+  real(c_double), intent(in) :: val(*)
+  type(c_ptr), value :: cscale
+  type(c_ptr), value :: cakeep
+  type(c_ptr), intent(inout) :: cfkeep
+  type(sylver_options_t), intent(in) :: coptions
+  type(sylver_inform_t), intent(out) :: cinform
   
-!   logical                           :: fposdef
-!   type(spldlt_akeep_type), pointer  :: fakeep
-!   type(spldlt_fkeep_type), pointer  :: ffkeep
-!   type(spldlt_options)              :: foptions
-!   type(ssids_inform)                :: finform
+  logical :: fposdef
+  integer(C_LONG), dimension(:), pointer :: fptr
+  integer(C_INT), dimension(:), pointer :: frow
+  real(C_DOUBLE), dimension(:), pointer :: fscale
+  type(spldlt_akeep_type), pointer :: fakeep
+  type(spldlt_fkeep_type), pointer :: ffkeep
+  type(sylver_options) :: foptions
+  type(sylver_inform) :: finform
 
-!   logical :: cindexed
+  integer :: n
+  logical :: cindexed
 
-!   ! Copy options in first to find out whether we use Fortran or C indexing
-!   call copy_spldlt_options_in(coptions, foptions, cindexed)
+  ! Copy options in first to find out whether we use Fortran or C indexing
+  call sylver_copy_options_in(coptions, foptions, cindexed)
 
-!   ! Translate arguments
-!   fposdef = cposdef
-!   call C_F_POINTER(cakeep, fakeep) ! Pulled forward so we can use it
-!   if (C_ASSOCIATED(cfkeep)) then
-!      ! Reuse old pointer
-!      call C_F_POINTER(cfkeep, ffkeep)
-!   else
-!      ! Create new pointer
-!      allocate(ffkeep)
-!      cfkeep = C_LOC(ffkeep)
-!   end if
+  ! Translate arguments
+  fposdef = cposdef
+  ! akeep
+  call c_f_pointer(cakeep, fakeep) ! Pulled forward so we can use it
 
-!  !print *, "Call factor"
-!   ! Call Fortran routine
-!   !spldlt_factor(spldlt_akeep, spldlt_fkeep, posdef, val, options, inform)
-!     call spldlt_factor(fakeep, ffkeep, fposdef, val, foptions%options, finform)
+  n = fakeep%akeep%n
+  ! ptr
+  if (c_associated(cptr)) then
+     call c_f_pointer(cptr, fptr, shape=(/ n+1 /))
+     ! if (.not. cindexed) then
+     !    allocate(fptr_alloc(fakeep%n+1))
+     !    fptr_alloc(:) = fptr(:) + 1
+     !    fptr => fptr_alloc
+     ! end if
+  else
+     nullify(fptr)
+  end if
 
-!   ! Copy arguments out
-!   call copy_inform_out(finform, cinform)
-! end subroutine spldlt_c_factor
+  ! row
+  if (c_associated(crow)) then
+     call c_f_pointer(crow, frow, shape=(/ fptr(n+1)-1 /))
+     ! if (.not. cindexed) then
+     !    allocate(frow_alloc(fakeep%n+1))
+     !    frow_alloc(:) = frow(:) + 1
+     !    frow => frow_alloc
+     ! end if
+  else
+     nullify(frow)
+  end if
 
+  ! scale
+  if (c_associated(cscale)) then
+     call C_F_POINTER(cscale, fscale, shape=(/ n /))
+  else
+     nullify(fscale)
+  end if
 
+  ! fkeep
+  if (c_associated(cfkeep)) then
+     ! Reuse old pointer
+     call c_f_pointer(cfkeep, ffkeep)
+  else
+     ! Create new pointer
+     allocate(ffkeep)
+     cfkeep = c_loc(ffkeep)
+  end if
+
+  ! Call spldlt_factor Fortran routine
+  if (associated(fptr) .and. associated(frow)) then
+     if (associated(fscale)) then
+        call spldlt_factorize(fakeep, ffkeep, fposdef, val, foptions, finform, &
+             scale=fscale, ptr=fptr, row=frow)
+     else
+        call spldlt_factorize(fakeep, ffkeep, fposdef, val, foptions, finform, &
+             ptr=fptr, row=frow)
+     end if
+  else
+     if (associated(fscale)) then
+        call spldlt_factorize(fakeep, ffkeep, fposdef, val, foptions, finform, &
+             scale=fscale)
+     else
+        call spldlt_factorize(fakeep, ffkeep, fposdef, val, foptions, finform)
+     end if
+  end if
+  
+  ! Copy arguments out
+  call sylver_copy_inform_out(finform, cinform)
+
+end subroutine spldlt_c_factorize
 
 ! subroutine spldlt_c_solve(job, nrhs, cx, ldx, cakeep, cfkeep, cinform)&
 !     bind(C, name="spldlt_solve")

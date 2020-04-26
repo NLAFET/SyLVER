@@ -110,7 +110,7 @@ extern void spldlt_analyse(
       int n, int *order,
       long const* ptr, int const* row, double const* val,
       void **akeep, bool check,
-      sylver_options_t const* options, sylver_inform_t const* inform);
+      sylver_options_t const* options, sylver_inform_t *inform);
    
 //extern void spldlt_analyse_d( int               n,
 //                              long              *ptr,
@@ -122,12 +122,10 @@ extern void spldlt_analyse(
 //                              spldlt_inform_t   *info,
 //                              int               dumpMat);//MPI rank, othewise -1
 
-/* extern void spldlt_factor(int               posdef, //Boolean  */
-/*                           double            *val, */
-/*                           void              *akeep, */
-/*                           void              **fkeep, */
-/*                           spldlt_options_t  *options, */
-/*                           spldlt_inform_t   *info); */
+extern void spldlt_factorize(
+      bool posdef, long const* ptr, int const* row, double const* val,
+      double *scale, void *akeep, void **fkeep,
+      sylver_options_t const* options, sylver_inform_t *inform);
 
 /* extern void spldlt_solve( int             job, */
 /*                           int             nrhs, */

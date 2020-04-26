@@ -63,7 +63,7 @@ int main(int argc, char ** argv) {
   bool check = true;
   spldlt_analyse(n, order, ptr, row, val, &akeep, check, &options, &inform);
 
-  /* spldlt_factor(posdef, val, akeep, &fkeep, &options, &info); */
+  spldlt_factorize(posdef, NULL, NULL, val, NULL, akeep, &fkeep, &options, &inform);
 
   /* spldlt_solve(0, nrhs, x, n, akeep, fkeep, &info); */
 
