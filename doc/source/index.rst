@@ -16,7 +16,6 @@ SyLVER
    installation
    subroutines
    capi
-   types
    examples
    
 Indices and tables
