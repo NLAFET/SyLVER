@@ -219,8 +219,7 @@ Data types
 
       +-------------+---------------------------------------------------------+
       | 0           | User-supplied ordering is used (`order` argument to     |
-      |             | :c:func:`spral_ssids_analyse()` or                      |
-      |             | :c:func:`spral_ssids_analyse_coord()`).                 |
+      |             | :c:func:`sylver_analyse()`).                            |
       +-------------+---------------------------------------------------------+
       | 1 (default) | METIS ordering with default settings.                   |
       +-------------+---------------------------------------------------------+
@@ -231,8 +230,8 @@ Data types
       |             |                                                         |
       |             | **Note:** This option should only be chosen for         |
       |             | indefinite systems. A scaling is also computed that may |
-      |             | be used in :c:func:`spral_ssids_factor()` (see          |
-      |             | :c:member:`scaling <spral_ssids_options.scaling>`       |
+      |             | be used in :c:func:`sylver_factor()` (see               |
+      |             | :c:member:`scaling <sylver_options_t.scaling>`          |
       |             | below).                                                 |
       +-------------+---------------------------------------------------------+
 
