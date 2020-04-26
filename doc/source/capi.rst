@@ -169,6 +169,10 @@ SpLDLT
 Data types
 ==========
 
+-------
+Options
+-------
+
 .. c:type:: struct sylver_options_t
 
    The data type :c:type:`sylver_options_t` is used to specify the
@@ -367,7 +371,10 @@ Data types
 
       Default is `1.0`.
 
-
+-----------
+Information
+-----------
+      
 .. c:type:: struct sylver_inform_t
 
    Used to return information about the progress and needs of the
