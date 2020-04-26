@@ -377,4 +377,157 @@ Data types
       
       Exit status of the algorithm (see table below).
 
+   .. c:member:: int matrix_dup
    
+      Number of duplicate entries encountered (if
+      :c:func:`spldlt_analyse()` called with check=true).
+
+   .. c:member:: int matrix_missing_diag
+   
+      Number of diagonal entries without an explicit value (if
+      :c:func:`spldlt_analyse()` called with check=true).
+
+   .. c:member:: int matrix_outrange
+   
+      Number of out-of-range entries encountered (if
+      :c:func:`spldlt_analyse()` called with check=true).
+
+   .. c:member:: int matrix_rank
+   
+      (Estimated) rank (structural after analyse phase, numerical
+      after factorize phase).
+
+   .. c:member:: int maxdepth
+   
+      Maximum depth of the assembly tree.
+
+   .. c:member:: int maxfront
+   
+      Maximum front size (without pivoting after analyse phase, with
+      pivoting after factorize phase).
+
+   .. c:member:: int num_delay
+   
+      Number of delayed pivots. That is, the total number of
+      fully-summed variables that were passed to the father node
+      because of stability considerations. If a variable is passed
+      further up the tree, it will be counted again.
+
+   .. c:member:: long num_factor
+   
+      Number of entries in :math:`L` (without pivoting after analyse
+      phase, with pivoting after factorize phase).
+
+   .. c:member:: long num_flops
+   
+      Number of floating-point operations for Cholesky factorization
+      (indefinte needs slightly more). Without pivoting after analyse
+      phase, with pivoting after factorize phase.
+
+   .. c:member:: int num_neg
+   
+      Number of negative eigenvalues of the matrix :math:`D` after
+      factorize phase.
+
+   .. c:member:: int num_sup
+   
+      Number of supernodes in assembly tree.
+
+   .. c:member:: int num_two
+   
+      Number of :math:`2 \times 2` pivots used by the factorization
+      (i.e. in the matrix :math:`D`).
+
+   .. c:member:: int stat
+      
+      Fortran allocation status parameter in event of allocation error
+      (0 otherwise).
+
+   +-------------+-------------------------------------------------------------+
+   | inform.flag | Return status                                               |
+   +=============+=============================================================+
+   | 0           | Success.                                                    |
+   +-------------+-------------------------------------------------------------+
+   | -1          | Error in sequence of calls (may be caused by failure of a   |
+   |             | preceding call).                                            |
+   +-------------+-------------------------------------------------------------+
+   | -2          | n<0 or ne<1.                                                |
+   +-------------+-------------------------------------------------------------+
+   | -3          | Error in ptr[].                                             |
+   +-------------+-------------------------------------------------------------+
+   | -4          | CSC format: All variable indices in one or more columns are |
+   |             | out-of-range.                                               |
+   |             |                                                             |
+   |             | Coordinate format: All entries are out-of-range.            |
+   +-------------+-------------------------------------------------------------+
+   | -5          | Matrix is singular and options.action=false                 |
+   +-------------+-------------------------------------------------------------+
+   | -6          | Matrix found not to be positive definite.                   |
+   +-------------+-------------------------------------------------------------+
+   | -7          | ptr[] and/or row[] not present, but required as             |
+   |             | :c:func:`spldlt_analyse()` was called with check=false.     |
+   +-------------+-------------------------------------------------------------+
+   | -8          | options.ordering out of range, or options.ordering=0 and    |
+   |             | order parameter not provided or not a valid permutation.    |
+   +-------------+-------------------------------------------------------------+
+   | -9          | options.ordering=-2 but val[] was not supplied.             |
+   +-------------+-------------------------------------------------------------+
+   | -10         | ldx<n or nrhs<1.                                            |
+   +-------------+-------------------------------------------------------------+
+   | -11         | job is out-of-range.                                        |
+   +-------------+-------------------------------------------------------------+
+   | -13         | Called :c:func:`spldlt_enquire_posdef()` on indefinite      |
+   |             | factorization.                                              |
+   +-------------+-------------------------------------------------------------+
+   | -14         | Called :c:func:`spldlt_enquire_indef()` on                  |
+   |             | positive-definite factorization.                            |
+   +-------------+-------------------------------------------------------------+
+   | -15         | options.scaling=3 but a matching-based ordering was not     |
+   |             | performed during analyse phase.                             |
+   +-------------+-------------------------------------------------------------+
+   | -50         | Allocation error. If available, the stat parameter is       |
+   |             | returned in inform.stat.                                    |
+   +-------------+-------------------------------------------------------------+
+   | -51         | CUDA error. The CUDA error return value is returned in      |
+   |             | inform.cuda_error.                                          |
+   +-------------+-------------------------------------------------------------+
+   | -52         | CUBLAS error. The CUBLAS error return value is returned in  |
+   |             | inform.cublas_error.                                        |
+   +-------------+-------------------------------------------------------------+
+   | +1          | Out-of-range variable indices found and ignored in input    |
+   |             | data. inform.matrix_outrange is set to the number of such   |
+   |             | entries.                                                    |
+   +-------------+-------------------------------------------------------------+
+   | +2          | Duplicate entries found and summed in input data.           |
+   |             | inform.matrix_dup is set to the number of such entries.     |
+   +-------------+-------------------------------------------------------------+
+   | +3          | Combination of +1 and +2.                                   |
+   +-------------+-------------------------------------------------------------+
+   | +4          | One or more diagonal entries of :math:`A` are missing.      |
+   +-------------+-------------------------------------------------------------+
+   | +5          | Combination of +4 and +1 or +2.                             |
+   +-------------+-------------------------------------------------------------+
+   | +6          | Matrix is found be (structurally) singular during analyse   |
+   |             | phase. This will overwrite any of the above warning flags.  |
+   +-------------+-------------------------------------------------------------+
+   | +7          | Matrix is found to be singular during factorize phase.      |
+   +-------------+-------------------------------------------------------------+
+   | +8          | Matching-based scaling found as side-effect of              |
+   |             | matching-based ordering ignored                             |
+   |             | (consider setting options.scaling=3).                       |
+   +-------------+-------------------------------------------------------------+
+   | +50         | OpenMP processor binding is disabled. Consider setting      |
+   |             | the environment variable OMP_PROC_BIND=true (this may       |
+   |             | affect performance on NUMA systems).                        |
+   +-------------+-------------------------------------------------------------+
+
+   .. c:member:: int cuda_error
+   
+      CUDA error code in the event of a CUDA error (0 otherwise).
+      Note that due to asynchronous execution, CUDA errors may not be
+      reported by the call that caused them.
+
+   .. c:member:: int cublas_error
+   
+      cuBLAS error code in the event of a cuBLAS error (0 otherwise).
+
