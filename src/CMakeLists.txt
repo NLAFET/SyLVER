@@ -71,6 +71,11 @@ set(kernel_sources
   kernels/wrappers.cxx
   kernels/wrappers.hxx)
 
+if (SYLVER_BUILD_UNIT_TESTS)
+  add_subdirectory(kernels/test)
+endif()
+
+
 file(
   GLOB 
   to_remove

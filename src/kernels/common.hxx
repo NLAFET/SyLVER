@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <cassert>
 #include <iostream>
+#include <cmath>
 
 namespace sylver {
 

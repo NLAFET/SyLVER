@@ -35,10 +35,13 @@ namespace sylver {
          // Block dimensions must be positive
          assert((m >= 0) && (n >= 0));
       }
-         
+
+      // Return pointer to data associated with this block
       T* a() { return a_; }
+      // Return constant pointer to data associated with this block
       T const* a() const { return a_; }
 
+      // Set pointer to data associated with this block
       void a(T const* data) {
          a_ = data;
       }

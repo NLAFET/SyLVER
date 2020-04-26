@@ -234,18 +234,18 @@ namespace spldlt {
       sylver::SymbolicFront const& snode = node.symb();
       int const blksz = node.blksz();
 
-      int m = node.nrow();
-      int n = node.ncol();
-      int nr = node.nr(); // Number of block rows
-      int nc = node.nc(); // Number of block columns
+      int const m = node.nrow();
+      int const n = node.ncol();
+      int const nr = node.nr(); // Number of block rows
+      int const nc = node.nc(); // Number of block columns
       
-      int blkm = std::min(blksz, m - kk*blksz);
-      int blkn = std::min(blksz, n - kk*blksz);
+      int const blkm = std::min(blksz, m - kk*blksz);
+      int const blkn = std::min(blksz, n - kk*blksz);
 
       int lda = align_lda<T>(m);
       T *a = node.lcol;
       T *contrib = node.contrib;
-      int ldcontrib = m-n;
+      int const ldcontrib = m-n;
 
 #if defined(SPLDLT_USE_STARPU)
 
