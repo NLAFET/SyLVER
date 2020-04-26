@@ -2,6 +2,8 @@
 C API
 *****
 
+.. code-block:: C
+                
    #include "sylver/sylver.h"
 
 =======
@@ -34,3 +36,4 @@ General
 ======
 SpLDLT
 ======
+
