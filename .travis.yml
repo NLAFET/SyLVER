@@ -1,11 +1,9 @@
 language: c++
 sudo: required
 
-before_install:
-  - apt-get -q update
-
 addons:
   apt:
+    update: true
     sources:      
       - ubuntu-toolchain-r-test
     packages:
