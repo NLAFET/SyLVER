@@ -196,18 +196,21 @@ Data types
    
       Fortran unit number for diagnostics printing.
       Printing is suppressed if <0.
+
       The default is 6 (stdout).
 
    .. c:member:: int unit_error
    
       Fortran unit number for printing of error messages.
       Printing is suppressed if <0.
+      
       The default is 6 (stdout).
 
    .. c:member:: int unit_warning
    
       Fortran unit number for printing of warning messages.
       Printing is suppressed if <0.
+
       The default is 6 (stdout).
       
    .. c:member:: int ordering
@@ -245,13 +248,14 @@ Data types
    .. c:member:: bool prune_tree
    
       If true, prune the elimination tree to better exploit data
-      locality in the parallel multifrontal factorization. The default
-      is `true`.
+      locality in the parallel factorization.
+
+      The default is `true`.
 
    .. c:member:: long min_gpu_work
    
-      Minimum number of flops
-      in subtree before scheduling on GPU.
+      Minimum number of flops in subtree before scheduling on GPU.
+
       Default is `5e9`.
 
    .. c:member:: int scaling
@@ -287,3 +291,44 @@ Data types
 
       The default is 0.
 
+   .. c:member:: int pivot_method
+   
+      Pivot method to be used on CPU, one of:
+
+      +-------------+----------------------------------------------------------+
+      | 2 (default) | Block a posteori pivoting. A failed pivot only requires  |
+      |             | recalculation of entries within its own block column.    |
+      +-------------+----------------------------------------------------------+
+      | 3           | Threshold partial pivoting. Not parallel.                |
+      +-------------+----------------------------------------------------------+
+
+      Default is `2`.
+
+   .. c:member:: double small
+
+      Threshold below which an entry is treated as equivalent to
+      `0.0`.
+
+      The default is `1e-20`.
+
+   .. c:member:: double u
+   
+      Relative pivot threshold used in symmetric indefinite
+      case. Values outside of the range :math:`[0,0.5]` are treated as
+      the closest value in that range.
+
+      The default is `0.01`.
+
+   .. c:member:: long small_subtree_threshold
+   
+      Maximum number of flops in a subtree treated as a single
+      task.
+
+      The default is `4e6`.
+
+   .. c:member:: int nb
+   
+      Block size to use for parallelization of large nodes on CPU
+      resources.
+
+      Default is `256`.
