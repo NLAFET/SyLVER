@@ -31,4 +31,4 @@ before_script:
 
 script:
   - pwd && ls
-  - ci/makebuild.sh
+  - ./ci/makebuild.sh
