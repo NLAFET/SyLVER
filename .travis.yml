@@ -33,9 +33,9 @@ before_script:
 script:
   - pwd && ls
   - echo $CC && echo $CXX && echo $FC
-  - echo $STARPU_DIR && echo $STARPU_DIR/lib 
+  - echo $STARPU_DIR && ls $STARPU_DIR/lib 
   - echo $LD_LIBRARY_PATH
   - mkdir builds/sylver-starpu
   - cd builds/sylver-starpu
   - which cmake
-  - cmake $TRAVIS_BUILD_DIR -D SYLVER_RUNTIME=StarPU -D SYLVER_ENABLE_CUDA=OFF -D SYLVER_ENABLE_OMP=OFF -D SYLVER_SPRAL_USE_INTERNAL=ON -D SYLVER_BUILD_UNIT_TESTS=ON
+  - cmake $TRAVIS_BUILD_DIR -DSYLVER_RUNTIME=StarPU -DSYLVER_ENABLE_CUDA=OFF -DSYLVER_ENABLE_OMP=OFF -DSYLVER_SPRAL_USE_INTERNAL=ON -DSYLVER_BUILD_UNIT_TESTS=ON
