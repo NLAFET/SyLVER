@@ -66,7 +66,14 @@ SpLDLT
       format
       <http://www.numerical.rl.ac.uk/spral/doc/latest/Fortran/csc_format.html>`_). Only
       used if a matching-based ordering is requested.
-
+   :param akeep: returns symbolic factorization, to be passed
+      unchanged to subsequent routines.
+   :param check: if true, matrix data is checked. Out-of-range entries
+      are dropped and duplicate entries are summed.
+   :param options: specifies algorithm options to be used (see
+      :c:type:`sylver_options_t`).
+   :param inform: returns information about the execution of the
+      routine (see :c:type:`sylver_inform_t`).
 
 .. c:function:: void spldlt_factorize(bool posdef, long const* ptr, int const* row, double const* val, double *scale, void *akeep, void **fkeep, sylver_options_t const* options, sylver_inform_t *inform)
 
