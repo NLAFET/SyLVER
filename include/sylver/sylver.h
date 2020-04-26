@@ -127,13 +127,9 @@ extern void spldlt_factorize(
       double *scale, void *akeep, void **fkeep,
       sylver_options_t const* options, sylver_inform_t *inform);
 
-/* extern void spldlt_solve( int             job, */
-/*                           int             nrhs, */
-/*                           double          *x, */
-/*                           int             ldx, */
-/*                           void            *akeep, */
-/*                           void            *fkeep, */
-/*                           spldlt_inform_t *info); */
+extern void spldlt_solve(
+      int job, int nrhs, double *x, int ldx, void *akeep, void *fkeep,
+      sylver_options_t const* options, sylver_inform_t *inform);
 
 //extern void spldlt_solve_d( int             job,
 //                            int             nrhs,

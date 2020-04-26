@@ -47,7 +47,7 @@ int main(int argc, char ** argv) {
   nrhs = 1;
   x     = malloc(n * nrhs * sizeof(double));
   rhs   = malloc(n * nrhs * sizeof(double));
-  for(int i = 0; i < n; i++) rhs[i] = 1.0;
+  for (int i = 0; i < n; i++) rhs[i] = 1.0;
   memcpy(x, rhs, n * sizeof(double));
 
   sylver_default_options(&options);
@@ -61,21 +61,32 @@ int main(int argc, char ** argv) {
   sylver_init(ncpu, ngpu);
 
   bool check = true;
+
   spldlt_analyse(n, order, ptr, row, val, &akeep, check, &options, &inform);
 
   spldlt_factorize(posdef, NULL, NULL, val, NULL, akeep, &fkeep, &options, &inform);
 
-  /* spldlt_solve(0, nrhs, x, n, akeep, fkeep, &info); */
+  /* Perfom complete solve: forward, diagonal and backward solve */
+  int job = 0;
+  int ldx = n;
+  
+  spldlt_solve(job, nrhs, x, ldx, akeep, fkeep, &options, &inform);
 
   /* spldlt_chkerr(n, ptr, row, val, nrhs, x, rhs); */
 
-
   sylver_finalize();
 
+  printf("Computed solution x: ");
+  for (int i = 0; i < n; i++) {
+     printf(" %.2f ", x[i]);
+  }
+  printf("\n");
+  
   /* stat = spldlt_free_akeep(&akeep); */
   /* stat = spldlt_free_fkeep(&fkeep); */
 
   // Cleanup memory
+  free(x);
   free(ptr);
   free(row);
   free(val);  

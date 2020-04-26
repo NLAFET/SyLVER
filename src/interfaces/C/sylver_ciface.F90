@@ -631,51 +631,84 @@ subroutine spldlt_c_factorize(cposdef, cptr, crow, val, cscale, cakeep, cfkeep, 
 
 end subroutine spldlt_c_factorize
 
-! subroutine spldlt_c_solve(job, nrhs, cx, ldx, cakeep, cfkeep, cinform)&
-!     bind(C, name="spldlt_solve")
-!   use sylver_datatypes_mod
-!   use spldlt_analyse_mod
-!   use spldlt_factorize_mod
-!   use spldlt_ciface
-!   implicit none
+subroutine spldlt_c_solve(cjob, cnrhs, cx, cldx, cakeep, cfkeep, coptions, &
+     cinform) bind(C, name="spldlt_solve")
+  use sylver_datatypes_mod
+  use spldlt_analyse_mod
+  use spldlt_factorize_mod
+  use sylver_ciface
+  implicit none
 
-!   integer(C_INT),      value            :: job ! unused right now
-!   integer(C_INT),      value            :: nrhs
-!   type(C_PTR),         value            :: cx
-!   integer(C_INT),      value            :: ldx
-!   type(C_PTR),         value            :: cakeep
-!   type(C_PTR),         value            :: cfkeep
-!   type(spral_ssids_inform), intent(out) :: cinform
+  integer(c_int), value :: cjob
+  integer(c_int), value :: cnrhs
+  type(c_ptr), value :: cx
+  integer(c_int), value :: cldx
+  type(c_ptr), value :: cakeep
+  type(c_ptr), value :: cfkeep
+  type(sylver_options_t), intent(in) :: coptions
+  type(sylver_inform_t), intent(out) :: cinform
 
-!   real(C_DOUBLE),          pointer  :: fx(:,:)
-!   type(spldlt_akeep_type), pointer  :: fakeep
-!   type(spldlt_fkeep_type), pointer  :: ffkeep
-!   type(ssids_inform)                :: finform
+  integer :: fjob
+  integer :: fnrhs
+  integer :: fldx
+  real(c_double),          pointer  :: fx(:,:)
+  type(spldlt_akeep_type), pointer  :: fakeep
+  type(spldlt_fkeep_type), pointer  :: ffkeep
+  type(sylver_options) :: foptions
+  type(sylver_inform) :: finform
 
-!   ! Translate arguments
-!   if (C_ASSOCIATED(cx)) then
-!      call C_F_POINTER(cx, fx, shape=(/ ldx,nrhs /))
-!   else
-!      nullify(fx)
-!   end if
-!   if (C_ASSOCIATED(cakeep)) then
-!      call C_F_POINTER(cakeep, fakeep)
-!   else
-!      nullify(fakeep)
-!   end if
-!   if (C_ASSOCIATED(cfkeep)) then
-!      call C_F_POINTER(cfkeep, ffkeep)
-!   else
-!      nullify(ffkeep)
-!   end if
+  logical :: cindexed
+
+  ! Copy options in first to find out whether we use Fortran or C indexing
+  call sylver_copy_options_in(coptions, foptions, cindexed)
+
+  ! Translate arguments
+
+  ! job
+  fjob = cjob
+
+  ! nrhs
+  fnrhs = cnrhs
+
+  ! ldx
+  fldx = cldx
+
+  ! x
+  if (C_ASSOCIATED(cx)) then
+     call c_f_pointer(cx, fx, shape=(/ fldx, fnrhs /))
+  else
+     nullify(fx)
+  end if
+
+
+  ! akeep
+  if (C_ASSOCIATED(cakeep)) then
+     call C_F_POINTER(cakeep, fakeep)
+  else
+     nullify(fakeep)
+  end if
+
+  ! fkeep
+  if (C_ASSOCIATED(cfkeep)) then
+     call C_F_POINTER(cfkeep, ffkeep)
+  else
+     nullify(ffkeep)
+  end if
 
 !  !print *, "Call solve"
 !   ! Call Fortran routine
 !   call ffkeep%solve(fakeep, nrhs, fx, ldx, finform)
-
-!   ! Copy arguments out
-!   call copy_inform_out(finform, cinform)
-! end subroutine spldlt_c_solve
+  if (fjob .eq. 0) then
+     call spldlt_solve(fakeep, ffkeep, fnrhs, fx, fldx, foptions, &
+          finform)
+  else
+     call spldlt_solve(fakeep, ffkeep, fnrhs, fx, fldx, foptions, &
+          finform, job=fjob)
+  end if
+  
+  ! Copy arguments out
+  call sylver_copy_inform_out(finform, cinform)
+end subroutine spldlt_c_solve
 
 
 
