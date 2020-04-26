@@ -117,8 +117,7 @@ SpLDLT
                 
 .. c:function:: void spldlt_solve(int job, int nrhs, double *x, int ldx, void *akeep, void *fkeep, sylver_options_t const* options, sylver_inform_t *inform)
 
-   Solve (for :c:expr:`nrhs` right-hand sides) one of the following
-   equations:
+   Solve (for `nrhs` right-hand sides) one of the following equations:
 
    +---------------+--------------------------+
    | `job`         | Equation solved          |
