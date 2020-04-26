@@ -1,6 +1,6 @@
-*****
-C API
-*****
+*******
+API (C)
+*******
 
 .. code-block:: C
                 
@@ -165,3 +165,126 @@ SpLDLT
    Frees memory and resources associated with :c:type:`fkeep`.
 
    :param fkeep: numeric factors to be freed.
+
+==========
+Data types
+==========
+
+.. c:type:: struct sylver_options_t
+
+   The data type :c:type:`sylver_options_t` is used to specify the
+   options used within ``SyLVER``. The components, that are
+   automatically given default values in the definition of the type,
+   are:
+
+   .. c:member:: int print_level
+   
+      Level of printing:
+
+      +---------------+-------------------------------------------------+
+      | < 0           | No printing.                                    |
+      +---------------+-------------------------------------------------+
+      | = 0 (default) | Error and warning messages only.                |
+      +---------------+-------------------------------------------------+
+      | = 1           | As 0, plus basic diagnostic printing.           |
+      +---------------+-------------------------------------------------+
+      | > 1           | As 1, plus some additional diagnostic printing. |
+      +---------------+-------------------------------------------------+
+
+      The default is 0.
+
+   .. c:member:: int unit_diagnostics
+   
+      Fortran unit number for diagnostics printing.
+      Printing is suppressed if <0.
+      The default is 6 (stdout).
+
+   .. c:member:: int unit_error
+   
+      Fortran unit number for printing of error messages.
+      Printing is suppressed if <0.
+      The default is 6 (stdout).
+
+   .. c:member:: int unit_warning
+   
+      Fortran unit number for printing of warning messages.
+      Printing is suppressed if <0.
+      The default is 6 (stdout).
+      
+   .. c:member:: int ordering
+   
+      Ordering method to use in analyse phase:
+
+      +-------------+---------------------------------------------------------+
+      | 0           | User-supplied ordering is used (`order` argument to     |
+      |             | :c:func:`spral_ssids_analyse()` or                      |
+      |             | :c:func:`spral_ssids_analyse_coord()`).                 |
+      +-------------+---------------------------------------------------------+
+      | 1 (default) | METIS ordering with default settings.                   |
+      +-------------+---------------------------------------------------------+
+      | 2           | Matching-based elimination ordering is computed (the    |
+      |             | Hungarian algorithm is used to identify large           |
+      |             | off-diagonal entries. A restricted METIS ordering is    |
+      |             | then used that forces these on to the subdiagonal).     |
+      |             |                                                         |
+      |             | **Note:** This option should only be chosen for         |
+      |             | indefinite systems. A scaling is also computed that may |
+      |             | be used in :c:func:`spral_ssids_factor()` (see          |
+      |             | :c:member:`scaling <spral_ssids_options.scaling>`       |
+      |             | below).                                                 |
+      +-------------+---------------------------------------------------------+
+
+      The default is 1.
+
+   .. c:member:: int nemin
+   
+      Supernode amalgamation threshold. Two neighbours in the elimination tree
+      are merged if they both involve fewer than `nemin` eliminations.
+      The default is used if `nemin<1`.
+      The default is 8.
+
+   .. c:member:: bool prune_tree
+   
+      If true, prune the elimination tree to better exploit data
+      locality in the parallel multifrontal factorization. The default
+      is `true`.
+
+   .. c:member:: long min_gpu_work
+   
+      Minimum number of flops
+      in subtree before scheduling on GPU.
+      Default is `5e9`.
+
+   .. c:member:: int scaling
+   
+      Scaling algorithm to use:
+
+      +---------------+-------------------------------------------------------+
+      | <=0 (default) | No scaling (if ``scale[]`` is not present on call to  |
+      |               | :c:func:`spldlt_factor()`, or user-supplied           |
+      |               | scaling (if ``scale[]`` is present).                  |
+      +---------------+-------------------------------------------------------+
+      | =1            | Compute using weighted bipartite matching via the     |
+      |               | Hungarian Algorithm (MC64 algorithm).                 |
+      +---------------+-------------------------------------------------------+
+      | =2            | Compute using a weighted bipartite matching via the   |
+      |               | Auction Algorithm (may be lower quality than that     |
+      |               | computed using the Hungarian Algorithm, but can be    |
+      |               | considerably faster).                                 |
+      +---------------+-------------------------------------------------------+
+      | =3            | Use matching-based ordering generated during the      |
+      |               | analyse phase using :c:member:`options.ordering=2     |
+      |               | <sylver_options_t.ordering>`. The scaling             |
+      |               | will be the same as that generated with               |
+      |               | :c:member:`options.scaling=1                          |
+      |               | <sylver_options_t.scaling>`                           |
+      |               | if the matrix values have not changed. This option    |
+      |               | will generate an error if a matching-based ordering   |
+      |               | was not used during analysis.                         |
+      +---------------+-------------------------------------------------------+
+      | >=4           | Compute using the norm-equilibration algorithm of     |
+      |               | Ruiz (see :doc:`scaling`).                            |
+      +---------------+-------------------------------------------------------+
+
+      The default is 0.
+

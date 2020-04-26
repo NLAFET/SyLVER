@@ -1,6 +1,6 @@
-***********
-Fortran API
-***********
+*************
+API (Fortran)
+*************
 
 In the below, all reals are double precision unless otherwise indicated.
 
