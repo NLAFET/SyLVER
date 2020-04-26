@@ -2,15 +2,14 @@ language: c++
 sudo: required
 
 before_install:
-  - add-apt-repository -y ppa:ubuntu-toolchain-r/test
   - apt-get -q update
 
 addons:
   apt:
+    sources:      
+      - ubuntu-toolchain-r-test
     packages:
-      - gfortran-8
       - gcc-8
-      - g++-8
       - libmetis-dev
       - libblas-dev
       - liblapack-dev
