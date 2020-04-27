@@ -1,11 +1,12 @@
 #pragma once
 
 // SpLDLT
-#include "SymbolicFront.hxx"
+#include "BuddyAllocator.hxx"
+#include "common.hxx"
 #include "NumericFront.hxx"
 #include "kernels/factor_indef.hxx"
 // SpLDLT tests
-#include "common.hxx"
+#include "SymbolicFront.hxx"
 
 // STD
 #include <vector>
@@ -20,14 +21,15 @@
 #include "tests/ssids/kernels/AlignedAllocator.hxx"
 #include "tests/ssids/kernels/framework.hxx"
 
-namespace spldlt { namespace tests {
+namespace spldlt {
+namespace tests {
 
-      template<typename T, bool debug = false>
-      int form_contrib_test(
-            T u, T small, bool posdef,
-            int m, int n, int from, int to,
-            int blksz, 
-            int test=0, int seed=0) {
+   template<typename T, bool debug = false>
+   int form_contrib_test(
+         T u, T small, bool posdef,
+         int m, int n, int from, int to,
+         int blksz, 
+         int test=0, int seed=0) {
          
       bool failed = false;
 
@@ -55,13 +57,13 @@ namespace spldlt { namespace tests {
       sylver::tests::gen_rhs(m, a, lda, b);
 
       T* l = new double[m*lda];
-      memcpy(l, a, lda*m*sizeof(T)); // Copy a to l
+      std::memcpy(l, a, lda*m*sizeof(T)); // Copy a to l
 
       ////////////////////////////////////////
       // Setup front
 
       // Setup pool allocator
-      typedef BuddyAllocator<T, std::allocator<T>> PoolAllocator;
+      using PoolAllocator = ::sylver::BuddyAllocator<T, std::allocator<T>>; 
       PoolAllocator pool_alloc(lda*n);
       // Symbolic front
       sylver::SymbolicFront sfront;
@@ -69,10 +71,10 @@ namespace spldlt { namespace tests {
       sfront.ncol = n;
 
       // Numeric front
-      NumericFront<T, PoolAllocator> front(sfront, pool_alloc, blksz);
+      sylver::spldlt::NumericFront<T, PoolAllocator> front(sfront, pool_alloc, blksz);
 
       // Setup allocator for factors
-      typedef spral::test::AlignedAllocator<T> FactorAllocator;
+      using FactorAllocator = spral::test::AlignedAllocator<T>;
       FactorAllocator allocT;
       // Make lcol m columns wide for debugging
       size_t len = (lda+2)*m; // Includes D
@@ -93,7 +95,7 @@ namespace spldlt { namespace tests {
       // nelim += ldlt_tpp_factor(
       //       m-nelim, from, &perm[nelim], &l[nelim*(lda+1)], lda,
       //       &d[2*nelim], ld, m, true, u, small, nelim, &l[nelim], lda);
-      nelim += ldlt_tpp_factor(
+      nelim += spral::ssids::cpu::ldlt_tpp_factor(
             m-nelim, from, &perm[nelim], &l[nelim*(lda+1)], lda,
             &d[2*nelim], ld, m, true, u, small, nelim, &l[nelim], lda);
 
@@ -102,7 +104,7 @@ namespace spldlt { namespace tests {
       printf("[form_contrib_test] first pass nelim = %d\n", nelim);
       do_update<T>(m-nelim, nelim, &l[nelim*(lda+1)], &l[nelim], lda, d);
 
-      nelim += ldlt_tpp_factor(
+      nelim += spral::ssids::cpu::ldlt_tpp_factor(
             m-nelim, to-nelim+1, &perm[nelim], &l[nelim*(lda+1)], lda,
             &d[2*nelim], ld, m, true, u, small, nelim, &l[nelim], lda);
 
@@ -119,7 +121,7 @@ namespace spldlt { namespace tests {
       // Update contribution blocks
       // do_update<T>(    m-n,     m-n, nelim-nelim1, &l[n*(lda+1)],     &l[nelim1*lda+n], lda, &d[2*nelim1]);
 
-      memcpy(front.lcol, l, lda*n*sizeof(T)); // Copy factors into front
+      std::memcpy(front.lcol, l, lda*n*sizeof(T)); // Copy factors into front
       copy_a_to_cb(l, lda, front); // Copy constribution blocks into front      
       form_contrib_notask(front, work, nelim1, nelim-1);
       copy_cb_to_a(front, l, lda); // Copy constribution blocks back into l
@@ -132,7 +134,7 @@ namespace spldlt { namespace tests {
          print_mat("%10.2e", m, l, lda);
       }
 
-      nelim += ldlt_tpp_factor(
+      nelim += spral::ssids::cpu::ldlt_tpp_factor(
             m-nelim, m-nelim, &perm[nelim], &l[nelim*(lda+1)], lda,
             &d[2*nelim], ld, m, true, u, small, nelim, &l[nelim], lda);
       delete[] ld;
@@ -163,4 +165,4 @@ namespace spldlt { namespace tests {
    // Run tests for the node factorization
    int run_form_contrib_tests();
 
-}} // namespace spldlt::tests
+}} // End of namespace spldlt::tests

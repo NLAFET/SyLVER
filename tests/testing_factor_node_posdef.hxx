@@ -22,7 +22,6 @@
 
 // SSIDS
 #include "ssids/cpu/cpu_iface.hxx"
-#include "ssids/cpu/BuddyAllocator.hxx"
 #include "ssids/cpu/kernels/cholesky.hxx"
 // SSIDS tests
 #include "tests/ssids/kernels/AlignedAllocator.hxx"
@@ -67,18 +66,17 @@ namespace tests {
       options.nb = blksz;
 
       // Setup pool allocator
-      // typedef spldlt::BuddyAllocator<T,std::allocator<T>> PoolAllocator;
-      typedef spral::ssids::cpu::BuddyAllocator<T, std::allocator<T>> PoolAllocator;
+      using PoolAllocator = ::sylver::BuddyAllocator<T, std::allocator<T>>; 
       PoolAllocator pool_alloc(lda*n);
          
       // Setup frontal matrix
       sylver::SymbolicFront sfront;
       sfront.nrow = m;
       sfront.ncol = n;
-      NumericFront<T, PoolAllocator> front(sfront, pool_alloc, blksz);
+      sylver::spldlt::NumericFront<T, PoolAllocator> front(sfront, pool_alloc, blksz);
 
       // Setup allocator for factors
-      typedef spral::test::AlignedAllocator<T> FactorAllocator;
+      using FactorAllocator = spral::test::AlignedAllocator<T>;
       FactorAllocator allocT;
       // Allocate factors
       size_t len = lda*m;
@@ -173,17 +171,17 @@ namespace tests {
       ////////////////////////////////////////
       // Init factor
 #if defined(SPLDLT_USE_STARPU)
-      spldlt::starpu::codelet_init<T, FactorAllocator, PoolAllocator>();
+      sylver::spldlt::starpu::codelet_init<T, FactorAllocator, PoolAllocator>();
 
 #if defined(SPLDLT_USE_GPU)
-      spldlt::starpu::cl_update_block.where = STARPU_CPU|STARPU_CUDA;
+      sylver::spldlt::starpu::cl_update_block.where = STARPU_CPU|STARPU_CUDA;
 #endif
       // Register symbolic handles on node
       front.register_symb();
       // Register symbolic handle for contribution block
       front.register_symb_contrib();
       // Register data handles in StarPU         
-      spldlt::starpu::register_node(front);
+      sylver::spldlt::starpu::register_node(front);
 #endif
          
       printf("[factor_node_posdef_test] Factor..\n");
@@ -204,7 +202,7 @@ namespace tests {
 
       // if(debug) printf("[factor_node_indef_test] factorization done\n");
 
-      spldlt::starpu::unregister_node_submit(front);
+      sylver::spldlt::starpu::unregister_node_submit(front);
       starpu_task_wait_for_all(); // Wait for unregistration of handles      
       starpu_data_unregister(sfront.hdl); // Node's symbolic handle
       starpu_data_unregister(front.contrib_hdl());
@@ -247,14 +245,14 @@ namespace tests {
 
          printf("[factor_node_posdef_test] Solve..\n");
          sylver::spldlt::cholesky_solve_fwd(m, n, l, lda, nrhs, soln, ldsoln);
-         host_trsm<T>(
+         sylver::host_trsm<T>(
                sylver::SIDE_LEFT, sylver::FILL_MODE_LWR, 
-               sylver::OP_N, sylver::DIAG_NON_UNIT, 
+               sylver::operation::OP_N, sylver::DIAG_NON_UNIT, 
                m-n, nrhs, 1.0, &l[n*lda+n], lda, 
                &soln[n], ldsoln);
-         host_trsm<T>(
+         sylver::host_trsm<T>(
                sylver::SIDE_LEFT, sylver::FILL_MODE_LWR, 
-               sylver::OP_T, sylver::DIAG_NON_UNIT, 
+               sylver::operation::OP_T, sylver::DIAG_NON_UNIT, 
                m-n, nrhs, 1.0, &l[n*lda+n], lda, 
                &soln[n], ldsoln);
          sylver::spldlt::cholesky_solve_bwd(m, n, l, lda, nrhs, soln, ldsoln);

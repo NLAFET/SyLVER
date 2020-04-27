@@ -26,6 +26,18 @@
 #endif
 
 namespace sylver {
+
+   ////////////////////////////////////////////////////////////
+
+   /// @brief Wait for completion of all tasks previously submitted to
+   /// the runtime system
+   inline void task_wait_for_all() {
+#if defined(SPLDLT_USE_STARPU)
+      starpu_task_wait_for_all();
+#endif
+   }
+
+   
 namespace spldlt {
 
    ////////////////////////////////////////////////////////////
@@ -57,16 +69,6 @@ namespace spldlt {
    int const UPDATE_PRIO   = 1;
 
 #endif
-
-   ////////////////////////////////////////////////////////////
-
-   /// @brief Wait for completion of all tasks previously submitted to
-   /// the runtime system
-   inline void sylver_task_wait_for_all() {
-#if defined(SPLDLT_USE_STARPU)
-            starpu_task_wait_for_all();
-#endif
-   }
    
    ////////////////////////////////////////////////////////////
 

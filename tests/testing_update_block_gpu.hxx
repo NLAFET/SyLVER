@@ -113,7 +113,8 @@ namespace tests {
          
       // Compute U = U - W L^{T}
       host_gemm(
-            OP_N, OP_T, m, n, k,
+            sylver::operation::OP_N, sylver::operation::OP_T,
+            m, n, k,
             // -1.0, ljk, ld_ljk, ld, ldld,
             -1.0, ld, ldld, l_jk, ld_ljk,
             rbeta, l_ij, ld_lij);
@@ -190,7 +191,7 @@ namespace tests {
          
       auto start = std::chrono::high_resolution_clock::now();         
 
-      spldlt::gpu::update_block(
+      sylver::spldlt::gpu::update_block(
             stream, handle,
             m, n,
             d_upd, ld_lij,

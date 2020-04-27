@@ -1,6 +1,7 @@
 #pragma once
 
 // SpLDLT
+#include "BuddyAllocator.hxx"
 #include "SymbolicFront.hxx"
 #include "NumericFront.hxx"
 #include "factor_indef.hxx"
@@ -14,7 +15,6 @@
 // SSIDS
 #include "ssids/cpu/cpu_iface.hxx"
 #include "tests/ssids/kernels/AlignedAllocator.hxx"
-#include "ssids/cpu/BuddyAllocator.hxx"
 #include "ssids/cpu/kernels/ldlt_tpp.hxx"
 #include "ssids/cpu/kernels/ldlt_app.hxx"
 // SSIDS tests
@@ -28,16 +28,18 @@
 #endif
 
 
-namespace spldlt { namespace tests {
-
-      /// @brief Launch test for the LDL^{T} factorization of a mxn
-      /// indefinite node using APP strategy.
+namespace spldlt {
+namespace tests {
+   
+   /// @brief Launch test for the LDL^{T} factorization of a mxn
+   /// indefinite node using APP strategy.
    template<typename T,
-            int iblksz=INNER_BLOCK_SIZE,
+            int iblksz=sylver::spldlt::INNER_BLOCK_SIZE,
             bool debug = false>
-   int factor_node_indef_app_test(T u, T small, bool delays, bool singular, int m, int n,
-                                  int blksz=INNER_BLOCK_SIZE, int ncpu=1,
-                                  int test=0, int seed=0) {
+   int factor_node_indef_app_test(
+         T u, T small, bool delays, bool singular, int m, int n,
+         int blksz=sylver::spldlt::INNER_BLOCK_SIZE, int ncpu=1,
+         int test=0, int seed=0) {
       
       
       bool failed = false;
@@ -73,17 +75,17 @@ namespace spldlt { namespace tests {
       options.failed_pivot_method = sylver::FailedPivotMethod::tpp;
 
       // Setup pool allocator
-      typedef BuddyAllocator<T, std::allocator<T>> PoolAllocator;
+      using PoolAllocator = sylver::BuddyAllocator<T, std::allocator<T>>;
       PoolAllocator pool_alloc(lda*n);
 
       sylver::SymbolicFront sfront;
       sfront.nrow = m;
       sfront.ncol = n;
-      NumericFront<T, PoolAllocator> front(sfront, pool_alloc, blksz);
+      sylver::spldlt::NumericFront<T, PoolAllocator> front(sfront, pool_alloc, blksz);
 
       // Init node
       // Setup allocator for factors
-      typedef spral::test::AlignedAllocator<T> FactorAllocator;
+      using FactorAllocator = spral::test::AlignedAllocator<T>;
       FactorAllocator allocT;
 
       // Make lcol m columns wide for debugging
@@ -114,7 +116,7 @@ namespace spldlt { namespace tests {
       // T *d = new T[2*m];      
       //       T* upd = nullptr;
       // Setup backup
-      typedef spldlt::ldlt_app_internal::CopyBackup<T, PoolAllocator> Backup;
+      using Backup = sylver::spldlt::ldlt_app_internal::CopyBackup<T, PoolAllocator>;
       // CopyBackup<T, PoolAllocator> backup(m, n, blksz);
       front.alloc_backup();
       // Setup cdata
@@ -148,16 +150,16 @@ namespace spldlt { namespace tests {
 
       // Init factoriization 
 #if defined(SPLDLT_USE_STARPU)
-      spldlt::starpu::codelet_init<T, FactorAllocator, PoolAllocator>();
-      spldlt::starpu::codelet_init_indef<T, iblksz, Backup, PoolAllocator>();
-      spldlt::starpu::codelet_init_factor_indef<T, PoolAllocator>();
+      sylver::spldlt::starpu::codelet_init<T, FactorAllocator, PoolAllocator>();
+      sylver::spldlt::starpu::codelet_init_indef<T, iblksz, Backup, PoolAllocator>();
+      sylver::spldlt::starpu::codelet_init_factor_indef<T, PoolAllocator>();
 #endif
 
 #if defined(SPLDLT_USE_STARPU)
       // Register symbolic handles
       starpu_void_data_register(&(sfront.hdl)); // Node's symbolic handle
       // Register StarPU data handles
-      spldlt::starpu::register_node_indef(front);
+      sylver::spldlt::starpu::register_node_indef(front);
 #endif
       
       if(debug) printf("[factor_node_indef_app_test] factor front..\n");
@@ -170,8 +172,8 @@ namespace spldlt { namespace tests {
       front.nelim(0);
 
       // Factor front (first and second pass) and from contrib blocks
-      FactorSymIndef
-         <T, INNER_BLOCK_SIZE, Backup, debug, PoolAllocator>
+      sylver::spldlt::FactorSymIndef
+         <T, sylver::spldlt::INNER_BLOCK_SIZE, Backup, debug, PoolAllocator>
          ::factor_front_indef_app(
                front, options, worker_stats, 0.0, upd, 0, workspaces, pool_alloc,
                front.nelim());
@@ -187,7 +189,7 @@ namespace spldlt { namespace tests {
       printf("[factor_node_indef_app_test] factor time: %e\n", 1e-9*ttotal);
       
 #if defined(SPLDLT_USE_STARPU)
-      unregister_node_submit(front);
+      sylver::spldlt::starpu::unregister_node_submit(front);
       starpu_data_unregister_submit(sfront.hdl); // Node's symbolic handle
       starpu_task_wait_for_all(); // Wait for unregistration of handles      
 #endif
