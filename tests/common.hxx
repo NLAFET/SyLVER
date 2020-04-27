@@ -1,11 +1,12 @@
 #pragma once
 
 // SyLVER
-#include "NumericFront.hxx"
+#include "kernels/wrappers.hxx"
 #if defined(SPLDLT_USE_GPU)
 #include "kernels/gpu/common.hxx"
 #include "kernels/gpu/wrappers.hxx"
 #endif
+#include "NumericFront.hxx"
 #include "Tile.hxx"
 
 #include <cstdio>
@@ -311,7 +312,9 @@ namespace spldlt {
            }*/
 
          // Perform actual update
-         host_gemm<T>(OP_N, OP_T, n, n, k, -1.0, ad21, n, a21, lda, 1.0, a22, lda);
+         sylver::host_gemm<T>(
+               sylver::operation::OP_N, sylver::operation::OP_T,
+               n, n, k, -1.0, ad21, n, a21, lda, 1.0, a22, lda);
 
          // Free memory
          delete[] ad21;
@@ -377,7 +380,9 @@ namespace spldlt {
            }*/
 
          // Perform actual update
-         host_gemm<T>(OP_N, OP_T, m, n, k, -1.0, ad21, m, a21, lda, 1.0, a22, lda);
+         sylver::host_gemm<T>(
+               sylver::operation::OP_N, sylver::operation::OP_T,
+               m, n, k, -1.0, ad21, m, a21, lda, 1.0, a22, lda);
 
          // Free memory
          delete[] ad21;
@@ -386,7 +391,8 @@ namespace spldlt {
       /// @brief Copy the array a into the contribution blocks
       template<typename T, typename PoolAllocator,
                bool debug=false>
-      void copy_a_to_cb(T* a, int lda, NumericFront<T, PoolAllocator>& node) {
+      void copy_a_to_cb(
+            T* a, int lda, sylver::spldlt::NumericFront<T, PoolAllocator>& node) {
 
          int m = node.nrow();
          int n = node.ncol();
@@ -430,7 +436,8 @@ namespace spldlt {
       /// @brief Copy the contribution blocks into the array a
       template<typename T, typename PoolAllocator,
                bool debug=false>
-      void copy_cb_to_a(NumericFront<T, PoolAllocator>& node, T* a, int lda) {
+      void copy_cb_to_a(
+            sylver::spldlt::NumericFront<T, PoolAllocator>& node, T* a, int lda) {
 
          int m = node.nrow();
          int n = node.ncol();
@@ -471,7 +478,8 @@ namespace spldlt {
       /// @brief Add the contribution blocks into the array a
       template<typename T, typename PoolAllocator,
                bool debug=false>
-      void add_cb_to_a(NumericFront<T, PoolAllocator>& node, T* a, int lda) {
+      void add_cb_to_a(
+            sylver::spldlt::NumericFront<T, PoolAllocator>& node, T* a, int lda) {
 
          int m = node.nrow();
          int n = node.ncol();
@@ -509,7 +517,8 @@ namespace spldlt {
 
       /// @brief Print node's contribution blocks
       template<typename T, typename PoolAllocator>
-      void print_cb(char const* format, NumericFront<T, PoolAllocator>& node) {
+      void print_cb(
+            char const* format, sylver::spldlt::NumericFront<T, PoolAllocator>& node) {
 
          int m = node.nrow();
          int n = node.ncol();

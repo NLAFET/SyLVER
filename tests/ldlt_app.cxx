@@ -22,11 +22,12 @@
 
 using namespace spral::ssids::cpu;
 
-namespace spldlt { namespace tests {
+namespace spldlt {
+namespace tests {
 
    // static const int INNER_BLOCK_SIZE = 32; // same as in ssids/cpu/kernels/ldlt_app.cxx 
-   using namespace spldlt::ldlt_app_internal;
-
+   using namespace sylver::spldlt::ldlt_app_internal;
+   
    // template<typename T>
    // void solve(int m, int n, const int *perm, const T *l, int ldl, const T *d, const T *b, T *x) {
    //    for(int i=0; i<m; i++) x[i] = b[perm[i]];
@@ -53,11 +54,11 @@ namespace spldlt { namespace tests {
    template<typename T,
             bool aggressive, // Use Cholesky-like app pattern
             bool debug=true,
-            int iblksz=INNER_BLOCK_SIZE>
+            int iblksz=sylver::spldlt::INNER_BLOCK_SIZE>
    int ldlt_app_test(T u, T small, 
                      bool delays, bool singular, bool dblk_singular, 
                      int m, int n, 
-                     int blksz=INNER_BLOCK_SIZE, 
+                     int blksz=sylver::spldlt::INNER_BLOCK_SIZE, 
                      int test=0, int seed=0) {
 
       bool failed = false;

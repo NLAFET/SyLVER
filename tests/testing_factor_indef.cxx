@@ -1,5 +1,6 @@
 #include "testing_factor_indef.hxx"
 
+#include "BuddyAllocator.hxx"
 #include "common.hxx"
 #include "kernels/ldlt_app.hxx"
 #include "factor_indef.hxx"
@@ -9,7 +10,6 @@
 
 // SSIDS
 #include "ssids/cpu/kernels/common.hxx"
-#include "ssids/cpu/BuddyAllocator.hxx"
 // #include "ssids/cpu/kernels/ldlt_app.hxx"
 #include "ssids/cpu/kernels/wrappers.hxx"
 // #include "ssids/cpu/kernels/ldlt_app.cxx" // .cxx as we need internal namespace
@@ -20,9 +20,10 @@
 #include "tests/ssids/kernels/framework.hxx"
 #include "tests/ssids/kernels/AlignedAllocator.hxx"
 
-namespace spldlt { namespace tests {
+namespace spldlt {
+namespace tests {
 
-   using namespace spldlt::ldlt_app_internal;
+   using namespace sylver::spldlt::ldlt_app_internal;
 
    /*
      bool dblk_singular singular diagonal blocks
@@ -30,11 +31,11 @@ namespace spldlt { namespace tests {
    template<typename T,
             bool aggressive, // Use Cholesky-like app pattern
             bool debug=true,
-            int iblksz=INNER_BLOCK_SIZE>
+            int iblksz=sylver::spldlt::INNER_BLOCK_SIZE>
    int factor_indef_test(T u, T small, 
                          bool delays, bool singular, bool dblk_singular, 
                          int m, int n, 
-                         int blksz=INNER_BLOCK_SIZE, 
+                         int blksz=sylver::spldlt::INNER_BLOCK_SIZE, 
                          int test=0, int seed=0) {
 
       bool failed = false;
@@ -43,7 +44,7 @@ namespace spldlt { namespace tests {
       // m x n matrix followed by an (m-n) x (m-n) matrix [give or take delays]
 
       // Generate test matrix
-      int lda = align_lda<T>(m);
+      int lda =  spral::ssids::cpu::align_lda<T>(m);
       double* a = new T[m*lda];
       gen_sym_indef(m, a, lda);
       modify_test_matrix<T, iblksz>(
@@ -73,7 +74,7 @@ namespace spldlt { namespace tests {
                                           : sylver::PivotMethod::app_block;
 
       // Init factorization
-      typedef BuddyAllocator<T,std::allocator<T>> PoolAllocator;
+      typedef ::sylver::BuddyAllocator<T,std::allocator<T>> PoolAllocator;
       PoolAllocator pool_alloc(m*n);
 
       // factor_indef_init<T, PoolAllocator>();
@@ -108,7 +109,7 @@ namespace spldlt { namespace tests {
       //          m, n, perm, l, lda, d, backup, options, options.pivot_method,
       //          blksz, 0.0, nullptr, 0, work
       //          );
-      int q1 = FactorSymIndef
+      int q1 = sylver::spldlt::FactorSymIndef
          <T, iblksz, CopyBackup<T>, debug, PoolAllocator>
          ::ldlt_app(
                m, n, perm, l, lda, d, backup, options, worker_stats, 
@@ -125,8 +126,9 @@ namespace spldlt { namespace tests {
       if(q1 < n) {
          // Finish off with simplistic kernel
          T *ld = new T[2*m];
-         q1 += ldlt_tpp_factor(m-q1, n-q1, &perm[q1], &l[(q1)*(lda+1)], lda,
-                               &d[2*(q1)], ld, m, options.action, u, small, q1, &l[q1], lda);
+         q1 += spral::ssids::cpu::ldlt_tpp_factor(
+               m-q1, n-q1, &perm[q1], &l[(q1)*(lda+1)], lda,
+               &d[2*(q1)], ld, m, options.action, u, small, q1, &l[q1], lda);
          delete[] ld;
       }
       if(m > n) {
@@ -154,9 +156,10 @@ namespace spldlt { namespace tests {
          if(q1+q2 < m) {
             // Finish off with simplistic kernel
             T *ld = new T[2*m];
-            q2 += ldlt_tpp_factor(m-q1-q2, m-q1-q2, &perm[q1+q2],
-                                  &l[(q1+q2)*(lda+1)], lda, &d[2*(q1+q2)], ld, m, options.action,
-                                  u, small, q1+q2, &l[q1+q2], lda);
+            q2 += spral::ssids::cpu::ldlt_tpp_factor(
+                  m-q1-q2, m-q1-q2, &perm[q1+q2],
+                  &l[(q1+q2)*(lda+1)], lda, &d[2*(q1+q2)], ld, m, options.action,
+                  u, small, q1+q2, &l[q1+q2], lda);
             delete[] ld;
          }
       }

@@ -1,6 +1,7 @@
 #pragma once
 
-// SpLDLT
+// SyLVER
+#include "BuddyAllocator.hxx"
 #include "SymbolicFront.hxx"
 #include "factor_indef.hxx"
 // SpLDLT tests
@@ -13,7 +14,6 @@
 
 // SSIDS
 #include "ssids/cpu/cpu_iface.hxx"
-#include "ssids/cpu/BuddyAllocator.hxx"
 #include "ssids/cpu/kernels/ldlt_tpp.hxx"
 #include "ssids/cpu/kernels/ldlt_app.hxx"
 // SSIDS tests
@@ -37,7 +37,7 @@ namespace spldlt { namespace tests {
 
    
    template<typename T,
-            int iblksz=INNER_BLOCK_SIZE,
+            int iblksz=sylver::spldlt::INNER_BLOCK_SIZE,
             bool debug = false>
    int factor_node_indef_test(T u, T small, bool posdef, bool delays, bool singular, int m, int n, 
                               int blksz, int ncpu, int ngpu=0, int test=0, int seed=0) {
@@ -86,13 +86,13 @@ namespace spldlt { namespace tests {
       // options.failed_pivot_method = FailedPivotMethod::pass;
          
       // Setup pool allocator
-      typedef spral::ssids::cpu::BuddyAllocator<T, std::allocator<T>> PoolAllocator;
+      typedef ::sylver::BuddyAllocator<T, std::allocator<T>> PoolAllocator;
       PoolAllocator pool_alloc(lda*n);
 
       sylver::SymbolicFront sfront;
       sfront.nrow = m;
       sfront.ncol = n;
-      NumericFront<T, PoolAllocator> front(sfront, pool_alloc, blksz);
+      sylver::spldlt::NumericFront<T, PoolAllocator> front(sfront, pool_alloc, blksz);
 
       // Init node
       // Setup allocator for factors
@@ -123,7 +123,7 @@ namespace spldlt { namespace tests {
       T *d = &front.lcol[lda*n];
 
       // Setup backup
-      typedef spldlt::ldlt_app_internal::CopyBackup<T, PoolAllocator> Backup;
+      using Backup = sylver::spldlt::ldlt_app_internal::CopyBackup<T, PoolAllocator>;
       // CopyBackup<T, PoolAllocator> backup(m, n, blksz);
       front.alloc_backup(); // TODO only if piv strategy is APTP
       // Setup cdata
@@ -193,14 +193,14 @@ namespace spldlt { namespace tests {
 
       // Register worksapce handle
       starpu_matrix_data_register (
-            &spldlt::starpu::workspace_hdl, -1, (uintptr_t) NULL, blksz, blksz, blksz,
+            &sylver::spldlt::starpu::workspace_hdl, -1, (uintptr_t) NULL, blksz, blksz, blksz,
             sizeof(T));
 
       // Init factorization 
 #if defined(SPLDLT_USE_STARPU)
-      spldlt::starpu::codelet_init<T, FactorAllocator, PoolAllocator>();
-      spldlt::starpu::codelet_init_indef<T, iblksz, Backup, PoolAllocator>();
-      spldlt::starpu::codelet_init_factor_indef<T, PoolAllocator>();
+      sylver::spldlt::starpu::codelet_init<T, FactorAllocator, PoolAllocator>();
+      sylver::spldlt::starpu::codelet_init_indef<T, iblksz, Backup, PoolAllocator>();
+      sylver::spldlt::starpu::codelet_init_factor_indef<T, PoolAllocator>();
       sylver::spldlt::starpu::codelet_init_factor_failed<T, PoolAllocator>();
 
       // if (ngpu > 0) {
@@ -223,7 +223,7 @@ namespace spldlt { namespace tests {
       // Register symbolic handle for contribution block
       front.register_symb_contrib();
       // Register StarPU data handles
-      spldlt::starpu::register_node_indef(front);
+      sylver::spldlt::starpu::register_node_indef(front);
 #endif
       
       if(debug) printf("[factor_node_indef_test] factor front..\n");
@@ -252,12 +252,12 @@ namespace spldlt { namespace tests {
       std::cout << "SECOND FACTOR CALL ELIMINATED " << q2 << " of " << n << " pivots" << std::endl;
       
 #if defined(SPLDLT_USE_STARPU)
-      spldlt::starpu::unregister_node_indef<T, PoolAllocator, false>(front); // Synchronous unregister
+      sylver::spldlt::starpu::unregister_node_indef<T, PoolAllocator, false>(front); // Synchronous unregister
       // starpu_task_wait_for_all(); // Wait for unregistration of handles      
       starpu_data_unregister(sfront.hdl); // Node's symbolic handle
       starpu_data_unregister(front.contrib_hdl());
 
-      starpu_data_unregister(spldlt::starpu::workspace_hdl);
+      starpu_data_unregister(sylver::spldlt::starpu::workspace_hdl);
 #endif
 
 #if defined(SPLDLT_USE_STARPU)
@@ -328,7 +328,7 @@ namespace spldlt { namespace tests {
             
          // Finish off with TPP
          T *ld = new T[2*m];
-         nelim += ldlt_tpp_factor(
+         nelim += spral::ssids::cpu::ldlt_tpp_factor(
                m-nelim, m-nelim, &front.perm[nelim], &l[nelim*(lda+1)], lda,
                &d[2*nelim], ld, m, options.action, u, small, nelim, &l[nelim], lda);
          delete[] ld;

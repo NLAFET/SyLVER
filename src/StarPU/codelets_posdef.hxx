@@ -4,8 +4,9 @@
 #pragma once
 
 // SyLVER
-#include "StarPU/kernels.hxx"
 #include "StarPU/assemble.hxx"
+#include "StarPU/kernels.hxx"
+#include "StarPU/subtree.hxx"
 
 namespace sylver {
 namespace spldlt {
