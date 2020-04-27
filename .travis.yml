@@ -43,4 +43,4 @@ script:
   - make test
 
 after_failure:
-  - more Testing/Temporary/LastTest.log
+  - cat Testing/Temporary/LastTest.log
