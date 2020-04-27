@@ -6,8 +6,12 @@
 // SyLVER
 #include "SymbolicFront.hxx"
 #include "Tile.hxx"
+
+#include <iostream>
+
 // SSIDS
 #include "ssids/cpu/cpu_iface.hxx"
+
 
 namespace sylver {
    
@@ -106,12 +110,12 @@ namespace sylver {
 
       /// @brief Return the number of block rows in the node
       inline int nc() const {
-         return (this->ncol()-1) / this->blksz() + 1;
+         return (this->ncol() - 1 + this->blksz()) / this->blksz();
       }
 
       /// @brief Return the number of block rows in the node
       inline int nr() const {
-         return (this->nrow()-1) / this->blksz() + 1;
+         return (this->nrow() - 1 + this->blksz()) / this->blksz();
       }
 
       inline int& nelim() {

@@ -50,7 +50,7 @@ module spldlt_factorize_mod
        real(c_double), dimension(*), intent(in) :: aval
        type(C_PTR), value :: scaling
        type(c_ptr), dimension(*), intent(inout) :: child_contrib
-       type(options_c), intent(in) :: options ! SSIDS options
+       type(options_c), intent(in) :: options
        type(inform_c), intent(out) :: inform
      end function spldlt_create_numeric_tree_dlb
   end interface spldlt_create_numeric_tree_c
@@ -78,7 +78,7 @@ module spldlt_factorize_mod
        real(c_double), dimension(*), intent(in) :: aval
        type(C_PTR), value :: scaling
        type(c_ptr), dimension(*), intent(inout) :: child_contrib
-       type(options_c), intent(in) :: options ! SSIDS options
+       type(options_c), intent(in) :: options
        type(inform_c), intent(out) :: inform
      end function spldlt_create_numeric_tree_posdef_dlb
   end interface spldlt_create_numeric_tree_posdef_c
@@ -241,7 +241,7 @@ contains
 
     integer :: flag
 
-    ! Cleanup SSIDS structure
+    ! Cleanup SSIDS fkeep structure
     call spldlt_fkeep%fkeep%free(flag)
 
   end subroutine fkeep_free
@@ -370,22 +370,16 @@ contains
     nullify(spldlt_factor_subtree_cpu)
 
     ! Allocate cpu_factor for output
-    ! allocate(cpu_factor, stat=st)
-    allocate(cpu_factor)
+    allocate(cpu_factor, stat=st)
 
-    ! cscaling = c_null_ptr
-    ! if (present(scaling)) cscaling = C_LOC(scaling) ! TODO(Florent) Set scaling if needed
     cscaling = C_LOC(scaling)
 
     cpu_factor%posdef = posdef 
     cpu_factor%symbolic => cpu_symb
-    ! ptr = c_null_ptr
-    ! cpu_factor%csubtree = test_malloc(p, ptr)
 
     cpu_factor%csubtree = &
          c_create_numeric_subtree(posdef, cpu_factor%symbolic%csubtree, &
          val, cscaling, child_contrib_c, coptions, cstats)
-    !print *, "cstats%flag = ", cstats%flag
     if (cstats%flag .lt. 0) then
        call c_destroy_numeric_subtree(cpu_factor%posdef, cpu_factor%csubtree)
        deallocate(cpu_factor, stat=st)
@@ -1237,21 +1231,21 @@ contains
     ! Check existence of factors
     if (.not. allocated(spldlt_fkeep%fkeep%subtree)) then
        ! factorize phase has not been performed
-       inform%flag = SSIDS_ERROR_CALL_SEQUENCE
+       inform%flag = SYLVER_ERROR_CALL_SEQUENCE
        goto 200
     end if
 
     inform%flag = max(SYLVER_SUCCESS, spldlt_fkeep%inform%flag) ! Preserve warnings
     ! immediate return if already had an error in previous calls
     if ((spldlt_akeep%inform%flag .lt. 0) .or. (spldlt_fkeep%inform%flag .lt. 0)) then
-       inform%flag = SSIDS_ERROR_CALL_SEQUENCE
+       inform%flag = SYLVER_ERROR_CALL_SEQUENCE
        goto 200
     end if
     
     ! Check size of x 
     n = spldlt_akeep%akeep%n
     if (ldx .lt. n) then
-       inform%flag = SSIDS_ERROR_X_SIZE
+       inform%flag = SYLVER_ERROR_X_SIZE
        call inform%print_flag(options, context)
        if ((options%print_level .ge. 0) .and. (options%unit_error .gt. 0)) &
             write (options%unit_error,'(a,i8,a,i8)') &
@@ -1261,7 +1255,7 @@ contains
 
     ! Check size of rhs 
     if (nrhs .lt. 1) then
-       inform%flag = SSIDS_ERROR_X_SIZE
+       inform%flag = SYLVER_ERROR_X_SIZE
        call inform%print_flag(options, context)
        if ((options%print_level .ge. 0) .and. (options%unit_error .gt. 0)) &
             write (options%unit_error,'(a,i8,a,i8)') &

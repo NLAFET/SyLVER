@@ -504,7 +504,11 @@ contains
     ptr(n+1) = j
   end subroutine gen_bordered_block_diag
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
   subroutine gen_random_indef(a, nza, state, zr)
+    implicit none
+
     type(matrix_type), intent(inout) :: a
     integer(long), intent(in) :: nza
     type(random_state), intent(inout) :: state
@@ -552,5 +556,69 @@ contains
     endif
 
   end subroutine gen_random_indef
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  subroutine gen_random_posdef(a, nza, state)
+    implicit none
+    
+    type(matrix_type), intent(inout) :: a
+    integer(long), intent(in) :: nza
+    type(random_state), intent(inout) :: state
+    integer, dimension(:), allocatable :: ptr32
+    integer :: ptrsz
+
+    integer :: i, j, k, flag
+    real(wp) :: tempv
+
+    ptrsz = size(a%ptr, 1)
+    allocate(ptr32(ptrsz))
+    ! Generate matrix FIXME: move to 64-bit
+    call random_matrix_generate(state, SPRAL_MATRIX_REAL_SYM_PSDEF, a%n, a%n, &
+         int(nza), ptr32, a%row, flag, val=a%val, nonsingular=.true., sort=.true.)
+    if(flag.ne.0) print *, "Bad flag from random_matrix_generate()"
+    a%ptr = ptr32
+    deallocate(ptr32)
+
+    ! Make a diagonally dominant, observing first entry in column
+    ! is always the diagonal after sorting
+    do k = 1, a%n
+       tempv = zero
+       do j = a%ptr(k)+1, a%ptr(k+1)-1
+          tempv = tempv + abs(a%val(j))
+          i = a%ptr(a%row(j))
+          a%val(i) = a%val(i) + abs(a%val(j))
+       end do
+       i = a%ptr(k)
+       a%val(i) = one + a%val(i) + tempv
+    end do
+  end subroutine gen_random_posdef
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  subroutine simple_metis_order(a, order)
+    use spral_metis_wrapper, only : metis_order
+    implicit none
+
+    type(matrix_type), intent(in) :: a
+    integer, dimension(:), allocatable :: order
+
+    integer :: i, flag, stat
+    integer, dimension(:), allocatable :: invp
+
+    allocate(invp(a%n))
+
+    ! Perform MeTiS
+    ! FIXME: which way around should we have order and invp?
+    call metis_order(a%n, a%ptr, a%row, order, invp, flag, stat)
+    if(flag.ne.0) then
+       ! Failed for some reason
+       do i = 1, a%n
+          order(i) = i
+       end do
+       return
+    endif
+
+  end subroutine simple_metis_order
 
 end module sylver_test_mod

@@ -40,6 +40,7 @@ program main
   call test_warnings
   call test_errors
   call test_special
+  ! call test_random
   
   write(*, "(/a)") "=========================="
   write(*, "(a,i4)") "Total number of errors = ", errors
@@ -378,6 +379,8 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   subroutine test_errors
+    implicit none
+
     type(matrix_type) :: a
     type(sylver_options) :: options
     type(spldlt_akeep_type) :: akeep
@@ -914,6 +917,8 @@ contains
   end subroutine test_errors
 
   subroutine test_special
+    implicit none
+    
     type(matrix_type) :: a
     type(sylver_options) :: options
     type(spldlt_akeep_type) :: akeep
@@ -1209,7 +1214,8 @@ contains
     real(wp), allocatable, dimension(:, :) :: res
 
     logical :: posdef
-    integer :: prblm, i, j, k, n1, nrhs, mt
+    integer :: matrix_type
+    integer :: prblm, i, j, k, n1, nrhs
     integer(long) :: ne, nza
     integer, dimension(:), allocatable :: order, piv_order
     integer, dimension(:), allocatable :: xindex, bindex
@@ -1238,6 +1244,439 @@ contains
 
     if(debug) options%print_level = 10000
     options%min_gpu_work = 0 ! alway allow some gpu working
+
+   do prblm = 1, nprob
+
+      !
+      ! Determine positive-positivness
+      !
+      
+      ! Draw random integer in [1,maxn]
+      n1 = random_integer(state,maxn)
+      
+      if ((n1/2)*2 == n1) then
+         ! Even: Generate positive-definite problem
+         posdef = .true.
+         matrix_type = SPRAL_MATRIX_REAL_SYM_PSDEF
+      else
+         ! Odd: Generate indefinite problem
+         posdef = .false.
+         matrix_type = SPRAL_MATRIX_REAL_SYM_INDEF         
+      endif
+
+      !
+      ! Generate random problem
+      !
+
+      ! Matrix dimensions
+      if (prblm .lt. 21) then
+         ! If `prblm` index is < 21, set a%n = pblm to
+         ! test with very small problems
+         a%n = prblm
+      else
+         ! If `prblm` index is >= 21, randomly draw matrix dimensions (integer) in [1, maxn]
+         a%n = random_integer(state, maxn)   
+      end if
+
+      ! Number of nonzeros
+      i = a%n**2/2 - a%n
+      i = max(0,i)
+      nza = random_integer(state, i)
+      nza = nza + a%n
+
+      options%nemin = random_integer(state,  maxnemin)
+      options%nemin = 1 ! FIXME: remove
+
+      if(nza.gt.maxnz .or. a%n.gt.maxn) then
+         write(*, "(a)") "bad random matrix."
+         write(*, "(a,i5,a,i5)") "n = ", a%n, " > maxn = ", maxn
+         write(*, "(a,i8,a,i8)") "or nza = ", nza, " > maxnz = ", maxnz
+         cycle
+      endif
+
+      if(posdef) then
+         call gen_random_posdef(a, nza, state)
+      else
+         call gen_random_indef(a, nza, state)
+      endif
+      if(debug) call print_matrix(6, -1, matrix_type, a%n, a%n, a%ptr, a%row, a%val)
+
+      options%ordering = random_integer(state, 2) - 1 ! user or metis
+
+      ! if(random_logical(state)) then
+      !    options%nstream = random_integer(state, 4)
+      ! else
+      !    options%nstream = 1
+      ! endif
+
+      if (options%ordering .eq. 0) then
+         ! Generate a pivot order
+         call simple_metis_order(a, order)
+      endif
+
+      ! Draw random integer in [1,maxn]
+      n1 = random_integer(state, maxn)
+
+      if ((n1/2)*2 == n1) then
+         check = .true.
+      else
+         check = .false.
+      end if
+
+      ! Peform analyse
+      n1 = random_integer(state, maxn)
+
+      if (posdef) then
+         write(*, "(a, i3, a, i5, a, i7, a, i2, a)",advance="no") &
+              " + no. ", prblm,  " n = ", a%n, " nza = ", nza, "..."
+      else
+         write(*, "(a, i3, a, i5, a, i7, a, i2, a)",advance="no") &
+              " - no. ", prblm,  " n = ", a%n, " nza = ", nza, "..."
+      end if
+
+      !
+      ! Perform analysis
+      !
+      
+      ! if ((n1/3)*3 == n1) then
+      !    ne = a%ptr(a%n+1) - 1
+      !    if (allocated(a%col)) deallocate(a%col)
+      !    allocate (a%col(ne))
+      !    do i = 1,a%n 
+      !       do j = a%ptr(i),a%ptr(i+1)-1
+      !          a%col(j) = i
+      !       end do
+      !    end do
+
+      !    if(random_logical(state)) then
+      !       ! Use fake_topology
+      !       call ssids_analyse_coord(a%n, ne, a%row, a%col, &
+      !            akeep, options, info, order, topology=fake_topology)
+      !    else
+      !       ! Use real topology
+      !       call ssids_analyse_coord(a%n, ne, a%row, a%col, &
+      !            akeep, options, info, order)
+      !    endif
+      !    coord = .true.
+      ! else
+      call spldlt_analyse(akeep, a%n, a%ptr, a%row, options, info, &
+           order=order, check=check, ncpu=ncpu)
+
+      ! coord = .false.
+      ! endif
+      
+      num_flops = info%num_flops
+      
+      if (info%flag .ne. SYLVER_SUCCESS) then
+         write(*, "(a,i3)") "fail on analyse", info%flag
+         call spldlt_akeep_free(akeep)
+         errors = errors + 1
+         cycle
+      endif
+
+      nrhs = random_integer(state,  maxnrhs)
+
+      ! Generate rhs assuming x(k) = k/maxn. remember we have only
+      ! half matrix held.
+      rhs(1:a%n, 1:nrhs) = zero
+      do k = 1, a%n
+         do j = a%ptr(k), a%ptr(k+1)-1
+            i = a%row(j)
+            rhs(i, 1:nrhs) = rhs(i, 1:nrhs) + a%val(j)*real(k)/real(maxn)
+            if(i.eq.k) cycle
+            rhs(k, 1:nrhs) = rhs(k, 1:nrhs) + a%val(j)*real(i)/real(maxn)
+         end do
+      end do
+
+      ! Set rhs1d(1:n) = rhs(1:n,1)
+      rhs1d(1:a%n) = rhs(1:a%n, 1)
+
+      !
+      ! Factorize matrix
+      !
+      
+      ! set right-hand side
+      x(1:a%n,1:nrhs) = rhs(1:a%n,1:nrhs)
+      x1(1:a%n) = rhs1d(1:a%n)
+      ! if (coord) then
+         ! call ssids_factor(posdef,a%val, akeep, fkeep, options, info)
+      ! else
+      call spldlt_factorize(akeep, fkeep, posdef, a%val, options, &
+           info, ptr=a%ptr, row=a%row)
+      ! call ssids_factor(posdef,a%val, akeep, fkeep, options, info,  &
+      !      ptr=a%ptr, row=a%row)
+      ! endif
+
+      if(info%flag .lt. SYLVER_SUCCESS) then
+         write(*, "(a,i3)") "fail on factor", info%flag
+         call spldlt_akeep_free(akeep)
+         call spldlt_fkeep_free(fkeep)
+         errors = errors + 1
+         cycle
+      endif
+      write(*,'(a,f6.1,1x)',advance="no") ' num_flops:',num_flops*1e-6
+
+      !
+      ! Solve system
+      !
+      
+      if(posdef) then
+
+         ! select case(mod(prblm,2))
+
+         ! case(0)
+         !    ! Vanilla solve
+         !    call ssids_solve(x1, akeep, fkeep, options, info)
+         !    if(info%flag .lt. SSIDS_SUCCESS) then
+         !       write(*, "(a,i4)") " fail on 1d solve with job absent", &
+         !            info%flag
+         !       call ssids_free(akeep, fkeep, cuda_error)
+         !       errors = errors + 1
+         !       cycle
+         !    endif
+
+         ! call spldlt_solve(akeep, fkeep, nrhs, x, maxn, options, info)
+         call spldlt_solve(akeep, fkeep, 1, x1, maxn, options, info)
+
+         if(info%flag .lt. SYLVER_SUCCESS) then
+            write(*, "(a,i4)") " fail on 1d solve with job absent", &
+                 info%flag
+            call spldlt_akeep_free(akeep)
+            call spldlt_fkeep_free(fkeep)
+            errors = errors + 1
+            cycle
+         endif
+
+         ! case(1)
+         !    ! Fwd, then bwd solves
+         !    call ssids_solve(x1, akeep, fkeep, options, info, job=1)
+         !    if(info%flag .lt. SSIDS_SUCCESS) then
+         !       write(*, "(a,i4)") " fail on 1d solve with job = 1", &
+         !            info%flag
+         !       call ssids_free(akeep, fkeep, cuda_error)
+         !       errors = errors + 1
+         !       cycle
+         !    endif
+         !    call ssids_solve(x1, akeep, fkeep, options, info, job=3)
+         !    if(info%flag .lt. SSIDS_SUCCESS) then
+         !       write(*, "(a,i4)") " fail on 1d solve with job = 3", &
+         !            info%flag
+         !       call ssids_free(akeep, fkeep, cuda_error)
+         !       errors = errors + 1
+         !       cycle
+         !    endif
+         !    call ssids_solve(nrhs, x, maxn, akeep, fkeep, options, info, job=1)
+         !    if(info%flag .lt. SSIDS_SUCCESS) then
+         !       write(*, "(a,i4)") " fail on 1d solve with job = 1", &
+         !            info%flag
+         !       errors = errors + 1
+         !       cycle
+         !    endif
+         !    call ssids_solve(nrhs, x, maxn, akeep, fkeep, options, info, job=3)
+         !    if(info%flag .lt. SSIDS_SUCCESS) then
+         !       write(*, "(a,i4)") " fail on 1d solve with job = 3", &
+         !            info%flag
+         !       call ssids_free(akeep, fkeep, cuda_error)
+         !       errors = errors + 1
+         !       cycle
+         !    endif
+         ! end select
+
+      else
+
+         ! FIXME: Restore separate cases
+         !select case(mod(prblm, 3))
+         !case(0)
+         ! Vanilla solve
+         ! call ssids_solve(x1, akeep, fkeep, options, info)
+         ! if(info%flag .lt. SSIDS_SUCCESS) then
+         !    write(*, "(a,i4)") " fail on 1d solve with job absent", &
+         !         info%flag
+         !    call ssids_free(akeep, fkeep, cuda_error)
+         !    errors = errors + 1
+         !    cycle
+         ! endif
+         ! FIXME: restore multirhs
+
+         ! call spldlt_solve(akeep, fkeep, nrhs, x, maxn, options, info)
+         call spldlt_solve(akeep, fkeep, 1, x1, maxn, options, info)
+
+         if(info%flag .lt. SYLVER_SUCCESS) then
+            write(*, "(a,i4)") " fail on 1d solve with job absent", &
+                 info%flag
+            call spldlt_akeep_free(akeep)
+            call spldlt_fkeep_free(fkeep)
+            errors = errors + 1
+           cycle
+         endif
+
+         !case(1)
+         !   ! Fwd, then (diag+bwd) solves
+         !   call ssids_solve(x1, akeep, fkeep, options, info, job=1)
+         !   if(info%flag .lt. SSIDS_SUCCESS) then
+         !      write(*, "(a,i4)") " fail on 1d solve with job = 1", &
+         !         info%flag
+         !      call ssids_free(akeep, fkeep, cuda_error)
+         !      errors = errors + 1
+         !      cycle
+         !   endif
+         !   call ssids_solve(x1, akeep, fkeep, options, info, job=4)
+         !   if(info%flag .lt. SSIDS_SUCCESS) then
+         !      write(*, "(a,i4)") " fail on 1d solve with job = 4", &
+         !         info%flag
+         !      call ssids_free(akeep, fkeep, cuda_error)
+         !      errors = errors + 1
+         !      cycle
+         !   endif
+         !   call ssids_solve(nrhs, x, maxn, akeep, fkeep, options, info, job=1)
+         !   if(info%flag .lt. SSIDS_SUCCESS) then
+         !      write(*, "(a,i4)") " fail on 1d solve with job = 1", &
+         !         info%flag
+         !      errors = errors + 1
+         !      cycle
+         !   endif
+         !   call ssids_solve(nrhs, x, maxn, akeep, fkeep, options, info, job=4)
+         !   if(info%flag .lt. SSIDS_SUCCESS) then
+         !      write(*, "(a,i4)") " fail on 1d solve with job = 4", &
+         !         info%flag
+         !      call ssids_free(akeep, fkeep, cuda_error)
+         !      errors = errors + 1
+         !      cycle
+         !   endif
+         !case(2)
+         !   ! Fwd, then diag, then bwd solves
+         !   call ssids_solve(x1, akeep, fkeep, options, info, job=1)
+         !   if(info%flag .lt. SSIDS_SUCCESS) then
+         !      write(*, "(a,i4)") " fail on 1d solve with job = 1", &
+         !         info%flag
+         !      call ssids_free(akeep, fkeep, cuda_error)
+         !      errors = errors + 1
+         !      cycle
+         !   endif
+         !   call ssids_solve(x1, akeep, fkeep, options, info, job=2)
+         !   if(info%flag .lt. SSIDS_SUCCESS) then
+         !      write(*, "(a,i4)") " fail on 1d solve with job = 2", &
+         !         info%flag
+         !      errors = errors + 1
+         !      cycle
+         !   endif
+         !   call ssids_solve(x1, akeep, fkeep, options, info, job=3)
+         !   if(info%flag .lt. SSIDS_SUCCESS) then
+         !      write(*, "(a,i4)") " fail on 1d solve with job = 3", &
+         !         info%flag
+         !      call ssids_free(akeep, fkeep, cuda_error)
+         !      errors = errors + 1
+         !      cycle
+         !   endif
+         !   call ssids_solve(nrhs, x, maxn, akeep, fkeep, options, info, job=1)
+         !   if(info%flag .lt. SSIDS_SUCCESS) then
+         !      write(*, "(a,i4)") " fail on 1d solve with job = 1", &
+         !         info%flag
+         !      call ssids_free(akeep, fkeep, cuda_error)
+         !      errors = errors + 1
+         !      cycle
+         !   endif
+         !   call ssids_solve(nrhs, x, maxn, akeep, fkeep, options, info, job=2)
+         !   if(info%flag .lt. SSIDS_SUCCESS) then
+         !      write(*, "(a,i4)") " fail on 1d solve with job = 2", &
+         !         info%flag
+         !      call ssids_free(akeep, fkeep, cuda_error)
+         !      errors = errors + 1
+         !      cycle
+         !   endif
+         !   call ssids_solve(nrhs, x, maxn, akeep, fkeep, options, info, job=3)
+         !   if(info%flag .lt. SSIDS_SUCCESS) then
+         !      write(*, "(a,i4)") " fail on 1d solve with job = 3", &
+         !         info%flag
+         !      call ssids_free(akeep, fkeep, cuda_error)
+         !      errors = errors + 1
+         !      cycle
+         !   endif
+         !end select
+      endif
+
+      if(prblm .eq. nprob) then
+         options%print_level = 2
+         options%unit_diagnostics = dl_unit
+      endif
+
+      !
+      ! Check residuals
+      !
+
+      ! Compute residual
+      call compute_resid(1, a, x1, maxn, rhs1d, maxn, res, maxn)
+
+      ! Check error below threshold 
+      if(maxval(abs(res(1:a%n,1))) < err_tol) then
+         !write(*, "(a)", advance="no") "ok..." ! FIXME: restore
+         write(*, "(a)") "ok..."
+      else
+         write(*, "(a,es12.4)") " f+s fail residual 1d = ", &
+              maxval(abs(res(1:a%n,1)))
+         !  write (6,'(6es12.4)') x1(1:a%n)
+         errors = errors + 1
+         cycle
+      endif
+
+      ! FIXME: restore multirhs
+      !call compute_resid(nrhs,a,x,maxn,rhs,maxn,res,maxn)
+      !if(maxval(abs(res(1:a%n,1:nrhs))) < err_tol) then
+      !   write(*, "(a)") "ok..."
+      !else
+      !   write(*, "(a)") " f+s fail residual 2d = "
+      !   do i = 1, nrhs
+      !      write(*, "(es12.4)") maxval(abs(res(1:a%n,i)))
+      !   end do
+      !   write(*, "()")
+      ! !  write (6,'(6es12.4)') x1(1:a%n)
+      !   errors = errors + 1
+      !   call ssids_free(akeep, fkeep, cuda_error)
+      !   cycle
+      !endif
+
+      ! if (.not.posdef) then
+      !    call ssids_enquire_indef(akeep,fkeep,options,info,piv_order=piv_order, &
+      !         d=d)
+      !    if (info%flag < 0) then
+      !       write (*,'(a)') ' Unexpected error from ssids_enquire_indef'
+      !       call ssids_free(akeep, fkeep, cuda_error)
+      !       errors = errors + 1
+      !       cycle 
+      !    endif
+
+      !    call ssids_alter(d,akeep,fkeep,options,info)
+      !    if (info%flag < 0) then
+      !       write (*,'(a)') ' Unexpected error from ssids_alter'
+      !       call ssids_free(akeep, fkeep, cuda_error)
+      !       errors = errors + 1
+      !       cycle 
+      !    endif
+      ! else
+      !    call ssids_enquire_posdef(akeep,fkeep,options,info,d1)
+      !    if (info%flag < 0 .and. info%flag.ne.SSIDS_ERROR_UNIMPLEMENTED) then
+      !       ! NB: unknown error return as not yet implemented with gpu factors
+      !       write (*,'(a)') ' Unexpected error from ssids_enquire_posdef'
+      !       call ssids_free(akeep, fkeep, cuda_error)
+      !       errors = errors + 1
+      !       cycle 
+      !    endif
+      ! endif
+
+      !
+      ! Cleanup ready for next iteration
+      !
+
+      ! if(random_logical(state)) then
+      call spldlt_akeep_free(akeep)
+      call spldlt_fkeep_free(fkeep)
+      ! end if
+         
+   end do
+
+   ! Ensure cleaned up at end
+   call spldlt_akeep_free(akeep)
+   call spldlt_fkeep_free(fkeep)
 
   end subroutine test_random
 

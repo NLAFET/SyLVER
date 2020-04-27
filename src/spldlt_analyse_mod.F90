@@ -94,9 +94,12 @@ contains
 
     integer :: flag
 
+    ! Cleanup SSIDS akeep structure
     call spldlt_akeep%akeep%free(flag)
 
-    if (allocated(spldlt_akeep%subtree_en)) deallocate(spldlt_akeep%subtree_en)
+    if (allocated(spldlt_akeep%subtree_en)) then
+       deallocate(spldlt_akeep%subtree_en)
+    end if
     
   end subroutine akeep_free
   
