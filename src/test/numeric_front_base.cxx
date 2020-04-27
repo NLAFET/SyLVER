@@ -35,7 +35,11 @@ protected:
       empty_symb_front.num_a = 0;
       empty_symb_front.amap = nullptr;
       empty_symb_front.parent = -1;
-
+#if defined(SPLDLT_USE_STARPU)
+      empty_symb_front.hdl = nullptr;
+#endif 
+      empty_symb_front.exec_loc = -1;
+      
       empty_numeric_front.reset(
             new sylver::NumericFrontBase<T, default_allocator_type>(
                   empty_symb_front, default_allocator, blksz));
@@ -50,6 +54,10 @@ protected:
       small_sqr_symb_front.num_a = 0;
       small_sqr_symb_front.amap = nullptr;
       small_sqr_symb_front.parent = -1;
+#if defined(SPLDLT_USE_STARPU)
+      small_sqr_symb_front.hdl = nullptr;
+#endif
+      small_sqr_symb_front.exec_loc = -1;
 
       small_sqr_numeric_front.reset(
             new sylver::NumericFrontBase<T, default_allocator_type>(
