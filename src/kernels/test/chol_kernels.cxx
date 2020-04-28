@@ -64,17 +64,18 @@ protected:
       }
    }
 
-   // FIXME: would certainly be much better to compute a componentwise
-   // error
+   // FIXME: would certainly be much better to compute a (componentwise)
+   // backward error for the factorization
    void check_block_lwr_eq(int m, int n, T *a, int lda, T *b, int ldb) {
 
       for (int j = 0; j < n; ++j) {
          for (int i = j; i < m; ++i) {
+            T err_ij = std::fabs(a[j*lda+i] - b[j*lda+i]);
             if(std::is_same<value_type, double>::value) {
-               ASSERT_NEAR(a[j*lda+i], b[j*lda+i], 5e-14);
+               ASSERT_LT(err_ij, 1e-14);
             }
             else if (std::is_same<value_type, float>::value) {
-               ASSERT_NEAR(a[j*lda+i], b[j*lda+i], 5e-6);
+               ASSERT_LT(err_ij, 1e-6);
             }
             else {
                FAIL();
