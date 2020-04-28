@@ -51,6 +51,8 @@ function(sylver_create_unit_test testfile)
   add_executable(${testname} ${testfile})
 
   target_link_libraries(${testname} gtest gmock gtest_main)
+  target_link_libraries(${testname} sylver)
+  target_link_libraries(${testname} ${LIBS})
 
   add_test(NAME ${testname} COMMAND ${testname})
 
