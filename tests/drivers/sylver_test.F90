@@ -1214,7 +1214,7 @@ contains
     real(wp), allocatable, dimension(:, :) :: res
 
     logical :: posdef
-    integer :: matrix_type
+    integer :: mat_type
     integer :: prblm, i, j, k, n1, nrhs
     integer(long) :: ne, nza
     integer, dimension(:), allocatable :: order, piv_order
@@ -1257,11 +1257,11 @@ contains
       if ((n1/2)*2 == n1) then
          ! Even: Generate positive-definite problem
          posdef = .true.
-         matrix_type = SPRAL_MATRIX_REAL_SYM_PSDEF
+         mat_type = SPRAL_MATRIX_REAL_SYM_PSDEF
       else
          ! Odd: Generate indefinite problem
          posdef = .false.
-         matrix_type = SPRAL_MATRIX_REAL_SYM_INDEF         
+         mat_type = SPRAL_MATRIX_REAL_SYM_INDEF         
       endif
 
       !
@@ -1299,7 +1299,7 @@ contains
       else
          call gen_random_indef(a, nza, state)
       endif
-      if(debug) call print_matrix(6, -1, matrix_type, a%n, a%n, a%ptr, a%row, a%val)
+      if(debug) call print_matrix(6, -1, mat_type, a%n, a%n, a%ptr, a%row, a%val)
 
       options%ordering = random_integer(state, 2) - 1 ! user or metis
 
