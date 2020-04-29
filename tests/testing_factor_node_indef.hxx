@@ -36,11 +36,13 @@
 namespace spldlt { namespace tests {
 
    
-   template<typename T,
-            int iblksz=sylver::spldlt::INNER_BLOCK_SIZE,
-            bool debug = false>
-   int factor_node_indef_test(T u, T small, bool posdef, bool delays, bool singular, int m, int n, 
-                              int blksz, int ncpu, int ngpu=0, int test=0, int seed=0) {
+   template<
+      typename T,
+      int iblksz=sylver::spldlt::INNER_BLOCK_SIZE,
+      bool debug = false>
+   int factor_node_indef_test(
+         T u, T small, bool posdef, bool delays, bool singular, int m, int n, 
+         int blksz, int ncpu, int ngpu=0, int test=0, int seed=0) {
    
       bool failed = false;
 
@@ -143,8 +145,9 @@ namespace spldlt { namespace tests {
 
       // Select scheduling strategy in StarPU
       if (ngpu > 0) {
-         conf->sched_policy_name = "heteroprio";
-         conf->sched_policy_init = &init_heteroprio;
+         conf->sched_policy_name = "lws";
+         // conf->sched_policy_name = "heteroprio";
+         // conf->sched_policy_init = &init_heteroprio;
       }
       else{
          // If no GPU is enabled, use Eager scheduler
