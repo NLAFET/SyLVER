@@ -199,6 +199,7 @@ if(SYLVER_ENABLE_CUDA)
 else()
 
   add_library(sylver ${sources})
+
 endif()
 
 sylver_install_library(sylver)

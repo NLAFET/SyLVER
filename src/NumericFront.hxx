@@ -9,6 +9,7 @@
 #include "NumericFrontBase.hxx"
 #include "SymbolicFront.hxx"
 #include "Tile.hxx"
+#include "sylver/kernels/CopyBackup.hxx"
 
 // STD
 #include <cassert>
@@ -22,7 +23,10 @@ namespace spldlt {
    template <typename T, typename PoolAllocator>
    class NumericFront : public sylver::NumericFrontBase<T, PoolAllocator> {
    public:
-      typedef typename std::allocator_traits<PoolAllocator>::template rebind_alloc<int> IntAlloc;
+      // Integer allocator
+      using IntAlloc = typename std::allocator_traits<PoolAllocator>::template rebind_alloc<int>;
+      // Backup strategy
+      using Backup = sylver::CopyBackup<T, PoolAllocator>;
    private:
       typedef spldlt::ldlt_app_internal::Block<T, INNER_BLOCK_SIZE, IntAlloc> BlockSpec;
       typedef std::allocator_traits<PoolAllocator> PATraits;
@@ -239,7 +243,7 @@ namespace spldlt {
       /// facorization using APTP strategy
       void alloc_backup() {
          backup = 
-            new spldlt::ldlt_app_internal::CopyBackup<T, PoolAllocator>(
+            new Backup(
                   this->nrow(), this->ncol(), this->blksz(),
                   this->pool_alloc());
       }
@@ -347,7 +351,7 @@ namespace spldlt {
       int *perm; // Pointer to permutation
       int *cperm; // Pointer to permutation (column)
       T *contrib; // Pointer to contribution block
-      spldlt::ldlt_app_internal::CopyBackup<T, PoolAllocator> *backup; // Stores backups of matrix blocks
+      Backup *backup; // Stores backups of matrix blocks
       // Structures for indef factor
       spldlt::ldlt_app_internal::ColumnData<T, IntAlloc> *cdata;
       std::vector<BlockSpec> blocks;

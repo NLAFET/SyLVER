@@ -129,5 +129,15 @@ namespace sylver {
       }
    }
 
-   
+
+   /** \return number of blocks for given n */
+   inline int calc_nblk(int n, int block_size) {
+      return (n-1) / block_size + 1;
+   }
+
+   /** \return block size of block blk if maximum in dimension is n */
+   inline int calc_blkn(int blk, int n, int block_size) {
+      return std::min(block_size, n-blk*block_size);
+   }
+
 } // End of namespace sylver

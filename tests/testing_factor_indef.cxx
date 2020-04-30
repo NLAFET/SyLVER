@@ -1,9 +1,11 @@
 #include "testing_factor_indef.hxx"
 
+// SyLVER
 #include "BuddyAllocator.hxx"
 #include "common.hxx"
 #include "kernels/ldlt_app.hxx"
 #include "factor_indef.hxx"
+#include "sylver/kernels/CopyBackup.hxx"
 
 #include <cstring>
 #include <vector>
@@ -73,8 +75,12 @@ namespace tests {
       options.pivot_method = (aggressive) ? sylver::PivotMethod::app_aggressive
                                           : sylver::PivotMethod::app_block;
 
-      // Init factorization
-      typedef ::sylver::BuddyAllocator<T,std::allocator<T>> PoolAllocator;
+      //
+      // Initialize factorization
+
+      // Pool allocator type 
+      using PoolAllocator = ::sylver::BuddyAllocator<T,std::allocator<T>>;
+
       PoolAllocator pool_alloc(m*n);
 
       // factor_indef_init<T, PoolAllocator>();
@@ -101,19 +107,33 @@ namespace tests {
       //       // allocT
       //       pool_alloc
       //       );
+
+
+      // Enable serial mode 
       int const use_tasks = false;
-      CopyBackup<T> backup(m, n, blksz);
+
+      // Backup strategy: copy factor
+      using Backup = sylver::CopyBackup<T>;
+      
+      Backup backup(m, n, blksz);
       // int q1 = LDLT
       //    <T, iblksz, CopyBackup<T>, use_tasks, debug>
       //    ::factor(
       //          m, n, perm, l, lda, d, backup, options, options.pivot_method,
       //          blksz, 0.0, nullptr, 0, work
       //          );
-      int q1 = sylver::spldlt::FactorSymIndef
-         <T, iblksz, CopyBackup<T>, debug, PoolAllocator>
-         ::ldlt_app(
-               m, n, perm, l, lda, d, backup, options, worker_stats, 
-               blksz, 0.0, upd, 0, work, pool_alloc);
+
+      // Factorization type
+      using FactorType = sylver::spldlt::FactorSymIndef<
+         T,
+         iblksz,
+         Backup,
+         debug,
+         PoolAllocator>;
+         
+      int q1 = FactorType::ldlt_app(
+            m, n, perm, l, lda, d, backup, options, worker_stats, 
+            blksz, 0.0, upd, 0, work, pool_alloc);
       
       if(debug) {
          std::cout << "FIRST FACTOR CALL ELIMINATED " << q1 << " of " << n << " pivots" << std::endl;
@@ -144,7 +164,7 @@ namespace tests {
          //       options, work,
          //       pool_alloc
          //       );
-         CopyBackup<T> backup(m-q1, m-q1, blksz);
+         Backup backup(m-q1, m-q1, blksz);
          // q2 = LDLT
          //    <T, iblksz, CopyBackup<T>, use_tasks, debug>
          //    ::factor(

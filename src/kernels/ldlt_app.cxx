@@ -4,8 +4,7 @@
 
 // SyLVER
 #include "kernels/ldlt_app.hxx"
-
-// namespace spral { namespace ssids { namespace cpu {
+#include "kernels/wrappers.hxx"
 
 namespace sylver {
 namespace spldlt {
@@ -53,14 +52,19 @@ size_t ldlt_app_factor_mem_required(int m, int n, int block_size) {
 
 template <typename T>
 void ldlt_app_solve_fwd(int m, int n, T const* l, int ldl, int nrhs, T* x, int ldx) {
-   if(nrhs==1) {
-      host_trsv(FILL_MODE_LWR, OP_N, DIAG_UNIT, n, l, ldl, x, 1);
-      if(m > n)
-         gemv(OP_N, m-n, n, -1.0, &l[n], ldl, x, 1, 1.0, &x[n], 1);
+   if (nrhs == 1) {
+      spral::ssids::cpu::host_trsv(
+            spral::ssids::cpu::FILL_MODE_LWR, spral::ssids::cpu::OP_N,
+            spral::ssids::cpu::DIAG_UNIT, n, l, ldl, x, 1);
+      if (m > n) {
+         spral::ssids::cpu::gemv(
+               spral::ssids::cpu::OP_N, m-n, n, -1.0, &l[n], ldl, x, 1, 1.0, &x[n], 1);
+      }
    } else {
       host_trsm(SIDE_LEFT, FILL_MODE_LWR, OP_N, DIAG_UNIT, n, nrhs, 1.0, l, ldl, x, ldx);
-      if(m > n)
+      if (m > n) {
          host_gemm(OP_N, OP_N, m-n, nrhs, n, -1.0, &l[n], ldl, x, ldx, 1.0, &x[n], ldx);
+      }
    }
 }
 template void ldlt_app_solve_fwd<double>(int, int, double const*, int, int, double*, int);
@@ -93,18 +97,21 @@ template void ldlt_app_solve_diag<double>(int, double const*, int, double*, int)
 
 template <typename T>
 void ldlt_app_solve_bwd(int m, int n, T const* l, int ldl, int nrhs, T* x, int ldx) {
-   if(nrhs==1) {
-      if(m > n)
-         gemv(OP_T, m-n, n, -1.0, &l[n], ldl, &x[n], 1, 1.0, x, 1);
-      host_trsv(FILL_MODE_LWR, OP_T, DIAG_UNIT, n, l, ldl, x, 1);
+   if (nrhs == 1) {
+      if (m > n) {
+         spral::ssids::cpu::gemv(
+               spral::ssids::cpu::OP_T, m-n, n, -1.0, &l[n], ldl, &x[n], 1, 1.0, x, 1);
+      }
+      spral::ssids::cpu::host_trsv(
+            spral::ssids::cpu::FILL_MODE_LWR, spral::ssids::cpu::OP_T,
+            spral::ssids::cpu::DIAG_UNIT, n, l, ldl, x, 1);
    } else {
-      if(m > n)
+      if (m > n) {
          host_gemm(OP_T, OP_N, n, nrhs, m-n, -1.0, &l[n], ldl, &x[n], ldx, 1.0, x, ldx);
+      }
       host_trsm(SIDE_LEFT, FILL_MODE_LWR, OP_T, DIAG_UNIT, n, nrhs, 1.0, l, ldl, x, ldx);
    }
 }
 template void ldlt_app_solve_bwd<double>(int, int, double const*, int, int, double*, int);
-
-// }}} /* namespaces spral::ssids::cpu */
 
 }} // End of namespace sylver::spldlt

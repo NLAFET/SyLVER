@@ -1,7 +1,7 @@
 include(${CMAKE_SOURCE_DIR}/cmake/create_test.cmake)
 
 # Include modules files from SyLVER
-include_directories(${CMAKE_BINARY_DIR}/src)
+# include_directories(${CMAKE_BINARY_DIR}/src)
 
 # Get object files from SSIDS tests 
 file(
@@ -28,21 +28,38 @@ if(SYLVER_ENABLE_CUDA)
 endif()
 
 if(SYLVER_ENABLE_CUDA)
+
   if(SYLVER_NATIVE_CUDA)
+
     add_library(
       sylver_tests
       ${tests_src}
       ${tests_cuda_src})
+
+    sylver_default_includes(sylver_tests)
+
   else()
+
     add_library(
       sylver_tests
       ${tests_src})
+
     cuda_add_library(sylver_tests_cuda ${tests_cuda_src})
+
+
+    sylver_default_includes(sylver_tests)
+    sylver_default_includes(sylver_tests_cuda)
+
   endif()
+
 else()
+
   add_library(
     sylver_tests
     ${tests_src})
+
+  sylver_default_includes(sylver_tests)
+
 endif()
 
 sylver_tests_add_driver("drivers/factor_node_test.cxx")

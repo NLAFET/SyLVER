@@ -15,6 +15,7 @@
 #include "StarPU/codelets.hxx"
 #include "StarPU/kernels_indef.hxx"
 #endif
+#include "sylver/kernels/CopyBackup.hxx"
 #include "Tile.hxx"
 
 // SSIDS
@@ -79,31 +80,45 @@ namespace spldlt {
          std::vector<spral::ssids::cpu::Workspace>& workspaces,
          sylver::inform_t& stats) {
 
-      typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
-
+      using IntAlloc =
+         typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int>;
+      
       // Start from first column
       front.nelim(0); // TODO add parameter from;
 
       // LDLT with APTP strategy
       if (options.pivot_method==sylver::PivotMethod::app_block) {
 
-         typedef spldlt::ldlt_app_internal::CopyBackup<T, PoolAlloc> Backup;
+         // Use copy backup strategy
+         using Backup = sylver::CopyBackup<T, PoolAlloc>; 
+         // Disable debug mode
          bool const debug = false;
-         typedef
-            FactorSymIndef<T, INNER_BLOCK_SIZE, Backup, debug, PoolAlloc>
-            FactorSymIndefSpec;
+         // Inner block size
+         int const ib = INNER_BLOCK_SIZE;
+         // Define factorization type 
+         using FactorType = FactorSymIndef<
+            T,
+            ib,
+            Backup,
+            debug,
+            PoolAlloc
+            >;
 
          int& nelim = front.nelim(); 
             
          // Factor front
-         FactorSymIndefSpec::factor_front_indef_app_notask(
+         FactorType::factor_front_indef_app_notask(
                front, options, stats, workspaces[0], pool_alloc, nelim);
          
          if (front.nelim() < front.ncol()) { 
             // Some columns remain uneliminated after the first pass
-            
-            spldlt::ldlt_app_internal::
-               ColumnData<T, IntAlloc> &cdata = *front.cdata;
+
+            using ColumnDataType = spldlt::ldlt_app_internal::ColumnData<
+               T,
+               IntAlloc
+               >;
+
+            ColumnDataType& cdata = *front.cdata;
 
             // Realease backup and permute failed at the back of the
             // front
@@ -111,10 +126,9 @@ namespace spldlt {
             backup.release_all_memory(); // Release backup associated
                                          // to this front
             // Permute failed entries at the back of the front
-            FactorSymIndefSpec::permute_failed(
-                  front.nrow(), front.ncol(), front.perm,
-                  front.lcol, front.ldl(),
-                  front.nelim(), cdata, front.blksz(),
+            FactorType::permute_failed(
+                  front.nrow(), front.ncol(), front.perm, front.lcol,
+                  front.ldl(), front.nelim(), cdata, front.blksz(),
                   pool_alloc);
          }
          
@@ -138,7 +152,7 @@ namespace spldlt {
          sylver::options_t& options,
          std::vector<sylver::inform_t>& worker_stats) {
 
-      typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
+      using IntAlloc = typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int>;
       
       /* Extract useful information about node */
       int m = node.nrow();
@@ -156,7 +170,6 @@ namespace spldlt {
 
       int blksz = node.blksz();
       // node.nelim = nelim;      
-      bool const debug = false;
       T *upd = nullptr;
 
       // Factorize from first column
@@ -164,17 +177,25 @@ namespace spldlt {
 
       if (options.pivot_method==sylver::PivotMethod::app_block) {
 
-         typedef spldlt::ldlt_app_internal::CopyBackup<T, PoolAlloc> Backup;
-         typedef FactorSymIndef<T, INNER_BLOCK_SIZE, Backup, debug, PoolAlloc> FactorSymIndefSpec;
+         // Use copy backup strategy
+         using Backup = sylver::CopyBackup<T, PoolAlloc>; 
+         // Disable debug mode
+         bool const debug = false;
+         // Define factorization type
+         using FactorType = FactorSymIndef<
+            T,
+            INNER_BLOCK_SIZE,
+            Backup,
+            debug,
+            PoolAlloc>;
 
          // Factor fully-summed columns and form contrib blocks
-         FactorSymIndefSpec::factor_front_indef_app(
+         FactorType::factor_front_indef_app(
                node, options, worker_stats, 0.0, upd, 0, workspaces, pool_alloc,
                node.nelim());
 
          // Release backup and permute failed columns
-         FactorSymIndefSpec::release_permute_failed_task(
-               node, pool_alloc);
+         FactorType::release_permute_failed_task(node, pool_alloc);
       }
 
       // Process uneliminated columns 

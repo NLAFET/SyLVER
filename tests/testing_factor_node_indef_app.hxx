@@ -116,8 +116,8 @@ namespace tests {
       // T *d = new T[2*m];      
       //       T* upd = nullptr;
       // Setup backup
-      using Backup = sylver::spldlt::ldlt_app_internal::CopyBackup<T, PoolAllocator>;
-      // CopyBackup<T, PoolAllocator> backup(m, n, blksz);
+      using Backup = sylver::CopyBackup<T, PoolAllocator>;
+
       front.alloc_backup();
       // Setup cdata
       front.alloc_cdata();

@@ -87,8 +87,9 @@ namespace spldlt { namespace tests {
       options.failed_pivot_method = sylver::FailedPivotMethod::tpp;
       // options.failed_pivot_method = FailedPivotMethod::pass;
          
-      // Setup pool allocator
-      typedef ::sylver::BuddyAllocator<T, std::allocator<T>> PoolAllocator;
+      // Pool allocator type
+      using PoolAllocator = ::sylver::BuddyAllocator<T, std::allocator<T>>;
+
       PoolAllocator pool_alloc(lda*n);
 
       sylver::SymbolicFront sfront;
@@ -98,13 +99,14 @@ namespace spldlt { namespace tests {
 
       // Init node
       // Setup allocator for factors
-      typedef spral::test::AlignedAllocator<T> FactorAllocator;
-      FactorAllocator allocT;
+      using FactorAllocator = spral::test::AlignedAllocator<T>;
+
+      FactorAllocator factor_alloc;
 
       // Make lcol m columns wide for debugging
       size_t len = (lda+2)*m; // Includes D
       if (debug) printf("m = %d, n = %d, lda = %d, len = %zu\n", m, n, lda, len);
-      front.lcol = allocT.allocate(len);
+      front.lcol = factor_alloc.allocate(len);
 
       memcpy(front.lcol, a, lda*n*sizeof(T)); // Copy a to l
       // Put nans on the bottom right corner of the LCOL matrix
@@ -124,8 +126,9 @@ namespace spldlt { namespace tests {
       for(int i=0; i<m; i++) front.perm[i] = i;
       T *d = &front.lcol[lda*n];
 
-      // Setup backup
-      using Backup = sylver::spldlt::ldlt_app_internal::CopyBackup<T, PoolAllocator>;
+      // Backup type: copy backup
+      using Backup = sylver::CopyBackup<T, PoolAllocator>;
+
       // CopyBackup<T, PoolAllocator> backup(m, n, blksz);
       front.alloc_backup(); // TODO only if piv strategy is APTP
       // Setup cdata
@@ -289,7 +292,7 @@ namespace spldlt { namespace tests {
       }
 
       // Alloc L array for storing factors
-      T *l = allocT.allocate(lda*m);
+      T *l = factor_alloc.allocate(lda*m);
       // Initialize L with zeros
       for (int j=0; j<m; ++j)
          for (int i=j; i<m; ++i)
@@ -372,8 +375,8 @@ namespace spldlt { namespace tests {
 
 
       // Cleanup memory
-      allocT.deallocate(l, m*lda);
-      delete[] a; allocT.deallocate(front.lcol, len);
+      factor_alloc.deallocate(l, m*lda);
+      delete[] a; factor_alloc.deallocate(front.lcol, len);
       delete[] b;
       delete[] front.perm;
       delete[] soln;
