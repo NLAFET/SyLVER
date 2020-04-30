@@ -3,7 +3,7 @@ function(sylver_default_includes name)
   target_include_directories("${name}"
     PUBLIC
     $<BUILD_INTERFACE:${SyLVER_BINARY_DIR}/include>
-    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${SyLVER_SOURCE_DIR}/include>
     $<BUILD_INTERFACE:${SyLVER_BINARY_DIR}/src>
     $<BUILD_INTERFACE:${SyLVER_SOURCE_DIR}/src>
     $<INSTALL_INTERFACE:include>
