@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 2.6)
+cmake_minimum_required (VERSION 3.12)
 include(CheckFunctionExists)
 include(CheckFortranFunctionExists)
 project (SyLVER)

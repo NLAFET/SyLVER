@@ -200,6 +200,8 @@ else()
 
   add_library(sylver ${sources})
 
+  sylver_default_includes(sylver)
+
 endif()
 
 sylver_install_library(sylver)
