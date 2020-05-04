@@ -109,6 +109,7 @@ if(${SYLVER_RUNTIME} MATCHES "StarPU")
     StarPU/factor_failed.hxx
     StarPU/factor_indef.cxx
     StarPU/factor_indef.hxx
+    StarPU/hlws.cxx
     StarPU/kernels.cxx
     StarPU/kernels.hxx
     StarPU/kernels_indef.cxx
@@ -119,6 +120,7 @@ if(${SYLVER_RUNTIME} MATCHES "StarPU")
     StarPU/scheduler.h
     StarPU/subtree.cxx
     StarPU/subtree.hxx
+    StarPU/starpu.cxx
     StarPU/starpu_f_mod.F90
     StarPU/starpu_f_wrappers.c)
   
