@@ -11,10 +11,10 @@ using ValueTypes =
    // ::testing::Types<float, double>;
 
 template <typename T>
-class Common : public ::testing::Test {
+class FindColAbsMax : public ::testing::Test {
 protected:
    using value_type = T;
-   Common()
+   FindColAbsMax()
       :
       col_dim(16), col(new T[col_dim])
    {
@@ -43,10 +43,10 @@ protected:
 
 };
 
-TYPED_TEST_CASE(Common, ValueTypes);
+TYPED_TEST_CASE(FindColAbsMax, ValueTypes);
 
 // Max absoute value in first position with positive element
-TYPED_TEST(Common, FindColAbsMaxFirst)
+TYPED_TEST(FindColAbsMax, FindColAbsMaxFirst)
 {
    using value_type  = typename TestFixture::value_type;
 
@@ -69,7 +69,7 @@ TYPED_TEST(Common, FindColAbsMaxFirst)
 }
 
 // Max absoute value in first position with negative element
-TYPED_TEST(Common, FindColAbsMaxFirstNeg)
+TYPED_TEST(FindColAbsMax, FindColAbsMaxFirstNeg)
 {
    using value_type  = typename TestFixture::value_type;
 
@@ -92,7 +92,7 @@ TYPED_TEST(Common, FindColAbsMaxFirstNeg)
 }
 
 // Max absoute value in last position with positive element   
-TYPED_TEST(Common, FindColAbsMaxLast)
+TYPED_TEST(FindColAbsMax, FindColAbsMaxLast)
 {
    using value_type  = typename TestFixture::value_type;
 
@@ -114,7 +114,7 @@ TYPED_TEST(Common, FindColAbsMaxLast)
 }
 
 // Max absoute value in last position with negative element   
-TYPED_TEST(Common, FindColAbsMaxLastNeg)
+TYPED_TEST(FindColAbsMax, FindColAbsMaxLastNeg)
 {
    using value_type  = typename TestFixture::value_type;
 
@@ -138,7 +138,7 @@ TYPED_TEST(Common, FindColAbsMaxLastNeg)
 
    
 // Max absoute value in middle position with positive element
-TYPED_TEST(Common, FindColAbsMaxMiddle)
+TYPED_TEST(FindColAbsMax, FindColAbsMaxMiddle)
 {
    using value_type  = typename TestFixture::value_type;
 
@@ -159,7 +159,7 @@ TYPED_TEST(Common, FindColAbsMaxMiddle)
 
 }
 
-TYPED_TEST(Common, FindColAbsMaxFirstFrom)
+TYPED_TEST(FindColAbsMax, FindColAbsMaxFirstFrom)
 {
    using value_type  = typename TestFixture::value_type;
 
