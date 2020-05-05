@@ -4,7 +4,9 @@
 /// @author Florent Lopez
 #pragma once
 
+#include "sylver/kernels/Column.hxx"
 #include "sylver/kernels/CopyBackup.hxx"
+#include "sylver/kernels/PoolBackup.hxx"
 #include "sylver_ciface.hxx"
 
 #include <algorithm>
@@ -26,7 +28,6 @@
 
 #include "compat.hxx"
 #include "ssids/profile.hxx"
-#include "ssids/cpu/BlockPool.hxx"
 // #include "ssids/cpu/BuddyAllocator.hxx"
 #include "ssids/cpu/cpu_iface.hxx"
 #include "ssids/cpu/Workspace.hxx"
@@ -69,166 +70,6 @@ void ldlt_app_solve_bwd(int m, int n, T const* l, int ldl, int nrhs, T* x, int l
 namespace ldlt_app_internal {
 
    // static const int INNER_BLOCK_SIZE = 32;
-
-/** \brief Data about block column of factorization; handles operations
- *         concerning number of eliminated variables and stores D.
- *  \tparam T underlying data type, e.g. double
- */
-template<typename T>
-class Column {
-public:
-   bool first_elim; ///< True if first column with eliminations
-   int nelim; ///< Number of eliminated entries in this column
-   T *d; ///< Pointer to local d
-
-   // \{
-   Column(Column const&) =delete; // must be unique
-   Column& operator=(Column const&) =delete; // must be unique
-   Column() =default;
-   // \}
-
-   /** \brief Initialize number of passed columns ready for reduction
-    *  \param passed number of variables passing a posteori pivot test in block
-    */
-   void init_passed(int passed) {
-      npass_ = passed;
-   }
-   /** \brief Update number of passed columns.
-    *  \details Aquires a lock before doing a minimum reduction across blocks
-    *  \param passed number of variables passing a posteori pivot test in block
-    */
-   void update_passed(int passed) {
-      
-#if defined(SPLDLT_USE_STARPU)
-      std::lock_guard<std::mutex> lock(mtx);
-#else
-      spral::omp::AcquiredLock scopeLock(lock_);
-#endif
-      npass_ = std::min(npass_, passed);
-   }
-   /** \brief Test if column has failed (in unpivoted case), recording number of
-    *         blocks in column that have passed. To be called once per block
-    *         in the column.
-    *  \details Whilst this check could easily be done without calling this
-    *           routine, the atomic recording of number that have passed would
-    *           not be done, and this is essential for calculating number of
-    *           sucessful columns in the case of a global cancellation.
-    *  \param passed number of pivots that succeeded for a block
-    *  \returns true if passed < nelim */
-   bool test_fail(int passed) {
-      bool fail = (passed < nelim);
-      if(!fail) {
-         // Record number of blocks in column passing this test
-         
-         // TODO find an alternative to the omp atomic update when omp
-         // is not used.
-         #pragma omp atomic update
-         ++npass_;
-      }
-      return fail;
-   }
-
-   /** \brief Adjust nelim after all blocks of row/column have completed to
-    *         avoid split 2x2 pivots. Also updates next_elim.
-    *  \details If a split 2x2 pivot is detected, the number of eliminated
-    *           variables is reduced by one. This routine also sets first_elim
-    *           to true if this is the first column to successfully eliminated
-    *           a variable, and sets nelim for this column.
-    *  \param next_elim global number of eliminated pivots to be updated based
-    *         on number eliminated in this column. */
-   void adjust(int& next_elim) {
-      // Test if last passed column was first part of a 2x2: if so,
-      // decrement npass
-      if(npass_>0) {
-         T d11 = d[2*(npass_-1)+0];
-         T d21 = d[2*(npass_-1)+1];
-         if(std::isfinite(d11) && // not second half of 2x2
-               d21 != 0.0)        // not a 1x1 or zero pivot
-            npass_--;              // so must be first half 2x2
-      }
-      // Update elimination progress
-      first_elim = (next_elim==0 && npass_>0);
-      next_elim += npass_;
-      nelim = npass_;
-   }
-
-   /** \brief Move entries of permutation for eliminated entries backwards to
-    *         close up space from failed columns, whilst extracting failed
-    *         entries.
-    *  \details n entries of perm are moved to elim_perm (that may overlap
-    *           with perm). Uneliminated variables are placed into failed_perm.
-    *  \param n number of entries in block to be moved to elim_perm or failed.
-    *  \param perm[n] source pointer
-    *  \param elim_perm destination pointer for eliminated columns
-    *         from perm, first nelim entries are filled on output.
-    *  \param failed_perm destination pointer for failed columns from
-    *         perm first (n-nelim) entries are filled on output.
-    *  \internal Note that there is no need to consider a similar operation for
-    *            d[] as it is only used for eliminated variables.
-    */
-   void move_back(int n, int const* perm, int* elim_perm, int* failed_perm) {
-      if(perm != elim_perm) { // Don't move if memory is identical
-         for(int i=0; i<nelim; ++i)
-            *(elim_perm++) = perm[i];
-      }
-      // Copy failed perm
-      for(int i=nelim; i<n; ++i)
-         *(failed_perm++) = perm[i];
-   }
-
-   /** \brief return number of passed columns */
-   int get_npass() const { return npass_; }
-
-#if defined(SPLDLT_USE_STARPU)
-   /* return StarPU handle on column */
-   starpu_data_handle_t get_hdl() const { return hdl_; }
-   /* register handle on column*/
-   void register_handle() {
-      starpu_void_data_register(&hdl_);
-   }
-
-   // @brief Unregister data handle on column in StarPU
-   template<bool async=true>
-   void unregister_handle() {
-      if (async) starpu_data_unregister_submit(hdl_);
-      else       starpu_data_unregister(hdl_);
-   }
-
-   /// @brief Return StarPU handle on diagonal D
-   starpu_data_handle_t get_d_hdl() const { return d_hdl_; }
-
-   void register_d_hdl(const T *d, int dimn) {
-      starpu_vector_data_register(
-            &d_hdl_, STARPU_MAIN_RAM, reinterpret_cast<uintptr_t>(d), dimn,
-            sizeof(T));
-   }
-
-   template<bool async=true>
-   void unregister_d_hdl() {
-      if (async) starpu_data_unregister_submit(d_hdl_);
-      else       starpu_data_unregister(d_hdl_);
-   }
-
-#endif
-
-private:
-#if defined(SPLDLT_USE_STARPU)
-   starpu_data_handle_t hdl_;
-
-   // spral::omp::Lock lock_; ///< lock for altering npass
-   int npass_=0; ///< reduction variable for nelim
-
-   std::mutex mtx;
-   // std::atomic<int> npass_=0; ///< reduction variable for nelim
-
-   // StarPU handle for diagonal D
-   starpu_data_handle_t d_hdl_;
-
-#else
-   spral::omp::Lock lock_; ///< lock for altering npass
-   int npass_=0; ///< reduction variable for nelim
-#endif
-};
 
 /** \brief Stores data about block columns
  *  \details A wrapper around a vector of Column, also handles local permutation
@@ -273,7 +114,7 @@ public:
    /** \brief Returns Column instance for given column
     *  \param idx block column
     */
-   Column<T>& operator[](int idx) { return cdata_[idx]; }
+   sylver::Column<T>& operator[](int idx) { return cdata_[idx]; }
 
    /** \brief Return local permutation pointer for given column
     *  \param blk block column
@@ -303,7 +144,7 @@ private:
    int const n_; ///< number of columns in matrix
    int const block_size_; ///< block size for matrix
    IntAlloc alloc_; ///< internal copy of allocator to be used in destructor
-   Column<T> *cdata_; ///< underlying array of columns
+   sylver::Column<T> *cdata_; ///< underlying array of columns
    int* lperm_; ///< underlying local permutation
 #if defined(SPLDLT_USE_STARPU)
    starpu_data_handle_t d_hdl_;
@@ -481,169 +322,6 @@ void apply_pivot(int m, int n, int from, const T *diag, const T *d, const T smal
       }
    }
 }
-
-/** \brief Stores backups of matrix blocks using a pool of memory.
- *  \details The pool is not necessarily as large as the full matrix, so in
- *  some cases allocation will have to wait until a block is released by
- *  another task. In this case, OpenMP taskyield is used.
- *  \tparam T underlying data type, e.g. double
- *  \tparam Allocator allocator to use when allocating memory
- */
-template <typename T, typename Allocator=std::allocator<T*>>
-class PoolBackup {
-   //! \{
-   typedef typename std::allocator_traits<Allocator>::template rebind_alloc<T*> TptrAlloc;
-   //! \}
-public:
-   /** \brief Constructor
-    *  \param m number of rows in matrix
-    *  \param n number of blocks in matrix
-    *  \param block_size dimension of a block in rows or columns
-    *  \param alloc allocator instance to use when allocating memory
-    */
-   // FIXME: reduce pool size
-   PoolBackup(int m, int n, int block_size, Allocator const& alloc=Allocator())
-   : m_(m), n_(n), block_size_(block_size), mblk_(calc_nblk(m,block_size)),
-     pool_(calc_nblk(n,block_size)*((calc_nblk(n,block_size)+1)/2+mblk_), block_size, alloc),
-     ptr_(mblk_*calc_nblk(n,block_size), alloc)
-   {}
-
-   /** \brief Release memory associated with backup of given block.
-    *  \param iblk row index of block.
-    *  \param jblk column index of block.
-    */
-   void release(int iblk, int jblk) {
-      pool_.release(ptr_[jblk*mblk_+iblk]);
-      ptr_[jblk*mblk_+iblk] = nullptr;
-   }
-
-   /** \brief Create a restore point for the given block.
-    *  \param iblk row index of block.
-    *  \param jblk column index of block.
-    *  \param aval pointer to block to be stored.
-    *  \param lda leading dimension of aval.
-    */
-   void create_restore_point(int iblk, int jblk, T const* aval, int lda) {
-      T*& lwork = ptr_[jblk*mblk_+iblk];
-      lwork = pool_.get_wait();
-      for(int j=0; j<get_ncol(jblk); j++)
-      for(int i=0; i<get_nrow(iblk); i++)
-         lwork[j*block_size_+i] = aval[j*lda+i];
-   }
-
-   /** \brief Apply row permutation to block and create a restore point.
-    *  \details The row permutation is applied before taking the copy. This
-    *           routine is provided as the row permutation requires taking a
-    *           copy anyway, so they can be profitably combined.
-    *  \param iblk row index of block
-    *  \param jblk column index of block
-    *  \param nperm number of rows to permute (allows for rectangular blocks)
-    *  \param perm the permutation to apply
-    *  \param aval pointer to block to be stored.
-    *  \param lda leading dimension of aval.
-    */
-   void create_restore_point_with_row_perm(int iblk, int jblk, int nperm,
-         int const* perm, T* aval, int lda) {
-      T*& lwork = ptr_[jblk*mblk_+iblk];
-      lwork = pool_.get_wait();
-      for(int j=0; j<get_ncol(jblk); j++) {
-         for(int i=0; i<nperm; i++) {
-            int r = perm[i];
-            lwork[j*block_size_+i] = aval[j*lda+r];
-         }
-         for(int i=nperm; i<get_nrow(iblk); i++) {
-            lwork[j*block_size_+i] = aval[j*lda+i];
-         }
-      }
-      for(int j=0; j<get_ncol(jblk); j++)
-      for(int i=0; i<nperm; i++)
-         aval[j*lda+i] = lwork[j*block_size_+i];
-   }
-
-   /** \brief Apply column permutation to block and create a restore point.
-    *  \details The column permutation is applied before taking the copy. This
-    *           routine is provided as the permutation requires taking a
-    *           copy anyway, so they can be profitably combined.
-    *  \param iblk row index of block
-    *  \param jblk column index of block
-    *  \param perm the permutation to apply
-    *  \param aval pointer to block to be stored.
-    *  \param lda leading dimension of aval.
-    */
-   void create_restore_point_with_col_perm(int iblk, int jblk,
-         int const* perm, T* aval, int lda) {
-      T*& lwork = ptr_[jblk*mblk_+iblk];
-      lwork = pool_.get_wait();
-      for(int j=0; j<get_ncol(jblk); j++) {
-         int c = perm[j];
-         for(int i=0; i<get_nrow(iblk); i++)
-            lwork[j*block_size_+i] = aval[c*lda+i];
-      }
-      for(int j=0; j<get_ncol(jblk); j++)
-      for(int i=0; i<get_nrow(iblk); i++)
-         aval[j*lda+i] = lwork[j*block_size_+i];
-   }
-
-   /** \brief Restore submatrix (rfrom:, cfrom:) of block from backup.
-    *  \param iblk row of block
-    *  \param jblk column of block
-    *  \param rfrom row from which to start restoration
-    *  \param cfrom column from which to start restoration
-    *  \param aval pointer to block to be stored.
-    *  \param lda leading dimension of aval.
-    */
-   void restore_part(int iblk, int jblk, int rfrom, int cfrom, T* aval, int lda) {
-      T*& lwork = ptr_[jblk*mblk_+iblk];
-      for(int j=cfrom; j<get_ncol(jblk); j++)
-      for(int i=rfrom; i<get_nrow(iblk); i++)
-         aval[j*lda+i] = lwork[j*block_size_+i];
-   }
-
-   /** \brief Restore submatrix (from:, from:) from a symmetric permutation of
-    *         backup.
-    *  \details The backup will have been stored pritor to a symmetric
-    *           permutation associated with the factorization of a diagonal
-    *           block. This routine restores any failed columns, taking into
-    *           account the supplied permutation.
-    *  \param iblk row of block
-    *  \param jblk column of block
-    *  \param from row and column from which to start restoration
-    *  \param perm permutation to apply
-    *  \param aval pointer to block to be stored.
-    *  \param lda leading dimension of aval.
-    */
-   void restore_part_with_sym_perm(int iblk, int jblk, int from,
-         int const* perm, T* aval, int lda) {
-      T*& lwork = ptr_[jblk*mblk_+iblk];
-      for(int j=from; j<get_ncol(jblk); j++) {
-         int c = perm[j];
-         for(int i=from; i<get_ncol(jblk); i++) {
-            int r = perm[i];
-            aval[j*lda+i] = (r>c) ? lwork[c*block_size_+r]
-                                  : lwork[r*block_size_+c];
-         }
-         for(int i=get_ncol(jblk); i<get_nrow(iblk); i++)
-            aval[j*lda+i] = lwork[c*block_size_+i];
-      }
-   }
-
-private:
-   /** \brief return number of columns in given block column */
-   inline int get_ncol(int blk) {
-      return calc_blkn(blk, n_, block_size_);
-   }
-   /** \brief return number of rows in given block row */
-   inline int get_nrow(int blk) {
-      return calc_blkn(blk, m_, block_size_);
-   }
-
-   int const m_; ///< number of rows in main matrix
-   int const n_; ///< number of columns in main matrix
-   int const block_size_; ///< block size of main matrix
-   int const mblk_; ///< number of block rows in main matrix
-   BlockPool<T, Allocator> pool_; ///< pool of blocks
-   std::vector<T*, TptrAlloc> ptr_; ///< map from pointer matrix entry to block
-};
 
 // template<typename T,
 //          int BLOCK_SIZE,
