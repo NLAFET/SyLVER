@@ -5,6 +5,7 @@
 #pragma once
 
 // STD
+#include <cmath>
 #include <mutex>
 
 #ifdef _OPENMP
