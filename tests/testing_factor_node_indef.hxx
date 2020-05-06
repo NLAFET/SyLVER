@@ -4,6 +4,7 @@
 #include "BuddyAllocator.hxx"
 #include "SymbolicFront.hxx"
 #include "factor_indef.hxx"
+#include "sylver/StarPU/hlws.hxx"
 #include "sylver/StarPU/starpu.hxx"
 // SpLDLT tests
 #include "common.hxx"
@@ -12,6 +13,7 @@
 #include <vector>
 #include <cstdio>
 #include <chrono>
+#include <iostream>
 
 // SSIDS
 #include "ssids/cpu/cpu_iface.hxx"
@@ -47,8 +49,11 @@ int factor_node_indef_test(
    
    bool failed = false;
 
-   printf("[factor_node_indef_test] %d x %d, posdef = %d, blksz = %d\n", m, n, posdef, blksz);
-
+   std::cout << "[factor_node_indef_test] "
+             << m << " x " << n << ", blksz = " << blksz
+             << ", posdef = " << posdef
+             << std::endl;
+      
    // We don't allow these cases
    ASSERT_TRUE(n > 0);
    ASSERT_TRUE(m > 0);
@@ -145,8 +150,6 @@ int factor_node_indef_test(
    sylver::starpu::StarPU::ncpu = ncpu;
    sylver::starpu::StarPU::ncuda = ngpu;
 
-   sylver::starpu::StarPU::initialize();
-
 //    struct starpu_conf *conf = new starpu_conf;
 //    starpu_conf_init(conf);
 //    conf->ncpus = ncpu;
@@ -173,6 +176,14 @@ int factor_node_indef_test(
 // #if defined(SPLDLT_USE_GPU)
 //    starpu_cublas_init();
 // #endif
+
+   // sylver::starpu::StarPU::conf.sched_policy_name = "eager";
+   // sylver::starpu::StarPU::conf.sched_policy_name = NULL;
+   // sylver::starpu::StarPU::conf.sched_policy =
+   //    &sylver::starpu::HeteroLwsScheduler::starpu_sched_policy();
+   
+   sylver::starpu::StarPU::initialize();
+   
 #endif
 
    int nworkers = 1;

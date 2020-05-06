@@ -46,18 +46,18 @@ namespace spldlt {
 #if defined(SPLDLT_USE_GPU)
 
    // Heteroprio
-   int const FACTOR_PRIO   = 0;
-   int const INIT_PRIO     = 0;
-   int const ASSEMBLE_PRIO = 0;
-   int const SOLVE_PRIO    = 1;
-   int const UPDATE_PRIO   = 2;
+   // int const FACTOR_PRIO   = 0;
+   // int const INIT_PRIO     = 0;
+   // int const ASSEMBLE_PRIO = 0;
+   // int const SOLVE_PRIO    = 1;
+   // int const UPDATE_PRIO   = 2;
 
    // LWS
-   // int const FACTOR_PRIO   = 3;
-   // int const INIT_PRIO     = 3;
-   // int const ASSEMBLE_PRIO = 3;
-   // int const SOLVE_PRIO    = 2;
-   // int const UPDATE_PRIO   = 1;
+   int const FACTOR_PRIO   = 3;
+   int const INIT_PRIO     = 3;
+   int const ASSEMBLE_PRIO = 3;
+   int const SOLVE_PRIO    = 2;
+   int const UPDATE_PRIO   = 1;
 
 #else
 

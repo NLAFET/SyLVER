@@ -254,14 +254,26 @@ namespace spldlt {
 #if defined(SPLDLT_USE_GPU)
 
       // Heteroprio
-      static const int FACTOR_APP_PRIO   = 0;
-      static const int ADJUST_APP_PRIO   = 0;
-      static const int APPLYN_APP_PRIO   = 1;
-      static const int RESTORE_APP_PRIO  = 1;
-      static const int UPDATEN_APP_PRIO  = 2;
-      static const int UPDATEC_APP_PRIO  = 2;
-      static const int APPLYT_APP_PRIO   = 3;
-      static const int UPDATET_APP_PRIO  = 3;
+      // static const int FACTOR_APP_PRIO   = 0;
+      // static const int ADJUST_APP_PRIO   = 0;
+      // static const int APPLYN_APP_PRIO   = 1;
+      // static const int RESTORE_APP_PRIO  = 1;
+      // static const int UPDATEN_APP_PRIO  = 2;
+      // static const int UPDATEC_APP_PRIO  = 2;
+      // static const int APPLYT_APP_PRIO   = 3;
+      // static const int UPDATET_APP_PRIO  = 3;
+
+      // LWS
+      static const int FACTOR_APP_PRIO   = 3;
+      static const int ADJUST_APP_PRIO   = 3;
+      static const int APPLYN_APP_PRIO   = 2;
+      static const int RESTORE_APP_PRIO  = 2;
+      static const int UPDATEN_APP_PRIO  = 1;
+      static const int UPDATEC_APP_PRIO  = 1;
+      static const int APPLYT_APP_PRIO   = 0;
+      static const int UPDATET_APP_PRIO  = 0;
+
+      static const int MAX_APP_PRIO = FACTOR_APP_PRIO;
 #else
 
       // LWS
@@ -390,15 +402,15 @@ namespace spldlt {
 #endif
       }
 
-      /* UpdateN task: peroform update of a block on the right of
-         eliminated column. First, if we are in the block row or block
-         column that we have jsut eliminated, restore the failed rows
-         or columns from the backup. Then perform the following
-         operation:
+      // UpdateN task: perform block update in the trailing
+      // submatrix.
+      //
+      // First, if we are in the block row or block column that we
+      // have jsut eliminated, restore the failed rows or columns from
+      // the backup. Then perform the following operation:
          
-         A_ij = A_ij - L_ik D_k L_jk^T
+      // A(i,j) = A(i,j) - L(i,k) * D(k) * L(j,k)^T
          
-       */
 
       static 
       void updateN_block_app_task(
@@ -414,6 +426,14 @@ namespace spldlt {
 
 #if defined(SPLDLT_USE_STARPU)
 
+         int prio = UPDATEN_APP_PRIO;
+
+         if ((iblk == blk+1) && (jblk == blk+1)) {
+            // If udpate operation is on the critical path, increase
+            // its priority
+            prio = MAX_APP_PRIO; 
+         }
+         
          sylver::spldlt::starpu::insert_updateN_block_app(
                isrc.get_hdl(), jsrc.get_hdl(), ublk.get_hdl(), 
                cdata[blk].get_d_hdl(), cdata[blk].get_hdl(),
@@ -422,7 +442,7 @@ namespace spldlt {
                &cdata, &backup,
                beta, upd, ldupd,
                &work, ublk.get_blksz(),
-               UPDATEN_APP_PRIO);
+               prio);
 
 #else
 

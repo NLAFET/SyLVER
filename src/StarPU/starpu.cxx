@@ -1,5 +1,6 @@
 #include <starpu.h>
 
+#include "sylver/StarPU/hlws.hxx"
 #include "sylver/StarPU/starpu.hxx"
 
 namespace sylver {
@@ -8,29 +9,35 @@ namespace starpu {
 int StarPU::ncpu = 0;
 int StarPU::ncuda = 0;
 
-struct starpu_conf StarPU::conf_;
+struct starpu_conf StarPU::conf;
 
 void StarPU::initialize() {
 
    int ret;
 
-   starpu_conf_init(&conf_);
+   starpu_conf_init(&conf);
 
    // if(ncpu >= 0) {
-   conf_.ncpus = ncpu;
+   conf.ncpus = ncpu;
    // }
 
 #if defined(SPLDLT_USE_GPU)
    // if(ngpu >= 0) {
-   conf_.ncuda = ncuda;
+   conf.ncuda = ncuda;
    // }
 #else
-   conf_.ncuda = 0;
+   conf.ncuda = 0;
 #endif
    
-   conf_.sched_policy_name = "lws";
+   // conf.sched_policy_name = "lws";
 
-   ret = starpu_init(&conf_);
+   // conf.sched_policy_name = "ws";
+
+   conf.sched_policy_name = NULL;
+   sylver::starpu::StarPU::conf.sched_policy =
+      &sylver::starpu::HeteroLwsScheduler::starpu_sched_policy();
+
+   ret = starpu_init(&conf);
    STARPU_CHECK_RETURN_VALUE(ret, "starpu_init");
 
 #if defined(SPLDLT_USE_GPU)

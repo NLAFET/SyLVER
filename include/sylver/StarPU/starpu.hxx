@@ -11,8 +11,8 @@ namespace starpu {
       static int ncpu;
       static int ncuda;
 
-   private:
-      static struct starpu_conf conf_;
+   // private:
+      static struct starpu_conf conf;
    };  
    
 }} // End of namespace sylver::starpu
