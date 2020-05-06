@@ -272,8 +272,6 @@ namespace spldlt {
       static const int UPDATEC_APP_PRIO  = 1;
       static const int APPLYT_APP_PRIO   = 0;
       static const int UPDATET_APP_PRIO  = 0;
-
-      static const int MAX_APP_PRIO = FACTOR_APP_PRIO;
 #else
 
       // LWS
@@ -287,6 +285,9 @@ namespace spldlt {
       static const int UPDATET_APP_PRIO  = 0;
 
 #endif
+
+      static const int MAX_APP_PRIO = FACTOR_APP_PRIO;
+
       ////////////////////////////////////////
       // Tasks
 
