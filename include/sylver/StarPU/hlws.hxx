@@ -29,22 +29,36 @@ public:
 
    static void finalize(unsigned sched_ctx_id);
 
-   static void add_workers(unsigned sched_ctx_id, int *workerids,unsigned nworkers);
+   static void add_workers(
+         unsigned sched_ctx_id, int *workerids, unsigned nworkers);
 
-   static void remove_workers(unsigned sched_ctx_id, int *workerids, unsigned nworkers);
+   static void remove_workers(
+         unsigned sched_ctx_id, int *workerids, unsigned nworkers);
 
-   static int push_task(struct starpu_task *task) {}
+   static int push_task(struct starpu_task *task);
 
-   static struct starpu_task *pop_task(unsigned sched_ctx_id) {}
+   static struct starpu_task *pop_task(unsigned sched_ctx_id);
 
    static std::string const name;
 
    static std::string const description;
-      
+
+   static struct starpu_sched_policy& starpu_sched_policy();
+   
 private:
 
+   static struct starpu_sched_policy hlws_sched_policy_;
+
+   static struct starpu_task* pick_task(
+         HeteroLwsScheduler::Data *sched_data, int source, int target);
+   
    static int select_victim(
-         HeteroLwsScheduler::Data *sched_data, unsigned sched_ctx_id, int workerid);
+         HeteroLwsScheduler::Data *sched_data, unsigned sched_ctx_id,
+         int workerid);
+
+   static unsigned select_worker(
+         HeteroLwsScheduler::Data *sched_data, struct starpu_task *task,
+         unsigned sched_ctx_id);
 };
    
 }} // End of namespace sylver::starpu

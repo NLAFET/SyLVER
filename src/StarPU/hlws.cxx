@@ -1,16 +1,316 @@
-#include <starpu.h>
+#include "sylver/StarPU/hlws.hxx"
 
 #include <string>
 
-#include "sylver/StarPU/hlws.hxx"
+#include <starpu.h>
+#include <starpu_scheduler.h>
+
+// extern "C" {
+// hlws_sched_policy.init_sched = HeteroLwsScheduler::initialize;
+// hlws_sched_policy.pre_exec_hook = NULL;
+   // hlws_sched_policy.policy_name = "hlws";
+// }
 
 namespace sylver {
 namespace starpu {
 
+struct starpu_sched_policy HeteroLwsScheduler::hlws_sched_policy_;
+
+struct starpu_sched_policy& HeteroLwsScheduler::starpu_sched_policy() {
+
+   struct starpu_sched_policy& sched = HeteroLwsScheduler::hlws_sched_policy_;
+   
+   sched.init_sched = HeteroLwsScheduler::initialize;
+   sched.deinit_sched = HeteroLwsScheduler::finalize;
+   sched.add_workers = HeteroLwsScheduler::add_workers;
+   sched.remove_workers = HeteroLwsScheduler::remove_workers;
+   sched.push_task = HeteroLwsScheduler::push_task;
+   sched.pop_task = HeteroLwsScheduler::pop_task;
+   sched.pre_exec_hook = NULL;
+   sched.post_exec_hook = NULL;
+   sched.pop_every_task = NULL;
+   sched.policy_name = "hlws";
+   sched.policy_description = "locality work stealing";
+// #ifdef STARPU_HAVE_HWLOC
+   // sched.worker_type = STARPU_WORKER_TREE;
+// #else
+   sched.worker_type = STARPU_WORKER_LIST;
+// #endif
+
+   return sched;
+}
+   
+// struct starpu_sched_policy
+   
+   // {
+   //    policy_name : "hlws"                                         
+   //    };
+
+// {
+//  .init_sched = HeteroLwsScheduler::initialize,
+//  .deinit_sched = HeteroLwsScheduler::finalize,
+//  .add_workers = HeteroLwsScheduler::add_workers,
+//  .remove_workers = HeteroLwsScheduler::remove_workers,
+//  .push_task = HeteroLwsScheduler::push_task,
+//  .pop_task = HeteroLwsScheduler::pop_task,
+//  .pre_exec_hook = NULL,
+//  .post_exec_hook = NULL,
+//  .pop_every_task = NULL,
+//  .policy_name = "hlws",
+//  .policy_description = "heterogeneous locality work stealing",
+//  // #ifdef STARPU_HAVE_HWLOC
+//  // .worker_type = STARPU_WORKER_TREE,
+//  // #else
+//  .worker_type = STARPU_WORKER_LIST,
+//  // #endif
+
+// };
+
+   
 std::string const HeteroLwsScheduler::name = "hlws";
 
 std::string const HeteroLwsScheduler::description = "Heterogeneous locality work stealing";
 
+bool can_execute(starpu_task* task, int workerid) {
+
+   for (unsigned i = 0; i < STARPU_MAXIMPLEMENTATIONS; i++) {
+      if (starpu_worker_can_execute_task(workerid, task, i)) {
+         
+            starpu_task_set_implementation(task, i);
+            return 1;
+         }
+   }
+   return 0;
+   
+}
+   
+struct starpu_task* HeteroLwsScheduler::pick_task(
+      HeteroLwsScheduler::Data *sched_data, int source, int target) {
+
+   starpu_task* task = nullptr;
+   
+   auto& source_list = sched_data->worker_data[source].task_queue;
+   auto task_iterator = source_list.begin();
+
+   while (task_iterator != source_list.end()) {
+
+      task = *task_iterator;
+
+      if (can_execute(task, target)) {
+         // Task can be executed on target worker, pick it and remove
+         // it from the source worker task queue
+         source_list.erase(task_iterator);
+         return task; 
+      }
+
+      task_iterator++;
+   }
+
+   return nullptr;
+}
+   
+struct starpu_task* HeteroLwsScheduler::pop_task(unsigned sched_ctx_id) {
+
+   using SchedulerData = HeteroLwsScheduler::Data;
+   
+   auto *sched_data = reinterpret_cast<SchedulerData*>(starpu_sched_ctx_get_policy_data(sched_ctx_id));
+   
+   struct starpu_task *task = NULL;
+   // Note: starpu_worker_get_id_check is similar to
+   // `starpu_worker_get_id` exepct that it aborts if not called from
+   // a worker
+   unsigned workerid = starpu_worker_get_id_check();
+   auto& worker_data = sched_data->worker_data[workerid];
+
+   // StarPU Context list
+   // unsigned *sched_ctxs = NULL;
+   // int nsched_ctxs = -1;
+   // starpu_worker_get_sched_ctx_list(workerid, sched_ctxs);
+   // assert(NULL != sched_ctxs);
+   // assert(nsched_ctxs > 0);
+   
+   worker_data.busy = false;
+
+#ifdef STARPU_NON_BLOCKING_DRIVERS
+   // if (STARPU_RUNNING_ON_VALGRIND || !worker_data.task_queue.empty())
+   if (!worker_data.task_queue.empty())
+#endif
+      {
+         task = HeteroLwsScheduler::pick_task(sched_data, workerid, workerid);
+         // if (task) {
+         //    locality_popped_task(ws, task, workerid, sched_ctx_id);
+         // }
+      }
+
+   if (task) {
+      /* there was a local task */
+      worker_data.busy = true;
+      // if (_starpu_get_nsched_ctxs() > 1)
+      //    {
+      //       starpu_worker_relax_on();
+      //       _starpu_sched_ctx_lock_write(sched_ctx_id);
+      //       starpu_worker_relax_off();
+      //       starpu_sched_ctx_list_task_counters_decrement(sched_ctx_id, workerid);
+      //       if (_starpu_sched_ctx_worker_is_master_for_child_ctx(sched_ctx_id, workerid, task))
+      //          task = NULL;
+      //       _starpu_sched_ctx_unlock_write(sched_ctx_id);
+      //    }
+      return task;
+   }
+
+   /* we need to steal someone's job */
+   starpu_worker_relax_on();
+   // Select a suitable worker to steal task from 
+   int victim = HeteroLwsScheduler::select_victim(sched_data, sched_ctx_id, workerid);
+   auto& victim_data = sched_data->worker_data[victim];
+   starpu_worker_relax_off();
+
+   if (victim == -1) {
+      // Could not find a worker to steal task from. Return no task.
+      
+      return NULL;
+   }
+
+   // Try locking `victim` worker. Note: `starpu_worker_trylock`
+   // return 0 if successful
+   if (starpu_worker_trylock(victim)) {
+      
+      /* victim is busy, don't bother it, come back later */
+      return NULL;
+   }
+
+   if (victim_data.running && !victim_data.task_queue.empty()) {
+      // Victim is running and has ready tasks available in its task
+      // queue
+      
+      task = HeteroLwsScheduler::pick_task(sched_data, victim, workerid);
+   }
+
+   if (task) {
+      // _STARPU_TRACE_WORK_STEALING(workerid, victim);
+      starpu_sched_task_break(task);
+      starpu_sched_ctx_list_task_counters_decrement(sched_ctx_id, victim);
+      // record_data_locality(task, workerid);
+      // record_worker_locality(ws, task, workerid, sched_ctx_id);
+      // locality_popped_task(ws, task, victim, sched_ctx_id);
+   }
+   starpu_worker_unlock(victim);
+
+#ifndef STARPU_NON_BLOCKING_DRIVERS
+   /* While stealing, perhaps somebody actually give us a task, don't miss
+    * the opportunity to take it before going to sleep. */
+   {
+      struct _starpu_worker *worker = _starpu_get_worker_struct(starpu_worker_get_id());
+      if (!task && worker->state_keep_awake)
+         {
+            task = HeteroLwsScheduler::pick_task(sched_data, workerid, workerid);
+            if (task)
+               {
+                  /* keep_awake notice taken into account here, clear flag */
+                  worker->state_keep_awake = 0;
+                  // locality_popped_task(ws, task, workerid, sched_ctx_id);
+               }
+         }
+   }
+#endif
+
+   // if (task && _starpu_get_nsched_ctxs() > 1) {
+      
+   //    starpu_worker_relax_on();
+   //    _starpu_sched_ctx_lock_write(sched_ctx_id);
+   //    starpu_worker_relax_off();
+   //    if (_starpu_sched_ctx_worker_is_master_for_child_ctx(sched_ctx_id, workerid, task))
+   //       task = NULL;
+   //    _starpu_sched_ctx_unlock_write(sched_ctx_id);
+   //    if (!task)
+   //       return NULL;
+   // }
+
+   // Record weather we are busy or not 
+   worker_data.busy = !!task;
+
+   return task;
+}
+
+   
+unsigned HeteroLwsScheduler::select_worker(
+      HeteroLwsScheduler::Data *sched_data, struct starpu_task *task,
+      unsigned sched_ctx_id) {
+
+
+   // Round robin
+   
+   unsigned worker;
+   unsigned nworkers;
+   int *workerids;
+   nworkers = starpu_sched_ctx_get_workers_list_raw(sched_ctx_id, &workerids);
+
+   worker = sched_data->last_push_worker;
+   auto& worker_data = sched_data->worker_data[worker];
+   do {
+      worker = (worker + 1) % nworkers;
+      worker_data = sched_data->worker_data[worker];
+   }
+   while (!worker_data.running || !starpu_worker_can_execute_task_first_impl(workerids[worker], task, NULL));
+
+   sched_data->last_push_worker = worker;
+
+   return workerids[worker];
+
+}
+   
+int HeteroLwsScheduler::push_task(struct starpu_task *task) {
+
+   using SchedulerData = HeteroLwsScheduler::Data;
+
+   unsigned sched_ctx_id = task->sched_ctx;
+   auto *sched_data = reinterpret_cast<SchedulerData*>(starpu_sched_ctx_get_policy_data(sched_ctx_id));
+   int workerid;
+
+// #ifdef USE_LOCALITY
+//    workerid = select_worker_locality(ws, task, sched_ctx_id);
+// #else
+   workerid = -1;
+// #endif
+   if (workerid == -1)
+      workerid = starpu_worker_get_id();
+
+   auto& worker_data = sched_data->worker_data[workerid];
+
+   /* If the current thread is not a worker but the main thread (-1)
+    * or the current worker is not in the target context, we find the
+    * better one to put task on its queue */
+   if (workerid == -1 || !starpu_sched_ctx_contains_worker(workerid, sched_ctx_id) ||
+       !starpu_worker_can_execute_task_first_impl(workerid, task, NULL)) {
+      workerid = select_worker(sched_data, task, sched_ctx_id);
+   }
+   starpu_worker_lock(workerid);
+   // STARPU_AYU_ADDTOTASKQUEUE(starpu_task_get_job_id(task), workerid);
+   starpu_sched_task_break(task);
+   // record_data_locality(task, workerid);
+   // STARPU_ASSERT_MSG(worker_data.running, "workerid=%d, ws=%p\n", workerid, sched_data);
+   // _starpu_prio_deque_push_back_task(&ws->per_worker[workerid].queue, task);
+   worker_data.task_queue.push_back(task);
+
+   // locality_pushed_task(ws, task, workerid, sched_ctx_id);
+
+   starpu_push_task_end(task);
+   starpu_worker_unlock(workerid);
+   starpu_sched_ctx_list_task_counters_increment(sched_ctx_id, workerid);
+
+#if !defined(STARPU_NON_BLOCKING_DRIVERS) || defined(STARPU_SIMGRID)
+   /* TODO: implement fine-grain signaling, similar to what eager does */
+   struct starpu_worker_collection *workers = starpu_sched_ctx_get_worker_collection(sched_ctx_id);
+   struct starpu_sched_ctx_iterator it;
+
+   workers->init_iterator(workers, &it);
+   while(workers->has_next(workers, &it))
+      starpu_wake_worker_relax_light(workers->get_next(workers, &it));
+#endif
+   return 0;
+
+}
+   
 void HeteroLwsScheduler::add_workers(unsigned sched_ctx_id, int *workerids,unsigned nworkers) {
 
    using SchedulerData = HeteroLwsScheduler::Data;
