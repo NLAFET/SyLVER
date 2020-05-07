@@ -7,7 +7,8 @@
 #include "NumericFront.hxx"
 #include "kernels/ldlt_app.hxx"
 #include "sylver/kernels/ColumnData.hxx"
-#include "Tile.hxx"
+#include "sylver/Tile.hxx"
+
 // STD
 #include <assert.h>
 #include <chrono>

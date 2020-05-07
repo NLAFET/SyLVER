@@ -17,7 +17,7 @@
 #endif
 #include "sylver/kernels/ColumnData.hxx"
 #include "sylver/kernels/CopyBackup.hxx"
-#include "Tile.hxx"
+#include "sylver/Tile.hxx"
 
 // SSIDS
 #include "ssids/cpu/kernels/ldlt_nopiv.hxx"

@@ -9,7 +9,7 @@
 #include "NumericFront.hxx"
 #include "sylver/kernels/common.hxx"
 #include "sylver/kernels/ColumnData.hxx"
-#include "Tile.hxx"
+#include "sylver/Tile.hxx"
 // STD
 #include <assert.h>
 #include <string>

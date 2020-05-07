@@ -5,7 +5,7 @@
 
 // SyLVER
 #include "SymbolicFront.hxx"
-#include "Tile.hxx"
+#include "sylver/Tile.hxx"
 
 #include <iostream>
 

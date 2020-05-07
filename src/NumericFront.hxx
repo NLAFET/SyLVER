@@ -8,9 +8,9 @@
 #include "kernels/ldlt_app.hxx"
 #include "NumericFrontBase.hxx"
 #include "SymbolicFront.hxx"
-#include "Tile.hxx"
 #include "sylver/kernels/ColumnData.hxx"
 #include "sylver/kernels/CopyBackup.hxx"
+#include "sylver/Tile.hxx"
 
 // STD
 #include <cassert>

@@ -7,7 +7,7 @@
 #include "kernels/gpu/wrappers.hxx"
 #endif
 #include "NumericFront.hxx"
-#include "Tile.hxx"
+#include "sylver/Tile.hxx"
 
 #include <cstdio>
 #include <cmath>

@@ -8,7 +8,7 @@
 #include "kernels/factor_indef.hxx"
 #include "kernels/ldlt_app.hxx"
 #include "sylver/kernels/ColumnData.hxx"
-#include "Tile.hxx"
+#include "sylver/Tile.hxx"
 
 // STD
 #include <assert.h>

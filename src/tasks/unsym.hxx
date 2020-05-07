@@ -8,9 +8,9 @@
 #include "kernels/factor_unsym.hxx"
 #include "kernels/assemble_unsym.hxx"
 #include "kernels/ldlt_app.hxx"
-#include "Tile.hxx"
 #include "NumericFrontUnsym.hxx"
 #include "sylver/kernels/ColumnData.hxx"
+#include "sylver/Tile.hxx"
 
 // SSIDS
 #include "ssids/cpu/Workspace.hxx"
