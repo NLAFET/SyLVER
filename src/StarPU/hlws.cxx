@@ -83,9 +83,9 @@ bool can_execute(starpu_task* task, int workerid) {
    for (unsigned i = 0; i < STARPU_MAXIMPLEMENTATIONS; i++) {
       if (starpu_worker_can_execute_task(workerid, task, i)) {
          
-            starpu_task_set_implementation(task, i);
-            return true;
-         }
+         starpu_task_set_implementation(task, i);
+         return true;
+      }
    }
    return false;
    
@@ -104,18 +104,24 @@ struct starpu_task* HeteroLwsScheduler::pick_task(
       task = *task_iterator;
 
       if (can_execute(task, target)) {
+
+         // Debug
+         // if (starpu_worker_get_type(target) == STARPU_CUDA_WORKER) {
+         //    std::cout << "[HeteroLwsScheduler::pick_task] "
+         //              << source << " -> " << target
+         //              << ", task = " << task
+         //              << ", task name = " << task->cl->name
+         //              << ", task impl = " << starpu_task_get_implementation(task)
+         //              << std::endl;
+            
+         // if (starpu_worker_get_type(target) == STARPU_CUDA_WORKER) {
+         //    return NULL;
+         // }
+
          // Task can be executed on target worker, pick it and remove
          // it from the source worker task queue
          source_list.erase(task_iterator);
 
-         // Debug
-         if (starpu_worker_get_type(target) == STARPU_CUDA_WORKER) {
-            std::cout << "[HeteroLwsScheduler::pick_task] source = " << source
-                      << ", task = " << task
-                      << ", task name = " << task->cl->name
-                      << std::endl;
-         }
-         
          return task;
       }
 
@@ -273,11 +279,12 @@ struct starpu_task* HeteroLwsScheduler::pop_task(unsigned sched_ctx_id) {
    return task;
 }
 
-   
+
 unsigned HeteroLwsScheduler::select_worker(
       HeteroLwsScheduler::Data *sched_data, struct starpu_task *task,
       unsigned sched_ctx_id) {
 
+   // std::cout << "[HeteroLwsScheduler::select_worker]" << std::endl;
 
    // Round robin
    
@@ -287,12 +294,11 @@ unsigned HeteroLwsScheduler::select_worker(
    nworkers = starpu_sched_ctx_get_workers_list_raw(sched_ctx_id, &workerids);
 
    worker = sched_data->last_push_worker;
-   auto& worker_data = sched_data->worker_data[workerids[worker]];
    do {
       worker = (worker + 1) % nworkers;
-      worker_data = sched_data->worker_data[workerids[worker]];
    }
-   while (!worker_data.running || !starpu_worker_can_execute_task_first_impl(workerids[worker], task, NULL));
+   while (!sched_data->worker_data[workerids[worker]].running ||
+          !starpu_worker_can_execute_task_first_impl(workerids[worker], task, NULL));
 
    sched_data->last_push_worker = worker;
 
@@ -313,10 +319,10 @@ int HeteroLwsScheduler::push_task(struct starpu_task *task) {
 // #ifdef USE_LOCALITY
 //    workerid = select_worker_locality(ws, task, sched_ctx_id);
 // #else
-   workerid = -1;
+   // workerid = -1;
 // #endif
-   if (workerid == -1)
-      workerid = starpu_worker_get_id();
+   // if (workerid == -1)
+   workerid = starpu_worker_get_id();
 
    /* If the current thread is not a worker but the main thread (-1)
     * or the current worker is not in the target context, we find the
