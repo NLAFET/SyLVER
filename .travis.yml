@@ -30,7 +30,7 @@ before_script:
   - tar -xzvf starpu-1.3.3.tar.gz
   - mkdir starpu-1.3.3/build
   - cd starpu-1.3.3/build
-  -
+  - |
   if [[ ${ENABLE_OMP} == "ON" ]]; then
      STARPU_OMP=--enable-openmp
   else
