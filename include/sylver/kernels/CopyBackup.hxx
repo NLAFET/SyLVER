@@ -8,7 +8,7 @@
 #include "ssids/cpu/cpu_iface.hxx"
 
 // SyLVER
-#include "kernels/common.hxx"
+#include "sylver/kernels/common.hxx"
 
 namespace sylver {
 

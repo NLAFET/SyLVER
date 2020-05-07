@@ -3,7 +3,9 @@
 /// @author Florent Lopez
 #pragma once
 
-#include "kernels/common.hxx"
+// SyLVER
+#include "sylver/kernels/common.hxx"
+
 // STD
 #include <vector>
 #include <cstring>

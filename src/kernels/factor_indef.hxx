@@ -6,6 +6,7 @@
 // SyLVER
 #include "NumericFront.hxx"
 #include "kernels/ldlt_app.hxx"
+#include "sylver/kernels/ColumnData.hxx"
 #include "Tile.hxx"
 // STD
 #include <assert.h>
@@ -57,7 +58,7 @@ namespace spldlt {
    void factor_block_app(
          BlockSpec& dblk, int& next_elim,
          int* perm, T* d,
-         spldlt::ldlt_app_internal::ColumnData<T,IntAlloc>& cdata,
+         sylver::ColumnData<T,IntAlloc>& cdata,
          Backup& backup,
          sylver::options_t& options,
          spral::ssids::cpu::Workspace& work,
@@ -81,7 +82,7 @@ namespace spldlt {
       typename BlockSpec, typename T, typename IntAlloc, typename Backup>
    void applyN_block_app(
          BlockSpec& dblk, BlockSpec& rblk,
-         spldlt::ldlt_app_internal::ColumnData<T,IntAlloc>& cdata,
+         sylver::ColumnData<T,IntAlloc>& cdata,
          Backup& backup,
          sylver::options_t& options) {
 
@@ -105,7 +106,7 @@ namespace spldlt {
       typename BlockSpec, typename T, typename IntAlloc, typename Backup>
    void applyT_block_app(
          BlockSpec& dblk, BlockSpec& cblk,
-         spldlt::ldlt_app_internal::ColumnData<T,IntAlloc>& cdata,
+         sylver::ColumnData<T,IntAlloc>& cdata,
          Backup& backup,
          sylver::options_t& options) {
 
@@ -131,7 +132,7 @@ namespace spldlt {
    void adjust_app(
          int blk,
          int& next_elim,
-         spldlt::ldlt_app_internal::ColumnData<T,IntAlloc>& cdata) {
+         sylver::ColumnData<T,IntAlloc>& cdata) {
 
       // Adjust column once all applys have finished and we know final
       // number of passed columns.
@@ -147,7 +148,7 @@ namespace spldlt {
          BlockSpec& isrc,
          BlockSpec& jsrc,
          BlockSpec& ublk,
-         spldlt::ldlt_app_internal::ColumnData<T,IntAlloc>& cdata,
+         sylver::ColumnData<T,IntAlloc>& cdata,
          Backup& backup, spral::ssids::cpu::Workspace& work) {
 
       ublk.restore_if_required(backup, elim_col);
@@ -183,7 +184,7 @@ namespace spldlt {
    template<typename BlockSpec, typename T, typename IntAlloc, typename Backup>
    void updateN_block_app(
          BlockSpec& isrc, BlockSpec& jsrc, BlockSpec& ublk,
-         spldlt::ldlt_app_internal::ColumnData<T,IntAlloc>& cdata,
+         sylver::ColumnData<T,IntAlloc>& cdata,
          Backup& backup,
          T const beta, T* upd, int const ldupd,
          spral::ssids::cpu::Workspace& work) {
@@ -219,7 +220,7 @@ namespace spldlt {
       int lik_first_row = std::max(0, ncol-i*blksz);
       // printf("[udpate_contrib_block_app_cpu_func] lik_first_row = %d, ljk_first_row = %d\n", lik_first_row, ljk_first_row);
 
-      spldlt::ldlt_app_internal::ColumnData<T, IntAlloc> *cdata = node.cdata;
+      sylver::ColumnData<T, IntAlloc> *cdata = node.cdata;
       int cnelim = (*cdata)[k].nelim;
       bool first_elim = (*cdata)[k].first_elim;
       T *dk = (*cdata)[k].d;

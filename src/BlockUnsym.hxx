@@ -6,6 +6,7 @@
 #include "BlockBase.hxx"
 #include "kernels/ldlt_app.hxx"
 #include "kernels/factor_unsym.hxx"
+#include "sylver/kernels/ColumnData.hxx"
 
 // STD
 #include <cassert>
@@ -205,7 +206,7 @@ namespace splu {
       template <typename IntAlloc>
       void restore_failed(
             int elim_col,
-            spldlt::ldlt_app_internal::ColumnData<T, IntAlloc>& cdata) {
+            sylver::ColumnData<T, IntAlloc>& cdata) {
          
          assert(cpy_ != nullptr);
          if (!cpy_) return;
@@ -247,7 +248,7 @@ namespace splu {
       template <typename IntAlloc, typename Allocator>
       void restore_failed_and_release_backup(
             int elim_col,
-            spldlt::ldlt_app_internal::ColumnData<T, IntAlloc> const& cdata,
+            sylver::ColumnData<T, IntAlloc> const& cdata,
             Allocator const& alloc) {
 
          restore_failed(elim_col, cdata);
@@ -318,7 +319,7 @@ namespace splu {
       template <typename IntAlloc>
       int applyU_app(
             BlockUnsym<T>& dblk, T u, 
-            spldlt::ldlt_app_internal::ColumnData<T, IntAlloc>& cdata) {
+            sylver::ColumnData<T, IntAlloc>& cdata) {
          
          assert(dblk.get_row() != i);
          
@@ -384,7 +385,7 @@ namespace splu {
       template <typename IntAlloc>
       void applyL_app(
             BlockUnsym<T>& dblk,
-            spldlt::ldlt_app_internal::ColumnData<T, IntAlloc>& cdata) {
+            sylver::ColumnData<T, IntAlloc>& cdata) {
 
          assert(get_col() != dblk.get_col());
 
@@ -416,7 +417,7 @@ namespace splu {
       template <typename IntAlloc>
       void update_app(
             BlockUnsym<T>& lblk, BlockUnsym<T>& ublk,
-            spldlt::ldlt_app_internal::ColumnData<T, IntAlloc>& cdata) {
+            sylver::ColumnData<T, IntAlloc>& cdata) {
          
          int elim_col = ublk.get_row();
          int nelim = cdata[elim_col].nelim; // Number of eliminated columns

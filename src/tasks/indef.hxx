@@ -7,14 +7,18 @@
 #include "kernels/assemble.hxx"
 #include "kernels/factor_indef.hxx"
 #include "kernels/ldlt_app.hxx"
+#include "sylver/kernels/ColumnData.hxx"
 #include "Tile.hxx"
+
 // STD
 #include <assert.h>
+
 // StarPU
 #if defined(SPLDLT_USE_STARPU)
 #include "StarPU/kernels_indef.hxx"
 #include "StarPU/factor_indef.hxx"
 #endif
+
 // SSIDS 
 #include "ssids/cpu/cpu_iface.hxx"
 
@@ -42,7 +46,7 @@ namespace spldlt {
       // int nr = node.get_nr(); // number of block rows
       // int ncontrib = nr-rsa;
 
-      spldlt::ldlt_app_internal::ColumnData<T, IntAlloc> &cdata = *node.cdata;
+      sylver::ColumnData<T, IntAlloc> &cdata = *node.cdata;
       int const nblk = node.nc(); // number of block columns in factors      
       
       spldlt::starpu::insert_update_contrib_block_app(

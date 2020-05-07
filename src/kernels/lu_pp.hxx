@@ -3,7 +3,7 @@
 /// @author Florent Lopez
 #pragma once
 
-#include "kernels/common.hxx"
+#include "sylver/kernels/common.hxx"
 
 #include <cassert>
 #include <cmath>

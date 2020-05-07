@@ -9,6 +9,7 @@
 #include "NumericFrontBase.hxx"
 #include "SymbolicFront.hxx"
 #include "Tile.hxx"
+#include "sylver/kernels/ColumnData.hxx"
 #include "sylver/kernels/CopyBackup.hxx"
 
 // STD
@@ -257,7 +258,7 @@ namespace spldlt {
       
       void alloc_cdata() {
          cdata = 
-            new spldlt::ldlt_app_internal::ColumnData<T, IntAlloc> (
+            new sylver::ColumnData<T, IntAlloc> (
                   this->ncol(), this->blksz(), IntAlloc(this->pool_alloc()));
       }
       
@@ -353,7 +354,7 @@ namespace spldlt {
       T *contrib; // Pointer to contribution block
       Backup *backup; // Stores backups of matrix blocks
       // Structures for indef factor
-      spldlt::ldlt_app_internal::ColumnData<T, IntAlloc> *cdata;
+      sylver::ColumnData<T, IntAlloc> *cdata;
       std::vector<BlockSpec> blocks;
    };
 

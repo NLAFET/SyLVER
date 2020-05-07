@@ -4,8 +4,9 @@
 #pragma once
 
 // SyLVER
-#include "sylver_ciface.hxx"
 #include "StarPU/factor_failed.hxx"
+#include "sylver_ciface.hxx"
+#include "sylver/kernels/ColumnData.hxx"
 
 // STD
 #include <assert.h>
@@ -28,7 +29,7 @@ namespace spldlt {
 
       typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
       int blksz = node.blksz();
-      spldlt::ldlt_app_internal::ColumnData<T, IntAlloc> &cdata = *node.cdata;
+      sylver::ColumnData<T, IntAlloc> &cdata = *node.cdata;
       int const nblk = node.nc(); // Number of block-columns
       starpu_data_handle_t *hdls = nullptr;
       int nh = 0;

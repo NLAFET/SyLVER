@@ -3,7 +3,7 @@
 /// @author Florent Lopez
 #pragma once
 
-#include "common.hxx"
+#include "sylver/kernels/common.hxx"
 
 namespace sylver {
 

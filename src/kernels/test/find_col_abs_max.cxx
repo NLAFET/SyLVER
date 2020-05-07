@@ -1,4 +1,4 @@
-#include "kernels/common.hxx"
+#include "sylver/kernels/common.hxx"
 
 #include <gtest/gtest.h>
 

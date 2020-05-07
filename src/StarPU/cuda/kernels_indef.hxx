@@ -5,6 +5,7 @@
 
 #include "kernels/ldlt_app.hxx"
 #include "NumericFront.hxx"
+#include "sylver/kernels/ColumnData.hxx"
 
 #include <starpu.h>
 #if defined(SPLDLT_USE_GPU)
@@ -46,7 +47,7 @@ namespace starpu {
       int jblk; // destination block's column index     
       int blk; // source block's column index     
 
-      sylver::spldlt::ldlt_app_internal::ColumnData<T,IntAlloc> *cdata = nullptr;
+      sylver::ColumnData<T,IntAlloc> *cdata = nullptr;
       Backup *backup = nullptr;
          
       T beta;

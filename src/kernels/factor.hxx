@@ -4,7 +4,7 @@
 #pragma once
 
 // SyLVER
-#include "kernels/common.hxx"
+#include "sylver/kernels/common.hxx"
 #include "kernels/wrappers.hxx"
 
 // STD

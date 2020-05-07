@@ -4,6 +4,7 @@
 #pragma once
 
 #include "NumericFront.hxx"
+#include "sylver/kernels/ColumnData.hxx"
 
 // cuBLAS
 #include "cublas_v2.h"
@@ -76,7 +77,7 @@ namespace gpu {
       int ljk_first_row = std::max(0, ncol-j*blksz);
       int lik_first_row = std::max(0, ncol-i*blksz);
 
-      spldlt::ldlt_app_internal::ColumnData<T, IntAlloc> *cdata = node.cdata;
+      sylver::ColumnData<T, IntAlloc> *cdata = node.cdata;
       int cnelim = (*cdata)[k].nelim;
       if (cnelim <= 0) return; // No factors to update in current block-column
       bool first_elim = (*cdata)[k].first_elim;

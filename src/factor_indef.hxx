@@ -15,6 +15,7 @@
 #include "StarPU/codelets.hxx"
 #include "StarPU/kernels_indef.hxx"
 #endif
+#include "sylver/kernels/ColumnData.hxx"
 #include "sylver/kernels/CopyBackup.hxx"
 #include "Tile.hxx"
 
@@ -113,10 +114,7 @@ namespace spldlt {
          if (front.nelim() < front.ncol()) { 
             // Some columns remain uneliminated after the first pass
 
-            using ColumnDataType = spldlt::ldlt_app_internal::ColumnData<
-               T,
-               IntAlloc
-               >;
+            using ColumnDataType = sylver::ColumnData<T, IntAlloc>;
 
             ColumnDataType& cdata = *front.cdata;
 
@@ -298,7 +296,7 @@ namespace spldlt {
       void factor_block_app_task(
             BlockSpec& dblk, int& next_elim,
             int* perm, T* d,
-            ColumnData<T,IntAlloc>& cdata, Backup& backup,
+            sylver::ColumnData<T,IntAlloc>& cdata, Backup& backup,
             sylver::options_t& options, std::vector<sylver::inform_t>& worker_stats,
             std::vector<spral::ssids::cpu::Workspace>& work,
             Allocator const& alloc) {
@@ -344,7 +342,7 @@ namespace spldlt {
       static
       void applyN_block_app_task(
             BlockSpec& dblk, BlockSpec& rblk,
-            ColumnData<T,IntAlloc>& cdata, Backup& backup,
+            sylver::ColumnData<T,IntAlloc>& cdata, Backup& backup,
             sylver::options_t& options) {
 
          int blk = dblk.get_col();
@@ -380,7 +378,7 @@ namespace spldlt {
       static 
       void applyT_block_app_task(
             BlockSpec& dblk, BlockSpec& cblk,
-            ColumnData<T,IntAlloc>& cdata, Backup& backup,
+            sylver::ColumnData<T,IntAlloc>& cdata, Backup& backup,
             sylver::options_t& options) {
 
          int blk = dblk.get_col();
@@ -416,7 +414,7 @@ namespace spldlt {
       static 
       void updateN_block_app_task(
             BlockSpec& isrc, BlockSpec& jsrc, BlockSpec& ublk,
-            ColumnData<T,IntAlloc>& cdata, Backup& backup, 
+            sylver::ColumnData<T,IntAlloc>& cdata, Backup& backup, 
             T const beta, T* upd, int const ldupd,
             std::vector<spral::ssids::cpu::Workspace>& work
             ) {
@@ -473,7 +471,7 @@ namespace spldlt {
             // int blk, int iblk, int jblk,
             // int const m, int const n, 
             // T* a, int const lda,
-            ColumnData<T,IntAlloc>& cdata, Backup& backup, 
+            sylver::ColumnData<T,IntAlloc>& cdata, Backup& backup, 
             // int const block_size,
             std::vector<spral::ssids::cpu::Workspace>& work
             ) {
@@ -512,7 +510,7 @@ namespace spldlt {
       void adjust_task(
             BlockSpec& dblk,
             int& next_elim,
-            ColumnData<T,IntAlloc>& cdata) {
+            sylver::ColumnData<T,IntAlloc>& cdata) {
 
          int blk = dblk.get_col();
 
@@ -558,7 +556,7 @@ namespace spldlt {
             int elim_col,
             BlockSpec& jblk,
             BlockSpec& blk,
-            ColumnData<T,IntAlloc>& cdata, Backup& backup,
+            sylver::ColumnData<T,IntAlloc>& cdata, Backup& backup,
             std::vector<spral::ssids::cpu::Workspace>& workspaces) {
 
 #if defined(SPLDLT_USE_STARPU)
@@ -586,7 +584,7 @@ namespace spldlt {
       static
       int factorize_indef_app_notask (
             int const m, int const n, int* perm, T* a,
-            int const lda, T* d, ColumnData<T,IntAlloc>& cdata, Backup& backup,
+            int const lda, T* d, sylver::ColumnData<T,IntAlloc>& cdata, Backup& backup,
             sylver::options_t& options, int const block_size,
             T const beta, T* upd, int const ldupd, spral::ssids::cpu::Workspace& work,
             Allocator const& alloc, int const from_blk=0) {
@@ -863,7 +861,7 @@ namespace spldlt {
       static
       int factorize_indef_app (
             int const m, int const n, int* perm, T* a,
-            int const lda, T* d, ColumnData<T,IntAlloc>& cdata, Backup& backup,
+            int const lda, T* d, sylver::ColumnData<T,IntAlloc>& cdata, Backup& backup,
             sylver::options_t& options, std::vector<sylver::inform_t>& worker_stats, int const block_size,
             T const beta, T* upd, int const ldupd, std::vector<spral::ssids::cpu::Workspace>& work,
             Allocator const& alloc, int const from_blk=0) {
@@ -1169,7 +1167,7 @@ namespace spldlt {
       void permute_failed(
             int m, int n, int *perm, T *a, int lda,
             int num_elim, 
-            ColumnData<T,IntAlloc>& cdata, int block_size,
+            sylver::ColumnData<T,IntAlloc>& cdata, int block_size,
             Allocator const& alloc) {
 
          int nblk = calc_nblk(n, block_size);
@@ -1274,7 +1272,7 @@ namespace spldlt {
 
 #if defined(SPLDLT_USE_STARPU)
 
-         ColumnData<T, IntAlloc> &cdata = *node.cdata;
+         sylver::ColumnData<T, IntAlloc> &cdata = *node.cdata;
          int n = node.ncol();
          int const nblk = calc_nblk(n, node.blksz());
 
@@ -1294,7 +1292,7 @@ namespace spldlt {
          T *lcol = node.lcol;
 
          CopyBackup<T, Allocator> &backup = *node.backup; 
-         ColumnData<T, IntAlloc> &cdata = *node.cdata;
+         sylver::ColumnData<T, IntAlloc> &cdata = *node.cdata;
          
          backup.release_all_memory(); 
 
@@ -1335,7 +1333,7 @@ namespace spldlt {
          int* perm = front.perm;
          std::vector<Block<T, iblksz, IntAlloc>>& blocks = front.blocks;
          std::vector<sylver::Tile<T, Allocator>>& contrib_blocks = front.contrib_blocks;
-         ColumnData<T, IntAlloc> &cdata = *front.cdata;
+         sylver::ColumnData<T, IntAlloc> &cdata = *front.cdata;
          CopyBackup<T, Allocator> &backup = *front.backup;
 
          // Dimensions of contribution block
@@ -1480,7 +1478,7 @@ namespace spldlt {
          int *perm = node.perm;
          std::vector<Block<T, iblksz, IntAlloc>>& blocks = node.blocks;
          std::vector<sylver::Tile<T, Allocator>>& contrib_blocks = node.contrib_blocks;
-         ColumnData<T, IntAlloc> &cdata = *node.cdata;
+         sylver::ColumnData<T, IntAlloc> &cdata = *node.cdata;
          CopyBackup<T, Allocator> &backup = *node.backup;
          
          int const nblk = calc_nblk(n, block_size);
@@ -1936,7 +1934,7 @@ namespace spldlt {
          int mblk = calc_nblk(m, block_size);
 
          /* Temporary workspaces */
-         ColumnData<T, IntAlloc> cdata(n, block_size, IntAlloc(alloc));
+         sylver::ColumnData<T, IntAlloc> cdata(n, block_size, IntAlloc(alloc));
 
          // factorize matrix and leave fail entries in place
          num_elim = factorize_indef_app_notask (
@@ -2005,7 +2003,7 @@ namespace spldlt {
          int mblk = calc_nblk(m, block_size);
 
          /* Temporary workspaces */
-         ColumnData<T, IntAlloc> cdata(n, block_size, IntAlloc(alloc));
+         sylver::ColumnData<T, IntAlloc> cdata(n, block_size, IntAlloc(alloc));
 
          // factorize matrix and leave fail entries in place
          num_elim = factorize_indef_app (

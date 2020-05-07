@@ -5,9 +5,10 @@
 #pragma once
 
 // SyLVER
-#include "kernels/common.hxx"
 #include "kernels/ldlt_app.hxx"
 #include "NumericFront.hxx"
+#include "sylver/kernels/common.hxx"
+#include "sylver/kernels/ColumnData.hxx"
 #include "Tile.hxx"
 // STD
 #include <assert.h>
@@ -100,7 +101,7 @@ namespace starpu {
       int lda = spral::ssids::cpu::align_lda<T>(m);
       int nr = front.nr(); // number of block rows
       int nc = front.nc(); // number of block columns
-      spldlt::ldlt_app_internal::ColumnData<T, IntAlloc>& cdata = *front.cdata;
+      sylver::ColumnData<T, IntAlloc>& cdata = *front.cdata;
 
       // Block diagonal matrix 
       T *d = &a[n*lda];
@@ -207,8 +208,7 @@ namespace starpu {
 
       assert(node.cdata); // Make sure cdata is allocated
 
-      spldlt::ldlt_app_internal::
-         ColumnData<T, IntAlloc>& cdata = *node.cdata;
+      sylver::ColumnData<T, IntAlloc>& cdata = *node.cdata;
          
       // Unregister block handles in the factors
       for(int j = 0; j < nc; ++j) {
