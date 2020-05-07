@@ -31,12 +31,12 @@ before_script:
   - mkdir starpu-1.3.3/build
   - cd starpu-1.3.3/build
   - |
-  if [[ ${ENABLE_OMP} == "ON" ]]; then
-     STARPU_OMP=--enable-openmp
-  else
-     STARPU_OMP=--disable-openmp
-  fi
-  ../configure --prefix=$TRAVIS_BUILD_DIR/builds/starpu-1.3.3 --disable-build-doc --disable-build-examples --disable-opencl --disable-starpufft --disable-mpi ${STARPU_ENABLE_OMP} --disable-fxt --enable-blas-lib=none
+    if [[ ${ENABLE_OMP} == "ON" ]]; then
+      STARPU_OMP=--enable-openmp
+    else
+      STARPU_OMP=--disable-openmp
+    fi
+  - ../configure --prefix=$TRAVIS_BUILD_DIR/builds/starpu-1.3.3 --disable-build-doc --disable-build-examples --disable-opencl --disable-starpufft --disable-mpi ${STARPU_OMP} --disable-fxt --enable-blas-lib=none
   - make && make install
   - export STARPU_DIR=$TRAVIS_BUILD_DIR/builds/starpu-1.3.3
   - export LD_LIBRARY_PATH=$STARPU_DIR/lib:$LD_LIBRARY_PATH
