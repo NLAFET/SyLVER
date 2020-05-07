@@ -1,6 +1,10 @@
 language: c++
 sudo: required
 
+env:
+  - ENABLE_OMP=ON
+  - ENABLE_OMP=OFF
+
 addons:
   apt:
     update: true
