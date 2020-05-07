@@ -8,7 +8,6 @@ set(sources
   factor.hxx
   factor_indef.hxx
   factor_unsym.hxx
-  NumericFrontBase.hxx
   NumericFront.hxx
   NumericFrontUnsym.hxx
   NumericTree.cxx
@@ -30,10 +29,8 @@ set(sources
   sylver_inform_mod.F90
   sylver_mod.F90
   sylver_topology_mod.F90
-  SymbolicFront.hxx
   SymbolicTree.cxx
   SymbolicTree.hxx
-  Tile.hxx
   topology.cxx
   topology.hxx)
 
@@ -56,7 +53,6 @@ set(kernel_sources
   kernels/assemble.cxx
   kernels/assemble.hxx
   kernels/assemble_unsym.hxx
-  kernels/common.hxx
   kernels/factor.cxx
   kernels/factor.hxx
   kernels/factor_indef.hxx
