@@ -6,7 +6,7 @@
 #include "ssids/cpu/cpu_iface.hxx"
 // #include "ssids/cpu/SymbolicNode.hxx"
 
-#include "SymbolicFront.hxx"
+#include "sylver/SymbolicFront.hxx"
 
 // using namespace spral::ssids::cpu;
 

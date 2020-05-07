@@ -4,10 +4,10 @@
 #pragma once
 
 // SyLVER
-#include "SymbolicFront.hxx"
 #include "NumericFront.hxx"
 #include "tasks/indef.hxx"
 #include "tasks/tasks.hxx"
+#include "sylver/SymbolicFront.hxx"
 
 namespace sylver {
 namespace spldlt {

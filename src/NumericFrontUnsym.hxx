@@ -5,7 +5,7 @@
 
 // SyLVER
 #include "BlockUnsym.hxx"
-#include "NumericFrontBase.hxx"
+#include "sylver/NumericFrontBase.hxx"
 
 namespace sylver {
 namespace splu {

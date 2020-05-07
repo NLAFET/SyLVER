@@ -10,12 +10,11 @@
 #endif
 #include "kernels/ldlt_app.hxx"
 #include "kernels/factor_indef.hxx"
-// #include "StarPU/kernels.hxx"
-#include "SymbolicFront.hxx"
 #include "NumericFront.hxx"
 #if defined(SPLDLT_USE_GPU)
 #include "StarPU/cuda/kernels_indef.hxx"
 #endif
+#include "sylver/SymbolicFront.hxx"
 
 // STD
 #include <iostream>

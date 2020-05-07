@@ -2,7 +2,7 @@
 
 // SyLVER
 #include "BuddyAllocator.hxx"
-#include "SymbolicFront.hxx"
+#include "sylver/SymbolicFront.hxx"
 #include "factor_indef.hxx"
 #include "sylver/StarPU/hlws.hxx"
 #include "sylver/StarPU/starpu.hxx"

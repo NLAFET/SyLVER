@@ -6,8 +6,8 @@
 
 // SyLVER
 #include "kernels/ldlt_app.hxx"
-#include "NumericFrontBase.hxx"
-#include "SymbolicFront.hxx"
+#include "sylver/NumericFrontBase.hxx"
+#include "sylver/SymbolicFront.hxx"
 #include "sylver/kernels/ColumnData.hxx"
 #include "sylver/kernels/CopyBackup.hxx"
 #include "sylver/Tile.hxx"

@@ -4,7 +4,6 @@
 #pragma once
 
 // SpLDLT
-#include "SymbolicFront.hxx"
 #include "NumericFront.hxx"
 #include "factor.hxx"
 #include "kernels/llt.hxx"
@@ -14,6 +13,7 @@
 #include "StarPU/scheduler.h"
 #include "StarPU/kernels.hxx"
 #endif
+#include "sylver/SymbolicFront.hxx"
 
 // STD
 #include <vector>

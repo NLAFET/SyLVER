@@ -1,5 +1,5 @@
-#include "NumericFrontBase.hxx"
-#include "SymbolicFront.hxx"
+#include "sylver/NumericFrontBase.hxx"
+#include "sylver/SymbolicFront.hxx"
 
 #include <gtest/gtest.h>
 

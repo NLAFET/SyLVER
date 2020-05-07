@@ -1,12 +1,11 @@
 #pragma once
 
-// SpLDLT
+// SyLVER
 #include "BuddyAllocator.hxx"
 #include "common.hxx"
 #include "NumericFront.hxx"
 #include "kernels/factor_indef.hxx"
-// SpLDLT tests
-#include "SymbolicFront.hxx"
+#include "sylver/SymbolicFront.hxx"
 
 // STD
 #include <vector>

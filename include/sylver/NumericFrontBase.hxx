@@ -4,7 +4,7 @@
 #pragma once
 
 // SyLVER
-#include "SymbolicFront.hxx"
+#include "sylver/SymbolicFront.hxx"
 #include "sylver/Tile.hxx"
 
 #include <iostream>

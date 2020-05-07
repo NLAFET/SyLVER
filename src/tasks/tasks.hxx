@@ -5,7 +5,6 @@
 
 // SyLVER
 #include "sylver_ciface.hxx"
-#include "SymbolicFront.hxx"
 #include "kernels/assemble.hxx"
 #include "kernels/factor.hxx"
 #if defined(SPLDLT_USE_STARPU)
@@ -13,6 +12,7 @@
 #include "StarPU/kernels_indef.hxx"
 #include "StarPU/subtree.hxx"
 #endif
+#include "sylver/SymbolicFront.hxx"
 #include "sylver/Tile.hxx"
 
 #include <assert.h>
