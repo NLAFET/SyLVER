@@ -593,6 +593,7 @@ namespace starpu {
       // any failed rows and release resources storing backup
       ublk.restore_if_required(*backup, blk);
       // Perform actual update
+      // std::cout << "[updateT_block_app_cpu_func] cdata_[isrc].nelim = " << (*cdata)[isrc.get_row()].nelim << std::endl;
       ublk.update(isrc, jsrc, (*workspaces)[id]);
    }
 

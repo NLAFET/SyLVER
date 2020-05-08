@@ -601,7 +601,7 @@ public:
          double beta=1.0, T* upd=nullptr, int ldupd=0) {
 
       if(isrc.i_ == i_ && isrc.j_ == jsrc.j_) {
-         
+
          // Update to right of elim column (UpdateN)
          int elim_col = isrc.j_;
          if(cdata_[elim_col].nelim == 0) return; // nothing to do
@@ -609,16 +609,24 @@ public:
          int cfrom = (j_ <= elim_col) ? cdata_[j_].nelim : 0;
          int ldld = align_lda<T>(block_size_);
          T* ld = work.get_ptr<T>(block_size_*ldld);
-         // NB: we use ld[rfrom] below so alignment matches that of aval[rfrom]
-         calcLD<spral::ssids::cpu::OP_N>(
-               nrow()-rfrom, cdata_[elim_col].nelim, &isrc.aval_[rfrom],
-               lda_, cdata_[elim_col].d, &ld[rfrom], ldld
-               );
-         host_gemm(
-               OP_N, OP_T, nrow()-rfrom, ncol()-cfrom, cdata_[elim_col].nelim,
-               -1.0, &ld[rfrom], ldld, &jsrc.aval_[cfrom], lda_,
-               1.0, &aval_[cfrom*lda_+rfrom], lda_
-               );
+
+         // Perform update of trailing submatrix block
+         if (((ncol()-cfrom)>0) && ((nrow()-rfrom)>0)) {
+            // Make sure there is work to do before starting computing
+            // L*D
+            
+            // NB: we use ld[rfrom] below so alignment matches that of aval[rfrom]
+            calcLD<spral::ssids::cpu::OP_N>(
+                  nrow()-rfrom, cdata_[elim_col].nelim, &isrc.aval_[rfrom],
+                  lda_, cdata_[elim_col].d, &ld[rfrom], ldld
+                  );
+            host_gemm(
+                  OP_N, OP_T, nrow()-rfrom, ncol()-cfrom, cdata_[elim_col].nelim,
+                  -1.0, &ld[rfrom], ldld, &jsrc.aval_[cfrom], lda_,
+                  1.0, &aval_[cfrom*lda_+rfrom], lda_
+                  );
+         }
+
          if(upd && j_==calc_nblk(n_,block_size_)-1) {
             // Handle fractional part of upd that "belongs" to this block
             int u_ncol = std::min(block_size_-ncol(), m_-n_); // ncol for upd
@@ -652,25 +660,41 @@ public:
          int cfrom = (j_ <= elim_col) ? cdata_[j_].nelim : 0;
          int ldld = align_lda<T>(block_size_);
          T* ld = work.get_ptr<T>(block_size_*ldld);
-         // NB: we use ld[rfrom] below so alignment matches that of aval[rfrom]
-         if(isrc.j_==elim_col) {
-            calcLD<spral::ssids::cpu::OP_N>(
-                  nrow()-rfrom, cdata_[elim_col].nelim,
-                  &isrc.aval_[rfrom], lda_,
-                  cdata_[elim_col].d, &ld[rfrom], ldld
-                  );
-         } else {
-            calcLD<spral::ssids::cpu::OP_T>(
-                  nrow()-rfrom, cdata_[elim_col].nelim, &
-                  isrc.aval_[rfrom*lda_], lda_,
-                  cdata_[elim_col].d, &ld[rfrom], ldld
+
+         // if (((ncol()-cfrom) == 0) && ((nrow()-rfrom) != 0)) {
+         //    std::cout << "[Block::update]"
+         //              << " elim_col = " << elim_col << ", i = " << i_ << ", j = " << j_
+         //              << ", cdata_[elim_col].nelim = " << cdata_[elim_col].nelim
+         //              << ", nrow()-rfrom = " << nrow()-rfrom << ", ncol()-cfrom = " << ncol()-cfrom
+         //              << ", upd = " << upd
+         //              << std::endl;
+         // }
+
+         // Perform update of left-diagonal block
+         if (((ncol()-cfrom)>0) && ((nrow()-rfrom)>0)) {
+            // Make sure there is work to do before starting computing
+            // L*D
+         
+            // NB: we use ld[rfrom] below so alignment matches that of aval[rfrom]
+            if(isrc.j_==elim_col) {
+               calcLD<spral::ssids::cpu::OP_N>(
+                     nrow()-rfrom, cdata_[elim_col].nelim,
+                     &isrc.aval_[rfrom], lda_,
+                     cdata_[elim_col].d, &ld[rfrom], ldld
+                     );
+            } else {
+               calcLD<spral::ssids::cpu::OP_T>(
+                     nrow()-rfrom, cdata_[elim_col].nelim, &
+                     isrc.aval_[rfrom*lda_], lda_,
+                     cdata_[elim_col].d, &ld[rfrom], ldld
+                     );
+            }
+            host_gemm(
+                  OP_N, OP_N, nrow()-rfrom, ncol()-cfrom, cdata_[elim_col].nelim,
+                  -1.0, &ld[rfrom], ldld, &jsrc.aval_[cfrom*lda_], lda_,
+                  1.0, &aval_[cfrom*lda_+rfrom], lda_
                   );
          }
-         host_gemm(
-               OP_N, OP_N, nrow()-rfrom, ncol()-cfrom, cdata_[elim_col].nelim,
-               -1.0, &ld[rfrom], ldld, &jsrc.aval_[cfrom*lda_], lda_,
-               1.0, &aval_[cfrom*lda_+rfrom], lda_
-               );
       }
    }
 

@@ -350,6 +350,15 @@ namespace spldlt {
 
 #if defined(SPLDLT_USE_STARPU)
 
+         int prio = APPLYN_APP_PRIO;
+
+         if (iblk == blk+1) {
+            // If udpate operation is on the critical path, increase
+            // its priority
+            prio = MAX_APP_PRIO; 
+         }
+
+         
          sylver::spldlt::starpu::insert_applyN_block_app(
                dblk.get_hdl(), rblk.get_hdl(),
                cdata[blk].get_hdl(),
