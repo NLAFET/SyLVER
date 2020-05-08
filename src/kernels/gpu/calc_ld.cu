@@ -134,31 +134,24 @@ namespace /* anon */ {
 namespace sylver {
 namespace spldlt {
 namespace gpu {
-   
-   // template<typename T>
-   void calc_ld(
-         const cudaStream_t stream,
-         int m, int n,
-         double *const l, int ldl,
-         double *const d,
-         double *ld, int ldld
-         ) {
 
-      dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
-      dim3 grid((m + threads.x - 1) / threads.x, (n + threads.y -1) / threads.y);
+// template<typename T>
+void calc_ld(
+      const cudaStream_t stream,
+      int m, int n,
+      double *const l, int ldl,
+      double *const d,
+      double *ld, int ldld
+      ) {
 
-      // printf("[calc_ld] m = %d, n = %d\n", m, n);
-      // printf("[calc_ld] thx = %d, thy = %d\n", threads.x, threads.y);
-      // printf("[calc_ld] grx = %d, gry = %d\n", grid.x, grid.y);
-
-      // int nb = (m + BLOCK_SIZE - 1) / BLOCK_SIZE;
+   dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
+   dim3 grid((m + threads.x - 1) / threads.x, (n + threads.y -1) / threads.y);
          
-      cu_calc_ld
-         <double>
-         // <<<1, 1, 0, stream>>>
-         // <<<nb, BLOCK_SIZE, 0, stream>>>
-         <<<grid, threads, 0, stream>>>
-         (m, n, l, ldl, d, ld, ldld);
+   cu_calc_ld
+      <double>
+      <<<grid, threads, 0, stream>>>
+      (m, n, l, ldl, d, ld, ldld);
 
-   }
+}
+
 }}} // End of namespace sylver::spldlt::gpu
