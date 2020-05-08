@@ -7,13 +7,13 @@
 #include "BuddyAllocator.hxx"
 #include "factor.hxx"
 #include "NumericFront.hxx"
-#include "SymbolicTree.hxx"
 #if defined(SPLDLT_USE_STARPU)
 #include "StarPU/codelets_posdef.hxx"
 #endif
 #include "sylver_ciface.hxx"
 #include "tasks/assemble_block.hxx"
 #include "tasks/tasks.hxx"
+#include "sylver/SymbolicTree.hxx"
 
 #include <cstddef>
 #include <iostream>
