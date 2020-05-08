@@ -1,7 +1,6 @@
 set(sources
   AppendAlloc.hxx
   assemble.hxx
-  BlockBase.hxx
   BlockUnsym.hxx
   BuddyAllocator.hxx
   factor_failed.hxx
