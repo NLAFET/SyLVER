@@ -107,45 +107,36 @@ int factor_node_indef_test(
    sylver::SymbolicFront sfront;
    sfront.nrow = m;
    sfront.ncol = n;
+   // Setup perumtation array
+   int *perm = new int[m];
+   for(int i=0; i<m; i++) {
+      perm[i] = i;
+   }
+   sfront.rlist = perm;
+
    NumericFrontType front(sfront, factor_alloc, pool_alloc, blksz);
+   // Allocate node
+   front.allocate(nullptr);
 
-   // Init node
-
-
-   // Make lcol m columns wide for debugging
-   size_t len = (lda+2)*m; // Includes D
-   if (debug) printf("m = %d, n = %d, lda = %d, len = %zu\n", m, n, lda, len);
-   front.lcol = factor_alloc.allocate(len);
-
+   // Copy generated matrix to front (first n columns)
    memcpy(front.lcol, a, lda*n*sizeof(T)); // Copy a to l
    // Put nans on the bottom right corner of the LCOL matrix
-   // for (int j = n; j < m; ++j) {
-   //    for (int i = j; i < m; ++i) {
-   //       front.lcol[lda*j+i] = std::numeric_limits<T>::signaling_NaN(); 
-   //    }
-   // }
+   for (int j = n; j < m; ++j) {
+      for (int i = j; i < m; ++i) {
+         front.lcol[lda*j+i] = std::numeric_limits<T>::signaling_NaN(); 
+      }
+   }
       
    if (debug) {
       std::cout << "LCOL:" << std::endl;
       spldlt::tests::print_mat("%10.2e", m, front.lcol, lda);
    }
-      
-   // Setup permutation vector
-   front.perm = new int[m];
-   for(int i=0; i<m; i++) front.perm[i] = i;
+
+   // Pointer to D factor
    T *d = &front.lcol[lda*n];
 
    // Backup type: copy backup
    using Backup = sylver::CopyBackup<T, PoolAllocator>;
-
-   // CopyBackup<T, PoolAllocator> backup(m, n, blksz);
-   front.alloc_backup(); // TODO only if piv strategy is APTP
-   // Setup cdata
-   front.alloc_cdata(); // TODO only if piv strategy is APTP
-   // Allocate block structure
-   front.alloc_blocks();
-   // Allocate contribution blocks
-   front.alloc_contrib_blocks();
 
    // Initialize solver (tasking system in particular)
 #if defined(SPLDLT_USE_STARPU)
@@ -250,7 +241,8 @@ int factor_node_indef_test(
    // Register symbolic handle for contribution block
    front.register_symb_contrib();
    // Register StarPU data handles
-   sylver::spldlt::starpu::register_node_indef(front);
+   // sylver::spldlt::starpu::register_node_indef(front);
+   front.register_node();
 #endif
       
    if(debug) printf("[factor_node_indef_test] factor front..\n");
@@ -397,7 +389,8 @@ int factor_node_indef_test(
 
    // Cleanup memory
    factor_alloc.deallocate(l, m*lda);
-   delete[] a; factor_alloc.deallocate(front.lcol, len);
+   delete[] a;
+   // factor_alloc.deallocate(front.lcol, len);
    delete[] b;
    delete[] front.perm;
    delete[] soln;

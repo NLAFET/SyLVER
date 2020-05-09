@@ -29,166 +29,130 @@ namespace starpu {
    extern starpu_data_handle_t workspace_hdl;      
 
    // Register handles for a node in StarPU
-   template <typename NumericFrontType>
-   void register_node(
-         NumericFrontType& front) {
+   // template <typename NumericFrontType>
+   // void register_node(
+   //       NumericFrontType& front) {
 
-      using ValueType = typename NumericFrontType::ValueType;
+   //    using ValueType = typename NumericFrontType::ValueType;
 
-      sylver::SymbolicFront& sfront = front.symb();
-      int blksz = front.blksz();
+   //    sylver::SymbolicFront& sfront = front.symb();
+   //    int blksz = front.blksz();
 
-      int const m = front.nrow();
-      int const n = front.ncol();
-      ValueType *a = front.lcol;
-      int const lda = front.ldl();
-      int const nr = front.nr(); // number of block rows
-      int const nc = front.nc(); // number of block columns
-      // sfront.handles.reserve(nr*nc);
-      sfront.handles.resize(nr*nc); // Allocate handles
+   //    int const m = front.nrow();
+   //    int const n = front.ncol();
+   //    ValueType *a = front.lcol;
+   //    int const lda = front.ldl();
+   //    int const nr = front.nr(); // number of block rows
+   //    int const nc = front.nc(); // number of block columns
+   //    // sfront.handles.reserve(nr*nc);
+   //    sfront.handles.resize(nr*nc); // Allocate handles
 
-      for(int j = 0; j < nc; ++j) {
-         int blkn = std::min(blksz, n - j*blksz);
+   //    for(int j = 0; j < nc; ++j) {
+   //       int blkn = std::min(blksz, n - j*blksz);
 
-         for(int i = j; i < nr; ++i) {
-            int blkm = std::min(blksz, m - i*blksz);
+   //       for(int i = j; i < nr; ++i) {
+   //          int blkm = std::min(blksz, m - i*blksz);
 
-            // TODO remove the following register
-            starpu_matrix_data_register(
-                  &(sfront.handles[i + j*nr]), // StarPU handle ptr 
-                  STARPU_MAIN_RAM, // memory 
-                  reinterpret_cast<uintptr_t>(&a[(j*blksz)*lda+(i*blksz)]),
-                  lda, blkm, blkn,
-                  sizeof(ValueType));
+   //          // TODO: remove the following register
+   //          starpu_matrix_data_register(
+   //                &(sfront.handles[i + j*nr]), // StarPU handle ptr 
+   //                STARPU_MAIN_RAM, // memory 
+   //                reinterpret_cast<uintptr_t>(&a[(j*blksz)*lda+(i*blksz)]),
+   //                lda, blkm, blkn,
+   //                sizeof(ValueType));
 
-            // Register StarPU handle for block (i,j)
-            front.blocks[j*nr+i].register_handle(); 
+   //          // Register StarPU handle for block (i,j)
+   //          front.blocks[j*nr+i].register_handle(); 
 
-         }
-      }
+   //       }
+   //    }
 
-      int const ldcontrib = m-n;         
-      // Allocate and init handles in contribution blocks         
-      if (ldcontrib>0) {
-         // Index of first block in contrib
-         int rsa = n/blksz;
-         // Number of block in contrib
-         // int ncontrib = nr-rsa;
+   //    int const ldcontrib = m-n;         
+   //    // Allocate and init handles in contribution blocks         
+   //    if (ldcontrib>0) {
+   //       // Index of first block in contrib
+   //       int rsa = n/blksz;
+   //       // Number of block in contrib
+   //       // int ncontrib = nr-rsa;
 
-         for(int j = rsa; j < nr; j++) {
-            for(int i = j; i < nr; i++) {
-               // Register block in StarPU
-               front.contrib_block(i, j).register_handle();
-               // front.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib].register_handle();
-            }
-         }
-      }
-   }
+   //       for(int j = rsa; j < nr; j++) {
+   //          for(int i = j; i < nr; i++) {
+   //             // Register block in StarPU
+   //             front.contrib_block(i, j).register_handle();
+   //             // front.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib].register_handle();
+   //          }
+   //       }
+   //    }
+   // }
 
-   ////////////////////////////////////////////////////////////////////////////////   
-   // register_node_indef
+   // ////////////////////////////////////////////////////////////////////////////////   
+   // // register_node_indef
 
-   /// @brief Register handles for a node in StarPU.
-   template <typename NumericFrontType>
-   void register_node_indef(NumericFrontType& front) {
+   // /// @brief Register handles for a node in StarPU.
+   // template <typename NumericFrontType>
+   // void register_node_indef(NumericFrontType& front) {
 
-      // Note: blocks are already registered when allocated
-      using ValueType = typename NumericFrontType::ValueType;
+   //    // Note: blocks are already registered when allocated
+   //    using ValueType = typename NumericFrontType::ValueType;
          
-      sylver::SymbolicFront& sfront = front.symb();
-      int blksz = front.blksz();
-      int m = front.nrow();
-      int n = front.ncol();
-      ValueType *a = front.lcol;
-      int lda = spral::ssids::cpu::align_lda<ValueType>(m);
-      int nr = front.nr(); // number of block rows
-      int nc = front.nc(); // number of block columns
-      auto& cdata = *front.cdata;
+   //    sylver::SymbolicFront& sfront = front.symb();
+   //    int blksz = front.blksz();
+   //    int m = front.nrow();
+   //    int n = front.ncol();
+   //    ValueType *a = front.lcol;
+   //    int lda = spral::ssids::cpu::align_lda<ValueType>(m);
+   //    int nr = front.nr(); // number of block rows
+   //    int nc = front.nc(); // number of block columns
+   //    auto& cdata = *front.cdata;
 
-      // Block diagonal matrix 
-      ValueType *d = &a[n*lda];
+   //    // Block diagonal matrix 
+   //    ValueType *d = &a[n*lda];
 
-      // sfront.handles.reserve(nr*nc);
-      sfront.handles.resize(nr*nc); // allocate handles
-      // printf("[register_front] sfront.handles size = %d\n", sfront.handles.size());
-      for(int j = 0; j < nc; ++j) {
+   //    // sfront.handles.reserve(nr*nc);
+   //    sfront.handles.resize(nr*nc); // allocate handles
+   //    // printf("[register_front] sfront.handles size = %d\n", sfront.handles.size());
+   //    for(int j = 0; j < nc; ++j) {
 
-         int blkn = std::min(blksz, n - j*blksz);
+   //       int blkn = std::min(blksz, n - j*blksz);
 
-         // Register cdata for APP factorization.
-         // FIXME: Only if pivot_method is APP
-         cdata[j].register_handle(); // Symbolic handle on column j
-         cdata[j].register_d_hdl(d, 2*std::min((j+1)*blksz, n)); // Handle on diagonal D 
-         // cdata[j].register_d_hdl(d, 2*n); // Handle on diagonal D 
+   //       // Register cdata for APP factorization.
+   //       // FIXME: Only if pivot_method is APP
+   //       cdata[j].register_handle(); // Symbolic handle on column j
+   //       cdata[j].register_d_hdl(d, 2*std::min((j+1)*blksz, n)); // Handle on diagonal D 
+   //       // cdata[j].register_d_hdl(d, 2*n); // Handle on diagonal D 
 
-         for(int i = j; i < nr; ++i) {
-            int blkm = std::min(blksz, m - i*blksz);
+   //       for(int i = j; i < nr; ++i) {
+   //          int blkm = std::min(blksz, m - i*blksz);
 
-            // TODO remove sfront.handles registration for indef case
-            starpu_matrix_data_register(
-                  &(sfront.handles[i + j*nr]), // StarPU handle ptr 
-                  STARPU_MAIN_RAM, // memory 
-                  reinterpret_cast<uintptr_t>(&a[(j*blksz)*lda+(i*blksz)]),
-                  lda, blkm, blkn,
-                  sizeof(ValueType));
+   //          // TODO remove sfront.handles registration for indef case
+   //          starpu_matrix_data_register(
+   //                &(sfront.handles[i + j*nr]), // StarPU handle ptr 
+   //                STARPU_MAIN_RAM, // memory 
+   //                reinterpret_cast<uintptr_t>(&a[(j*blksz)*lda+(i*blksz)]),
+   //                lda, blkm, blkn,
+   //                sizeof(ValueType));
 
-            // Register StarPU handle for block (i,j)
-            front.blocks[j*nr+i].register_handle(); 
-         }
-      }
+   //          // Register StarPU handle for block (i,j)
+   //          front.blocks[j*nr+i].register_handle(); 
+   //       }
+   //    }
 
-      int ldcontrib = m-n;
+   //    int ldcontrib = m-n;
          
-      // Allocate and init handles in contribution blocks         
-      if (ldcontrib>0 && front.contrib_blocks.size()>0) {
-         // Index of first block in contrib
-         int rsa = n/blksz;
-         // Number of block in contrib
-         int ncontrib = nr-rsa;
+   //    // Allocate and init handles in contribution blocks         
+   //    if (ldcontrib>0 && front.contrib_blocks.size()>0) {
+   //       // Index of first block in contrib
+   //       int rsa = n/blksz;
 
-         for(int j = rsa; j < nr; j++) {
-            for(int i = j; i < nr; i++) {
-               // Register block in StarPU
-               // front.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib].register_handle();
-               front.contrib_block(i, j).register_handle();
-            }
-         }
-      }
-
-      // T *contrib = node.contrib;
-
-      // // Allocate and init handles in contribution blocks         
-      // if (contrib) {
-      //    // Index of first block in contrib
-      //    int rsa = n/blksz;
-      //    // Number of block in contrib
-      //    int ncontrib = nr-rsa;
-      //    snode.contrib_handles.resize(ncontrib*ncontrib);
-
-      //    for(int j = rsa; j < nr; j++) {
-      //       // First col in contrib block
-      //       int first_col = std::max(j*blksz, n);
-      //       // Block width
-      //       int blkn = std::min((j+1)*blksz, m) - first_col;
-
-      //       for(int i = j; i < nr; i++) {
-      //          // First col in contrib block
-      //          int first_row = std::max(i*blksz, n);
-      //          // Block height
-      //          int blkm = std::min((i+1)*blksz, m) - first_row;
-
-      //          // starpu_matrix_data_register(
-      //          //       &(snode.contrib_handles[(i-rsa)+(j-rsa)*ncontrib]), // StarPU handle ptr
-      //          //       STARPU_MAIN_RAM, // memory 
-      //          //       reinterpret_cast<uintptr_t>(&contrib[(first_col-n)*ldcontrib+(first_row-n)]),
-      //          //       ldcontrib, blkm, blkn, sizeof(T));
-                  
-      //          node.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib].register_handle();
-      //       }
-      //    }
-
-      // }
-   }
+   //       for(int j = rsa; j < nr; j++) {
+   //          for(int i = j; i < nr; i++) {
+   //             // Register block in StarPU
+   //             // front.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib].register_handle();
+   //             front.contrib_block(i, j).register_handle();
+   //          }
+   //       }
+   //    }
+   // }
 
    /// @brief Unregister StarPU data handles associated with a node
    template <typename NumericFrontType>
@@ -309,167 +273,6 @@ namespace starpu {
 
 #endif
    
-   ////////////////////////////////////////////////////////////
-
-   // Activate frontal matrix: allocate data structures
-   template <typename T, typename FactorAlloc, typename PoolAlloc>
-   void activate_front(
-         bool posdef,
-         NumericFront<T, FactorAlloc, PoolAlloc>& front,
-         void** child_contrib,
-         FactorAlloc& factor_alloc) {
-
-      // Allocate frontal matrix
-      if (posdef) alloc_front_posdef(front, factor_alloc);
-      else        alloc_front_indef(front, child_contrib, factor_alloc);
-
-#if defined(SPLDLT_USE_STARPU)
-      // Register symbolic handle for current node in StarPU
-      // starpu_void_data_register(&(sfront.hdl));
-      // Register block handles
-      // register_node(sfront, front, blksz);
-
-      if (posdef) spldlt::starpu::register_node(front);
-      else        spldlt::starpu::register_node_indef(front);
-#endif
-   }
-
-   ////////////////////////////////////////////////////////////////////////////////   
-   // Allocate memory assocaited with the frontal matrix front
-   template<typename T, 
-            typename FactorAlloc, 
-            typename PoolAlloc>
-   void alloc_front_posdef(
-         NumericFront<T, FactorAlloc, PoolAlloc>& front,
-         FactorAlloc& factor_alloc) {
-
-      std::string const context = "alloc_front_posdef";
-      
-      // T *scaling = NULL; // No scaling
-
-      // Rebind allocators
-      typedef typename std::allocator_traits<FactorAlloc>::template rebind_traits<T> FATypeTraits;
-      typename FATypeTraits::allocator_type factor_alloc_type(factor_alloc);
-      typedef typename std::allocator_traits<FactorAlloc>::template rebind_traits<int> FAIntTraits;
-      // typename FAIntTraits::allocator_type factor_alloc_int(factor_alloc);
-      // typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> PoolAllocInt;
-      // printf("[alloc_front] posdef = %d\n", posdef);
-
-      sylver::SymbolicFront const& sfront = front.symb();
-
-      front.ndelay_in(0);
-
-      int const nrow = front.nrow();
-      int const ncol = front.ncol();
-
-      /* Get space for node now we know it size using Fortran allocator + zero it*/
-      // NB L is  nrow x ncol and D is 2 x ncol (but no D if posdef)
-      size_t ldl = spral::ssids::cpu::align_lda<T>(nrow);
-      size_t len = ldl * ncol;  // posdef
-      front.lcol = FATypeTraits::allocate(factor_alloc_type, len);
-
-#if defined(SPLDLT_USE_STARPU)
-#if defined(SPLDLT_USE_GPU)
-      int ret = starpu_memory_pin(front.lcol, len*sizeof(T));
-      // STARPU_CHECK_RETURN_VALUE(ret, "starpu_memory_pin");
-#endif
-#endif
-      int err;
-      // Get space for contribution block + (explicitly do not zero it!)
-      front.alloc_contrib_blocks();
-      // Allocate cdata (required for allocating blocks)
-      // FIXME not needed for posdef case
-      front.alloc_cdata();
-      // Allocate frontal matrix blocks
-      err = front.alloc_blocks(); // FIXME specialize for posdef case
-      sylver::sylver_check_error(err, context, "Failed to allocate blocks");
-   }
-
-   ////////////////////////////////////////////////////////////////////////////////
-   // alloc_front_indef
-
-   template<typename T, 
-            typename FactorAlloc, 
-            typename PoolAlloc>
-   void alloc_front_indef(
-         NumericFront<T, FactorAlloc, PoolAlloc>& front,
-         void** child_contrib,
-         FactorAlloc& factor_alloc) {
-
-      // TODO add scaling
-      // T *scaling = NULL; // No scaling
-
-      // Rebind allocators
-      typedef typename std::allocator_traits<FactorAlloc>::template rebind_traits<T> FATypeTraits;
-      typename FATypeTraits::allocator_type factor_alloc_type(factor_alloc);
-      typedef typename std::allocator_traits<FactorAlloc>::template rebind_traits<int> FAIntTraits;
-      typename FAIntTraits::allocator_type factor_alloc_int(factor_alloc);
-      typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> PoolAllocInt;
-      // printf("[alloc_front] posdef = %d\n", posdef);
-
-      sylver::SymbolicFront const& sfront = front.symb();
-
-      front.ndelay_out(0);
-      front.ndelay_in(0);
-      // Count incoming delays and determine size of node
-      for(auto* child=front.first_child; child!=NULL; child=child->next_child) {
-         // Make sure we're not in a subtree
-         if (child->symb().exec_loc == -1) {
-            front.ndelay_in_add(child->ndelay_out());
-         } 
-         else {
-            int cn, ldcontrib, ndelay, lddelay;
-            T const *cval, *delay_val;
-            int const *crlist, *delay_perm;
-            // spral_ssids_contrib_get_data(
-            contrib_get_data(
-                  child_contrib[child->symb().contrib_idx], &cn, &cval,
-                  &ldcontrib, &crlist, &ndelay, &delay_perm, &delay_val,
-                  &lddelay);
-            // front.ndelay_in += ndelay;
-            front.ndelay_in_add(ndelay);
-         }
-      }
-
-      int nrow = front.nrow();
-      int ncol = front.ncol();
-
-      // Get space for node now we know it size using factor
-      // allocator
-      // NB L is  nrow x ncol and D is 2 x ncol
-      size_t ldl = spral::ssids::cpu::align_lda<T>(nrow);
-      size_t len =  (ldl+2) * ncol; // indef (includes D)
-
-      front.lcol = FATypeTraits::allocate(factor_alloc_type, len);
-      assert(front.lcol != nullptr);
-
-#if defined(SPLDLT_USE_STARPU)
-#if defined(SPLDLT_USE_GPU)
-      int ret = starpu_memory_pin(front.lcol, len*sizeof(T));
-      // STARPU_CHECK_RETURN_VALUE(ret, "starpu_memory_pin");
-#endif
-#endif
-      
-      // Get space for contribution block + (explicitly do not zero it!)
-      front.alloc_contrib_blocks();
-
-      // Alloc + set perm for expected eliminations at this node
-      // (delays are set when they are imported from children)
-      front.perm = FAIntTraits::allocate(factor_alloc_int, ncol); // ncol fully summed variables
-      for(int i=0; i<sfront.ncol; i++)
-         front.perm[i] = sfront.rlist[i];
-
-      // TODO: Backup is needed only when pivot_method is set to APTP
-
-      // Allocate backups
-      front.alloc_backup();      
-      // Allocate cdata
-      front.alloc_cdata();
-      // Allocate frontal matrix blocks
-      front.alloc_blocks();
-
-   }
-
    // Taken from SSIDS for debugging purpose
    /**
     * \brief Add \f$A\f$ to a given block column of a node.

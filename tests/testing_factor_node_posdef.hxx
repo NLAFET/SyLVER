@@ -103,18 +103,9 @@ namespace tests {
       using NumericFrontType = sylver::spldlt::NumericFront<T, FactorAllocator, PoolAllocator>;
       NumericFrontType front(sfront, allocT, pool_alloc, blksz);
 
-      // Allocate factors
-      size_t len = lda*m;
-      // if (debug) printf("m = %d, n = %d, lda = %d, len = %zu\n", m, n, lda, len);
-
-      auto start_alloc = std::chrono::high_resolution_clock::now();
-      front.lcol = allocT.allocate(len);
-      auto end_alloc = std::chrono::high_resolution_clock::now();
-      long t_alloc = 
-         std::chrono::duration_cast<std::chrono::nanoseconds>
-         (end_alloc-start_alloc).count();
-      printf("[factor_node_posdef_test] memory alloc factor (s) = %e\n", 1e-9*t_alloc);
-
+      // Allocate front, factors, contrib block and data structures
+      front.allocate_posdef();
+      
       if (check) {
          // Copy A into L
          memcpy(front.lcol, a, lda*n*sizeof(T));
@@ -123,13 +114,6 @@ namespace tests {
          assert(m == n); // FIXME: does not work for non square fronts
          sylver::tests::gen_posdef(m, front.lcol, lda);
       }
-
-      // Allocate contribution blocks
-      front.alloc_contrib_blocks();
-
-      front.alloc_cdata();
-
-      front.alloc_blocks();
 
       ////////////////////////////////////////
       // Init runtime system
@@ -206,7 +190,8 @@ namespace tests {
       // Register symbolic handle for contribution block
       front.register_symb_contrib();
       // Register data handles in StarPU         
-      sylver::spldlt::starpu::register_node(front);
+      // sylver::spldlt::starpu::register_node(front);
+      front.register_node_posdef();
 #endif
          
       printf("[factor_node_posdef_test] Factor..\n");

@@ -170,6 +170,35 @@ namespace sylver {
 
          starpu_data_unregister_submit(contrib_hdl_);
       }
+
+      // TODO: test routine
+      void register_contrib_blocks() {
+
+         int m = this->nrow();
+         int n = this->ncol();
+         int ldcontrib = m-n;
+         int blksz = this->blksz();
+         // Number of block rows
+         int nr = this->nr();
+         
+         // Allocate and init handles in contribution blocks         
+         if (ldcontrib>0 && this->contrib_blocks.size()>0) {
+            // Index of first block in contrib
+            int rsa = n/blksz;
+            // Number of block in contrib
+            int ncontrib = nr-rsa;
+
+            for(int j = rsa; j < nr; j++) {
+               for(int i = j; i < nr; i++) {
+                  // Register block in StarPU
+                  // front.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib].register_handle();
+                  this->contrib_block(i, j).register_handle();
+               }
+            }
+         }
+
+      }
+
 #endif
 
       // Return associated symbolic node

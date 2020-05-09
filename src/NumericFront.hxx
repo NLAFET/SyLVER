@@ -129,6 +129,7 @@ public:
       // (delays are set when they are imported from children)
       this->perm = FAIntTraits::allocate(factor_alloc_int, this->ncol()); // ncol fully summed variables
       // Set permuatation array
+      assert(this->symb().rlist);
       for(int i=0; i< this->symb().ncol; i++) {
          this->perm[i] = this->symb().rlist[i];
       }
@@ -176,6 +177,121 @@ public:
       // Allocate frontal matrix blocks
       err = this->alloc_blocks(); // FIXME specialize for posdef case
       sylver::sylver_check_error(err, context, "Failed to allocate blocks");
+   }
+
+#if defined(SPLDLT_USE_STARPU)   
+   // TODO: test routine
+   void register_node() {
+
+      using ValueType = T;
+         
+      auto& sfront = this->symb();
+      int blksz = this->blksz();
+      int m = this->nrow();
+      int n = this->ncol();
+      ValueType *a = this->lcol;
+      int lda = spral::ssids::cpu::align_lda<ValueType>(m);
+      int nr = this->nr(); // number of block rows
+      int nc = this->nc(); // number of block columns
+      auto& cdata = *this->cdata;
+
+      // Block diagonal matrix 
+      ValueType *d = &a[n*lda];
+
+      // FIXME: DO we still need these handles?
+      sfront.handles.resize(nr*nc); // allocate handles
+      
+      for(int j = 0; j < nc; ++j) {
+
+         int blkn = std::min(blksz, n - j*blksz);
+
+         // Register cdata for APP factorization.
+         // FIXME: Only if pivot_method is APP
+         cdata[j].register_handle(); // Symbolic handle on column j
+         cdata[j].register_d_hdl(d, 2*std::min((j+1)*blksz, n)); // Handle on diagonal D 
+         // cdata[j].register_d_hdl(d, 2*n); // Handle on diagonal D 
+
+         for(int i = j; i < nr; ++i) {
+            int blkm = std::min(blksz, m - i*blksz);
+
+            // TODO remove sfront.handles registration for indef case
+            starpu_matrix_data_register(
+                  &(sfront.handles[i + j*nr]), // StarPU handle ptr 
+                  STARPU_MAIN_RAM, // memory 
+                  reinterpret_cast<uintptr_t>(&a[(j*blksz)*lda+(i*blksz)]),
+                  lda, blkm, blkn,
+                  sizeof(ValueType));
+
+            // Register StarPU handle for block (i,j)
+            this->blocks[j*nr+i].register_handle(); 
+         }
+      }
+
+      // Register blocks in contribution block
+      this->register_contrib_blocks();
+
+   }
+
+   // TODO: move to a new structure NumericFrontPosdef 
+   // TODO: est routine
+   void register_node_posdef() {
+
+      using ValueType = T;
+
+      auto& sfront = this->symb();
+      int blksz = this->blksz();
+
+      int const m = this->nrow();
+      int const n = this->ncol();
+      ValueType *a = this->lcol;
+      int const lda = this->ldl();
+      int const nr = this->nr(); // number of block rows
+      int const nc = this->nc(); // number of block columns
+      // sfront.handles.reserve(nr*nc);
+      sfront.handles.resize(nr*nc); // Allocate handles
+
+      for(int j = 0; j < nc; ++j) {
+         int blkn = std::min(blksz, n - j*blksz);
+
+         for(int i = j; i < nr; ++i) {
+            int blkm = std::min(blksz, m - i*blksz);
+
+            // TODO: remove the following register and test
+            starpu_matrix_data_register(
+                  &(sfront.handles[i + j*nr]), // StarPU handle ptr 
+                  STARPU_MAIN_RAM, // memory 
+                  reinterpret_cast<uintptr_t>(&a[(j*blksz)*lda+(i*blksz)]),
+                  lda, blkm, blkn,
+                  sizeof(ValueType));
+
+            // Register StarPU handle for block (i,j)
+            this->blocks[j*nr+i].register_handle(); 
+
+         }
+      }
+
+      // Register blocks in contribution block
+      this->register_contrib_blocks();
+
+   }
+#endif
+
+   /// @brief Activate front: allocate meemory associated with factors and
+   /// contrib block. Register data handles in StarPU.
+   void activate(void** child_contrib) {
+      this->allocate(child_contrib);
+#if defined(SPLDLT_USE_STARPU)   
+      this->register_node();
+#endif      
+   }
+
+   /// @brief Activate front posdef: allocate meemory associated with
+   /// factors and contrib block. Register data handles in StarPU.
+   void activate_posdef() {
+      this->allocate_posdef();
+#if defined(SPLDLT_USE_STARPU)   
+      this->register_node_posdef();
+#endif      
    }
    
    /// \brief Allocate block structures and memory space for

@@ -809,7 +809,12 @@ namespace starpu {
             cl_arg, &posdef, &snode, &node, &child_contrib, &blksz,
             &factor_alloc);
 
-      activate_front(posdef, *node, child_contrib, *factor_alloc);
+      if (posdef) {
+         node->activate_posdef();
+      }
+      else {
+         node->activate(child_contrib);
+      }
          
    }
 
@@ -874,8 +879,12 @@ namespace starpu {
             &factor_alloc, &pool_alloc, &aval, &scaling);
          
       // Allocate data structures
-      activate_front(
-            posdef, *node, child_contrib, *factor_alloc);
+      if (posdef) {
+         node->activate_posdef();
+      }
+      else {
+         node->activate(child_contrib);
+      }
       
       // Add coefficients from original matrix
       init_node(*node, aval, scaling);

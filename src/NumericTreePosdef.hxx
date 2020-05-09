@@ -205,8 +205,9 @@ namespace spldlt {
             if (sfront.is_in_subtree()) continue;
             
             // Activate frontal matrix
-            activate_front(true, front, child_contrib, factor_alloc_);
-
+            // activate_front(true, front, child_contrib, factor_alloc_);
+            front.activate_posdef();
+            
             // Initialize frontal matrix 
             // init_node(sfront, fronts_[ni], aval); // debug
             init_node_task(front, aval, scaling, sylver::spldlt::INIT_PRIO);

@@ -19,7 +19,7 @@ protected:
 
    NumericFrontIndef()
    {}
-   
+
 };
 
 TYPED_TEST_CASE(NumericFrontIndef, ValueTypes);
