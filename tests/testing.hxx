@@ -8,15 +8,17 @@
 #include <cstdlib>
 #include <iostream>
 
-namespace spldlt {
+namespace sylver {
+namespace tests {
 
-   class SpldltOpts {
+   class Options {
 
    public:
-      SpldltOpts():
+      Options():
          ncpu(1), ngpu(0), m(256), n(256), k(256), nb(256), ib(256), posdef(false), 
          check(true), chol(false), diagdom(false), algo(sylver::tests::algo::SyLVER),
-         usetc(true), prec(sylver::tests::prec::FP64), cond(1), itref(false), tol(1e-8)
+         usetc(true), prec(sylver::tests::prec::FP64), cond(1), itref(false), tol(1e-8),
+         sched(Sched::LWS)
       {}
 
       void parse_opts(int argc, char** argv) {
@@ -127,6 +129,21 @@ namespace spldlt {
                tol =  std::atof( argv[++i] );
             }
 
+            // Scheduler
+            else if ( !strcmp("--sched=lws", argv[i]) ) {
+               std::cout << "Using LWS (Locality Work Stealing) scheduler" << std::endl;
+               sched = Sched::LWS;
+            }
+            else if ( !strcmp("--sched=hlws", argv[i]) ) {
+               std::cout << "Using HLWS (Heterogeneous Locality Work Stealing) scheduler" << std::endl;
+               sched = Sched::LWS;
+            }
+            else if ( !strcmp("--sched=hp", argv[i]) ) {
+               std::cout << "Using HP (Heteroprio) scheduler" << std::endl;
+               sched = Sched::LWS;
+            }
+
+            // Command error message 
             else {
                std::cout << "Unrecognized command " << i << std::endl;
             }
@@ -153,5 +170,8 @@ namespace spldlt {
       // Iterative refinement
       bool itref; // Control the use of iterative refinement
       double tol; // Tolerence for iterative refinement
+      // Scheduler
+      Sched sched;
    };
-}
+
+}} // End of namespace sylver::tests

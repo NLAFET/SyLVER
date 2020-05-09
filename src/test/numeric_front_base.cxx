@@ -41,8 +41,8 @@ protected:
       empty_symb_front.exec_loc = -1;
       
       empty_numeric_front.reset(
-            new sylver::NumericFrontBase<T, default_allocator_type>(
-                  empty_symb_front, default_allocator, blksz));
+            new sylver::NumericFrontBase<T, default_allocator_type, default_allocator_type>(
+                  empty_symb_front, factor_allocator, pool_allocator, blksz));
 
       // Small square symbolic front
       small_sqr_symb_front.idx = 0;
@@ -60,17 +60,19 @@ protected:
       small_sqr_symb_front.exec_loc = -1;
 
       small_sqr_numeric_front.reset(
-            new sylver::NumericFrontBase<T, default_allocator_type>(
-                  small_sqr_symb_front, default_allocator, blksz));
+            new sylver::NumericFrontBase<T, default_allocator_type, default_allocator_type>(
+                  small_sqr_symb_front, factor_allocator, pool_allocator, blksz));
    }
 
-   default_allocator_type default_allocator;
+   default_allocator_type factor_allocator;
+   default_allocator_type pool_allocator;
+   
    // Empty front
    sylver::SymbolicFront empty_symb_front;
-   std::unique_ptr<sylver::NumericFrontBase<T, default_allocator_type>> empty_numeric_front;
+   std::unique_ptr<sylver::NumericFrontBase<T, default_allocator_type, default_allocator_type>> empty_numeric_front;
    // Small square front
    sylver::SymbolicFront small_sqr_symb_front;
-   std::unique_ptr<sylver::NumericFrontBase<T, default_allocator_type>> small_sqr_numeric_front;
+   std::unique_ptr<sylver::NumericFrontBase<T, default_allocator_type, default_allocator_type>> small_sqr_numeric_front;
 
 };
 

@@ -69,12 +69,15 @@ namespace tests {
       sfront.nrow = m;
       sfront.ncol = n;
 
-      // Numeric front
-      sylver::spldlt::NumericFront<T, PoolAllocator> front(sfront, pool_alloc, blksz);
-
       // Setup allocator for factors
       using FactorAllocator = spral::test::AlignedAllocator<T>;
       FactorAllocator allocT;
+
+      // Numeric front type
+      using NumericFrontType = sylver::spldlt::NumericFront<T, FactorAllocator, PoolAllocator>;
+      
+      NumericFrontType front(sfront, allocT, pool_alloc, blksz);
+
       // Make lcol m columns wide for debugging
       size_t len = (lda+2)*m; // Includes D
       front.lcol = allocT.allocate(len);

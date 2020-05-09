@@ -17,14 +17,16 @@ namespace splu {
    ///
    /// @param factor_alloc Memory allocator for allocating
    /// fully-summed entries
-   template <typename T, typename PoolAlloc, typename FactorAlloc>
+   template <typename NumericFrontType, typename FactorAlloc>
    void alloc_front_unsym_diagdom(
-         sylver::splu::NumericFrontUnsym<T, PoolAlloc> &front,
+         NumericFrontType& front,
          FactorAlloc& factor_alloc
          ) {
 
+      using ValueType = typename NumericFrontType::ValueType;
+      
       /* Rebind allocators */
-      typedef typename std::allocator_traits<FactorAlloc>::template rebind_traits<T> FADoubleTraits;
+      typedef typename std::allocator_traits<FactorAlloc>::template rebind_traits<ValueType> FADoubleTraits;
       typename FADoubleTraits::allocator_type factor_alloc_double(factor_alloc);
       typedef typename std::allocator_traits<FactorAlloc>::template rebind_traits<int> FAIntTraits;
       typename FAIntTraits::allocator_type factor_alloc_int(factor_alloc);
@@ -61,9 +63,9 @@ namespace splu {
       
    namespace starpu {
 
-      template <typename T, typename PoolAlloc>
+      template <typename NumericFrontType>
       void register_front_unsym(
-            sylver::splu::NumericFrontUnsym<T, PoolAlloc> &front) {
+            NumericFrontType& front) {
          
          int const mblk = front.nr();
          int const blksz = front.blksz();
@@ -80,7 +82,7 @@ namespace splu {
                // Loop if we are in the contributution block
                if ((first_col >= n) && (first_row >= n)) continue;
                
-               BlockUnsym<T>& blk = front.get_block_unsym(iblk, jblk);
+               auto& blk = front.get_block_unsym(iblk, jblk);
                blk.register_handle();
             }
          }
@@ -92,9 +94,9 @@ namespace splu {
 #endif
    /// @param diagdom Must be set to true if matrix is diagonally
    /// dominant and false otherwise. 
-   template <typename T, typename PoolAlloc, typename FactorAlloc>
+   template <typename NumericFrontType, typename FactorAlloc>
    void activate_front_unsym(
-         sylver::splu::NumericFrontUnsym<T, PoolAlloc> &front,
+         NumericFrontType& front,
          FactorAlloc& factor_alloc,
          bool diagdom
          ) {

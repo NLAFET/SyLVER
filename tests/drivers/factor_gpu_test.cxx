@@ -16,7 +16,7 @@ int main(int argc, char** argv) {
    int ret = 0;
    std::string context = "factor_node_test";
    
-   spldlt::SpldltOpts opts;
+   sylver::tests::Options opts;
    opts.parse_opts(argc, argv);
 
    std::cout << "[" << context << "]" << " Matrix m = " << opts.m << ", n = " << opts.m

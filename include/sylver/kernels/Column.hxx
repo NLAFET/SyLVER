@@ -136,10 +136,13 @@ public:
    }
 
    // @brief Unregister data handle on column in StarPU
-   template<bool async=true>
-   void unregister_handle() {
-      if (async) starpu_data_unregister_submit(hdl_);
-      else       starpu_data_unregister(hdl_);
+   void unregister_handle(bool async=true) {
+      if (async) {
+         starpu_data_unregister_submit(hdl_);
+      }
+      else {
+         starpu_data_unregister(hdl_);
+      }
    }
 
    /// @brief Return StarPU handle on diagonal D
@@ -151,10 +154,13 @@ public:
             sizeof(T));
    }
 
-   template<bool async=true>
-   void unregister_d_hdl() {
-      if (async) starpu_data_unregister_submit(d_hdl_);
-      else       starpu_data_unregister(d_hdl_);
+   void unregister_d_hdl(bool async=true) {
+      if (async) {
+         starpu_data_unregister_submit(d_hdl_);
+      }
+      else {
+         starpu_data_unregister(d_hdl_);
+      }
    }
 
 #endif

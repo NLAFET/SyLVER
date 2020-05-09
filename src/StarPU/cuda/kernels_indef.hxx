@@ -96,29 +96,31 @@ namespace starpu {
    // update_contrib_block_app StarPU task
 
    // CUDA kernel
-   template <typename T, typename IntAlloc, typename PoolAlloc>
+   template <typename NumericFrontType>
    void update_contrib_block_app_cuda_func(void *buffers[], void *cl_arg) {
 
+      using ValueType = typename NumericFrontType::ValueType;
+      
       // printf("[update_contrib_block_app_gpu_func]\n");
 
-      T *upd = (T *)STARPU_MATRIX_GET_PTR(buffers[0]);
+      ValueType *upd = (ValueType *)STARPU_MATRIX_GET_PTR(buffers[0]);
       unsigned ldupd = STARPU_MATRIX_GET_LD(buffers[0]); // Leading dimensions
       unsigned updm = STARPU_MATRIX_GET_NX(buffers[0]);
       unsigned updn = STARPU_MATRIX_GET_NY(buffers[0]);
 
-      T *lik = (T *)STARPU_MATRIX_GET_PTR(buffers[1]);
+      ValueType *lik = (ValueType *)STARPU_MATRIX_GET_PTR(buffers[1]);
       unsigned ld_lik = STARPU_MATRIX_GET_LD(buffers[1]); // Leading dimensions
 
-      T *ljk = (T *)STARPU_MATRIX_GET_PTR(buffers[2]);
+      ValueType *ljk = (ValueType *)STARPU_MATRIX_GET_PTR(buffers[2]);
       unsigned ld_ljk = STARPU_MATRIX_GET_LD(buffers[2]); // Leading dimensions
 
-      T *d_d = (T *)STARPU_VECTOR_GET_PTR(buffers[3]);
+      ValueType *d_d = (ValueType *)STARPU_VECTOR_GET_PTR(buffers[3]);
       unsigned d_dimn = STARPU_VECTOR_GET_NX(buffers[3]);
 
-      T *d_ld = (T *)STARPU_MATRIX_GET_PTR(buffers[4]); // Get pointer on scratch memory
+      ValueType *d_ld = (ValueType *)STARPU_MATRIX_GET_PTR(buffers[4]); // Get pointer on scratch memory
       unsigned ldld = STARPU_MATRIX_GET_LD(buffers[4]); // Get leading dimensions
 
-      sylver::spldlt::NumericFront<T, PoolAlloc> *node = nullptr;
+      NumericFrontType *node = nullptr;
       int k, i, j;
       std::vector<spral::ssids::cpu::Workspace> *workspaces;
 
@@ -128,16 +130,14 @@ namespace starpu {
       cudaStream_t stream = starpu_cuda_get_local_stream();
       cublasHandle_t handle = starpu_cublas_get_local_handle();
          
-      sylver::spldlt::gpu::update_contrib_block_app
-           <T, IntAlloc, PoolAlloc>(
-                 stream, handle,
-                 *node,
-                 k, i, j,
-                 lik, ld_lik,
-                 ljk, ld_ljk,
-                 updm, updn, upd, ldupd,
-                 d_d,
-                 d_ld, ldld);
+      sylver::spldlt::gpu::update_contrib_block_app(
+            stream, handle, *node,
+            k, i, j,
+            lik, ld_lik,
+            ljk, ld_ljk,
+            updm, updn, upd, ldupd,
+            d_d,
+            d_ld, ldld);
    }
 
 }}} // End of namespace sylver::spldlt::starpu

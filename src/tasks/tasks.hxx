@@ -73,11 +73,11 @@ namespace spldlt {
    ////////////////////////////////////////////////////////////
 
    /// @brief Launches a task for activating a node.
-   template <typename T, typename FactorAlloc, typename PoolAlloc>
+   template <typename NumericFrontType, typename FactorAlloc>
    void activate_front_task(
          bool posdef,
          sylver::SymbolicFront& snode,
-         NumericFront<T, PoolAlloc>& node,
+         NumericFrontType& node,
          void** child_contrib,
          int blksz,
          FactorAlloc& factor_alloc) {
@@ -113,10 +113,12 @@ namespace spldlt {
 
    ////////////////////////////////////////////////////////////
    // Initialize node.
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void init_node_task(
-         NumericFront<T, PoolAlloc> &front,
-         T *aval, T *scaling, int prio) {
+         NumericFrontType& front,
+         typename NumericFrontType::ValueType *aval,
+         typename NumericFrontType::ValueType *scaling,
+         int prio) {
 
 #if defined(SPLDLT_USE_STARPU)
       
@@ -136,9 +138,9 @@ namespace spldlt {
 
    ////////////////////////////////////////////////////////////
    // Terminate node
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void fini_node_task(
-         NumericFront<T, PoolAlloc> &node,
+         NumericFrontType& node,
          bool posdef) {
 
 #if defined(SPLDLT_USE_STARPU)
@@ -174,14 +176,15 @@ namespace spldlt {
 
    ////////////////////////////////////////////////////////////////////////////////
    /// @brief Lauches a task that activate and init a front.
-   template <typename T, typename FactorAlloc, typename PoolAlloc>
+   template <typename NumericFrontType, typename FactorAlloc, typename PoolAlloc>
    void activate_init_front_task(
          bool posdef,
-         NumericFront<T, PoolAlloc>& node,
+         NumericFrontType& node,
          void** child_contrib,
          FactorAlloc& factor_alloc,
          PoolAlloc& pool_alloc,
-         T *aval, T *scaling) {
+         typename NumericFrontType::ValueType *aval,
+         typename NumericFrontType::ValueType *scaling) {
 
 #if defined(SPLDLT_USE_STARPU)
 
@@ -226,13 +229,13 @@ namespace spldlt {
 
    // Factorize block on the diagonal
 
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void factor_block_task (
-         NumericFront<T, PoolAlloc> &node,
+         NumericFrontType& node,
          int kk, // Block  column/row index
          int prio,
          std::vector<sylver::inform_t>& worker_stats) {
-
+      
       sylver::SymbolicFront const& snode = node.symb();
       int const blksz = node.blksz();
 
@@ -241,10 +244,6 @@ namespace spldlt {
       
       int const blkm = std::min(blksz, m - kk*blksz);
       int const blkn = std::min(blksz, n - kk*blksz);
-
-      int lda = align_lda<T>(m);
-      T *a = node.lcol;
-      T *contrib = node.contrib;
       int const ldcontrib = m-n;
 
 #if defined(SPLDLT_USE_STARPU)
@@ -274,6 +273,12 @@ namespace spldlt {
 
 #else
 
+      using ValueType = typename NumericFrontType::ValueType;
+
+      int lda = align_lda<T>(m);
+      ValueType *a = node.lcol;
+      ValueType *contrib = node.contrib;
+
       sylver::inform_t& stats = worker_stats[0];
       int flag = factorize_diag_block(blkm, blkn,
                                       &a[kk*blksz*(lda+1)], lda,
@@ -287,13 +292,13 @@ namespace spldlt {
    ////////////////////////////////////////////////////////////////////////////////
    // Solve block (on subdaig) task
 
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void solve_block_task(
-         NumericFront<T, PoolAlloc> &node,
+         NumericFrontType& node,
          int k, // Column index
          int i, // Row index
-         T *a, int lda, 
-         T *a_ik, int lda_ik,         
+         typename NumericFrontType::ValueType *a, int lda, 
+         typename NumericFrontType::ValueType *a_ik, int lda_ik,         
          int prio) {
 
       sylver::SymbolicFront const& snode = node.symb();
@@ -338,16 +343,16 @@ namespace spldlt {
    ////////////////////////////////////////////////////////////////////////////////
    // Update block on subdaig task
    
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void update_block_task(
-         NumericFront<T, PoolAlloc> &node,
+         NumericFrontType& node,
          int k, /* block column index of A_ik and A_jk blocks */
          int i, /* block row index of A_ik and A_ij blocks  */
          int j, /* block row index of A_jk and block column index of
                    A_ij blocks */
-         T *a_ij, int lda_ij,
-         T *a_ik, int lda_ik,
-         T *a_jk, int lda_jk,
+         typename NumericFrontType::ValueType *a_ij, int lda_ij,
+         typename NumericFrontType::ValueType *a_ik, int lda_ik,
+         typename NumericFrontType::ValueType *a_jk, int lda_jk,
          int prio) {
 
       int const blksz = node.blksz();
@@ -395,13 +400,15 @@ namespace spldlt {
    ////////////////////////////////////////////////////////////////////////////////
    // Update contrib block task
 
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void update_contrib_task(
          sylver::SymbolicFront const& snode,
-         NumericFront<T, PoolAlloc> &node,
+         NumericFrontType& node,
          int k, int i, int j,
          int blksz, int prio) {
 
+      using ValueType = typename NumericFrontType::ValueType;
+      
       int m = node.nrow();
       int n = node.ncol(); 
 
@@ -409,10 +416,10 @@ namespace spldlt {
       int blkn = std::min(blksz, m - j*blksz);
       int blkk = std::min(blksz, n - k*blksz);
 
-      int lda = align_lda<T>(m);
-      T *a = node.lcol;
+      int lda = align_lda<ValueType>(m);
+      ValueType *a = node.lcol;
       int ldcontrib = m-n;
-      T *contrib = node.contrib;
+      ValueType *contrib = node.contrib;
 
 #if defined(SPLDLT_USE_STARPU)
 
@@ -526,9 +533,9 @@ namespace spldlt {
    ////////////////////////////////////////////////////////////
    // assemble_subtree_task
    
-   template <typename T, typename PoolAlloc>   
+   template <typename NumericFrontType>   
    void assemble_subtree_task(
-         NumericFront<T,PoolAlloc>& front, // Destination node 
+         NumericFrontType& front, // Destination node 
          sylver::SymbolicFront &csfront, // Root of the subtree
          void** child_contrib, 
          int contrib_idx, // Index of subtree to assemble
@@ -600,9 +607,9 @@ namespace spldlt {
    ////////////////////////////////////////////////////////////
    // assemble_contrib_subtree_task
 
-   template <typename T, typename PoolAlloc>   
+   template <typename NumericFrontType>   
    void assemble_contrib_subtree_task(
-         NumericFront<T,PoolAlloc>& node, // Destination node
+         NumericFrontType& node, // Destination node
          sylver::SymbolicFront& csnode, // Root of the subtree
          void** child_contrib, 
          int contrib_idx, // Index of subtree to assemble

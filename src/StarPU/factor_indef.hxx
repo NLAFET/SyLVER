@@ -18,10 +18,10 @@ namespace starpu {
    // factor_front_indef
 
    // CPU kernel
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType, typename PoolAlloc>
    void factor_front_indef_cpu_func(void *buffers[], void *cl_arg) {
       
-      NumericFront<T, PoolAlloc> *node;
+      NumericFrontType *node;
       std::vector<spral::ssids::cpu::Workspace> *workspaces;
       PoolAlloc *pool_alloc;
       sylver::options_t *options;
@@ -44,10 +44,10 @@ namespace starpu {
    // SarPU codelet
    extern struct starpu_codelet cl_factor_front_indef;
       
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType, typename PoolAlloc>
    void insert_factor_front_indef(
          starpu_data_handle_t node_hdl,
-         NumericFront<T, PoolAlloc> *node,
+         NumericFrontType *node,
          std::vector<spral::ssids::cpu::Workspace> *workspaces,
          PoolAlloc *pool_alloc,
          sylver::options_t *options,
@@ -59,7 +59,7 @@ namespace starpu {
       ret = starpu_task_insert(
             &cl_factor_front_indef,
             STARPU_RW, node_hdl,
-            STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
+            STARPU_VALUE, &node, sizeof(NumericFrontType*),
             STARPU_VALUE, &workspaces, sizeof(std::vector<spral::ssids::cpu::Workspace>*),
             STARPU_VALUE, &pool_alloc, sizeof(PoolAlloc*),
             STARPU_VALUE, &options, sizeof(sylver::options_t*),
@@ -70,7 +70,7 @@ namespace starpu {
       
    ////////////////////////////////////////////////////////////////////////////////
 
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType, typename PoolAlloc>
    void codelet_init_factor_indef() {
 
       // Initialize factor_front_indef StarPU codelet
@@ -78,7 +78,7 @@ namespace starpu {
       cl_factor_front_indef.where = STARPU_CPU;
       cl_factor_front_indef.nbuffers = STARPU_VARIABLE_NBUFFERS;
       cl_factor_front_indef.name = "FactorFront";
-      cl_factor_front_indef.cpu_funcs[0] = factor_front_indef_cpu_func<T, PoolAlloc>;
+      cl_factor_front_indef.cpu_funcs[0] = factor_front_indef_cpu_func<NumericFrontType, PoolAlloc>;
 
    }
 

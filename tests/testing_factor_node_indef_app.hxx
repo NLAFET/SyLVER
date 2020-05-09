@@ -81,12 +81,16 @@ namespace tests {
       sylver::SymbolicFront sfront;
       sfront.nrow = m;
       sfront.ncol = n;
-      sylver::spldlt::NumericFront<T, PoolAllocator> front(sfront, pool_alloc, blksz);
 
       // Init node
       // Setup allocator for factors
       using FactorAllocator = spral::test::AlignedAllocator<T>;
       FactorAllocator allocT;
+
+      // Numeric front type
+      using NumericFrontType = sylver::spldlt::NumericFront<T, FactorAllocator, PoolAllocator>;
+
+      NumericFrontType front(sfront, allocT, pool_alloc, blksz);
 
       // Make lcol m columns wide for debugging
       size_t len = (lda+2)*m; // Includes D
@@ -151,8 +155,8 @@ namespace tests {
       // Init factoriization 
 #if defined(SPLDLT_USE_STARPU)
       sylver::spldlt::starpu::codelet_init<T, FactorAllocator, PoolAllocator>();
-      sylver::spldlt::starpu::codelet_init_indef<T, iblksz, Backup, PoolAllocator>();
-      sylver::spldlt::starpu::codelet_init_factor_indef<T, PoolAllocator>();
+      sylver::spldlt::starpu::codelet_init_indef<T, iblksz, Backup, FactorAllocator, PoolAllocator>();
+      sylver::spldlt::starpu::codelet_init_factor_indef<NumericFrontType, PoolAllocator>();
 #endif
 
 #if defined(SPLDLT_USE_STARPU)
@@ -171,12 +175,19 @@ namespace tests {
 
       front.nelim(0);
 
+      // Factorization type
+      using FactorType = sylver::spldlt::FactorIndefAPP<
+         T,
+         sylver::spldlt::INNER_BLOCK_SIZE,
+         Backup,
+         debug,
+         FactorAllocator,
+         PoolAllocator>;
+
       // Factor front (first and second pass) and from contrib blocks
-      sylver::spldlt::FactorSymIndef
-         <T, sylver::spldlt::INNER_BLOCK_SIZE, Backup, debug, PoolAllocator>
-         ::factor_front_indef_app(
-               front, options, worker_stats, 0.0, upd, 0, workspaces, pool_alloc,
-               front.nelim());
+      FactorType::factor_front_indef_app(
+            front, options, worker_stats, 0.0, upd, 0, workspaces, pool_alloc,
+            front.nelim());
 
 #if defined(SPLDLT_USE_STARPU)
       starpu_task_wait_for_all();      

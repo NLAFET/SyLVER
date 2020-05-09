@@ -13,10 +13,10 @@ namespace starpu {
       
    ////////////////////////////////////////////////////////////////////////////////
    // fini child nodes
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void fini_cnodes_cpu_func(void *buffers[], void *cl_arg) {
 
-      NumericFront<T, PoolAlloc> *node = nullptr;
+      NumericFrontType *node = nullptr;
       bool posdef;
          
       starpu_codelet_unpack_args(cl_arg, &node, &posdef);
@@ -29,11 +29,11 @@ namespace starpu {
    // fini_cnodes StarPU codelet
    extern struct starpu_codelet cl_fini_cnodes;
 
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void insert_fini_cnodes(
          starpu_data_handle_t node_hdl,
          starpu_data_handle_t *cnode_hdls, int nhdl, // Children node's symbolic handles
-         NumericFront<T, PoolAlloc> *node,
+         NumericFrontType *node,
          bool posdef) {
 
       struct starpu_data_descr *descrs = new starpu_data_descr[nhdl+1];
@@ -50,7 +50,7 @@ namespace starpu {
       int ret;
       ret = starpu_task_insert(&cl_fini_cnodes,
                                STARPU_DATA_MODE_ARRAY, descrs, nh,
-                               STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
+                               STARPU_VALUE, &node, sizeof(NumericFrontType*),
                                STARPU_VALUE, &posdef, sizeof(bool),
                                0);
       STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
@@ -61,10 +61,10 @@ namespace starpu {
    ////////////////////////////////////////////////////////////////////////////////
    // Assemble contribution blocks
 
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void assemble_contrib_cpu_func(void *buffers[], void *cl_arg) {
 
-      NumericFront<T, PoolAlloc> *node = nullptr;
+      NumericFrontType *node = nullptr;
       void** child_contrib;
       std::vector<spral::ssids::cpu::Workspace> *workspaces;
       
@@ -85,12 +85,12 @@ namespace starpu {
    // assemble_contrib StarPU codelet
    extern struct starpu_codelet cl_assemble_contrib;
       
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void insert_assemble_contrib(
          starpu_data_handle_t node_hdl, // Node's symbolic handle
          // starpu_data_handle_t contrib_hdl, // Node's contribution blocks symbolic handle
          starpu_data_handle_t *cnode_hdls, int nhdl, // Children node's symbolic handles
-         NumericFront<T, PoolAlloc> *node,
+         NumericFrontType *node,
          void** child_contrib,
          std::vector<spral::ssids::cpu::Workspace> *workspaces
          ) {
@@ -119,7 +119,7 @@ namespace starpu {
             // STARPU_RW, node_hdl,
             // STARPU_RW, contrib_hdl,
             // STARPU_TAG, tag2, 
-            STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
+            STARPU_VALUE, &node, sizeof(NumericFrontType*),
             STARPU_VALUE, &child_contrib, sizeof(void**),
             STARPU_VALUE, &workspaces, sizeof(std::vector<spral::ssids::cpu::Workspace>*),
             0);
@@ -140,13 +140,13 @@ namespace starpu {
    ////////////////////////////////////////////////////////////
    // Assemble fully summed
 
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void assemble_cpu_func(void *buffers[], void *cl_arg) {
 
       int n;
-      NumericFront<T, PoolAlloc> *node;
+      NumericFrontType *node;
       void** child_contrib;
-      PoolAlloc *pool_alloc;
+      typename NumericFrontType::PoolAlloc *pool_alloc;
 
       starpu_codelet_unpack_args(
             cl_arg, &n, &node, &child_contrib, &pool_alloc);
@@ -159,14 +159,14 @@ namespace starpu {
    // assemble StarPU codelet
    extern struct starpu_codelet cl_assemble;
 
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void insert_assemble(
          starpu_data_handle_t node_hdl, // Node's symbolic handle
          starpu_data_handle_t *cnode_hdls, int nhdl, // Children node's symbolic handles
          int n,
-         NumericFront<T, PoolAlloc> *node,
+         NumericFrontType *node,
          void** child_contrib, 
-         PoolAlloc *pool_alloc
+         typename NumericFrontType::PoolAlloc *pool_alloc
          ) {
 
       struct starpu_data_descr *descrs = new starpu_data_descr[nhdl+1];
@@ -185,16 +185,16 @@ namespace starpu {
       ret = starpu_task_insert(&cl_assemble,
                                STARPU_DATA_MODE_ARRAY, descrs, nh,
                                STARPU_VALUE, &n, sizeof(int),
-                               STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
+                               STARPU_VALUE, &node, sizeof(NumericFrontType*),
                                STARPU_VALUE, &child_contrib, sizeof(void**),
-                               STARPU_VALUE, &pool_alloc, sizeof(PoolAlloc*),
+                               STARPU_VALUE, &pool_alloc, sizeof(typename NumericFrontType::PoolAlloc*),
                                0);
       STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
 
       delete[] descrs;
    }
 
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void codelet_init_assemble() {
 
       // assemble StarPU codelet
@@ -202,21 +202,21 @@ namespace starpu {
       cl_assemble.where = STARPU_CPU;
       cl_assemble.nbuffers = STARPU_VARIABLE_NBUFFERS;
       cl_assemble.name = "Assemble";
-      cl_assemble.cpu_funcs[0] = assemble_cpu_func<T, PoolAlloc>;
+      cl_assemble.cpu_funcs[0] = assemble_cpu_func<NumericFrontType>;
 
       // assemble_contrib StarPU codelet
       starpu_codelet_init(&cl_assemble_contrib);
       cl_assemble_contrib.where = STARPU_CPU;
       cl_assemble_contrib.nbuffers = STARPU_VARIABLE_NBUFFERS;
       cl_assemble_contrib.name = "AssembleContrib";
-      cl_assemble_contrib.cpu_funcs[0] = assemble_contrib_cpu_func<T, PoolAlloc>;
+      cl_assemble_contrib.cpu_funcs[0] = assemble_contrib_cpu_func<NumericFrontType>;
 
       // fini_cnodes StarPU codelet
       starpu_codelet_init(&cl_fini_cnodes);
       cl_fini_cnodes.where = STARPU_CPU;
       cl_fini_cnodes.nbuffers = STARPU_VARIABLE_NBUFFERS;
       cl_fini_cnodes.name = "FiniCnodes";
-      cl_fini_cnodes.cpu_funcs[0] = fini_cnodes_cpu_func<T, PoolAlloc>;
+      cl_fini_cnodes.cpu_funcs[0] = fini_cnodes_cpu_func<NumericFrontType>;
 
    }
 

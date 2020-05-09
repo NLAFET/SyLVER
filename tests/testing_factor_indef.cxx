@@ -78,6 +78,7 @@ namespace tests {
       //
       // Initialize factorization
 
+      using FactorAllocator = spral::test::AlignedAllocator<T>;
       // Pool allocator type 
       using PoolAllocator = ::sylver::BuddyAllocator<T,std::allocator<T>>;
 
@@ -86,7 +87,7 @@ namespace tests {
       // factor_indef_init<T, PoolAllocator>();
 
       // Factorize using main routine
-      spral::test::AlignedAllocator<T> allocT;
+      FactorAllocator allocT;
       T *l = allocT.allocate(m*lda);
       memcpy(l, a, m*lda*sizeof(T)); // Copy a to l
       int *perm = new int[m];
@@ -124,11 +125,12 @@ namespace tests {
       //          );
 
       // Factorization type
-      using FactorType = sylver::spldlt::FactorSymIndef<
+      using FactorType = sylver::spldlt::FactorIndefAPP<
          T,
          iblksz,
          Backup,
          debug,
+         FactorAllocator,
          PoolAllocator>;
          
       int q1 = FactorType::ldlt_app(

@@ -39,8 +39,9 @@ namespace spldlt {
             std::size_t PAGE_SIZE,
             typename FactorAllocator>
    class NumericTree {
-      typedef ::sylver::BuddyAllocator<T,std::allocator<T>> PoolAllocator;
-      typedef CopyBackup<T, PoolAllocator> Backup;
+      using PoolAllocator = ::sylver::BuddyAllocator<T,std::allocator<T>>;
+      using Backup = CopyBackup<T, PoolAllocator>;
+      using NumericTreeType = NumericFront<T, FactorAllocator, PoolAllocator>;
    public:
 
    public:
@@ -66,7 +67,7 @@ namespace spldlt {
          // Associate symbolic fronts to numeric ones; copy tree structure
          fronts_.reserve(symbolic_tree.nnodes()+1);
          for(int ni=0; ni<symb_.nnodes()+1; ++ni) {
-            fronts_.emplace_back(symbolic_tree[ni], pool_alloc_, blksz);
+            fronts_.emplace_back(symbolic_tree[ni], factor_alloc_, pool_alloc_, blksz);
             auto* fc = symbolic_tree[ni].first_child;
             fronts_[ni].first_child = fc ? &fronts_[fc->idx] : nullptr;
             auto* nc = symbolic_tree[ni].next_child;
@@ -531,7 +532,7 @@ namespace spldlt {
    private:
       void* fkeep_;
       sylver::SymbolicTree& symb_;
-      std::vector<spldlt::NumericFront<T,PoolAllocator>> fronts_;
+      std::vector<NumericTreeType> fronts_;
       FactorAllocator factor_alloc_; // Allocator specific to
         // permanent memory
       PoolAllocator pool_alloc_; // Allocator specific to temporay

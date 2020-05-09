@@ -17,33 +17,35 @@ namespace starpu {
    template <typename T, typename FactorAlloc, typename PoolAlloc>
    void codelet_init() {
 
+      using NumericFrontType = NumericFront<T, FactorAlloc, PoolAlloc>;
+      
       // activate node StarPU codelet
       starpu_codelet_init(&cl_activate_node);
       cl_activate_node.where = STARPU_CPU;
       cl_activate_node.nbuffers = STARPU_VARIABLE_NBUFFERS;
       cl_activate_node.name = "ActivateNode";
-      cl_activate_node.cpu_funcs[0] = activate_node_cpu_func<T, FactorAlloc,PoolAlloc>;
+      cl_activate_node.cpu_funcs[0] = activate_node_cpu_func<T, FactorAlloc, PoolAlloc>;
 
       // init_node StarPU codelet
       starpu_codelet_init(&cl_init_node);
       cl_init_node.where = STARPU_CPU;
       cl_init_node.nbuffers = STARPU_VARIABLE_NBUFFERS;
       cl_init_node.name = "InitNode";
-      cl_init_node.cpu_funcs[0] = init_node_cpu_func<T, PoolAlloc>;
+      cl_init_node.cpu_funcs[0] = init_node_cpu_func<NumericFrontType>;
 
       // activate_init node StarPU codelet
       starpu_codelet_init(&cl_activate_init_node);
       cl_activate_init_node.where = STARPU_CPU;
       cl_activate_init_node.nbuffers = STARPU_VARIABLE_NBUFFERS;
       cl_activate_init_node.name = "ActivateInitNode";
-      cl_activate_init_node.cpu_funcs[0] = activate_init_node_cpu_func<T, FactorAlloc,PoolAlloc>;
+      cl_activate_init_node.cpu_funcs[0] = activate_init_node_cpu_func<T, FactorAlloc, PoolAlloc>;
 
       // fini_node StarPU codelet
       starpu_codelet_init(&cl_fini_node);
       cl_fini_node.where = STARPU_CPU;
       cl_fini_node.nbuffers = STARPU_VARIABLE_NBUFFERS;
       cl_fini_node.name = "FiniNode";
-      cl_fini_node.cpu_funcs[0] = fini_node_cpu_func<T, PoolAlloc>;
+      cl_fini_node.cpu_funcs[0] = fini_node_cpu_func<NumericFrontType>;
 
       // factorize_block StarPU codelet
       starpu_codelet_init(&cl_factorize_block);
@@ -142,42 +144,42 @@ namespace starpu {
       cl_assemble_block.where = STARPU_CPU;
       cl_assemble_block.nbuffers = STARPU_VARIABLE_NBUFFERS;
       cl_assemble_block.name = "AssembleBlk";
-      cl_assemble_block.cpu_funcs[0] = assemble_block_cpu_func<T, PoolAlloc>;
+      cl_assemble_block.cpu_funcs[0] = assemble_block_cpu_func<NumericFrontType>;
 
       // assemble_contrib_block StarPU codelet
       starpu_codelet_init(&cl_assemble_contrib_block);
       cl_assemble_contrib_block.where = STARPU_CPU;
       cl_assemble_contrib_block.nbuffers = STARPU_VARIABLE_NBUFFERS;
       cl_assemble_contrib_block.name = "AssembleContribBlk";
-      cl_assemble_contrib_block.cpu_funcs[0] = assemble_contrib_block_cpu_func<T, PoolAlloc>;
+      cl_assemble_contrib_block.cpu_funcs[0] = assemble_contrib_block_cpu_func<NumericFrontType>;
 
       // subtree_assemble StarPU codelet
       starpu_codelet_init(&cl_subtree_assemble);
       cl_subtree_assemble.where = STARPU_CPU;
       cl_subtree_assemble.nbuffers = STARPU_VARIABLE_NBUFFERS;
       cl_subtree_assemble.name = "SubtreeAssemble";
-      cl_subtree_assemble.cpu_funcs[0] = subtree_assemble_cpu_func<T, PoolAlloc>;
+      cl_subtree_assemble.cpu_funcs[0] = subtree_assemble_cpu_func<NumericFrontType>;
 
       // subtree_assemble_block StarPU codelet
       starpu_codelet_init(&cl_subtree_assemble_block);
       cl_subtree_assemble_block.where = STARPU_CPU;
       cl_subtree_assemble_block.nbuffers = STARPU_VARIABLE_NBUFFERS;
       cl_subtree_assemble_block.name = "SubtreeAssembleBlk";
-      cl_subtree_assemble_block.cpu_funcs[0] = subtree_assemble_block_cpu_func<T, PoolAlloc>;
+      cl_subtree_assemble_block.cpu_funcs[0] = subtree_assemble_block_cpu_func<NumericFrontType>;
       
       // subtree_assemble_contrib StarPU codelet
       starpu_codelet_init(&cl_subtree_assemble_contrib);
       cl_subtree_assemble_contrib.where = STARPU_CPU;
       cl_subtree_assemble_contrib.nbuffers = STARPU_VARIABLE_NBUFFERS;
       cl_subtree_assemble_contrib.name = "SubtreeAssembleContrib";
-      cl_subtree_assemble_contrib.cpu_funcs[0] = subtree_assemble_contrib_cpu_func<T, PoolAlloc>;
+      cl_subtree_assemble_contrib.cpu_funcs[0] = subtree_assemble_contrib_cpu_func<NumericFrontType>;
 
       // subtree_assemble_contrib_block StarPU codelet
       starpu_codelet_init(&cl_subtree_assemble_contrib_block);
       cl_subtree_assemble_contrib_block.where = STARPU_CPU;
       cl_subtree_assemble_contrib_block.nbuffers = STARPU_VARIABLE_NBUFFERS;
       cl_subtree_assemble_contrib_block.name = "SubtreeAssembleContribBlk";
-      cl_subtree_assemble_contrib_block.cpu_funcs[0] = subtree_assemble_contrib_block_cpu_func<T, PoolAlloc>;
+      cl_subtree_assemble_contrib_block.cpu_funcs[0] = subtree_assemble_contrib_block_cpu_func<NumericFrontType>;
 
       // facto_subtree StarPU codelet
       starpu_codelet_init(&cl_factor_subtree);
@@ -203,8 +205,11 @@ namespace starpu {
              typename FactorAlloc,
              typename PoolAlloc>
    void codelets_init_posdef() {
+
+      using NumericFrontType = NumericFront<T, FactorAlloc, PoolAlloc>;
+
       codelet_init<T, FactorAlloc, PoolAlloc>();
-      codelet_init_assemble<T, PoolAlloc>();
+      codelet_init_assemble<NumericFrontType>();
    }
    
 }}} // End of namespace sylver::spldlt::starpu

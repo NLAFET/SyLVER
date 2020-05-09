@@ -19,9 +19,9 @@ namespace spldlt {
    ////////////////////////////////////////////////////////////
    // fini child nodes
 
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void fini_cnodes_task(
-         NumericFront<T, PoolAlloc>& node,
+         NumericFrontType& node,
          bool posdef) {
 
 #if defined(SPLDLT_USE_STARPU)
@@ -55,9 +55,9 @@ namespace spldlt {
    ////////////////////////////////////////////////////////////
    // assemble contribution block
    
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void assemble_contrib_task(
-         NumericFront<T, PoolAlloc>& node,
+         NumericFrontType& node,
          void** child_contrib,
          std::vector<spral::ssids::cpu::Workspace>& workspaces
          ){
@@ -92,10 +92,10 @@ namespace spldlt {
 
    ////////////////////////////////////////////////////////////
    // assemble front
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType, typename PoolAlloc>
    void assemble_task(
          int n,
-         NumericFront<T, PoolAlloc>& node,
+         NumericFrontType& node,
          void** child_contrib,
          PoolAlloc& pool_alloc
          ) {

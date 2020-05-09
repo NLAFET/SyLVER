@@ -30,7 +30,8 @@ namespace splu {
    /// assembly tree.
    template<typename T, typename FactorAllocator, bool diagdom, size_t PAGE_SIZE>
    class NumericTreeUnsym {
-      typedef ::sylver::BuddyAllocator<T,std::allocator<T>> PoolAllocator;
+      using PoolAllocator = ::sylver::BuddyAllocator<T,std::allocator<T>>;
+      using NumericFrontType = NumericFrontUnsym<T, FactorAllocator, PoolAllocator>;
    public:
       // Delete copy constructors for safety re allocated memory
       NumericTreeUnsym(const NumericTreeUnsym&) =delete;
@@ -104,7 +105,7 @@ namespace splu {
          for(int ni = 0; ni < symb_.nnodes()+1; ++ni) {
                
             sylver::SymbolicFront& sfront = symb_[ni];
-            sylver::splu::NumericFrontUnsym<T,PoolAllocator>& front = fronts_[ni];
+            NumericFrontType& front = fronts_[ni];
 
             // Skip if current node is within a subtree 
             if (sfront.is_in_subtree()) continue;
@@ -140,7 +141,7 @@ namespace splu {
 
          for(int ni=0; ni<symb_.nnodes()+1; ++ni) {
 
-            fronts_.emplace_back(symb_[ni], pool_alloc_, blksz);
+            fronts_.emplace_back(symb_[ni], factor_alloc_, pool_alloc_, blksz);
 
             auto* fc = symb_[ni].first_child;
             fronts_[ni].first_child = fc ? &fronts_[fc->idx] : nullptr;
@@ -232,7 +233,7 @@ namespace splu {
          
    private:
       sylver::SymbolicTree& symb_; ///< Structure holding symbolic factorization data 
-      std::vector<sylver::splu::NumericFrontUnsym<T,PoolAllocator>> fronts_; // Vector
+      std::vector<NumericFrontType> fronts_; // Vector
       // containing frontal matrices
       FactorAllocator factor_alloc_; ///< Allocator specific to
       // permanent memory

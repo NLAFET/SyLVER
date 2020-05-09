@@ -25,19 +25,21 @@ namespace sylver {
 namespace spldlt {
 
    /// @brief Factor the failed pivots in a frontal matrix
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void factor_front_indef_failed(
-         sylver::spldlt::NumericFront<T, PoolAlloc>& node,
+         NumericFrontType& node,
          std::vector<spral::ssids::cpu::Workspace>& workspaces, 
          // spral::ssids::cpu::Workspace& work,
          sylver::options_t& options,
          sylver::inform_t& stats) {
 
+      using ValueType = typename NumericFrontType::ValueType;
+      
       int const m = node.nrow();
       int const n = node.ncol();
       size_t const ldl = node.ldl();
-      T *lcol = node.lcol;
-      T *d = &lcol[n*ldl];
+      ValueType *lcol = node.lcol;
+      ValueType *d = &lcol[n*ldl];
       int *perm = node.perm;
          
       int nelim = 0;
@@ -71,7 +73,7 @@ namespace spldlt {
             options.failed_pivot_method==sylver::FailedPivotMethod::tpp
                ) {
 
-            T *ld = work.get_ptr<T>(m-nelim);
+            ValueType *ld = work.get_ptr<ValueType>(m-nelim);
             // auto start = std::chrono::high_resolution_clock::now();
             try {
                int nelim_second_pass = spral::ssids::cpu::ldlt_tpp_factor(

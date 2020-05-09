@@ -21,10 +21,10 @@ namespace starpu {
    // factor_front_indef_failed
 
    // CPU kernel
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void factor_front_indef_failed_cpu_func(void *buffers[], void *cl_arg) {
          
-      sylver::spldlt::NumericFront<T, PoolAlloc> *node = nullptr;
+      NumericFrontType *node = nullptr;
       std::vector<spral::ssids::cpu::Workspace> *workspaces = nullptr;
       sylver::options_t *options = nullptr;
       std::vector<sylver::inform_t> *worker_stats = nullptr;
@@ -47,12 +47,12 @@ namespace starpu {
    // SarPU codelet
    extern struct starpu_codelet cl_factor_front_indef_failed;
 
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void insert_factor_front_indef_failed(
          starpu_data_handle_t col_hdl,
          starpu_data_handle_t contrib_hdl,
          starpu_data_handle_t *hdls, int nhdl,
-         sylver::spldlt::NumericFront<T, PoolAlloc> *node,
+         NumericFrontType *node,
          std::vector<spral::ssids::cpu::Workspace> *workspaces,
          sylver::options_t *options,
          std::vector<sylver::inform_t> *worker_stats
@@ -79,7 +79,7 @@ namespace starpu {
             // STARPU_RW, col_hdl,
             // STARPU_RW, contrib_hdl,
             STARPU_DATA_MODE_ARRAY, descrs, nh,
-            STARPU_VALUE, &node, sizeof(sylver::spldlt::NumericFront<T, PoolAlloc>*),
+            STARPU_VALUE, &node, sizeof(NumericFrontType*),
             STARPU_VALUE, &workspaces, sizeof(std::vector<spral::ssids::cpu::Workspace>*),
             STARPU_VALUE, &options, sizeof(sylver::options_t*),
             STARPU_VALUE, &worker_stats, sizeof(std::vector<sylver::inform_t>*),
@@ -90,7 +90,7 @@ namespace starpu {
 
    }
 
-   template<typename T, typename Allocator>
+   template<typename NumericFrontType>
    void codelet_init_factor_failed() {
 
       ////////////////////////////////////////////////////////////
@@ -101,7 +101,7 @@ namespace starpu {
       cl_factor_front_indef_failed.nbuffers = STARPU_VARIABLE_NBUFFERS;
       cl_factor_front_indef_failed.name = "FactorFrontFailed";
       cl_factor_front_indef_failed.cpu_funcs[0] =
-         factor_front_indef_failed_cpu_func<T, Allocator>;
+         factor_front_indef_failed_cpu_func<NumericFrontType>;
 
    }
 

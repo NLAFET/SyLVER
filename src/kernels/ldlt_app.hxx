@@ -48,12 +48,23 @@
 namespace sylver {
 namespace spldlt {
 
-   const int INNER_BLOCK_SIZE = 32;
+const int INNER_BLOCK_SIZE = 32;
    
-   template<typename T, int iblksz, typename Backup, bool debug,
-            typename Allocator>
-   class FactorSymIndef;
-
+template<
+   // Numerical values type
+   typename T,
+   // Inner block size
+   int iblksz,
+   // Backup strategy
+   typename Backup,
+   bool debug,
+   // Factor entries allocator
+   typename FactorAlloc,
+   // Contrib block allocator
+   typename PoolAlloc
+   >
+class FactorIndefAPP;
+   
 using namespace spral::ssids::cpu;
 
 // template<typename T, typename Allocator>
@@ -487,10 +498,18 @@ public:
 
          // printf("[Block::factor] nrow = %d, ncol = %d\n", nrow(), ncol());
 
+         using FactorType =
+            FactorIndefAPP
+            <T,
+             INNER_BLOCK_SIZE,
+             Backup,
+             debug,
+             // Factor alloc: not useful for sequential algo
+             std::allocator<T>,
+             Allocator>;
+         
          cdata_[i_].nelim =
-            FactorSymIndef
-            <T, INNER_BLOCK_SIZE, Backup, debug, Allocator>
-            ::ldlt_app_notask(
+            FactorType::ldlt_app_notask(
                   nrow(), ncol(), lperm, aval_, lda_,
                   cdata_[i_].d, inner_backup, options, /*options.pivot_method,*/
                   INNER_BLOCK_SIZE, 0, nullptr, 0, work, alloc
@@ -800,10 +819,13 @@ public:
    }
 
    /// @brief Unregister data handle in StarPU
-   template<bool async=true>
-   void unregister_handle() {
-      if (async) starpu_data_unregister_submit(hdl_);
-      else       starpu_data_unregister(hdl_);
+   void unregister_handle(bool async=true) {
+      if (async) {
+         starpu_data_unregister_submit(hdl_);
+      }
+      else {
+         starpu_data_unregister(hdl_);
+      }
    }
 #endif
 

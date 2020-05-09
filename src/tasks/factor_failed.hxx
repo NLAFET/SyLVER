@@ -17,9 +17,9 @@ namespace spldlt {
    ////////////////////////////////////////////////////////////
    // factor_front_indef_failed_task
 
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void factor_front_indef_failed_task(
-         NumericFront<T, PoolAlloc> &node,
+         NumericFrontType& node,
          std::vector<spral::ssids::cpu::Workspace> &workspaces,
          sylver::options_t& options,
          std::vector<sylver::inform_t>& worker_stats
@@ -27,9 +27,8 @@ namespace spldlt {
 
 #if defined(SPLDLT_USE_STARPU)
 
-      typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
       int blksz = node.blksz();
-      sylver::ColumnData<T, IntAlloc> &cdata = *node.cdata;
+      auto& cdata = *node.cdata;
       int const nblk = node.nc(); // Number of block-columns
       starpu_data_handle_t *hdls = nullptr;
       int nh = 0;

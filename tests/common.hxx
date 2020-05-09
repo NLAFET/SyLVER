@@ -389,18 +389,20 @@ namespace spldlt {
       }
 
       /// @brief Copy the array a into the contribution blocks
-      template<typename T, typename PoolAllocator,
-               bool debug=false>
+      template<typename NumericFrontType>
       void copy_a_to_cb(
-            T* a, int lda, sylver::spldlt::NumericFront<T, PoolAllocator>& node) {
+            typename NumericFrontType::ValueType* a, int lda,
+            NumericFrontType& node) {
 
+         using ValueType = typename NumericFrontType::ValueType;
+         
          int m = node.nrow();
          int n = node.ncol();
          size_t contrib_dimn = m-n; // Dimension of contribution block
          int blksz =  node.blksz();
 
          if (contrib_dimn <= 0) return;
-         if(debug) printf("[copy_front_cb] contrib dimn = %zu\n", contrib_dimn);
+         // if(debug) printf("[copy_front_cb] contrib dimn = %zu\n", contrib_dimn);
 
          int nr = node.nr();
          int rsa = n/blksz;
@@ -413,8 +415,8 @@ namespace spldlt {
             // int blkn = std::min((j+1)*blksz, m) - first_col;
             for(int i = j; i < nr; i++) {
 
-               sylver::Tile<T, PoolAllocator>& cb = node.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib];
-            
+               auto& cb = node.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib];
+               
                // First col in contrib block
                int first_row = std::max(i*blksz, n);
                // Tile height
@@ -425,7 +427,7 @@ namespace spldlt {
                   memcpy(
                         &cb.a[c*cb.lda],
                         &a[(first_col+c)*lda + first_row],
-                        cb.m*sizeof(T));
+                        cb.m*sizeof(ValueType));
 
                }
             }
@@ -434,11 +436,12 @@ namespace spldlt {
       }
 
       /// @brief Copy the contribution blocks into the array a
-      template<typename T, typename PoolAllocator,
-               bool debug=false>
+      template<typename NumericFrontType>
       void copy_cb_to_a(
-            sylver::spldlt::NumericFront<T, PoolAllocator>& node, T* a, int lda) {
+            NumericFrontType& node, typename NumericFrontType::ValueType* a, int lda) {
 
+         using ValueType = typename NumericFrontType::ValueType;
+         
          int m = node.nrow();
          int n = node.ncol();
          size_t contrib_dimn = m-n; // Dimension of contribution block
@@ -460,14 +463,14 @@ namespace spldlt {
                // Tile height
                // int blkm = std::min((i+1)*blksz, m) - first_row;
            
-               sylver::Tile<T, PoolAllocator>& cb = node.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib];
+               auto& cb = node.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib];
 
                // FIXME: use copy routine from BLAS
                for (int c = 0; c < cb.n; ++c) {
                   memcpy(
                         &a[(first_col+c)*lda + first_row],
                         &cb.a[c*cb.lda],
-                        cb.m*sizeof(T));
+                        cb.m*sizeof(ValueType));
 
                }
             }
@@ -476,10 +479,12 @@ namespace spldlt {
       }
 
       /// @brief Add the contribution blocks into the array a
-      template<typename T, typename PoolAllocator,
-               bool debug=false>
+      template<typename NumericFrontType>
       void add_cb_to_a(
-            sylver::spldlt::NumericFront<T, PoolAllocator>& node, T* a, int lda) {
+            NumericFrontType& node, typename NumericFrontType::ValueType* a,
+            int lda) {
+
+         using ValueType = typename NumericFrontType::ValueType;
 
          int m = node.nrow();
          int n = node.ncol();
@@ -502,7 +507,7 @@ namespace spldlt {
                // Tile height
                // int blkm = std::min((i+1)*blksz, m) - first_row;
            
-               sylver::Tile<T, PoolAllocator>& cb = node.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib];
+               auto& cb = node.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib];
 
                // FIXME: use copy routine from BLAS
                for (int c = 0; c < cb.n; ++c) {
@@ -516,9 +521,11 @@ namespace spldlt {
       }
 
       /// @brief Print node's contribution blocks
-      template<typename T, typename PoolAllocator>
+      template<typename NumericFrontType>
       void print_cb(
-            char const* format, sylver::spldlt::NumericFront<T, PoolAllocator>& node) {
+            char const* format, NumericFrontType& node) {
+
+         using ValueType = typename NumericFrontType::ValueType;
 
          int m = node.nrow();
          int n = node.ncol();
@@ -542,7 +549,7 @@ namespace spldlt {
                // First col in contrib block
                int first_col = std::max(jblk*blksz, n);
 
-               T *a = node.contrib_blocks[iblk+jblk*ncontrib].a;
+               ValueType *a = node.contrib_blocks[iblk+jblk*ncontrib].a;
                int lda = node.contrib_blocks[iblk+jblk*ncontrib].lda;
                printf(format, a[(c-first_col)*lda+(r-first_row)]);            
             }
@@ -731,6 +738,13 @@ namespace tests {
       FP64
    };
 
+   enum class Sched
+      {
+       HP, // Heteroprio
+       HLWS, // Heterogeneous locality work stealing
+       LWS, // Locality work stealing
+      };
+   
    // Generates a random dense positive definte matrix. Entries are
    // Unif[-1,1]. Only lower triangle is used, rest is filled with
    // NaNs.

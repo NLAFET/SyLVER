@@ -93,21 +93,24 @@ int factor_node_indef_test(
    options.failed_pivot_method = sylver::FailedPivotMethod::tpp;
    // options.failed_pivot_method = FailedPivotMethod::pass;
          
+   // Setup allocator for factors
+   using FactorAllocator = spral::test::AlignedAllocator<T>;
    // Pool allocator type
    using PoolAllocator = ::sylver::BuddyAllocator<T, std::allocator<T>>;
+   // Numeric front type
+   using NumericFrontType = sylver::spldlt::NumericFront<T, FactorAllocator, PoolAllocator>;
+   
 
+   FactorAllocator factor_alloc;
    PoolAllocator pool_alloc(lda*n);
 
    sylver::SymbolicFront sfront;
    sfront.nrow = m;
    sfront.ncol = n;
-   sylver::spldlt::NumericFront<T, PoolAllocator> front(sfront, pool_alloc, blksz);
+   NumericFrontType front(sfront, factor_alloc, pool_alloc, blksz);
 
    // Init node
-   // Setup allocator for factors
-   using FactorAllocator = spral::test::AlignedAllocator<T>;
 
-   FactorAllocator factor_alloc;
 
    // Make lcol m columns wide for debugging
    size_t len = (lda+2)*m; // Includes D
@@ -223,9 +226,9 @@ int factor_node_indef_test(
    // Init factorization 
 #if defined(SPLDLT_USE_STARPU)
    sylver::spldlt::starpu::codelet_init<T, FactorAllocator, PoolAllocator>();
-   sylver::spldlt::starpu::codelet_init_indef<T, iblksz, Backup, PoolAllocator>();
-   sylver::spldlt::starpu::codelet_init_factor_indef<T, PoolAllocator>();
-   sylver::spldlt::starpu::codelet_init_factor_failed<T, PoolAllocator>();
+   sylver::spldlt::starpu::codelet_init_indef<T, iblksz, Backup, FactorAllocator, PoolAllocator>();
+   sylver::spldlt::starpu::codelet_init_factor_indef<NumericFrontType, PoolAllocator>();
+   sylver::spldlt::starpu::codelet_init_factor_failed<NumericFrontType>();
 
    // if (ngpu > 0) {
    //    // extern struct starpu_codelet cl_update_contrib_block_app;
@@ -255,7 +258,7 @@ int factor_node_indef_test(
    auto start = std::chrono::high_resolution_clock::now();
       
    // Factor front (first and second pass) and from contrib blocks
-   factor_front_indef(front, workspaces, pool_alloc, options, worker_stats);
+   sylver::spldlt::factor_front_indef(front, workspaces, pool_alloc, options, worker_stats);
 
    // By default function calls are asynchronous, so we put a
    // barrier and wait for the DAG to be executed
@@ -276,7 +279,7 @@ int factor_node_indef_test(
    std::cout << "SECOND FACTOR CALL ELIMINATED " << q2 << " of " << n << " pivots" << std::endl;
       
 #if defined(SPLDLT_USE_STARPU)
-   sylver::spldlt::starpu::unregister_node_indef<T, PoolAllocator, false>(front); // Synchronous unregister
+   sylver::spldlt::starpu::unregister_node_indef(front, false); // Synchronous unregister
    // starpu_task_wait_for_all(); // Wait for unregistration of handles      
    starpu_data_unregister(sfront.hdl); // Node's symbolic handle
    starpu_data_unregister(front.contrib_hdl());

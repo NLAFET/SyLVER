@@ -33,10 +33,9 @@ namespace spldlt {
 namespace starpu {
 
    // unregister handles for a node in StarPU
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void unregister_node_submit(
-         NumericFront<T, PoolAlloc> &node
-         ) {
+         NumericFrontType& node) {
 
       // printf("[unregister_node_submit]\n");
          
@@ -81,12 +80,14 @@ namespace starpu {
    ////////////////////////////////////////////////////////////////////////////////      
    // init_node StarPU task
    // CPU task
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void init_node_cpu_func(void *buffers[], void *cl_arg) {
 
-      NumericFront<T, PoolAlloc> *front = nullptr;
-      T *aval;
-      T *scaling;
+      using ValueType = typename NumericFrontType::ValueType;
+      
+      NumericFrontType* front = nullptr;
+      ValueType* aval;
+      ValueType* scaling;
 
       starpu_codelet_unpack_args(
             cl_arg,
@@ -108,9 +109,9 @@ namespace starpu {
    /// @param aval Numerical values in the original matrix,
    /// orginised according to a CSC format
    /// @param prio Task priority
-   template <typename T, typename PoolAlloc>
+   template <typename T, typename FactorAlloc, typename PoolAlloc>
    void insert_init_node(
-         NumericFront<T, PoolAlloc> *front,
+         NumericFront<T, FactorAlloc, PoolAlloc> *front,
          starpu_data_handle_t node_hdl,
          T *aval, T *scaling, int prio) {
                   
@@ -138,7 +139,7 @@ namespace starpu {
             &cl_init_node,
             STARPU_DATA_MODE_ARRAY, descrs, nh,
             // STARPU_RW, node_hdl,
-            STARPU_VALUE, &front, sizeof(NumericFront<T, PoolAlloc>*),
+            STARPU_VALUE, &front, sizeof(NumericFront<T, FactorAlloc, PoolAlloc>*),
             STARPU_VALUE, &aval, sizeof(T*),
             STARPU_VALUE, &scaling, sizeof(T*),
             STARPU_PRIORITY, prio,
@@ -152,21 +153,20 @@ namespace starpu {
    ////////////////////////////////////////////////////////////////////////////////
    // fini_node StarPU kernels
    // fini_node CPU kernel
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void fini_node_cpu_func(void *buffers[], void *cl_arg) {
          
-      NumericFront<T, PoolAlloc> *node = nullptr;
+      NumericFrontType* node = nullptr;
       bool posdef;
          
       starpu_codelet_unpack_args(cl_arg, &node, &posdef);
 
       // printf("[fini_node_cpu_func] node idx = %d\n", node->symb.idx+1);
       if (posdef) {
-         unregister_node_posdef<T, PoolAlloc, true>(*node);
+         unregister_node_posdef(*node);
       }
       else {
-         unregister_node_indef<T, PoolAlloc, true>(*node);
-         // unregister_node_indef<T, PoolAlloc, false>(*node);
+         unregister_node_indef(*node);
       }
          
       fini_node(*node);
@@ -175,11 +175,11 @@ namespace starpu {
    // fini_node codelet
    extern struct starpu_codelet cl_fini_node;
       
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void insert_fini_node(
          starpu_data_handle_t node_hdl,
          starpu_data_handle_t *hdls, int nhdl, // Children node's symbolic handles
-         NumericFront<T, PoolAlloc> *node,
+         NumericFrontType* node,
          bool posdef,
          int prio) {
 
@@ -199,7 +199,7 @@ namespace starpu {
       ret = starpu_insert_task(
             &cl_fini_node,
             STARPU_DATA_MODE_ARRAY, descrs, nh,
-            STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
+            STARPU_VALUE, &node, sizeof(NumericFrontType*),
             STARPU_VALUE, &posdef, sizeof(bool),
             STARPU_PRIORITY, prio,
             0);
@@ -598,13 +598,14 @@ namespace starpu {
    // Assemble block task
       
    // CPU kernel
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void assemble_block_cpu_func(void *buffers[], void *cl_arg) {
 
       // typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> PoolAllocInt;
       // std::vector<int, PoolAllocInt> *map;
 
-      NumericFront<T, PoolAlloc> *node = nullptr, *cnode = nullptr;
+      NumericFrontType* node = nullptr;
+      NumericFrontType* cnode = nullptr;
       int ii, jj; // Block indexes
       int *map;
 
@@ -618,10 +619,10 @@ namespace starpu {
    // assemble_block StarPU codelet
    extern struct starpu_codelet cl_assemble_block;
 
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void insert_assemble_block(
-         NumericFront<T, PoolAlloc> *node,
-         NumericFront<T, PoolAlloc> const* cnode,
+         NumericFrontType* node,
+         NumericFrontType const* cnode,
          int ii, int jj,
          int *cmap,
          starpu_data_handle_t bc_hdl,
@@ -659,8 +660,8 @@ namespace starpu {
 
       ret = starpu_task_insert(&cl_assemble_block,
                                STARPU_DATA_MODE_ARRAY, descrs, nh,
-                               STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
-                               STARPU_VALUE, &cnode, sizeof(NumericFront<T, PoolAlloc>*),
+                               STARPU_VALUE, &node, sizeof(NumericFrontType*),
+                               STARPU_VALUE, &cnode, sizeof(NumericFrontType*),
                                STARPU_VALUE, &ii, sizeof(int),
                                STARPU_VALUE, &jj, sizeof(int),
                                STARPU_VALUE, &cmap, sizeof(int*),
@@ -674,13 +675,14 @@ namespace starpu {
    // Assemble contrib block task
 
    // CPU kernel
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void assemble_contrib_block_cpu_func(void *buffers[], void *cl_arg) {
 
       // typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> PoolAllocInt;
       // std::vector<int, PoolAllocInt> *map;
 
-      NumericFront<T, PoolAlloc> *node = nullptr, *cnode = nullptr;
+      NumericFrontType* node = nullptr;
+      NumericFrontType* cnode = nullptr;
       int ii, jj; // Block row and col indexes
       int *map;
       std::vector<spral::ssids::cpu::Workspace> *workspaces;
@@ -711,10 +713,10 @@ namespace starpu {
    /// @param cnode Source node holding block (ii,jj)
    /// @param cmap Mapping vector: i-th column in cnode must be
    /// assembled in cmap(i) column of destination node
-   template <typename T, typename PoolAlloc>
+   template <typename T, typename FactorAlloc, typename PoolAlloc>
    void insert_assemble_contrib_block(
-         NumericFront<T, PoolAlloc> *node, // Destinaton node
-         NumericFront<T, PoolAlloc> *cnode,// Source node
+         NumericFront<T, FactorAlloc, PoolAlloc> *node, // Destinaton node
+         NumericFront<T, FactorAlloc, PoolAlloc> *cnode,// Source node
          int ii, int jj,
          int *cmap,
          starpu_data_handle_t bc_hdl,
@@ -770,8 +772,8 @@ namespace starpu {
       ret = starpu_task_insert(
             &cl_assemble_contrib_block,
             STARPU_DATA_MODE_ARRAY, descrs, nh,
-            STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
-            STARPU_VALUE, &cnode, sizeof(NumericFront<T, PoolAlloc>*),
+            STARPU_VALUE, &node, sizeof(NumericFront<T, FactorAlloc, PoolAlloc>*),
+            STARPU_VALUE, &cnode, sizeof(NumericFront<T, FactorAlloc, PoolAlloc>*),
             STARPU_VALUE, &ii, sizeof(int),
             STARPU_VALUE, &jj, sizeof(int),
             STARPU_VALUE, &cmap, sizeof(int*),
@@ -795,8 +797,8 @@ namespace starpu {
    void activate_node_cpu_func(void *buffers[], void *cl_arg) {
          
       bool posdef;
-      sylver::SymbolicFront *snode;
-      NumericFront<T, PoolAlloc> *node;
+      sylver::SymbolicFront* snode;
+      NumericFront<T, FactorAlloc, PoolAlloc>* node;
       void** child_contrib;
       int blksz;
       FactorAlloc *factor_alloc;
@@ -820,7 +822,7 @@ namespace starpu {
          starpu_data_handle_t *cnode_hdls, int nhdl, // Children node's symbolic handles
          bool posdef,
          sylver::SymbolicFront *snode,
-         NumericFront<T, PoolAlloc> *node,
+         NumericFront<T, FactorAlloc, PoolAlloc> *node,
          void** child_contrib,
          int blksz,
          FactorAlloc *factor_alloc
@@ -843,7 +845,7 @@ namespace starpu {
                                STARPU_DATA_MODE_ARRAY, descrs, nh,
                                STARPU_VALUE, &posdef, sizeof(bool),
                                STARPU_VALUE, &snode, sizeof(sylver::SymbolicFront*),
-                               STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
+                               STARPU_VALUE, &node, sizeof(NumericFront<T, FactorAlloc, PoolAlloc>*),
                                STARPU_VALUE, &child_contrib, sizeof(void**),
                                STARPU_VALUE, &blksz, sizeof(int),
                                STARPU_VALUE, &factor_alloc, sizeof(FactorAlloc*),
@@ -860,7 +862,7 @@ namespace starpu {
    void activate_init_node_cpu_func(void *buffers[], void *cl_arg) {
          
       bool posdef;
-      NumericFront<T, PoolAlloc> *node;
+      NumericFront<T, FactorAlloc, PoolAlloc> *node;
       void** child_contrib;
       FactorAlloc *factor_alloc;
       PoolAlloc *pool_alloc;
@@ -887,7 +889,7 @@ namespace starpu {
          starpu_data_handle_t node_hdl, // Node's symbolic handle
          starpu_data_handle_t *cnode_hdls, int nhdl, // Children node's symbolic handles
          bool posdef,
-         NumericFront<T, PoolAlloc> *node,
+         NumericFront<T, FactorAlloc, PoolAlloc> *node,
          void** child_contrib,
          FactorAlloc *factor_alloc,
          PoolAlloc *pool_alloc,
@@ -909,7 +911,7 @@ namespace starpu {
       ret = starpu_task_insert(&cl_activate_init_node,
                                STARPU_DATA_MODE_ARRAY, descrs, nh,
                                STARPU_VALUE, &posdef, sizeof(bool),
-                               STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
+                               STARPU_VALUE, &node, sizeof(NumericFront<T, FactorAlloc, PoolAlloc>*),
                                STARPU_VALUE, &child_contrib, sizeof(void**),
                                STARPU_VALUE, &factor_alloc, sizeof(FactorAlloc*),
                                STARPU_VALUE, &pool_alloc, sizeof(PoolAlloc*),

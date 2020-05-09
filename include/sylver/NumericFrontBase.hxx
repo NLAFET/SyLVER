@@ -15,16 +15,21 @@
 
 namespace sylver {
    
-   template <typename T, typename PoolAllocator>
+   template <typename T, typename FactorAllocator, typename PoolAllocator>
    class NumericFrontBase {
+   public:
+      using ValueType = T;
+      using FactorAlloc = FactorAllocator;
+      using PoolAlloc = PoolAllocator;
    public:
 
       NumericFrontBase(
             SymbolicFront& symb,
+            FactorAllocator const& factor_alloc,
             PoolAllocator const& pool_alloc,
             int blksz)
-         : symb_(symb), pool_alloc_(pool_alloc), blksz_(blksz),
-           contrib_hdl_(nullptr), ndelay_in_(0), ndelay_out_(0),
+         : symb_(symb), factor_alloc_(factor_alloc), pool_alloc_(pool_alloc),
+           blksz_(blksz), contrib_hdl_(nullptr), ndelay_in_(0), ndelay_out_(0),
            nelim_first_pass_(0), nelim_(0)
       {};
 
@@ -186,6 +191,8 @@ namespace sylver {
       int nelim_first_pass_;
       // Number of columns succesfully eliminated
       int nelim_;
+      // Memory allocator to manage factors
+      FactorAllocator factor_alloc_;
       // Memory allocator used to manage contribution blocks
       PoolAllocator pool_alloc_;
       // Symbolic frontal matrix

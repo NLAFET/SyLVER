@@ -15,9 +15,9 @@ namespace spldlt {
    ////////////////////////////////////////////////////////////
    // factor_front_indef_nocontrib_task
 
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType, typename PoolAlloc>
    inline void factor_front_indef_task(
-         NumericFront<T, PoolAlloc>& node,
+         NumericFrontType& node,
          std::vector<spral::ssids::cpu::Workspace>& workspaces,
          PoolAlloc& pool_alloc,
          sylver::options_t & options,
@@ -41,9 +41,9 @@ namespace spldlt {
    ////////////////////////////////////////////////////////////
    // factor_front_indef_nocontrib_task
 
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType, typename PoolAlloc>
    void factor_front_indef_nocontrib_task(
-         NumericFront<T, PoolAlloc> &node,
+         NumericFrontType& node,
          std::vector<spral::ssids::cpu::Workspace> &workspaces,
          PoolAlloc& pool_alloc,
          sylver::options_t& options
@@ -66,9 +66,9 @@ namespace spldlt {
    ////////////////////////////////////////////////////////////
    // form_contrib_front_task
 
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void form_contrib_front_task(
-         NumericFront<T, PoolAlloc> &node,
+         NumericFrontType& node,
          int blksz) {
 
 #if defined(SPLDLT_USE_STARPU)

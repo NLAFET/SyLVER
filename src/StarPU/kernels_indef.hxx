@@ -30,17 +30,17 @@ namespace sylver {
 namespace spldlt {
 namespace starpu {
    
-   using namespace spldlt::ldlt_app_internal;
+using namespace spldlt::ldlt_app_internal;
 
-   template<typename T>
-   void print_block(int m, int n, const T *a, int lda) {
-      for(int row=0; row<m; row++) {
-         printf("%d:",row);
-         for(int col=0; col<n; col++)
-            printf(" %.2e", a[col*lda+row]);
-         printf("\n");
-      }
+template<typename T>
+void print_block(int m, int n, const T *a, int lda) {
+   for(int row=0; row<m; row++) {
+      printf("%d:",row);
+      for(int col=0; col<n; col++)
+         printf(" %.2e", a[col*lda+row]);
+      printf("\n");
    }
+}
 
    /* factor_block_app StarPU task
          
@@ -734,21 +734,23 @@ namespace starpu {
    // };
 #endif
 
-   template <typename T, typename IntAlloc, typename PoolAlloc>
+   template <typename NumericFrontType>
    void update_contrib_block_app_cpu_func(void *buffers[], void *cl_arg) {
 
-      T *upd = (T *)STARPU_MATRIX_GET_PTR(buffers[0]);
+      using ValueType = typename NumericFrontType::ValueType;
+      
+      ValueType *upd = (ValueType *)STARPU_MATRIX_GET_PTR(buffers[0]);
       unsigned ldupd = STARPU_MATRIX_GET_LD(buffers[0]); // Get leading dimensions
       unsigned updm = STARPU_MATRIX_GET_NX(buffers[0]);
       unsigned updn = STARPU_MATRIX_GET_NY(buffers[0]);
 
-      const T *lik = (T *)STARPU_MATRIX_GET_PTR(buffers[1]);
+      ValueType const* lik = (ValueType *)STARPU_MATRIX_GET_PTR(buffers[1]);
       unsigned ld_lik = STARPU_MATRIX_GET_LD(buffers[1]); // Get leading dimensions
 
-      const T *ljk = (T *)STARPU_MATRIX_GET_PTR(buffers[2]);
+      ValueType const* ljk = (ValueType *)STARPU_MATRIX_GET_PTR(buffers[2]);
       unsigned ld_ljk = STARPU_MATRIX_GET_LD(buffers[2]); // Get leading dimensions
                   
-      NumericFront<T, PoolAlloc> *node = nullptr;
+      NumericFrontType *node = nullptr;
       int k, i, j;
       std::vector<spral::ssids::cpu::Workspace> *workspaces;
 
@@ -758,7 +760,7 @@ namespace starpu {
       int workerid = starpu_worker_get_id();
       spral::ssids::cpu::Workspace &work = (*workspaces)[workerid];
 
-      update_contrib_block_app<T, IntAlloc, PoolAlloc>(
+      update_contrib_block_app(
             *node, k, i, j,
             lik, ld_lik, ljk, ld_ljk,
             updm, updn, upd, ldupd,
@@ -768,7 +770,7 @@ namespace starpu {
    extern struct starpu_codelet cl_update_contrib_block_app;
 
    // insert_udpate_contrib_block_indef
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void insert_update_contrib_block_app(
          starpu_data_handle_t upd_hdl,
          starpu_data_handle_t lik_hdl,
@@ -776,7 +778,7 @@ namespace starpu {
          starpu_data_handle_t d_hdl,
          starpu_data_handle_t col_hdl, // Symbolic handle on block-column k
          starpu_data_handle_t contrib_hdl, // Contribution blocks symbolic handle
-         NumericFront<T, PoolAlloc> *node,
+         NumericFrontType *node,
          int k, int i, int j,
          std::vector<spral::ssids::cpu::Workspace> *workspaces,
          int prio) {
@@ -799,7 +801,7 @@ namespace starpu {
             STARPU_SCRATCH, workspace_hdl,
             STARPU_R, col_hdl,
             STARPU_R, contrib_hdl, // Contribution blocks symbolic handle
-            STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
+            STARPU_VALUE, &node, sizeof(NumericFrontType*),
             STARPU_VALUE, &k, sizeof(int),
             STARPU_VALUE, &i, sizeof(int),
             STARPU_VALUE, &j, sizeof(int),
@@ -814,10 +816,14 @@ namespace starpu {
    // permute_failed StarPU task
 
    // CPU kernel
-   template <typename T, typename IntAlloc, typename PoolAlloc>
+   template <typename NumericFrontType>
    void permute_failed_cpu_func(void *buffers[], void *cl_arg) {
-         
-      NumericFront<T, PoolAlloc> *node = nullptr;
+
+      using ValueType = typename NumericFrontType::ValueType;
+      using FactorAlloc = typename NumericFrontType::PoolAlloc;
+      using PoolAlloc = typename NumericFrontType::PoolAlloc;
+      
+      NumericFrontType *node = nullptr;
       PoolAlloc *alloc = nullptr;
 
       starpu_codelet_unpack_args(
@@ -827,15 +833,16 @@ namespace starpu {
 
       if (node->nelim() < n) {
 
-         CopyBackup<T, PoolAlloc> &backup = *node->backup; 
-
+         auto& backup = *node->backup; 
+         
          backup.release_all_memory(); 
          
-         ColumnData<T, IntAlloc> &cdata = *node->cdata;
+         auto& cdata = *node->cdata;
          bool const debug = false;
-            
-         FactorSymIndef
-            <T, INNER_BLOCK_SIZE, CopyBackup<T, PoolAlloc>, debug, PoolAlloc>
+         
+         FactorIndefAPP
+            // <T, INNER_BLOCK_SIZE, CopyBackup<T, PoolAlloc>, debug, PoolAlloc>
+            <ValueType, INNER_BLOCK_SIZE, decltype(cdata), debug, FactorAlloc, PoolAlloc>
             ::permute_failed (
                   node->nrow(), n, node->perm, node->lcol, node->ldl(),
                   node->nelim(),
@@ -848,11 +855,11 @@ namespace starpu {
    // StarPU codelet
    extern struct starpu_codelet cl_permute_failed;
 
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void insert_permute_failed(
          starpu_data_handle_t *col_hdls, int nhdl,
-         NumericFront<T, PoolAlloc> *node,
-         PoolAlloc *pool_alloc
+         NumericFrontType *node,
+         typename NumericFrontType::PoolAlloc *pool_alloc
          ) {
          
       int ret;
@@ -869,8 +876,8 @@ namespace starpu {
       ret = starpu_insert_task(
             &cl_permute_failed,
             STARPU_DATA_MODE_ARRAY, descrs, nh,
-            STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
-            STARPU_VALUE, &pool_alloc, sizeof(PoolAlloc*),
+            STARPU_VALUE, &node, sizeof(NumericFrontType*),
+            STARPU_VALUE, &pool_alloc, sizeof(typename NumericFrontType::PoolAlloc*),
             0);
       STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");
 
@@ -882,10 +889,10 @@ namespace starpu {
    // form_contrib StarPU task
 
    // CPU kernel
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void form_contrib_cpu_func(void *buffers[], void *cl_arg) {
 
-      NumericFront<T, PoolAlloc> *node = nullptr;
+      NumericFrontType *node = nullptr;
       // spral::ssids::cpu::Workspace *work = nullptr;
       std::vector<spral::ssids::cpu::Workspace> *workspaces = nullptr;
       int nelim_from;
@@ -903,10 +910,10 @@ namespace starpu {
    // SarPU codelet
    extern struct starpu_codelet cl_form_contrib;
 
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void insert_form_contrib(
          starpu_data_handle_t *hdls, int nhdl,
-         NumericFront<T, PoolAlloc> *node,
+         NumericFrontType *node,
          std::vector<spral::ssids::cpu::Workspace> *workspaces, 
          int nelim_from, int nelim_to) {
 
@@ -923,7 +930,7 @@ namespace starpu {
       ret = starpu_insert_task(
             &cl_form_contrib,
             STARPU_DATA_MODE_ARRAY, descrs, nh,
-            STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
+            STARPU_VALUE, &node, sizeof(NumericFrontType*),
             STARPU_VALUE, &workspaces, sizeof(std::vector<spral::ssids::cpu::Workspace>*),
             STARPU_VALUE, &nelim_from, sizeof(int),
             STARPU_VALUE, &nelim_to, sizeof(int),
@@ -937,12 +944,12 @@ namespace starpu {
    // zero_contrib_blocks
 
    // CPU kernel      
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void zero_contrib_blocks_cpu_func(void *buffers[], void *cl_arg) {
 
       printf("[zero_contrib_blocks_cpu_func]\n");
          
-      NumericFront<T, PoolAlloc> *node = nullptr;
+      NumericFrontType *node = nullptr;
 
       starpu_codelet_unpack_args(
             cl_arg, &node);
@@ -954,10 +961,10 @@ namespace starpu {
    // SarPU codelet
    extern struct starpu_codelet cl_zero_contrib_blocks;
 
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void insert_zero_contrib_blocks(
          starpu_data_handle_t *hdls, int nhdl,
-         NumericFront<T, PoolAlloc> *node) {
+         NumericFrontType *node) {
 
       int ret;
       struct starpu_data_descr *descrs = new starpu_data_descr[nhdl];
@@ -972,7 +979,7 @@ namespace starpu {
       ret = starpu_insert_task(
             &cl_zero_contrib_blocks,
             STARPU_DATA_MODE_ARRAY, descrs, nh,
-            STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
+            STARPU_VALUE, &node, sizeof(NumericFrontType*),
             0);
          
       delete[] descrs;
@@ -1057,10 +1064,10 @@ namespace starpu {
    // assemble_delays_subtree
       
    // CPU kernel      
-   template <typename T, typename PoolAlloc>      
+   template <typename NumericFrontType>
    void assemble_delays_subtree_cpu_func(void *buffers[], void *cl_arg) {
 
-      NumericFront<T, PoolAlloc> *node = nullptr;
+      NumericFrontType *node = nullptr;
       sylver::SymbolicFront *csnode = nullptr;
       void **child_contrib;
       int contrib_idx;
@@ -1078,11 +1085,11 @@ namespace starpu {
    // StarPU codelet
    extern struct starpu_codelet cl_assemble_delays_subtree;
 
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void insert_assemble_delays_subtree(
          starpu_data_handle_t *hdls, int nhdl,
          starpu_data_handle_t root_hdl,
-         NumericFront<T, PoolAlloc> *node,
+         NumericFrontType *node,
          sylver::SymbolicFront const* csnode,
          void **child_contrib, int contrib_idx,
          int delay_col) {
@@ -1112,7 +1119,7 @@ namespace starpu {
       ret = starpu_task_insert(
             &cl_assemble_delays_subtree,
             STARPU_DATA_MODE_ARRAY, descrs, nh,
-            STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
+            STARPU_VALUE, &node, sizeof(NumericFrontType*),
             STARPU_VALUE, &csnode, sizeof(sylver::SymbolicFront*),
             STARPU_VALUE, &child_contrib, sizeof(void**),
             STARPU_VALUE, &contrib_idx, sizeof(int),
@@ -1126,11 +1133,11 @@ namespace starpu {
    // assemble_delays
       
    // CPU kernel      
-   template <typename T, typename PoolAlloc>      
+   template <typename NumericFrontType>      
    void assemble_delays_cpu_func(void *buffers[], void *cl_arg) {
 
-      NumericFront<T, PoolAlloc> *node = nullptr;
-      NumericFront<T, PoolAlloc> *cnode = nullptr;
+      NumericFrontType *node = nullptr;
+      NumericFrontType *cnode = nullptr;
       int delay_col;
 
       starpu_codelet_unpack_args(
@@ -1142,13 +1149,13 @@ namespace starpu {
    // StarPU kernel
    extern struct starpu_codelet cl_assemble_delays;
 
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void insert_assemble_delays(
          starpu_data_handle_t *chdls, int nchdl,
          starpu_data_handle_t *hdls, int nhdl,
-         NumericFront<T, PoolAlloc> *cnode,
+         NumericFrontType *cnode,
          int delay_col,
-         NumericFront<T, PoolAlloc> *node) {
+         NumericFrontType *node) {
 
       assert(nchdl > 0);
       assert(nhdl > 0);
@@ -1175,9 +1182,9 @@ namespace starpu {
 
       ret = starpu_insert_task(
             &cl_assemble_delays,
-            STARPU_VALUE, &cnode, sizeof(NumericFront<T, PoolAlloc>*),
+            STARPU_VALUE, &cnode, sizeof(NumericFrontType*),
             STARPU_VALUE, &delay_col, sizeof(int),
-            STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
+            STARPU_VALUE, &node, sizeof(NumericFrontType*),
             STARPU_DATA_MODE_ARRAY, descrs, nh,               
             0);
       STARPU_CHECK_RETURN_VALUE(ret, "starpu_task_insert");

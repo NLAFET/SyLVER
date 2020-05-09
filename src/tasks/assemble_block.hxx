@@ -9,9 +9,9 @@ namespace spldlt {
    ////////////////////////////////////////////////////////////
    // assemble_subtree_block_task
 
-   template <typename T, typename PoolAlloc>   
+   template <typename NumericFrontType>   
    void assemble_subtree_block_task(
-         NumericFront<T,PoolAlloc>& front, // Destination node 
+         NumericFrontType& front, // Destination node 
          sylver::SymbolicFront const& csfront, // Root of the subtree
          int ii, int jj,
          void** child_contrib, 
@@ -99,9 +99,9 @@ namespace spldlt {
 
    // Assemble coefficient in contrib block `(ii, jj)` into parent
    // nodes
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void assemble_contrib_subtree_block_task(
-         NumericFront<T,PoolAlloc>& node, // Destination node
+         NumericFrontType& node, // Destination node
          sylver::SymbolicFront const& csnode, // Root of the subtree
          int ii, int jj,
          void** child_contrib, 
@@ -191,10 +191,10 @@ namespace spldlt {
    //
    // @param ii Row index of block in cnode
    // @param jj Column index of block in cnode
-   template <typename T, typename PoolAlloc>   
+   template <typename NumericFrontType>   
    void assemble_block_task(
-         NumericFront<T,PoolAlloc>& node, 
-         NumericFront<T,PoolAlloc>& cnode, 
+         NumericFrontType& node, 
+         NumericFrontType& cnode, 
          int ii, int jj, int *cmap, int prio) {
 
 #if defined(SPLDLT_USE_STARPU)
@@ -270,7 +270,7 @@ namespace spldlt {
       if (nh > 0) {
          
          // Contrib block to be assembled into current node
-         sylver::Tile<T, PoolAlloc>& cb = cnode.contrib_block(ii, jj);
+         auto& cb = cnode.contrib_block(ii, jj);
 
          spldlt::starpu::insert_assemble_block(
                &node, &cnode, ii, jj, cmap,
@@ -296,10 +296,10 @@ namespace spldlt {
    ///
    /// @param ii Row index in front cnode
    /// @param jj Column index in front cnode
-   template <typename T, typename PoolAlloc>   
+   template <typename NumericFrontType>   
    void assemble_contrib_block_task(
-         NumericFront<T,PoolAlloc>& node, 
-         NumericFront<T,PoolAlloc>& cnode, 
+         NumericFrontType& node, 
+         NumericFrontType& cnode, 
          int ii, int jj, int *cmap,
          std::vector<spral::ssids::cpu::Workspace>& workspaces,
          int prio) {

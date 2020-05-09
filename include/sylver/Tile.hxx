@@ -63,10 +63,13 @@ namespace sylver {
       }
 
       // Unregister handle on block asynchronously
-      template<bool async=true>
-      void unregister_handle() {
-         if(async) starpu_data_unregister_submit(hdl);
-         else      starpu_data_unregister(hdl);
+      void unregister_handle(bool async=true) {
+         if(async) {
+            starpu_data_unregister_submit(hdl);
+         }
+         else {
+            starpu_data_unregister(hdl);
+         }
          // starpu_data_unregister_submit(hdl);      
       }
 #endif

@@ -15,9 +15,9 @@ namespace spldlt {
    ////////////////////////////////////////////////////////////////////////////////   
    // fini_cnodes
 
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void fini_cnodes(
-         NumericFront<T,PoolAlloc>& node,
+         NumericFrontType& node,
          bool posdef) {
 
       // Deactivate children fronts
@@ -45,9 +45,9 @@ namespace spldlt {
    //
    // Assemble contributions from children node and subtrees into the
    // contribution blocks of node
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void assemble_contrib(
-         NumericFront<T,PoolAlloc>& node,
+         NumericFrontType& node,
          void** child_contrib,
          std::vector<spral::ssids::cpu::Workspace>& workspaces
          ) {
@@ -148,10 +148,10 @@ namespace spldlt {
    ///////////////////////////////////////////////////////////   
    // @brief Assemble contributions from children node and subtrees
    // into the fully-summed columns
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType, typename PoolAlloc>
    void assemble(
          int n,
-         NumericFront<T,PoolAlloc>& node,
+         NumericFrontType& node,
          void** child_contrib,
          PoolAlloc const& pool_alloc
          ) {

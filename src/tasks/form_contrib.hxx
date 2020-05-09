@@ -21,9 +21,9 @@
 namespace sylver {
 namespace spldlt {
 
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void form_contrib_task(
-         NumericFront<T, PoolAlloc>& node,
+         NumericFrontType& node,
          // spral::ssids::cpu::Workspace& work,
          std::vector<spral::ssids::cpu::Workspace>& workspaces, 
          int nelim_from, // First column in factors
@@ -77,9 +77,9 @@ namespace spldlt {
 #endif
    }
 
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void zero_contrib_blocks_task(
-         NumericFront<T, PoolAlloc>& node) {
+         NumericFrontType& node) {
 
 #if defined(SPLDLT_USE_STARPU)
 

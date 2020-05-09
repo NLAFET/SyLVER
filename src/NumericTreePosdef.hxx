@@ -30,7 +30,8 @@ namespace spldlt {
       typename FactorAllocator // Allocator for factor entries
       >
    class NumericTreePosdef {
-      typedef ::sylver::BuddyAllocator<T,std::allocator<T>> PoolAllocator;
+      using PoolAllocator = ::sylver::BuddyAllocator<T,std::allocator<T>>;
+      using NumericFrontType = NumericFront<T, FactorAllocator, PoolAllocator>;
    public:
       // Delete copy constructors for safety re allocated memory
       NumericTreePosdef(const NumericTreePosdef&) =delete;
@@ -57,7 +58,7 @@ namespace spldlt {
          // numeric ones. Copy tree structure.
          fronts_.reserve(symbolic_tree.nnodes()+1);
          for(int ni=0; ni<symb_.nnodes()+1; ++ni) {
-            fronts_.emplace_back(symbolic_tree[ni], pool_alloc_, blksz);
+            fronts_.emplace_back(symbolic_tree[ni], factor_alloc_, pool_alloc_, blksz);
             auto* fc = symbolic_tree[ni].first_child;
             fronts_[ni].first_child = fc ? &fronts_[fc->idx] : nullptr;
             auto* nc = symbolic_tree[ni].next_child;
@@ -197,7 +198,7 @@ namespace spldlt {
          // Loop over node in the assemnly tree
          for(int ni = 0; ni < symb_.nnodes(); ++ni) {
             
-            sylver::spldlt::NumericFront<T,PoolAllocator>& front = fronts_[ni];
+            NumericFrontType& front = fronts_[ni];
             sylver::SymbolicFront& sfront = symb_[ni];
             
             // Skip iteration if node is in a subtree
@@ -334,7 +335,7 @@ namespace spldlt {
          } // Loop over nodes in the assemnly tree
 
          // Finish root node
-         sylver::spldlt::NumericFront<T, PoolAllocator>& front = fronts_[symb_.nnodes()];
+         NumericFrontType& front = fronts_[symb_.nnodes()];
          for (auto* child=front.first_child; child!=NULL; child=child->next_child) {
             sylver::SymbolicFront const& child_sfront = symb_[child->symb().idx];
             if (!child_sfront.is_in_subtree()) {
@@ -450,7 +451,7 @@ namespace spldlt {
    private:
       void* fkeep_;
       sylver::SymbolicTree& symb_;
-      std::vector<sylver::spldlt::NumericFront<T,PoolAllocator>> fronts_;
+      std::vector<NumericFrontType> fronts_;
       FactorAllocator factor_alloc_; // Allocator specific to
       // permanent memory
       PoolAllocator pool_alloc_; // Allocator specific to temporay

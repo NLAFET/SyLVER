@@ -58,10 +58,10 @@ namespace gpu {
             d_upd, d_ldupd);
    }
 
-   template <typename T, typename IntAlloc, typename PoolAlloc>
+   template <typename T, typename NumericFrontType>
    void update_contrib_block_app(
          const cudaStream_t stream, const cublasHandle_t handle,
-         NumericFront<T, PoolAlloc>& node,
+         NumericFrontType& node,
          int k, int i, int j,
          T *d_lik, int ld_lik,
          T *d_ljk, int ld_ljk,
@@ -77,7 +77,7 @@ namespace gpu {
       int ljk_first_row = std::max(0, ncol-j*blksz);
       int lik_first_row = std::max(0, ncol-i*blksz);
 
-      sylver::ColumnData<T, IntAlloc> *cdata = node.cdata;
+      auto *cdata = node.cdata;
       int cnelim = (*cdata)[k].nelim;
       if (cnelim <= 0) return; // No factors to update in current block-column
       bool first_elim = (*cdata)[k].first_elim;

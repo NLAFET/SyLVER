@@ -16,7 +16,7 @@ int main(int argc, char** argv) {
 
    printf("[update_block_gpu_test]\n");
 
-   spldlt::SpldltOpts opts;
+   sylver::tests::Options opts;
    opts.parse_opts(argc, argv);
    
    printf("[update_block_gpu] Matrix %d x %d x %d\n", opts.m, opts.n, opts.k);

@@ -129,11 +129,11 @@ namespace spldlt {
 
    /// @brief Calculate the number of pivots passed in the LDLT
    /// factorization with APTP pivoting
-   template<typename T, typename IntAlloc>
+   template<typename ColumnDataType>
    void adjust_app(
          int blk,
          int& next_elim,
-         sylver::ColumnData<T,IntAlloc>& cdata) {
+         ColumnDataType& cdata) {
 
       // Adjust column once all applys have finished and we know final
       // number of passed columns.
@@ -143,12 +143,12 @@ namespace spldlt {
 
    /// @brief Restore failed clomuns in the LDLT factorization with
    /// APP
-   template<typename BlockSpec, typename T, typename IntAlloc, typename Backup>
+   template<typename BlockType, typename T, typename IntAlloc, typename Backup>
    void restore_failed_block_app(
          int elim_col,
-         BlockSpec& isrc,
-         BlockSpec& jsrc,
-         BlockSpec& ublk,
+         BlockType& isrc,
+         BlockType& jsrc,
+         BlockType& ublk,
          sylver::ColumnData<T,IntAlloc>& cdata,
          Backup& backup, spral::ssids::cpu::Workspace& work) {
 
@@ -182,9 +182,9 @@ namespace spldlt {
    
    /// @brief Update block in the trailing submatrix in the LDLT
    /// factorization with APP
-   template<typename BlockSpec, typename T, typename IntAlloc, typename Backup>
+   template<typename BlockType, typename T, typename IntAlloc, typename Backup>
    void updateN_block_app(
-         BlockSpec& isrc, BlockSpec& jsrc, BlockSpec& ublk,
+         BlockType& isrc, BlockType& jsrc, BlockType& ublk,
          sylver::ColumnData<T,IntAlloc>& cdata,
          Backup& backup,
          T const beta, T* upd, int const ldupd,
@@ -198,9 +198,9 @@ namespace spldlt {
    
    /// @brief Performs update of contribution block in the LDLT with
    /// APP factorization
-   template <typename T, typename IntAlloc, typename PoolAlloc>
+   template <typename T, typename NumericFrontType>
    void update_contrib_block_app(
-         NumericFront<T, PoolAlloc>& node,
+         NumericFrontType& node,
          int k, int i, int j,
          const T *lik, int ld_lik,
          const T *ljk, int ld_ljk,
@@ -221,7 +221,7 @@ namespace spldlt {
       int lik_first_row = std::max(0, ncol-i*blksz);
       // printf("[udpate_contrib_block_app_cpu_func] lik_first_row = %d, ljk_first_row = %d\n", lik_first_row, ljk_first_row);
 
-      sylver::ColumnData<T, IntAlloc> *cdata = node.cdata;
+      auto* cdata = node.cdata;
       int cnelim = (*cdata)[k].nelim;
       bool first_elim = (*cdata)[k].first_elim;
       T *dk = (*cdata)[k].d;
@@ -247,14 +247,16 @@ namespace spldlt {
 
    /// @brief Form cotribution blocks using the the columns nelim_from
    /// to nelim_to in the factors
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void form_contrib_notask(
-         NumericFront<T, PoolAlloc>& node,
+         NumericFrontType& node,
          spral::ssids::cpu::Workspace& work,
          int nelim_from, // First column in factors
          int nelim_to // Last column in factors
          ) {
 
+      using ValueType = typename NumericFrontType::ValueType;
+      
       assert(nelim_to >= nelim_from);
       assert(nelim_from >= 0);
       // node.zero_contrib_blocks();
@@ -265,8 +267,8 @@ namespace spldlt {
       assert(nelim_to < n);
       
       size_t ldl = node.ldl();
-      T *lcol = node.lcol;
-      T *d = &lcol[n*ldl];
+      ValueType *lcol = node.lcol;
+      ValueType *d = &lcol[n*ldl];
       int blksz = node.blksz();
 
       int fc = nelim_from/blksz; // First block-column
@@ -288,7 +290,7 @@ namespace spldlt {
       //int nelim_col = 0;
       int nelim_col = last_col-first_col+1;
       // if (k==fc) nelim_col = nelim_col+1; // debug
-      T *dk = &d[2*first_col];
+      ValueType *dk = &d[2*first_col];
       // printf("[form_contrib] first_col = %d, last_col = %d, nelim_from = %d, nelim_to = %d, nelim_col = %d\n",
       // first_col, last_col, nelim_from, nelim_to, nelim_col);
       // printf("[form_contrib] k = %d, first_col = %d, last_col = %d, nelim_from = %d, nelim_to = %d, nelim_col = %d\n",
@@ -300,19 +302,19 @@ namespace spldlt {
       for (int j = rsa; j < nr; ++j) {
 
          int ljk_first_row = std::max(j*blksz, n);
-         T *ljk = &lcol[first_col*ldl+ljk_first_row];
+         ValueType *ljk = &lcol[first_col*ldl+ljk_first_row];
          //T *ljk = &lcol[k*blksz*ldl+j*blksz];
 
          for (int i = j; i < nr; ++i) {
                            
             int lik_first_row = std::max(i*blksz, n);
-            T *lik = &lcol[first_col*ldl+lik_first_row];
+            ValueType *lik = &lcol[first_col*ldl+lik_first_row];
 
             // Tile<T, PoolAlloc>& upd = node.contrib_blocks[(j-rsa)*ncontrib+(i-rsa)];
-            sylver::Tile<T, PoolAlloc>& upd = node.contrib_block(i, j);
+            auto& upd = node.contrib_block(i, j);
                            
-            int ldld = spral::ssids::cpu::align_lda<T>(blksz);
-            T *ld = work.get_ptr<T>(blksz*ldld);
+            int ldld = spral::ssids::cpu::align_lda<ValueType>(blksz);
+            ValueType *ld = work.get_ptr<ValueType>(blksz*ldld);
             // T *ld = new T[blksz*ldld];
 
             // printf("[form_contrib] updm = %d, updn = %d\n", upd.m, upd.n);

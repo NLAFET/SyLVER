@@ -20,9 +20,9 @@ namespace splu {
 
    ////////////////////////////////////////////////////////////
    // Sparse LU factorization tasks
-   template <typename T, typename PoolAlloc, typename FactorAlloc>
+   template <typename NumericFrontType, typename FactorAlloc>
    void activate_init_front_unsym_task(
-         sylver::splu::NumericFrontUnsym<T, PoolAlloc> &front, 
+         NumericFrontType& front, 
          FactorAlloc& factor_alloc, 
          bool diagdom) {
       

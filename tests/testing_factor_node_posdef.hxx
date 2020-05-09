@@ -8,7 +8,7 @@
 #include "factor.hxx"
 #include "kernels/llt.hxx"
 #if defined(SPLDLT_USE_STARPU)
-#include "StarPU/codelets.hxx"
+#include "StarPU/codelets_posdef.hxx"
 #include "StarPU/common.hxx"
 #include "StarPU/scheduler.h"
 #include "StarPU/kernels.hxx"
@@ -31,13 +31,34 @@ namespace spldlt {
 namespace tests {
 
    template<typename T>
-   int factor_node_posdef_test(int m, int n, int blksz, int ncpu, int ngpu, bool check, bool usetc) {
+   int factor_node_posdef_test(sylver::tests::Options test_options) {
 
       std::string context = "factor_node_posdef_test";
       bool failed = false;
       int ret;
 
-      printf("[factor_node_posdef_test] m = %d, n =  %d, blksz = %d\n", m, n, blksz);
+      // Number of rows
+      int const m = test_options.m;
+      // Number of columns
+      int const n = test_options.n;
+      // Block dimensions
+      int const blksz = test_options.nb;
+
+      // Use Tensor Cores
+      bool const usetc = test_options.usetc;
+
+      // Check residual
+      bool const check = test_options.check;
+
+      // Number of CPUs
+      int const ncpu = test_options.ncpu;
+      // Number of GPUs 
+      int const ngpu = test_options.ngpu;
+      
+      std::cout << "[" << context << "]" << " m = " << m << " n = " << n << std::endl;
+      std::cout << "[" << context << "]" << " nb = " << blksz << std::endl;
+      std::cout << "[" << context << "]" << " Number of CPUs = " << ncpu << std::endl;
+      std::cout << "[" << context << "]" << " Number of GPUs = " << ngpu << std::endl;
       std::cout << "[" << context << "]" << " usetc = " << usetc << std::endl;
 
       ////////////////////////////////////////
@@ -47,7 +68,7 @@ namespace tests {
       int lda = spral::ssids::cpu::align_lda<T>(m);
       T* a = nullptr;
       T* b = nullptr;
-      if (check) {
+      if (test_options.check) {
          a = new T[m*lda];
          sylver::tests::gen_posdef(m, a, lda);
          // Generate a RHS based on x=1, b=Ax
@@ -73,11 +94,15 @@ namespace tests {
       sylver::SymbolicFront sfront;
       sfront.nrow = m;
       sfront.ncol = n;
-      sylver::spldlt::NumericFront<T, PoolAllocator> front(sfront, pool_alloc, blksz);
 
       // Setup allocator for factors
       using FactorAllocator = spral::test::AlignedAllocator<T>;
       FactorAllocator allocT;
+
+      // Numeric front type
+      using NumericFrontType = sylver::spldlt::NumericFront<T, FactorAllocator, PoolAllocator>;
+      NumericFrontType front(sfront, allocT, pool_alloc, blksz);
+
       // Allocate factors
       size_t len = lda*m;
       // if (debug) printf("m = %d, n = %d, lda = %d, len = %zu\n", m, n, lda, len);
@@ -91,11 +116,11 @@ namespace tests {
       printf("[factor_node_posdef_test] memory alloc factor (s) = %e\n", 1e-9*t_alloc);
 
       if (check) {
-         // Copy a into l
+         // Copy A into L
          memcpy(front.lcol, a, lda*n*sizeof(T));
       }
       else {
-         ASSERT_TRUE(m == n); // FIXME: does not work for non square fronts
+         assert(m == n); // FIXME: does not work for non square fronts
          sylver::tests::gen_posdef(m, front.lcol, lda);
       }
 

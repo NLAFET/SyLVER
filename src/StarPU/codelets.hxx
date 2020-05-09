@@ -13,12 +13,14 @@ namespace sylver {
 namespace spldlt {
 namespace starpu {
 
-   template <typename T, int iblksz, typename Backup, typename Allocator>
+   template <typename T, int iblksz, typename Backup, typename FactorAlloc, typename PoolAlloc>
    void codelet_init_indef() {
-         
+
+      using NumericFrontType = NumericFront<T, FactorAlloc, PoolAlloc>;
+
       // printf("[codelet_init_indef]\n");
 
-      typedef typename std::allocator_traits<Allocator>::template rebind_alloc<int> IntAlloc;
+      typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
       
       ////////////////////////////////////////////////////////////
       // factor_block_app StarPU codelet
@@ -28,7 +30,7 @@ namespace starpu {
       cl_factor_block_app.nbuffers = STARPU_VARIABLE_NBUFFERS;
       cl_factor_block_app.name = "FactorBlockAPP";
       cl_factor_block_app.cpu_funcs[0] = 
-         factor_block_app_cpu_func<T, Backup, IntAlloc, Allocator>;
+         factor_block_app_cpu_func<T, Backup, IntAlloc, PoolAlloc>;
 
       // printf("[codelet_init_indef] %s\n", cl_factor_block_app.name);
 
@@ -97,8 +99,8 @@ namespace starpu {
       starpu_perfmodel_init(&update_contrib_block_app_perfmodel);
       update_contrib_block_app_perfmodel.type = STARPU_HISTORY_BASED;
       update_contrib_block_app_perfmodel.symbol = "UpdateContribBlockAPPModel";
-      update_contrib_block_app_perfmodel.size_base = update_contrib_block_app_size_base<T, IntAlloc, Allocator>;
-      update_contrib_block_app_perfmodel.footprint = update_contrib_block_app_footprint<T, IntAlloc, Allocator>;
+      update_contrib_block_app_perfmodel.size_base = update_contrib_block_app_size_base<T, IntAlloc, PoolAlloc>;
+      update_contrib_block_app_perfmodel.footprint = update_contrib_block_app_footprint<T, IntAlloc, PoolAlloc>;
 
 #endif
 
@@ -117,11 +119,10 @@ namespace starpu {
       cl_update_contrib_block_app.name = "UpdateContribBlockAPP";
 #if defined(SPLDLT_USE_GPU)
       cl_update_contrib_block_app.cuda_funcs[0] =
-         sylver::spldlt::starpu::update_contrib_block_app_cuda_func
-         <T, IntAlloc, Allocator>;
+         sylver::spldlt::starpu::update_contrib_block_app_cuda_func<NumericFrontType>;
       cl_update_contrib_block_app.cuda_flags[0] = STARPU_CUDA_ASYNC;
 #endif
-      cl_update_contrib_block_app.cpu_funcs[0]  = update_contrib_block_app_cpu_func<T, IntAlloc, Allocator>;
+      cl_update_contrib_block_app.cpu_funcs[0]  = update_contrib_block_app_cpu_func<NumericFrontType>;
 #if defined(SPLDLT_USE_PROFILING)
       cl_update_contrib_block_app.model = &update_contrib_block_app_perfmodel;
 #endif
@@ -134,8 +135,7 @@ namespace starpu {
       cl_permute_failed.where = STARPU_CPU;
       cl_permute_failed.nbuffers = STARPU_VARIABLE_NBUFFERS;
       cl_permute_failed.name = "PermuteFailed";
-      cl_permute_failed.cpu_funcs[0] =
-         permute_failed_cpu_func<T, IntAlloc, Allocator>;
+      cl_permute_failed.cpu_funcs[0] = permute_failed_cpu_func<NumericFrontType>;
 
       ////////////////////////////////////////////////////////////
       // form_contrib StarPU codelet
@@ -145,7 +145,7 @@ namespace starpu {
       cl_form_contrib.where = STARPU_CPU;
       cl_form_contrib.nbuffers = STARPU_VARIABLE_NBUFFERS;
       cl_form_contrib.name = "FormContrib";
-      cl_form_contrib.cpu_funcs[0] = form_contrib_cpu_func<T, Allocator>;
+      cl_form_contrib.cpu_funcs[0] = form_contrib_cpu_func<NumericFrontType>;
 
       ////////////////////////////////////////////////////////////
       // zero_contrib_blocks StarPU codelet
@@ -154,7 +154,7 @@ namespace starpu {
       cl_zero_contrib_blocks.where = STARPU_CPU;
       cl_zero_contrib_blocks.nbuffers = STARPU_VARIABLE_NBUFFERS;
       cl_zero_contrib_blocks.name = "ZeroContrib";
-      cl_zero_contrib_blocks.cpu_funcs[0] = zero_contrib_blocks_cpu_func<T, Allocator>;
+      cl_zero_contrib_blocks.cpu_funcs[0] = zero_contrib_blocks_cpu_func<NumericFrontType>;
          
       // // Initialize factor_sync StarPU codelet
       // starpu_codelet_init(&cl_factor_sync);
@@ -164,7 +164,7 @@ namespace starpu {
       // cl_factor_sync.modes[0] = STARPU_RW;
       // // cl_factor_sync.modes[0] = STARPU_R;
       // cl_factor_sync.name = "FACTOR_SYNC";
-      // cl_factor_sync.cpu_funcs[0] = factor_sync_cpu_func<T, Allocator>;
+      // cl_factor_sync.cpu_funcs[0] = factor_sync_cpu_func<T, PoolAlloc>;
 
       ////////////////////////////////////////////////////////////
       // assemble_contrib_sync StarPU codelet
@@ -176,7 +176,7 @@ namespace starpu {
       cl_assemble_contrib_sync.modes[0] = STARPU_RW;
       // cl_assemble_contrib_sync.modes[0] = STARPU_R;
       cl_assemble_contrib_sync.name = "AssembleContribSync";
-      // cl_assemble_contrib_sync.cpu_funcs[0] = assemble_contrib_sync_cpu_func<T, Allocator>;
+      // cl_assemble_contrib_sync.cpu_funcs[0] = assemble_contrib_sync_cpu_func<T, PoolAlloc>;
       cl_assemble_contrib_sync.cpu_funcs[0] = assemble_contrib_sync_cpu_func;
 
       ////////////////////////////////////////////////////////////
@@ -190,7 +190,7 @@ namespace starpu {
       cl_nelim_sync.modes[0] = STARPU_RW;
       // cl_nelim_sync.modes[0] = STARPU_R;
       cl_nelim_sync.name = "NelimSync";
-      // cl_nelim_sync.cpu_funcs[0] = nelim_sync_cpu_func<T, Allocator>;
+      // cl_nelim_sync.cpu_funcs[0] = nelim_sync_cpu_func<T, PoolAlloc>;
       cl_nelim_sync.cpu_funcs[0] = nelim_sync_cpu_func;
 
       ////////////////////////////////////////////////////////////
@@ -209,7 +209,7 @@ namespace starpu {
       cl_assemble_delays.where = STARPU_CPU;
       cl_assemble_delays.nbuffers = STARPU_VARIABLE_NBUFFERS;
       cl_assemble_delays.name = "AssembleDelays";
-      cl_assemble_delays.cpu_funcs[0] = assemble_delays_cpu_func<T, Allocator>;
+      cl_assemble_delays.cpu_funcs[0] = assemble_delays_cpu_func<NumericFrontType>;
 
       ////////////////////////////////////////////////////////////
       // assemble_delays_subtree StarPU codelet
@@ -218,7 +218,7 @@ namespace starpu {
       cl_assemble_delays_subtree.nbuffers = STARPU_VARIABLE_NBUFFERS;
       cl_assemble_delays_subtree.name = "AssembleDelaysSubtree";
       cl_assemble_delays_subtree.cpu_funcs[0] =
-         assemble_delays_subtree_cpu_func<T, Allocator>;
+         assemble_delays_subtree_cpu_func<NumericFrontType>;
    }
 
    
@@ -230,13 +230,15 @@ namespace starpu {
              typename FactorAlloc,
              typename PoolAlloc>
    void codelets_init(bool posdef) {
-         
+
+      using NumericFrontType = NumericFront<T, FactorAlloc, PoolAlloc>;
+
       sylver::spldlt::starpu::codelets_init_posdef<T, FactorAlloc, PoolAlloc>();
 
       if (!posdef) {
-         codelet_init_indef<T, iblksz, Backup, PoolAlloc>();            
-         codelet_init_factor_indef<T, PoolAlloc>();
-         sylver::spldlt::starpu::codelet_init_factor_failed<T, PoolAlloc>();
+         codelet_init_indef<T, iblksz, Backup, FactorAlloc, PoolAlloc>();
+         codelet_init_factor_indef<NumericFrontType, PoolAlloc>();
+         sylver::spldlt::starpu::codelet_init_factor_failed<NumericFrontType>();
       }
 
    }

@@ -50,9 +50,9 @@ set(tasks_sources
   tasks/unsym.hxx)
   
 set(kernel_sources
-  kernels/assemble.cxx
   kernels/assemble.hxx
   kernels/assemble_unsym.hxx
+  kernels/contrib.cxx
   kernels/factor.cxx
   kernels/factor.hxx
   kernels/factor_indef.hxx

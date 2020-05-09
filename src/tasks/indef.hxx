@@ -27,17 +27,15 @@ namespace spldlt {
 
    ////////////////////////////////////////////////////////////
 
-   template <typename T, typename PoolAlloc, typename BlockSpec>
+   template <typename BlockType, typename ContribBlockType, typename NumericFrontType>
    void update_contrib_block_app_task(
-         BlockSpec& isrc, BlockSpec& jsrc,
-         sylver::Tile<T, PoolAlloc>& upd,
-         NumericFront<T, PoolAlloc>& node,
+         BlockType& isrc, BlockType& jsrc,
+         ContribBlockType& upd,
+         NumericFrontType& node,
          int blk, int iblk, int jblk,
          std::vector<spral::ssids::cpu::Workspace>& workspaces,
          int blksz, int prio
          ) {
-
-      typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
       
 #if defined(SPLDLT_USE_STARPU)
 
@@ -46,7 +44,7 @@ namespace spldlt {
       // int nr = node.get_nr(); // number of block rows
       // int ncontrib = nr-rsa;
 
-      sylver::ColumnData<T, IntAlloc> &cdata = *node.cdata;
+      auto& cdata = *node.cdata;
       int const nblk = node.nc(); // number of block columns in factors      
       
       spldlt::starpu::insert_update_contrib_block_app(
@@ -63,7 +61,7 @@ namespace spldlt {
 
       spral::ssids::cpu::Workspace& work = workspaces[0];
       
-      update_contrib_block_app<T, IntAlloc, PoolAlloc>(
+      update_contrib_block_app(
             node, blk, iblk, jblk,
             isrc.get_a(), isrc.get_lda(),
             jsrc.get_a(), jsrc.get_lda(),
@@ -78,9 +76,9 @@ namespace spldlt {
 
    /// @brief Submit task for assembling delays from one subtree to
    /// its parent.
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void assemble_delays_subtree_task(
-         NumericFront<T,PoolAlloc>& node, // Destination node 
+         NumericFrontType& node, // Destination node 
          sylver::SymbolicFront const& csnode, // Root of the subtree
          void** child_contrib, 
          int contrib_idx, // Index of subtree to assemble
@@ -201,11 +199,11 @@ namespace spldlt {
 
    /// @brief Submit task for assembling delays from one node to its
    /// parent.
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void assemble_delays_task(
-         NumericFront<T,PoolAlloc>& cnode,
+         NumericFrontType& cnode,
          int delay_col,
-         NumericFront<T,PoolAlloc>& node) {
+         NumericFrontType& node) {
 
       if (cnode.ndelay_out() <= 0) return; // No task to submit if no delays
 

@@ -15,9 +15,9 @@ namespace spldlt {
    //
 
    /// @brief Perform the Cholesky factorization of a frontal matrix
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void factor_front_posdef(
-         NumericFront<T, PoolAlloc> &node,
+         NumericFrontType& node,
          sylver::options_t const& options,
          std::vector<sylver::inform_t>& worker_stats
          ) {
@@ -29,7 +29,7 @@ namespace spldlt {
       int const m = node.nrow(); // Number of rows in frontal matrix
       int const n = node.ncol(); // Number of columns in frontal matrix
       int const lda = node.ldl(); // Leading dimensions
-      T *lcol = node.lcol; // Pointer to L factor 
+      auto *lcol = node.lcol; // Pointer to L factor 
       int const ldcontrib = m-n; // Dimension of contrib block
       int const blksz = node.blksz(); // Block size
       int const nr = node.nr(); // Number of block rows

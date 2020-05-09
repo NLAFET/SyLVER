@@ -7,6 +7,7 @@
 // SyLVER
 #include "kernels/ldlt_app.hxx"
 #include "NumericFront.hxx"
+#include "sylver/kernels/contrib.hxx"
 #include "sylver/kernels/common.hxx"
 #include "sylver/kernels/ColumnData.hxx"
 #include "sylver/Tile.hxx"
@@ -28,16 +29,18 @@ namespace starpu {
    extern starpu_data_handle_t workspace_hdl;      
 
    // Register handles for a node in StarPU
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void register_node(
-         NumericFront<T, PoolAlloc> &front) {
-         
+         NumericFrontType& front) {
+
+      using ValueType = typename NumericFrontType::ValueType;
+
       sylver::SymbolicFront& sfront = front.symb();
       int blksz = front.blksz();
 
       int const m = front.nrow();
       int const n = front.ncol();
-      T *a = front.lcol;
+      ValueType *a = front.lcol;
       int const lda = front.ldl();
       int const nr = front.nr(); // number of block rows
       int const nc = front.nc(); // number of block columns
@@ -56,7 +59,7 @@ namespace starpu {
                   STARPU_MAIN_RAM, // memory 
                   reinterpret_cast<uintptr_t>(&a[(j*blksz)*lda+(i*blksz)]),
                   lda, blkm, blkn,
-                  sizeof(T));
+                  sizeof(ValueType));
 
             // Register StarPU handle for block (i,j)
             front.blocks[j*nr+i].register_handle(); 
@@ -86,25 +89,24 @@ namespace starpu {
    // register_node_indef
 
    /// @brief Register handles for a node in StarPU.
-   template <typename T, typename PoolAlloc>
-   void register_node_indef(NumericFront<T, PoolAlloc>& front) {
+   template <typename NumericFrontType>
+   void register_node_indef(NumericFrontType& front) {
 
       // Note: blocks are already registered when allocated
+      using ValueType = typename NumericFrontType::ValueType;
          
-      typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
-
       sylver::SymbolicFront& sfront = front.symb();
       int blksz = front.blksz();
       int m = front.nrow();
       int n = front.ncol();
-      T *a = front.lcol;
-      int lda = spral::ssids::cpu::align_lda<T>(m);
+      ValueType *a = front.lcol;
+      int lda = spral::ssids::cpu::align_lda<ValueType>(m);
       int nr = front.nr(); // number of block rows
       int nc = front.nc(); // number of block columns
-      sylver::ColumnData<T, IntAlloc>& cdata = *front.cdata;
+      auto& cdata = *front.cdata;
 
       // Block diagonal matrix 
-      T *d = &a[n*lda];
+      ValueType *d = &a[n*lda];
 
       // sfront.handles.reserve(nr*nc);
       sfront.handles.resize(nr*nc); // allocate handles
@@ -128,7 +130,7 @@ namespace starpu {
                   STARPU_MAIN_RAM, // memory 
                   reinterpret_cast<uintptr_t>(&a[(j*blksz)*lda+(i*blksz)]),
                   lda, blkm, blkn,
-                  sizeof(T));
+                  sizeof(ValueType));
 
             // Register StarPU handle for block (i,j)
             front.blocks[j*nr+i].register_handle(); 
@@ -189,15 +191,13 @@ namespace starpu {
    }
 
    /// @brief Unregister StarPU data handles associated with a node
-   template <typename T, typename PoolAlloc, bool async=true>
+   template <typename NumericFrontType>
    void unregister_node_indef(
-         NumericFront<T, PoolAlloc> &node
-         ) {
+         NumericFrontType &node,
+         bool async=true) {
 
       // printf("[unregister_node_indef] nodeidx = %d\n", node.symb.idx);
-         
-      typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> IntAlloc;
-
+        
       // Get node info
       sylver::SymbolicFront &snode = node.symb();
       int const blksz = node.blksz();
@@ -208,23 +208,27 @@ namespace starpu {
 
       assert(node.cdata); // Make sure cdata is allocated
 
-      sylver::ColumnData<T, IntAlloc>& cdata = *node.cdata;
+      auto& cdata = *node.cdata;
          
       // Unregister block handles in the factors
       for(int j = 0; j < nc; ++j) {
 
          // FIXME: only if PivotMethod is APP
-         cdata[j].template unregister_handle<async>();
+         cdata[j].unregister_handle(async);
 
-         cdata[j].template unregister_d_hdl<async>(); // Unregister handle on diagonal D
+         cdata[j].unregister_d_hdl(async); // Unregister handle on diagonal D
 
          for(int i = j; i < nr; ++i) {
                
-            if (async) starpu_data_unregister_submit(snode.handles[i + j*nr]);
-            else       starpu_data_unregister(snode.handles[i + j*nr]);
+            if (async) {
+               starpu_data_unregister_submit(snode.handles[i + j*nr]);
+            }
+            else {
+               starpu_data_unregister(snode.handles[i + j*nr]);
+            }
 
             // Unregister block (i,j)
-            node.blocks[j*nr+i].template unregister_handle<async>();
+            node.blocks[j*nr+i].unregister_handle(async);
          }
       }
 
@@ -242,7 +246,7 @@ namespace starpu {
 
                // Register block in StarPU
                // node.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib].template unregister_handle<async>();
-               node.contrib_block(i, j).template unregister_handle<async>();
+               node.contrib_block(i, j).unregister_handle(async);
             }
          }
 
@@ -250,10 +254,10 @@ namespace starpu {
    }
 
    /// @brief Unregister StarPU data handles associated with a node
-   template <typename T, typename PoolAlloc, bool async=true>
+   template <typename NumericFrontType>
    void unregister_node_posdef(
-         NumericFront<T, PoolAlloc> &node
-         ) {
+         NumericFrontType& node,
+         bool async=true) {
 
       // Get node info
       sylver::SymbolicFront &snode = node.symb();
@@ -268,11 +272,15 @@ namespace starpu {
          for(int i = j; i < nr; ++i) {
 
             // TODO remove snode.handles array
-            if (async) starpu_data_unregister_submit(snode.handles[i + j*nr]);
-            else       starpu_data_unregister(snode.handles[i + j*nr]);
-
+            if (async) {
+               starpu_data_unregister_submit(snode.handles[i + j*nr]);
+            }
+            else {
+               starpu_data_unregister(snode.handles[i + j*nr]);
+            }
+            
             // Unregister block (i,j)
-            node.blocks[j*nr+i].template unregister_handle<async>();
+            node.blocks[j*nr+i].unregister_handle(async);
          }
       }
          
@@ -290,7 +298,7 @@ namespace starpu {
 
                // Register block in StarPU
                // node.contrib_blocks[(i-rsa)+(j-rsa)*ncontrib].template unregister_handle<async>();
-               node.contrib_block(i, j).template unregister_handle<async>();
+               node.contrib_block(i, j).unregister_handle(async);
             }
          }
 
@@ -300,18 +308,6 @@ namespace starpu {
 } // End of namespace sylver::spldlt::starpu
 
 #endif
-
-   ////////////////////////////////////////////////////////////
-
-   // @brief Retrieve contrib data from subtree for assembly
-   // operations
-   // Note: See assemble.cxx for specialized routine
-   template <typename T>
-   void contrib_get_data(
-         const void *const contrib, int *const n,
-         const T* *const val, int *const ldval, const int* *const rlist,
-         int *const ndelay, const int* *const delay_perm,
-         const T* *const delay_val, int *const lddelay);
    
    ////////////////////////////////////////////////////////////
 
@@ -319,7 +315,7 @@ namespace starpu {
    template <typename T, typename FactorAlloc, typename PoolAlloc>
    void activate_front(
          bool posdef,
-         NumericFront<T, PoolAlloc> &front,
+         NumericFront<T, FactorAlloc, PoolAlloc>& front,
          void** child_contrib,
          FactorAlloc& factor_alloc) {
 
@@ -344,7 +340,7 @@ namespace starpu {
             typename FactorAlloc, 
             typename PoolAlloc>
    void alloc_front_posdef(
-         NumericFront<T,PoolAlloc>& front,
+         NumericFront<T, FactorAlloc, PoolAlloc>& front,
          FactorAlloc& factor_alloc) {
 
       std::string const context = "alloc_front_posdef";
@@ -396,7 +392,7 @@ namespace starpu {
             typename FactorAlloc, 
             typename PoolAlloc>
    void alloc_front_indef(
-         NumericFront<T,PoolAlloc>& front,
+         NumericFront<T, FactorAlloc, PoolAlloc>& front,
          void** child_contrib,
          FactorAlloc& factor_alloc) {
 
@@ -524,9 +520,10 @@ namespace starpu {
 
    ////////////////////////////////////////////////////////////////////////////////
    template <typename T,
+             typename FactorAlloc,
              typename PoolAlloc>
    void init_node(
-         NumericFront<T,PoolAlloc>& front,
+         NumericFront<T, FactorAlloc, PoolAlloc>& front,
          T const* aval, T const* scaling) {
 
       sylver::SymbolicFront const& sfront = front.symb();
@@ -541,8 +538,8 @@ namespace starpu {
    
    // Terminate node.
    // Deallocate contribution block
-   template <typename T, typename PoolAlloc>
-   void fini_node(NumericFront<T,PoolAlloc>& node) {
+   template <typename NumericFrontType>
+   void fini_node(NumericFrontType& node) {
 
       // Cleanup memory
       node.free_contrib_blocks();
@@ -553,9 +550,9 @@ namespace starpu {
    ////////////////////////////////////////////////////////////////////////////////   
    // Assemble block
 
-   template <typename T, typename PoolAlloc>
-   void assemble_block(NumericFront<T,PoolAlloc>& node, 
-                       NumericFront<T,PoolAlloc> const& cnode, 
+   template <typename T, typename FactorAlloc, typename PoolAlloc>
+   void assemble_block(NumericFront<T, FactorAlloc, PoolAlloc>& node, 
+                       NumericFront<T, FactorAlloc, PoolAlloc> const& cnode, 
                        int ii, int jj, int const* cmap) {
       
       sylver::SymbolicFront const& csnode = cnode.symb();
@@ -666,10 +663,10 @@ namespace starpu {
    ////////////////////////////////////////////////////////////////////////////////   
    // Assemble contrib block
    
-   template <typename T, typename PoolAlloc>
+   template <typename T, typename FactorAlloc, typename PoolAlloc>
    void assemble_contrib_block(
-         NumericFront<T,PoolAlloc>& node, 
-         NumericFront<T,PoolAlloc> const& cnode, 
+         NumericFront<T, FactorAlloc, PoolAlloc>& node, 
+         NumericFront<T, FactorAlloc, PoolAlloc> const& cnode, 
          int ii, int jj, int const* cmap) {
 
       // printf("[assemble_contrib_block]\n");
@@ -753,10 +750,10 @@ namespace starpu {
    ////////////////////////////////////////////////////////////////////////////////   
    // Assemble contrib block with block-column memory layout
 
-   template <typename T, typename PoolAlloc>
+   template <typename T, typename FactorAlloc, typename PoolAlloc>
    void assemble_contrib_block_1d(
-         NumericFront<T,PoolAlloc>& node, 
-         NumericFront<T,PoolAlloc>& cnode, 
+         NumericFront<T, FactorAlloc, PoolAlloc>& node, 
+         NumericFront<T, FactorAlloc, PoolAlloc>& cnode, 
          int ii, int jj, int const* cmap
          // spral::ssids::cpu::Workspace &work
          ) {
@@ -941,9 +938,9 @@ namespace starpu {
 
    ////////////////////////////////////////////////////////////
    // assemble_contrib_subtree_block
-   template <typename T, typename PoolAlloc>
+   template <typename T, typename FactorAlloc, typename PoolAlloc>
    void assemble_contrib_subtree_block(
-         NumericFront<T,PoolAlloc>& node,
+         NumericFront<T, FactorAlloc, PoolAlloc>& node,
          sylver::SymbolicFront const& csnode,
          void** child_contrib,
          int contrib_idx, // Index of subtree to assemble
@@ -1011,9 +1008,9 @@ namespace starpu {
    
    ////////////////////////////////////////////////////////////////////////////////   
    // Assemble contrib subtree
-   template <typename T, typename PoolAlloc>
+   template <typename T, typename FactorAlloc, typename PoolAlloc>
    void assemble_contrib_subtree(
-         NumericFront<T,PoolAlloc>& node,
+         NumericFront<T, FactorAlloc, PoolAlloc>& node,
          sylver::SymbolicFront const& csnode,
          void** child_contrib, 
          int contrib_idx// Index of subtree to assemble
@@ -1077,9 +1074,9 @@ namespace starpu {
    // assemble_delays_subtree
 
    /// @brief Assemble delays from a subtree to its parent
-   template <typename T, typename PoolAlloc>
+   template <typename T, typename FactorAlloc, typename PoolAlloc>
    void assemble_delays_subtree(
-         NumericFront<T,PoolAlloc>& node,
+         NumericFront<T, FactorAlloc, PoolAlloc>& node,
          sylver::SymbolicFront const& csnode,
          void** child_contrib,
          int contrib_idx, // Index of subtree to assemble
@@ -1131,9 +1128,9 @@ namespace starpu {
    ///
    /// @param i Block-row index of block to be assembled
    /// @param i Block-column index of block to be assembled
-   template <typename T, typename PoolAlloc>
+   template <typename T, typename FactorAlloc, typename PoolAlloc>
    void assemble_subtree_block(
-         NumericFront<T,PoolAlloc>& node,
+         NumericFront<T, FactorAlloc, PoolAlloc>& node,
          sylver::SymbolicFront const& csnode,
          void** child_contrib, 
          int contrib_idx,// Index of subtree to assemble
@@ -1182,9 +1179,9 @@ namespace starpu {
    // assemble_subtree
    
    /// @brief Assemble a subtree to its parent
-   template <typename T, typename PoolAlloc>
+   template <typename T, typename FactorAlloc, typename PoolAlloc>
    void assemble_subtree(
-         NumericFront<T,PoolAlloc>& node,
+         NumericFront<T, FactorAlloc, PoolAlloc>& node,
          sylver::SymbolicFront const& csnode,
          void** child_contrib, 
          int contrib_idx// Index of subtree to assemble
@@ -1248,12 +1245,12 @@ namespace starpu {
 
    ///////////////////////////////////////////////////////////   
    // @brief Copy delays columns from a chil node to its parent
-   template <typename T, typename PoolAlloc>
+   template <typename T, typename FactorAlloc, typename PoolAlloc>
    void assemble_delays(
          // std::vector<int, PoolAllocInt> map,
-         NumericFront<T,PoolAlloc>& cnode,
+         NumericFront<T, FactorAlloc, PoolAlloc>& cnode,
          int delay_col,
-         NumericFront<T,PoolAlloc>& node
+         NumericFront<T, FactorAlloc, PoolAlloc>& node
          ) {
 
       // printf("[assemble_delays]\n");
@@ -1289,10 +1286,10 @@ namespace starpu {
    ///////////////////////////////////////////////////////////
    /// @brief Assemble contributions from children node and subtrees
    /// into the fully-summed columns
-   template <typename T, typename PoolAlloc>
+   template <typename T, typename FactorAlloc, typename PoolAlloc>
    void assemble_notask(
          int n,
-         NumericFront<T,PoolAlloc>& node,
+         NumericFront<T, FactorAlloc, PoolAlloc>& node,
          void** child_contrib,
          PoolAlloc const& pool_alloc
          ) {
@@ -1423,9 +1420,9 @@ namespace starpu {
    //
    // Assemble contributions from children node and subtrees into the
    // contribution blocks
-   template <typename T, typename PoolAlloc>
+   template <typename T, typename FactorAlloc, typename PoolAlloc>
    void assemble_contrib_notask(
-         NumericFront<T,PoolAlloc>& node,
+         NumericFront<T, FactorAlloc, PoolAlloc>& node,
          void** child_contrib) {
 
       // Assemble front: non fully-summed columns i.e. contribution block 

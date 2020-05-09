@@ -237,10 +237,10 @@ namespace starpu {
    // CPU kernel
    //
    
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void subtree_assemble_block_cpu_func(void *buffers[], void *cl_arg) {
 
-      NumericFront<T, PoolAlloc> *node = nullptr;
+      NumericFrontType *node = nullptr;
       sylver::SymbolicFront *csnode;
       void **child_contrib;
       int contrib_idx;
@@ -262,9 +262,9 @@ namespace starpu {
    // subtree_assemble StarPU codelet
    extern struct starpu_codelet cl_subtree_assemble_block;
 
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void insert_subtree_assemble_block(
-         spldlt::NumericFront<T, PoolAlloc> *node,
+         NumericFrontType *node,
          sylver::SymbolicFront const* csnode,
          starpu_data_handle_t node_hdl,
          starpu_data_handle_t root_hdl,
@@ -295,7 +295,7 @@ namespace starpu {
       ret = starpu_task_insert(
             &cl_subtree_assemble_block,
             STARPU_DATA_MODE_ARRAY, descrs, nh,
-            STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
+            STARPU_VALUE, &node, sizeof(NumericFrontType*),
             STARPU_VALUE, &csnode, sizeof(sylver::SymbolicFront*),
             STARPU_VALUE, &child_contrib, sizeof(void**),
             STARPU_VALUE, &contrib_idx, sizeof(int),
@@ -315,10 +315,10 @@ namespace starpu {
    // CPU kernel
    //
    
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void subtree_assemble_cpu_func(void *buffers[], void *cl_arg) {
 
-      NumericFront<T, PoolAlloc> *node = nullptr;
+      NumericFrontType *node = nullptr;
       sylver::SymbolicFront *csnode;
       void **child_contrib;
       int contrib_idx;
@@ -337,9 +337,9 @@ namespace starpu {
    // subtree_assemble StarPU codelet
    extern struct starpu_codelet cl_subtree_assemble;
 
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void insert_subtree_assemble(
-         spldlt::NumericFront<T, PoolAlloc> *node,
+         NumericFrontType *node,
          sylver::SymbolicFront *csnode,
          starpu_data_handle_t node_hdl,
          starpu_data_handle_t root_hdl,
@@ -368,7 +368,7 @@ namespace starpu {
       ret = starpu_task_insert(
             &cl_subtree_assemble,
             STARPU_DATA_MODE_ARRAY, descrs, nh,
-            STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
+            STARPU_VALUE, &node, sizeof(NumericFrontType*),
             STARPU_VALUE, &csnode, sizeof(sylver::SymbolicFront*),
             STARPU_VALUE, &child_contrib, sizeof(void**),
             STARPU_VALUE, &contrib_idx, sizeof(int),
@@ -385,10 +385,10 @@ namespace starpu {
    // CPU kernel
    //
    
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void subtree_assemble_contrib_block_cpu_func(void *buffers[], void *cl_arg) {
 
-      NumericFront<T, PoolAlloc> *node = nullptr;
+      NumericFrontType *node = nullptr;
       sylver::SymbolicFront *csnode = nullptr;
       void **child_contrib;
       int contrib_idx;
@@ -414,9 +414,9 @@ namespace starpu {
    extern struct starpu_codelet cl_subtree_assemble_contrib_block;
 
 
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void insert_subtree_assemble_contrib_block(
-         NumericFront<T, PoolAlloc> *node,
+         NumericFrontType *node,
          sylver::SymbolicFront const* csnode,
          int i, int j,
          starpu_data_handle_t node_hdl,
@@ -450,7 +450,7 @@ namespace starpu {
 
       ret = starpu_task_insert(&cl_subtree_assemble_contrib_block,
                                STARPU_DATA_MODE_ARRAY, descrs, nh,
-                               STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
+                               STARPU_VALUE, &node, sizeof(NumericFrontType*),
                                STARPU_VALUE, &csnode, sizeof(sylver::SymbolicFront*),
                                STARPU_VALUE, &child_contrib, sizeof(void**),
                                STARPU_VALUE, &contrib_idx, sizeof(int),
@@ -467,10 +467,10 @@ namespace starpu {
    // Subtree assemble contrib task
 
    // CPU kernel
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void subtree_assemble_contrib_cpu_func(void *buffers[], void *cl_arg) {
 
-      NumericFront<T, PoolAlloc> *node = nullptr;
+      NumericFrontType *node = nullptr;
       sylver::SymbolicFront *csnode = nullptr;
       void **child_contrib;
       int contrib_idx;
@@ -487,9 +487,9 @@ namespace starpu {
    // StarPU codelet
    extern struct starpu_codelet cl_subtree_assemble_contrib;
 
-   template <typename T, typename PoolAlloc>
+   template <typename NumericFrontType>
    void insert_subtree_assemble_contrib(
-         NumericFront<T, PoolAlloc> *node,
+         NumericFrontType*node,
          sylver::SymbolicFront *csnode,
          starpu_data_handle_t node_hdl,
          starpu_data_handle_t contrib_hdl,
@@ -522,7 +522,7 @@ namespace starpu {
 
       ret = starpu_task_insert(&cl_subtree_assemble_contrib,
                                STARPU_DATA_MODE_ARRAY, descrs, nh,
-                               STARPU_VALUE, &node, sizeof(NumericFront<T, PoolAlloc>*),
+                               STARPU_VALUE, &node, sizeof(NumericFrontType*),
                                STARPU_VALUE, &csnode, sizeof(sylver::SymbolicFront*),
                                STARPU_VALUE, &child_contrib, sizeof(void**),
                                STARPU_VALUE, &contrib_idx, sizeof(int),
