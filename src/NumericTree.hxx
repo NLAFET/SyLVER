@@ -7,7 +7,6 @@
 #include "sylver_ciface.hxx"
 #include "kernels/ldlt_app.hxx"
 #include "BuddyAllocator.hxx"
-#include "SymbolicTree.hxx"
 #include "NumericFront.hxx"
 #include "factor.hxx"
 #include "factor_indef.hxx"
@@ -19,9 +18,12 @@
 #if defined(SPLDLT_USE_STARPU)
 #include "StarPU/codelets.hxx"
 #endif
+#include "sylver/SymbolicTree.hxx"
+
 // STD
 #include <vector>
 #include <chrono>
+
 // SSIDS
 // #include "ssids/cpu/cpu_iface.hxx"
 #include "ssids/cpu/kernels/cholesky.hxx"

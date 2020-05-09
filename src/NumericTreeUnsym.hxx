@@ -6,10 +6,10 @@
 // SyLVER
 #include "BuddyAllocator.hxx"
 #include "sylver_ciface.hxx"
-#include "SymbolicTree.hxx"
 #include "NumericFrontUnsym.hxx"
 #include "tasks/unsym.hxx"
 #include "sylver/SymbolicFront.hxx"
+#include "sylver/SymbolicTree.hxx"
 
 // STD 
 #include <stdexcept>

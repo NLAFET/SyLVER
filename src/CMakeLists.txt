@@ -1,7 +1,6 @@
 set(sources
   AppendAlloc.hxx
   assemble.hxx
-  BlockBase.hxx
   BlockUnsym.hxx
   BuddyAllocator.hxx
   factor_failed.hxx
@@ -30,7 +29,6 @@ set(sources
   sylver_mod.F90
   sylver_topology_mod.F90
   SymbolicTree.cxx
-  SymbolicTree.hxx
   topology.cxx
   topology.hxx)
 
@@ -152,7 +150,10 @@ if(SYLVER_ENABLE_CUDA)
   file(
     GLOB
     cuda_sources 
-    kernels/gpu/*.cu)
+    kernels/gpu/*.cu
+    kernels/cuda/block_ldlt.cu
+    kernels/cuda/ldlt.cu
+    )
 
   if (${HAVE_CUTLASS} MATCHES "OFF")
     file(
