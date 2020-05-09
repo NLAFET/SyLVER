@@ -289,6 +289,32 @@ cu_square_ldlt(
       a[ind[x] - 1 + ld*(ind[y] - 1)] = f[x + ld*y];
 
 }
-   
+
+////////////////////////////////////////////////////////////////////////////
+
+template<typename T>
+void square_ldlt( 
+      cudaStream_t *stream, 
+      int n, 
+      T* a, 
+      T* f, 
+      T* w,
+      T* d,
+      int ld,
+      T delta, T eps,
+      int* index,
+      int* stat
+      )
+{
+  int nt = min(n, 256);
+  int sm = nt*sizeof(T) + (nt + 2)*sizeof(int);
+  cu_square_ldlt< T ><<< 1, nt, sm, *stream >>>
+    ( n, a, f, w, d, ld, delta, eps, index, stat );
+}
+
+// fp64
+template void square_ldlt<double>( 
+      cudaStream_t *stream, int n, double* a, double* f, double* w, double* d,
+      int ld, double delta, double eps, int* index, int* stat);
    
 }}} // End of namespace sylver::spldlt::cuda
