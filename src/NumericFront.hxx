@@ -68,11 +68,9 @@ public:
       free_cdata();
       // TODO Free backups in blocks if necessary
    }
-
-   // TODO: test this routine 
-
+   
    // Initialize front: allocate memory for storing factors
-   void activate(void** child_contrib) {
+   void allocate(void** child_contrib) {
 
       this->ndelay_out(0);
       this->ndelay_in(0);
@@ -100,7 +98,7 @@ public:
       // allocator
       // NB L is  nrow x ncol and D is 2 x ncol
       size_t ldl = spral::ssids::cpu::align_lda<T>(this->nrow());
-      size_t len =  (ldl+2) * this->ncol(); // indef (includes D)
+      size_t len = (ldl+2) * this->ncol(); // indef (includes D)
 
       using FAValueTypeTraits = typename std::allocator_traits<FactorAllocator>::template rebind_traits<T>;
       using FAValueType = typename FAValueTypeTraits::allocator_type;
@@ -144,7 +142,42 @@ public:
       // Allocate frontal matrix blocks
       this->alloc_blocks();  
    }
-      
+
+   // TODO: Move to new type NumericFrontPosdef
+   void allocate_posdef() {
+
+      std::string const context = "NumericFront::allocate_posdef";
+
+      this->ndelay_out(0);
+      this->ndelay_in(0);
+
+      using FAValueTypeTraits = typename std::allocator_traits<FactorAllocator>::template rebind_traits<T>;
+      using FAValueType = typename FAValueTypeTraits::allocator_type;
+      FAValueType factor_alloc_value_type(this->factor_alloc_); 
+
+      /* Get space for node now we know it size using Fortran allocator + zero it*/
+      // NB L is  nrow x ncol and D is 2 x ncol (but no D if posdef)
+      size_t ldl = spral::ssids::cpu::align_lda<T>(this->nrow());
+      size_t len = ldl * this->ncol();  // posdef
+      this->lcol = FAValueTypeTraits::allocate(factor_alloc_value_type, len);
+
+#if defined(SPLDLT_USE_GPU)
+#if defined(SPLDLT_USE_STARPU)
+      int ret = starpu_memory_pin(this->lcol, len*sizeof(T));
+      // STARPU_CHECK_RETURN_VALUE(ret, "starpu_memory_pin");
+#endif
+#endif
+      int err;
+      // Get space for contribution block + (explicitly do not zero it!)
+      this->alloc_contrib_blocks();
+      // Allocate cdata (required for allocating blocks)
+      // FIXME not needed for posdef case
+      this->alloc_cdata();
+      // Allocate frontal matrix blocks
+      err = this->alloc_blocks(); // FIXME specialize for posdef case
+      sylver::sylver_check_error(err, context, "Failed to allocate blocks");
+   }
+   
    /// \brief Allocate block structures and memory space for
    /// contrib (below diagonal)
    void alloc_contrib_blocks() {

@@ -345,14 +345,14 @@ namespace starpu {
 
       std::string const context = "alloc_front_posdef";
       
-      T *scaling = NULL; // No scaling
+      // T *scaling = NULL; // No scaling
 
       // Rebind allocators
       typedef typename std::allocator_traits<FactorAlloc>::template rebind_traits<T> FATypeTraits;
       typename FATypeTraits::allocator_type factor_alloc_type(factor_alloc);
       typedef typename std::allocator_traits<FactorAlloc>::template rebind_traits<int> FAIntTraits;
-      typename FAIntTraits::allocator_type factor_alloc_int(factor_alloc);
-      typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> PoolAllocInt;
+      // typename FAIntTraits::allocator_type factor_alloc_int(factor_alloc);
+      // typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> PoolAllocInt;
       // printf("[alloc_front] posdef = %d\n", posdef);
 
       sylver::SymbolicFront const& sfront = front.symb();
@@ -397,7 +397,7 @@ namespace starpu {
          FactorAlloc& factor_alloc) {
 
       // TODO add scaling
-      T *scaling = NULL; // No scaling
+      // T *scaling = NULL; // No scaling
 
       // Rebind allocators
       typedef typename std::allocator_traits<FactorAlloc>::template rebind_traits<T> FATypeTraits;

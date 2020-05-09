@@ -24,7 +24,7 @@ protected:
 
 TYPED_TEST_CASE(NumericFrontIndef, ValueTypes);
 
-TYPED_TEST(NumericFrontIndef, ActivateFront)
+TYPED_TEST(NumericFrontIndef, AllocateFront)
 {
 
    using ValueType = typename TestFixture::ValueType;
@@ -71,12 +71,14 @@ TYPED_TEST(NumericFrontIndef, ActivateFront)
  
    void** child_contrib = nullptr;
    
-   front.activate(child_contrib);
+   front.allocate(child_contrib);
 
    ASSERT_EQ(front.ndelay_in(), 0);
    ASSERT_EQ(front.ndelay_out(), 0);
    ASSERT_NE(front.lcol, nullptr);
    ASSERT_NE(front.backup, nullptr);
+   // Note: The blocks in the symmetric part are also allocated.
+   ASSERT_EQ(front.contrib_blocks.size(), 4);
 
 }
    
