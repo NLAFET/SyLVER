@@ -77,8 +77,10 @@ TYPED_TEST(NumericFrontIndef, AllocateFront)
    ASSERT_EQ(front.ndelay_out(), 0);
    ASSERT_NE(front.lcol, nullptr);
    ASSERT_NE(front.backup, nullptr);
-   // Note: The blocks in the symmetric part are also allocated.
+   // Note: The contrib blocks in the symmetric part are also allocated.
    ASSERT_EQ(front.contrib_blocks.size(), 4);
+   // Note: The blocks in the symmetric part are also allocated.
+   ASSERT_EQ(front.blocks.size(), 12);
 
 }
    
