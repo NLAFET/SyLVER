@@ -35,7 +35,7 @@ public:
    using Backup = sylver::CopyBackup<T, PoolAllocator>;
 private:
    // Block type
-   using BlockSpec = spldlt::ldlt_app_internal::Block<T, INNER_BLOCK_SIZE, IntAlloc>;
+   using BlockType = spldlt::ldlt_app_internal::Block<T, INNER_BLOCK_SIZE, IntAlloc>;
    // Pool allocator traits
    using PATraits = std::allocator_traits<PoolAllocator>; 
    // Front type
@@ -54,7 +54,8 @@ public:
          )
       :
       sylver::NumericFrontBase<T, FactorAllocator, PoolAllocator>(symb, factor_alloc, pool_alloc, blksz),
-      contrib(nullptr), backup(nullptr), cdata(nullptr), lcol(nullptr)
+      contrib(nullptr), backup(nullptr), cdata(nullptr), lcol(nullptr),
+      first_child(nullptr), next_child(nullptr), perm(nullptr), cperm(nullptr)
    {}
       
    /**
@@ -101,9 +102,47 @@ public:
       size_t ldl = spral::ssids::cpu::align_lda<T>(this->nrow());
       size_t len =  (ldl+2) * this->ncol(); // indef (includes D)
 
-      // TODO..
+      using FAValueTypeTraits = typename std::allocator_traits<FactorAllocator>::template rebind_traits<T>;
+      using FAValueType = typename FAValueTypeTraits::allocator_type;
+      FAValueType factor_alloc_value_type(this->factor_alloc_); 
+
+      // Allocate factor memory
+      this->lcol = FAValueTypeTraits::allocate(factor_alloc_value_type, len);
+      // Make sure memory was allocated
+      assert(this->lcol != nullptr);
+
       
-      // this->lcol = 
+#if defined(SPLDLT_USE_GPU)
+      // Pin memory on host for faster and asynchronous CPU-GPU memory
+      // transfer
+#if defined(SPLDLT_USE_STARPU)
+      int ret = starpu_memory_pin(this->lcol, len*sizeof(T));
+      // STARPU_CHECK_RETURN_VALUE(ret, "starpu_memory_pin");
+#endif
+#endif
+
+      // Get space for contribution block + (explicitly do not zero it!)
+      this->alloc_contrib_blocks();
+
+      using FAIntTraits = typename std::allocator_traits<FactorAllocator>::template rebind_traits<int>;
+      typename FAIntTraits::allocator_type factor_alloc_int(this->factor_alloc_);
+
+      // Alloc + set perm for expected eliminations at this node
+      // (delays are set when they are imported from children)
+      this->perm = FAIntTraits::allocate(factor_alloc_int, this->ncol()); // ncol fully summed variables
+      // Set permuatation array
+      for(int i=0; i< this->symb().ncol; i++) {
+         this->perm[i] = this->symb().rlist[i];
+      }
+      
+      // TODO: Backup is needed only when pivot_method is set to APTP
+
+      // Allocate backups
+      this->alloc_backup();      
+      // Allocate cdata
+      this->alloc_cdata();
+      // Allocate frontal matrix blocks
+      this->alloc_blocks();  
    }
       
    /// \brief Allocate block structures and memory space for
@@ -345,7 +384,7 @@ public:
             // Create and insert block at the end (column-wise storage)
             blocks.emplace_back(iblk, jblk, m, n, *cdata, &lcol[jblk*this->blksz()*ldl+iblk*this->blksz()], ldl, this->blksz());
             // alternativel store pointer
-            // blocks[jblk*mblk + iblk] = new BlockSpec(iblk, jblk, m, n, cdata, &a[jblk*block_size*lda+iblk*block_size], lda, block_size);
+            // blocks[jblk*mblk + iblk] = new BlockType(iblk, jblk, m, n, cdata, &a[jblk*block_size*lda+iblk*block_size], lda, block_size);
             // #if defined(SPLDLT_USE_STARPU)
             //                // register handle for block (iblk, jblk)
             //                if (iblk >= jblk) blocks[jblk*mblk+iblk].register_handle(); 
@@ -360,7 +399,7 @@ public:
    /// 
    /// @param i Block row index in the front 
    /// @param j Block column index in the front
-   inline BlockSpec& get_block(int i, int j) {
+   inline BlockType& get_block(int i, int j) {
 
       int nr = this->nr();
 
@@ -375,7 +414,7 @@ public:
    /// 
    /// @param i Block row index in the front 
    /// @param j Block column index in the front
-   inline BlockSpec& operator()(int i, int j) {
+   inline BlockType& operator()(int i, int j) {
       return get_block(i,j);
    }
 
@@ -405,7 +444,7 @@ public:
    Backup *backup; // Stores backups of matrix blocks
    // Structures for indef factor
    sylver::ColumnData<T, IntAlloc> *cdata;
-   std::vector<BlockSpec> blocks;
+   std::vector<BlockType> blocks;
 };
 
 }} // End of namespaces sylver::spldlt

@@ -50,14 +50,33 @@ TYPED_TEST(NumericFrontIndef, ActivateFront)
    symb.amap = nullptr;
    symb.parent = -1;
 
+   // Simple Permute
+   std::vector<int> rlist(symb.ncol);
+   for (int i = 0; i < symb.ncol; ++i) {
+      rlist[i] = i;
+   }
+   symb.rlist = &rlist[0];
+   
    NumericFactorType front(symb, factor_alloc, pool_alloc, blksz);
 
+   // Make sure variables are properly initialized
+   ASSERT_EQ(front.lcol, nullptr);
+   ASSERT_EQ(front.first_child, nullptr);
+   ASSERT_EQ(front.next_child, nullptr);
+   ASSERT_EQ(front.cperm, nullptr);
+   ASSERT_EQ(front.perm, nullptr);
+
+   ASSERT_EQ(front.symb().ncol, symb.ncol);
+   ASSERT_EQ(front.symb().nrow, symb.nrow);
+ 
    void** child_contrib = nullptr;
    
    front.activate(child_contrib);
 
    ASSERT_EQ(front.ndelay_in(), 0);
    ASSERT_EQ(front.ndelay_out(), 0);
+   ASSERT_NE(front.lcol, nullptr);
+   ASSERT_NE(front.backup, nullptr);
 
 }
    
