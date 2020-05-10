@@ -740,9 +740,10 @@ namespace tests {
 
    enum class Sched
       {
-       HP, // Heteroprio
+       HP, // Hetero prio
        HLWS, // Heterogeneous locality work stealing
        LWS, // Locality work stealing
+       WS, // Work stealing
       };
    
    // Generates a random dense positive definte matrix. Entries are

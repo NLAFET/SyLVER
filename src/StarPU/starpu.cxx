@@ -2,6 +2,7 @@
 
 #include "sylver/StarPU/hlws.hxx"
 #include "sylver/StarPU/starpu.hxx"
+#include "StarPU/scheduler.h"
 
 namespace sylver {
 namespace starpu {
@@ -9,6 +10,8 @@ namespace starpu {
 int StarPU::ncpu = 0;
 int StarPU::ncuda = 0;
 
+StarPU::Scheduler StarPU::sched = StarPU::Scheduler::LWS;
+   
 struct starpu_conf StarPU::conf;
 
 void StarPU::initialize() {
@@ -28,15 +31,33 @@ void StarPU::initialize() {
 #else
    conf.ncuda = 0;
 #endif
+
+   switch (StarPU::sched) {
+   case Scheduler::HLWS:
+      std::cout << "[StarPU::initialize] Init StarPU witth HLWS scheduler" << std::endl;
+      conf.sched_policy_name = NULL;
+      sylver::starpu::StarPU::conf.sched_policy =
+         &sylver::starpu::HeteroLwsScheduler::starpu_sched_policy();
+      break;
+   case Scheduler::HP:
+      std::cout << "[StarPU::initialize] Init StarPU witth HP scheduler" << std::endl;
+      conf.sched_policy_name = "heteroprio";
+      conf.sched_policy_init = &init_heteroprio;
+      break;
+   case Scheduler::LWS:
+      std::cout << "[StarPU::initialize] Init StarPU witth LWS scheduler" << std::endl;
+      conf.sched_policy_name = "lws";
+      break;
+   case Scheduler::WS:
+      std::cout << "[StarPU::initialize] Init StarPU witth WS scheduler" << std::endl;
+      conf.sched_policy_name = "ws";      
+      break;
+   default:
+      std::cout << "[StarPU::initialize] Init StarPU witth LWS scheduler" << std::endl;
+      conf.sched_policy_name = "lws";
+   }
    
-   // conf.sched_policy_name = "lws";
-
-   // conf.sched_policy_name = "ws";
-
-   conf.sched_policy_name = NULL;
-   sylver::starpu::StarPU::conf.sched_policy =
-      &sylver::starpu::HeteroLwsScheduler::starpu_sched_policy();
-
+   
    ret = starpu_init(&conf);
    STARPU_CHECK_RETURN_VALUE(ret, "starpu_init");
 

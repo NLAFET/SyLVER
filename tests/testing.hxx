@@ -18,7 +18,7 @@ namespace tests {
          ncpu(1), ngpu(0), m(256), n(256), k(256), nb(256), ib(256), posdef(false), 
          check(true), chol(false), diagdom(false), algo(sylver::tests::algo::SyLVER),
          usetc(true), prec(sylver::tests::prec::FP64), cond(1), itref(false), tol(1e-8),
-         sched(Sched::LWS)
+         sched(Sched::LWS), u(0.01), small(1e-20), delays(false), singular(false)
       {}
 
       void parse_opts(int argc, char** argv) {
@@ -136,13 +136,28 @@ namespace tests {
             }
             else if ( !strcmp("--sched=hlws", argv[i]) ) {
                std::cout << "Using HLWS (Heterogeneous Locality Work Stealing) scheduler" << std::endl;
-               sched = Sched::LWS;
+               sched = Sched::HLWS;
             }
             else if ( !strcmp("--sched=hp", argv[i]) ) {
                std::cout << "Using HP (Heteroprio) scheduler" << std::endl;
-               sched = Sched::LWS;
+               sched = Sched::HP;
+            }
+            else if ( !strcmp("--sched=ws", argv[i]) ) {
+               std::cout << "Using WS (Work Stealing) scheduler" << std::endl;
+               sched = Sched::WS;
             }
 
+            // Cause delays in the factorization
+            else if ( !strcmp("--delays", argv[i]) ) {
+               std::cout << "Cause delays" << std::endl;
+               delays = true;
+            }
+            // Make matrix singular
+            else if ( !strcmp("--sing", argv[i]) ) {
+               std::cout << "Singular matrix" << std::endl;
+               singular = true;
+            }
+            
             // Command error message 
             else {
                std::cout << "Unrecognized command " << i << std::endl;
@@ -172,6 +187,10 @@ namespace tests {
       double tol; // Tolerence for iterative refinement
       // Scheduler
       Sched sched;
+      double u;
+      double small;
+      bool delays;
+      bool singular;
    };
 
 }} // End of namespace sylver::tests

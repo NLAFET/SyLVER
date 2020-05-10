@@ -6,8 +6,10 @@
 #include "factor_indef.hxx"
 #include "sylver/StarPU/hlws.hxx"
 #include "sylver/StarPU/starpu.hxx"
-// SpLDLT tests
+
+// Sylver tests
 #include "common.hxx"
+#include "testing.hxx"
 
 // STD
 #include <vector>
@@ -41,14 +43,48 @@ namespace tests {
    
 template<
    typename T,
-   int iblksz=sylver::spldlt::INNER_BLOCK_SIZE,
+   int ib=sylver::spldlt::INNER_BLOCK_SIZE,
    bool debug = false>
-int factor_node_indef_test(
-      T u, T small, bool posdef, bool delays, bool singular, int m, int n, 
-      int blksz, int ncpu, int ngpu=0, int test=0, int seed=0) {
+int factor_node_indef_test(sylver::tests::Options test_options) {
    
    bool failed = false;
 
+   // Threshold
+   T u = test_options.u;
+   // Small
+   T small = test_options.small;
+
+   // Posdef matrix
+   bool posdef = test_options.posdef;
+
+   // Cause delays?
+   bool delays = test_options.delays;
+   // Make singluar
+   bool singular = test_options.singular;
+      
+   std::cout << "[factor_node_indef_test]" << " u = " << u  << ", small = " << small << std::endl;
+   std::cout << "[factor_node_indef_test]" << " posdef = " << posdef  << std::endl;
+   std::cout << "[factor_node_indef_test]" << " delays = " << delays << ", singular = " << singular << std::endl;
+   
+   // Number of rows
+   int const m = test_options.m;
+   // Number of columns
+   int const n = test_options.n;
+   // Block dimensions
+   int const blksz = test_options.nb;
+   
+   // Use Tensor Cores
+   bool const usetc = test_options.usetc;
+
+   // Check residual
+   bool const check = test_options.check;
+
+   // Number of CPUs
+   int const ncpu = test_options.ncpu;
+   // Number of GPUs 
+   int const ngpu = test_options.ngpu;
+
+   
    std::cout << "[factor_node_indef_test] "
              << m << " x " << n << ", blksz = " << blksz
              << ", posdef = " << posdef
@@ -144,6 +180,24 @@ int factor_node_indef_test(
    sylver::starpu::StarPU::ncpu = ncpu;
    sylver::starpu::StarPU::ncuda = ngpu;
 
+   // Select scheduler
+   switch (test_options.sched) {
+   case(sylver::tests::Sched::HP):
+      sylver::starpu::StarPU::sched = sylver::starpu::StarPU::Scheduler::HP;
+      break;
+   case(sylver::tests::Sched::HLWS):
+      sylver::starpu::StarPU::sched = sylver::starpu::StarPU::Scheduler::HLWS;
+      break;
+   case(sylver::tests::Sched::LWS):
+      sylver::starpu::StarPU::sched = sylver::starpu::StarPU::Scheduler::LWS;
+      break;
+   case(sylver::tests::Sched::WS):
+      sylver::starpu::StarPU::sched = sylver::starpu::StarPU::Scheduler::WS;
+      break;
+   default:
+      std::runtime_error("Scheduler not available");
+   }
+
 //    struct starpu_conf *conf = new starpu_conf;
 //    starpu_conf_init(conf);
 //    conf->ncpus = ncpu;
@@ -217,7 +271,7 @@ int factor_node_indef_test(
    // Init factorization 
 #if defined(SPLDLT_USE_STARPU)
    sylver::spldlt::starpu::codelet_init<T, FactorAllocator, PoolAllocator>();
-   sylver::spldlt::starpu::codelet_init_indef<T, iblksz, Backup, FactorAllocator, PoolAllocator>();
+   sylver::spldlt::starpu::codelet_init_indef<T, ib, Backup, FactorAllocator, PoolAllocator>();
    sylver::spldlt::starpu::codelet_init_factor_indef<NumericFrontType, PoolAllocator>();
    sylver::spldlt::starpu::codelet_init_factor_failed<NumericFrontType>();
 
@@ -362,7 +416,7 @@ int factor_node_indef_test(
 
    if (debug) std::cout << "nelim = " << nelim << std::endl;
       
-   EXPECT_EQ(m, nelim) << "(test " << test << " seed " << seed << ")" << std::endl;
+   EXPECT_EQ(m, nelim);// << "(test " << test << " seed " << seed << ")" << std::endl;
       
    // Perform solve
    T *soln = new T[m];
@@ -376,7 +430,7 @@ int factor_node_indef_test(
    // Check residual
    T bwderr = sylver::tests::backward_error(m, a, lda, b, 1, soln, m);
    /*if(debug)*/ printf("bwderr = %le\n", bwderr);
-   EXPECT_LE(u*bwderr, 5e-14) << "(test " << test << " seed " << seed << ")" << std::endl;
+   EXPECT_LE(u*bwderr, 5e-14); // << "(test " << test << " seed " << seed << ")" << std::endl;
 
    ////////////////////////////////////////
    // Print results
@@ -398,7 +452,37 @@ int factor_node_indef_test(
    return failed ? -1 : 0;
 }
 
-   // Run tests for the node factorization
-   int run_factor_node_indef_tests();
+template<
+   typename T,
+   int ib=sylver::spldlt::INNER_BLOCK_SIZE,
+   bool debug = false>
+int factor_node_indef_test(T u, T small, bool posdef, bool delays, bool singular, int m, int n, 
+      int blksz, int ncpu, int ngpu=0, int test=0, int seed=0) {
+
+
+   sylver::tests::Options test_options;
+
+   test_options.u = u;
+   test_options.small = small;
+
+   test_options.posdef = posdef;
+   test_options.delays = delays;
+   test_options.singular = singular;
+
+   test_options.m = m;
+   test_options.n = n;
+
+   test_options.nb = blksz;
+
+   test_options.ncpu = ncpu;
+   test_options.ngpu = ngpu;
+
+   int ret = factor_node_indef_test<T, ib, debug>(test_options);
+
+   return ret;
+}
+   
+// Run tests for the node factorization
+int run_factor_node_indef_tests();
 
 }} // namespace spldlt::tests

@@ -118,39 +118,61 @@ namespace tests {
       ////////////////////////////////////////
       // Init runtime system
 #if defined(SPLDLT_USE_STARPU)
-      struct starpu_conf conf;
-      starpu_conf_init(&conf);
-      conf.ncpus = ncpu;
+      sylver::starpu::StarPU::ncpu = ncpu;
 #if defined(SPLDLT_USE_GPU)
-      conf.ncuda = ngpu;
-
-      if (ngpu > 0) {
-         
-         // Scheduler
-         conf.sched_policy_name = "heteroprio";
-         conf.sched_policy_init = &init_heteroprio;
-
-#if defined(HAVE_LAHP)
-         if(getenv("USE_LAHETEROPRIO") != NULL
-            && (strcmp(getenv("USE_LAHETEROPRIO"),"TRUE")==0||strcmp(getenv("USE_LAHETEROPRIO"),"true")==0)){
-            printf("[starpu_f_init_c] use laheteroprio\n");
-            conf.sched_policy_name = "laheteroprio";
-            conf.sched_policy_init = &init_laheteroprio;
-         }
-#endif
-      }
-      else {
-         conf.sched_policy_name = "eager";
-      }
-
+      sylver::starpu::StarPU::ncuda = ngpu;
 #else
-      conf.sched_policy_name = "lws";
+      sylver::starpu::StarPU::ncuda = 0;
 #endif
 
-      ret = starpu_init(&conf);
-      STARPU_CHECK_RETURN_VALUE(ret, "starpu_init");
+      switch (test_options.sched) {
+      case(sylver::tests::Sched::HP):
+         sylver::starpu::StarPU::sched = sylver::starpu::StarPU::Scheduler::HP;
+         break;
+      case(sylver::tests::Sched::HLWS):
+         sylver::starpu::StarPU::sched = sylver::starpu::StarPU::Scheduler::HLWS;
+         break;
+      case(sylver::tests::Sched::LWS):
+         sylver::starpu::StarPU::sched = sylver::starpu::StarPU::Scheduler::LWS;
+         break;
+      case(sylver::tests::Sched::WS):
+         sylver::starpu::StarPU::sched = sylver::starpu::StarPU::Scheduler::WS;
+         break;
+      default:
+         std::runtime_error("Scheduler not available");
+      }
+      
+      sylver::starpu::StarPU::initialize();
+
+// #if defined(SPLDLT_USE_GPU)
+
+//       if (ngpu > 0) {
+         
+//          // Scheduler
+//          conf.sched_policy_name = "heteroprio";
+//          conf.sched_policy_init = &init_heteroprio;
+
+// // #if defined(HAVE_LAHP)
+// //          if(getenv("USE_LAHETEROPRIO") != NULL
+// //             && (strcmp(getenv("USE_LAHETEROPRIO"),"TRUE")==0||strcmp(getenv("USE_LAHETEROPRIO"),"true")==0)){
+// //             printf("[starpu_f_init_c] use laheteroprio\n");
+// //             conf.sched_policy_name = "laheteroprio";
+// //             conf.sched_policy_init = &init_laheteroprio;
+// //          }
+// // #endif
+//       }
+//       else {
+//          conf.sched_policy_name = "eager";
+//       }
+
+// #else
+//       conf.sched_policy_name = "lws";
+// #endif
+
+      // ret = starpu_init(&conf);
+      // STARPU_CHECK_RETURN_VALUE(ret, "starpu_init");
 #if defined(SPLDLT_USE_GPU)
-      starpu_cublas_init();
+      // starpu_cublas_init();
       // Select math mode
       if (usetc) sylver::starpu::enable_tc();
       else       sylver::starpu::disable_tc();
@@ -288,6 +310,7 @@ namespace tests {
          delete[] b;
       }
 
+      return 0;
    }
 
 }} // namespace spldlt::tests
