@@ -295,36 +295,62 @@ unsigned HeteroLwsScheduler::select_worker(
    // Get current worker id
    int workerid = starpu_worker_get_id();
 
-   // Check if current worker can execute task
-   if (workerid == -1 || // Not a worker
-       !starpu_sched_ctx_contains_worker(workerid, sched_ctx_id) || // Not part of current context
-       !starpu_worker_can_execute_task_first_impl(workerid, task, NULL)) {
+   if (task->where & STARPU_CUDA) {
+      // Task can run on CUDA, push it to a CUDA worker's queue
       
-      // Round robin
-   
-      unsigned worker;
-      unsigned nworkers;
-      int *workerids;
-      nworkers = starpu_sched_ctx_get_workers_list_raw(sched_ctx_id, &workerids);
+      // std::cout << "[HeteroLwsScheduler::push_task]"
+                // << " task name = " << task->cl->name << std::endl;
 
-      worker = sched_data->last_push_worker;
+      auto& cuda_worker_ids = sched_data->cuda_worker_ids;
+      unsigned num_cuda_worker = cuda_worker_ids.size();
+      unsigned cuda_worker;
+
+      sched_data->last_push_cuda_worker;
+
       do {
-         worker = (worker + 1) % nworkers;
+         cuda_worker = (cuda_worker + 1) % num_cuda_worker;
       }
-      while (!sched_data->worker_data[workerids[worker]].running ||
-             !starpu_worker_can_execute_task_first_impl(workerids[worker], task, NULL));
-
-      sched_data->last_push_worker = worker;
-
-      workerid = workerids[worker];
-   }
+      while (!sched_data->worker_data[cuda_worker_ids[cuda_worker]].running ||
+             !starpu_worker_can_execute_task_first_impl(
+                   cuda_worker_ids[cuda_worker], task, NULL));
       
+
+      sched_data->last_push_cuda_worker = cuda_worker;
+
+      workerid = cuda_worker_ids[cuda_worker];
+   }
+   else {
+
+      // Check if current worker can execute task
+      if (workerid == -1 || // Not a worker
+          !starpu_sched_ctx_contains_worker(workerid, sched_ctx_id) || // Not part of current context
+          !starpu_worker_can_execute_task_first_impl(workerid, task, NULL)) {
+      
+         // Round robin
+         unsigned nworkers;
+         int *workerids;
+         nworkers = starpu_sched_ctx_get_workers_list_raw(sched_ctx_id, &workerids);
+   
+         unsigned worker;
+
+         worker = sched_data->last_push_worker;
+         do {
+            worker = (worker + 1) % nworkers;
+         }
+         while (!sched_data->worker_data[workerids[worker]].running ||
+                !starpu_worker_can_execute_task_first_impl(
+                      workerids[worker], task, NULL));
+
+         sched_data->last_push_worker = worker;
+
+         workerid = workerids[worker];
+      }
+   }
+   
    return workerid;
 }
    
 int HeteroLwsScheduler::push_task(struct starpu_task *task) {
-
-   // std::cout << "[HeteroLwsScheduler::push_task]" << std::endl;
 
    using SchedulerData = HeteroLwsScheduler::Data;
 
@@ -433,6 +459,9 @@ int HeteroLwsScheduler::select_victim(
 
    // std::cout << "[HeteroLwsScheduler::select_victim] last_pop_worker = " << sched_data->last_pop_worker << std::endl;
 
+   // Worker type
+   auto worker_type = starpu_worker_get_type(workerid);
+   
    // Round robin strategy
    
    unsigned worker = sched_data->last_pop_worker;
@@ -444,33 +473,47 @@ int HeteroLwsScheduler::select_victim(
 
    /* If the worker's queue is empty, let's try
     * the next ones */
-   while (1)
-      {
-         /* Here helgrind would shout that this is unprotected, but we
-          * are fine with getting outdated values, this is just an
-          * estimation */
-         // ntasks = ws->per_worker[workerids[worker]].queue.ntasks;
+   while (1) {
+      /* Here helgrind would shout that this is unprotected, but we
+       * are fine with getting outdated values, this is just an
+       * estimation */
+      // ntasks = ws->per_worker[workerids[worker]].queue.ntasks;
 
-         auto& worker_data = sched_data->worker_data[workerids[worker]];
-         // ntasks = worker_data.task_queue.size();
-         ntasks = worker_data.task_prio_queue.size();
+      auto& worker_data = sched_data->worker_data[workerids[worker]];
+      // ntasks = worker_data.task_queue.size();
+      ntasks = worker_data.task_prio_queue.size();
 
-         if (
-               (ntasks > 0) &&
-               (worker_data.busy || starpu_worker_is_blocked_in_parallel(workerids[worker]))) {
-            
-            break;
-         }
+      if (
+            (ntasks > 0) &&
+            (worker_data.busy || starpu_worker_is_blocked_in_parallel(workerids[worker]))) {
 
-         worker = (worker + 1) % nworkers;
-         if (worker == sched_data->last_pop_worker)
-            {
-               /* We got back to the first worker,
-                * don't go in infinite loop */
-               ntasks = 0;
+         auto victim_type = starpu_worker_get_type(workerids[worker]);
+         if ((victim_type == STARPU_CUDA_WORKER) && (worker_type != STARPU_CUDA_WORKER)) {
+            // Non-CUDA worker trying to steal from a CUDA worker,
+            // making sure there is plently of tasks in the CUDA
+            // workers's queue. Do not steal otherwise.
+            if (ntasks > 100) {
                break;
             }
+
+            // std::cout << "[HeteroLwsScheduler::select_victim] workerid = " << workerid << " stealing " << std::endl;
+
+         }
+         else {
+            break;
+         }
       }
+
+      worker = (worker + 1) % nworkers;
+         
+      if (worker == sched_data->last_pop_worker)
+         {
+            /* We got back to the first worker,
+             * don't go in infinite loop */
+            ntasks = 0;
+            break;
+         }
+   }
 
    sched_data->last_pop_worker = (worker + 1) % nworkers;
 
@@ -511,6 +554,9 @@ void HeteroLwsScheduler::initialize(unsigned sched_ctx_id) {
    sched_data->last_pop_worker = 0;
    sched_data->last_push_worker = 0;
 
+   sched_data->last_pop_cuda_worker = 0;
+   sched_data->last_push_cuda_worker = 0;   
+   
    unsigned const nw = starpu_worker_get_count();
    
    sched_data->worker_data.resize(nw);
@@ -520,6 +566,13 @@ void HeteroLwsScheduler::initialize(unsigned sched_ctx_id) {
       starpu_sched_ctx_set_min_priority(sched_ctx_id, INT_MIN);
    if (starpu_sched_ctx_max_priority_is_set(sched_ctx_id) == 0)
       starpu_sched_ctx_set_max_priority(sched_ctx_id, INT_MAX);
+
+   unsigned num_cuda_workers = starpu_cuda_worker_get_count();
+   auto& cuda_worker_ids = sched_data->cuda_worker_ids;
+   cuda_worker_ids.resize(num_cuda_workers);
+   starpu_worker_get_ids_by_type(STARPU_CUDA_WORKER, &cuda_worker_ids[0], num_cuda_workers);
+
+   std::cout << "[HeteroLwsScheduler::initialize] num_cuda_workers = " << num_cuda_workers << std::endl;
 
 }
 

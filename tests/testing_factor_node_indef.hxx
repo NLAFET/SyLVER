@@ -62,9 +62,10 @@ int factor_node_indef_test(sylver::tests::Options test_options) {
    // Make singluar
    bool singular = test_options.singular;
       
-   std::cout << "[factor_node_indef_test]" << " u = " << u  << ", small = " << small << std::endl;
-   std::cout << "[factor_node_indef_test]" << " posdef = " << posdef  << std::endl;
-   std::cout << "[factor_node_indef_test]" << " delays = " << delays << ", singular = " << singular << std::endl;
+   std::cout << "[factor_node_indef_test]" << std::endl;
+   std::cout << "u = " << u  << ", small = " << small << std::endl;
+   std::cout << "posdef = " << posdef  << std::endl;
+   std::cout << " delays = " << delays << ", singular = " << singular << std::endl;
    
    // Number of rows
    int const m = test_options.m;
@@ -178,8 +179,14 @@ int factor_node_indef_test(sylver::tests::Options test_options) {
 #if defined(SPLDLT_USE_STARPU)
 
    sylver::starpu::StarPU::ncpu = ncpu;
+#if defined(SPLDLT_USE_GPU)
    sylver::starpu::StarPU::ncuda = ngpu;
-
+#else
+   sylver::starpu::StarPU::ncuda = 0;
+#endif
+   
+   // std::cout << " TETETETETETE " << std::endl;
+   
    // Select scheduler
    switch (test_options.sched) {
    case(sylver::tests::Sched::HP):
@@ -197,6 +204,8 @@ int factor_node_indef_test(sylver::tests::Options test_options) {
    default:
       std::runtime_error("Scheduler not available");
    }
+
+   sylver::starpu::StarPU::initialize();
 
 //    struct starpu_conf *conf = new starpu_conf;
 //    starpu_conf_init(conf);
@@ -229,9 +238,7 @@ int factor_node_indef_test(sylver::tests::Options test_options) {
    // sylver::starpu::StarPU::conf.sched_policy_name = NULL;
    // sylver::starpu::StarPU::conf.sched_policy =
    //    &sylver::starpu::HeteroLwsScheduler::starpu_sched_policy();
-   
-   sylver::starpu::StarPU::initialize();
-   
+      
 #endif
 
    int nworkers = 1;

@@ -18,7 +18,7 @@ public:
       bool operator()(
             struct starpu_task const* lhs, struct starpu_task const* rhs) const {
 
-         bool is_less = false;
+         bool is_greater = false;
          
          // std::cout << "[HeteroLwsScheduler::TaskLess] "
          //           << ", lhs task name = " << lhs->cl->name
@@ -28,13 +28,13 @@ public:
          //           << std::endl;
 
          if (lhs->priority == rhs->priority) {
-            is_less = true;
+            is_greater = true;
          }
          else {
-            is_less = (lhs->priority > rhs->priority);
+            is_greater = (lhs->priority > rhs->priority);
          }
 
-         return is_less;
+         return is_greater;
       }
    };
    
@@ -50,6 +50,11 @@ public:
 
       unsigned last_pop_worker;
       unsigned last_push_worker;
+      
+      unsigned last_pop_cuda_worker;
+      unsigned last_push_cuda_worker;
+
+      std::vector<int> cuda_worker_ids;
    };
    
    static void initialize(unsigned sched_ctx_id);
