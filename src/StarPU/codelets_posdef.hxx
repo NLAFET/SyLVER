@@ -63,10 +63,18 @@ namespace starpu {
 
       // solve_block StarPU codelet
       starpu_codelet_init(&cl_solve_block);
+#if defined(SPLDLT_USE_GPU)
+      cl_solve_block.where = STARPU_CPU | STARPU_CUDA;
+#else
       cl_solve_block.where = STARPU_CPU;
+#endif
       cl_solve_block.nbuffers = STARPU_VARIABLE_NBUFFERS;
       cl_solve_block.name = "SolveBlk";
       cl_solve_block.cpu_funcs[0] = solve_block_cpu_func<T>;
+#if defined(SPLDLT_USE_GPU)
+      cl_solve_block.cuda_funcs[0] = solve_block_cuda_func<T>;
+      cl_solve_block.cuda_flags[0] = STARPU_CUDA_ASYNC;
+#endif
 
       // solve_contrib_block StarPU codelet
       starpu_codelet_init(&cl_solve_contrib_block);

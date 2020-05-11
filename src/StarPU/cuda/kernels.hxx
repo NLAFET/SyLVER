@@ -7,11 +7,37 @@
 #if defined(SPLDLT_USE_GPU)
 #include <starpu_cublas_v2.h>
 #endif
+#include "sylver/kernels/cuda/llt.hxx"
 
 namespace sylver {
 namespace spldlt {
 namespace starpu {
 
+   ////////////////////////////////////////////////////////////
+   // solve_block StarPU task
+   
+   template<typename T>
+   void solve_block_cuda_func(void *buffers[], void *cl_arg) {
+
+      // Get diagonal block pointer and info
+      T *akk = (T *)STARPU_MATRIX_GET_PTR(buffers[0]);
+      unsigned ld_akk = STARPU_MATRIX_GET_LD(buffers[0]);
+
+      // Get sub diagonal block data pointer and info
+      T *aik = (T *)STARPU_MATRIX_GET_PTR(buffers[1]);
+      unsigned m = STARPU_MATRIX_GET_NX(buffers[1]);
+      unsigned n = STARPU_MATRIX_GET_NY(buffers[1]);
+      unsigned ld_aik = STARPU_MATRIX_GET_LD(buffers[1]);
+
+      // Retrieve cuBLAS handle associated with local stream
+      cublasHandle_t cuhandle = starpu_cublas_get_local_handle();
+      
+      using FactorType = sylver::spldlt::cuda::Chol<T>;
+      FactorType::solve(
+            cuhandle, m, n, akk, ld_akk, aik, ld_aik);
+      
+   }
+   
    ////////////////////////////////////////////////////////////
    // update_block StarPU task
 
